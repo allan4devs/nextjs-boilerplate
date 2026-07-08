@@ -1,17 +1,25 @@
-import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import {
+  CHECKINS_COLLECTION,
+  MEMBERS_COLLECTION,
+  PAYMENTS_COLLECTION,
+  PINS_COLLECTION,
+  RESERVATIONS_COLLECTION,
+  TRAININGS,
+  formatAccessCode,
+  hashPin,
+  memberAccessCode,
+  normalizeKey,
+  resolveAdminRole,
+  todayIso,
+} from "@/lib/xtreme/shared";
 
 export const dynamic = "force-dynamic";
 
-const MEMBERS_COLLECTION = "xtreme_gym_members";
-const RESERVATIONS_COLLECTION = "xtreme_gym_class_reservations";
-const PINS_COLLECTION = "xtreme_gym_pins";
-const PEPPER = "xtreme-gym-member-pin-v1";
-const ADMIN_CODE = process.env.XTREME_ADMIN_CODE || "xtreme-admin";
 const SEED_PIN = "1234";
 
-const TRAININGS = [
+const SEED_TRAININGS = [
   { id: "fuerza-total", name: "Fuerza Total", intensity: "Pesado", minutes: 55, capacity: 8 },
   { id: "hiit-quemador", name: "HIIT Quemador", intensity: "Alta", minutes: 35, capacity: 12 },
   { id: "glute-lab", name: "Glute Lab", intensity: "Media", minutes: 45, capacity: 10 },
@@ -40,11 +48,15 @@ const NAMES = [
 ];
 
 const GOALS = ["Ganar fuerza", "Bajar grasa", "Ser constante", "Volver al ritmo"];
-const PLANS = ["Xtreme Mensual", "Xtreme Trimestral", "Xtreme Anual"];
-
-function normalizeKey(value: string) {
-  return value.trim().toUpperCase();
-}
+const PLANS = [
+  { id: "month", label: "Plan mensual", crc: 23000, usd: 46, days: 30, category: "Plan" as const },
+  { id: "fortnight", label: "Plan quincenal", crc: 13500, usd: 27, days: 15, category: "Plan" as const },
+  { id: "week", label: "Plan semanal", crc: 8000, usd: 16, days: 7, category: "Plan" as const },
+  { id: "day-pass", label: "Pase del día / funcional", crc: 3000, usd: 6, days: 1, category: "Clase" as const },
+  { id: "senior", label: "Clase adultos mayores", crc: 16000, usd: 32, days: 30, category: "Clase" as const },
+];
+const COACHES = ["Coach Xtreme", "Funcional", "Zona lower", "Circuito"];
+const METHODS = ["cash", "sinpe", "transfer", "paypal"] as const;
 
 function isoDaysAgo(days: number) {
   const d = new Date();
@@ -61,10 +73,6 @@ function randInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function hashPin(pin: string, normalizedName: string) {
-  return createHash("sha256").update(`${normalizedName}|${pin}|${PEPPER}`).digest("hex");
-}
-
 type SeedWorkout = {
   id: string;
   trainingId: string;
@@ -75,7 +83,7 @@ type SeedWorkout = {
   completedAt: Date;
 };
 
-function makeWorkout(training: (typeof TRAININGS)[number], date: string): SeedWorkout {
+function makeWorkout(training: (typeof SEED_TRAININGS)[number], date: string): SeedWorkout {
   return {
     id: `${training.id}-${date}-${Math.floor(Math.random() * 1e9)}`,
     trainingId: training.id,
@@ -89,13 +97,11 @@ function makeWorkout(training: (typeof TRAININGS)[number], date: string): SeedWo
 
 function buildWorkouts(streak: number, older: number) {
   const workouts: SeedWorkout[] = [];
-  // Bloque consecutivo terminando hoy => racha exacta.
   for (let d = 0; d < streak; d++) {
-    workouts.push(makeWorkout(pick(TRAININGS), isoDaysAgo(d)));
+    workouts.push(makeWorkout(pick(SEED_TRAININGS), isoDaysAgo(d)));
   }
-  // Entrenos viejos dispersos, dejando un hueco despues de la racha.
   for (let i = 0; i < older; i++) {
-    workouts.push(makeWorkout(pick(TRAININGS), isoDaysAgo(randInt(streak + 2, 85))));
+    workouts.push(makeWorkout(pick(SEED_TRAININGS), isoDaysAgo(randInt(streak + 2, 85))));
   }
   workouts.sort(
     (a, b) =>
@@ -114,7 +120,7 @@ function buildMembership(kind: "active" | "warning" | "expired") {
       : kind === "warning"
         ? isoDaysAgo(-randInt(1, 5))
         : isoDaysAgo(-randInt(9, 30));
-  return { plan, status: kind, startedAt, nextBillingDate };
+  return { plan: plan.label, status: kind, startedAt, nextBillingDate };
 }
 
 function buildMetrics() {
@@ -133,8 +139,35 @@ function buildMetrics() {
   });
 }
 
+function buildPlan(name: string, goal: string) {
+  const sessions = [
+    { day: "Lunes", focus: "Fuerza upper", exercises: "Press banca 4x8, Remo 4x10, Press militar 3x10" },
+    { day: "Miercoles", focus: "Lower + core", exercises: "Sentadilla 4x8, Peso muerto 3x8, Plancha 3x40s" },
+    { day: "Viernes", focus: "HIIT / condicion", exercises: "Air bike 8x30s, Burpees 4x12, Farmer walk 3x40m" },
+  ];
+  return {
+    title: `Plan de ${name.split(" ")[0]}`,
+    objective: goal,
+    coachNote: "Prioriza tecnica y constancia. Hidratacion y sueno primero.",
+    startDate: isoDaysAgo(7),
+    endDate: isoDaysAgo(-21),
+    weeklySessions: 3,
+    items: sessions.map((s, i) => ({
+      id: `seed-plan-${name}-${i}`,
+      day: s.day,
+      focus: s.focus,
+      exercises: s.exercises,
+      targetMinutes: 45 + i * 5,
+      done: i === 0,
+      doneDate: i === 0 ? isoDaysAgo(2) : null,
+    })),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
 export async function POST(req: NextRequest) {
-  if ((req.headers.get("x-xtreme-admin") ?? "") !== ADMIN_CODE) {
+  if (!resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "")) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
@@ -146,12 +179,16 @@ export async function POST(req: NextRequest) {
     const membersCol = db.collection(MEMBERS_COLLECTION);
     const reservationsCol = db.collection(RESERVATIONS_COLLECTION);
     const pinsCol = db.collection(PINS_COLLECTION);
+    const paymentsCol = db.collection(PAYMENTS_COLLECTION);
+    const checkinsCol = db.collection(CHECKINS_COLLECTION);
 
     const clearFilter = wipeAll ? {} : { seeded: true };
     await Promise.all([
       membersCol.deleteMany(clearFilter),
       reservationsCol.deleteMany(clearFilter),
       pinsCol.deleteMany(clearFilter),
+      paymentsCol.deleteMany(clearFilter),
+      checkinsCol.deleteMany(clearFilter),
     ]);
 
     const now = new Date();
@@ -160,14 +197,20 @@ export async function POST(req: NextRequest) {
       const older = randInt(4, 42);
       const kind = idx % 6 === 0 ? "expired" : idx % 4 === 0 ? "warning" : "active";
       const workouts = buildWorkouts(streak, older);
+      const goal = pick(GOALS);
       return {
         normalizedName: normalizeKey(name),
         memberName: name,
-        goal: pick(GOALS),
+        goal,
         favoriteTraining: workouts.at(-1)?.trainingName ?? "",
+        phone: `8888${String(1000 + idx).slice(0, 4)}`,
+        email: `${name.split(" ")[0].toLowerCase()}@demo.xtreme.cr`,
+        coach: pick(COACHES),
+        notes: idx % 3 === 0 ? "Prefiere entrenar temprano." : "",
         workouts,
         membership: buildMembership(kind),
         bodyMetrics: buildMetrics(),
+        trainingPlan: idx % 2 === 0 ? buildPlan(name, goal) : undefined,
         seeded: true,
         createdAt: now,
         updatedAt: now,
@@ -176,11 +219,11 @@ export async function POST(req: NextRequest) {
 
     if (members.length) await membersCol.insertMany(members);
 
-    // Reservas de hoy por clase (respetando capacidad).
-    const today = isoDaysAgo(0);
+    const today = todayIso();
     const reservations: Record<string, unknown>[] = [];
     for (const training of TRAININGS) {
-      const count = randInt(2, training.capacity);
+      const meta = SEED_TRAININGS.find((t) => t.id === training.id)!;
+      const count = randInt(2, meta.capacity);
       const chosen = [...members].sort(() => Math.random() - 0.5).slice(0, count);
       for (const member of chosen) {
         reservations.push({
@@ -198,7 +241,6 @@ export async function POST(req: NextRequest) {
     }
     if (reservations.length) await reservationsCol.insertMany(reservations);
 
-    // PIN por defecto (1234) para poder entrar como cualquier cliente demo.
     await pinsCol.bulkWrite(
       members.map((member) => ({
         updateOne: {
@@ -218,11 +260,68 @@ export async function POST(req: NextRequest) {
       })),
     );
 
+    // Pagos demo (ultimos 30 dias) para super admin
+    const payments = Array.from({ length: 28 }, (_, i) => {
+      const member = pick(members);
+      const plan = pick(PLANS);
+      const method = pick([...METHODS]);
+      const daysAgo = randInt(0, 28);
+      const createdAt = new Date();
+      createdAt.setUTCDate(createdAt.getUTCDate() - daysAgo);
+      createdAt.setUTCHours(randInt(8, 20), randInt(0, 59), 0, 0);
+      return {
+        id: `seed-pay-${i}-${createdAt.getTime()}`,
+        memberName: member.memberName,
+        normalizedName: member.normalizedName,
+        customerName: member.memberName,
+        phone: member.phone,
+        email: member.email,
+        optionId: plan.id,
+        optionLabel: plan.label,
+        category: plan.category,
+        amountCrc: plan.crc,
+        amountUsd: plan.usd,
+        currency: method === "paypal" ? "USD" : "CRC",
+        method,
+        status: "completed" as const,
+        paypalOrderId: method === "paypal" ? `DEMO-ORDER-${i}` : null,
+        paypalCaptureId: method === "paypal" ? `DEMO-CAP-${i}` : null,
+        note: i % 5 === 0 ? "Pago en recepcion" : "",
+        date: isoDaysAgo(daysAgo),
+        createdAt,
+        recordedBy: "seed" as const,
+        seeded: true,
+      };
+    });
+    if (payments.length) await paymentsCol.insertMany(payments);
+
+    // Check-ins de hoy
+    const checkins = members.slice(0, randInt(6, 12)).map((member, i) => {
+      const checkedInAt = new Date();
+      checkedInAt.setHours(checkedInAt.getHours() - i, randInt(0, 50), 0, 0);
+      return {
+        id: `seed-chk-${i}-${checkedInAt.getTime()}`,
+        memberName: member.memberName,
+        normalizedName: member.normalizedName,
+        accessCode: formatAccessCode(memberAccessCode(member.normalizedName)),
+        method: i % 3 === 0 ? "pin" : i % 2 === 0 ? "code" : "name",
+        membershipStatus: member.membership.status,
+        date: today,
+        checkedInAt,
+        by: "kiosk" as const,
+        note: "",
+        seeded: true,
+      };
+    });
+    if (checkins.length) await checkinsCol.insertMany(checkins);
+
     return NextResponse.json({
       ok: true,
       wipeAll,
       insertedMembers: members.length,
       insertedReservations: reservations.length,
+      insertedPayments: payments.length,
+      insertedCheckins: checkins.length,
       pin: SEED_PIN,
     });
   } catch (err) {
