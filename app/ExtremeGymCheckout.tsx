@@ -237,7 +237,11 @@ export default function ExtremeGymCheckout() {
               const response = await fetch("/api/xtreme/checkout/capture-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderID: data.orderID }),
+                body: JSON.stringify({
+                  orderID: data.orderID,
+                  optionId: selected.id,
+                  customer: form,
+                }),
               });
               const result = (await response.json()) as { success?: boolean; captureID?: string; message?: string };
               if (!response.ok || !result.success) throw new Error(result.message || "No se pudo confirmar el pago.");

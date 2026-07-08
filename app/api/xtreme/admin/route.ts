@@ -1,189 +1,122 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import {
+  CHECKINS_COLLECTION,
+  GYM_CAPACITY,
+  MEMBERS_COLLECTION,
+  PAYMENTS_COLLECTION,
+  PINS_COLLECTION,
+  RESERVATIONS_COLLECTION,
+  TRAININGS,
+  type AdminRole,
+  type CheckinDoc,
+  type MemberDoc,
+  type PaymentDoc,
+  addDays,
+  formatAccessCode,
+  hourLoadBoost,
+  memberAccessCode,
+  membershipStatus,
+  normalizeKey,
+  normalizeName,
+  resolveAdminRole,
+  sanitizePlan,
+  todayIso,
+  toAdminMember,
+  toUtcDate,
+} from "@/lib/xtreme/shared";
 
 export const dynamic = "force-dynamic";
 
-const MEMBERS_COLLECTION = "xtreme_gym_members";
-const RESERVATIONS_COLLECTION = "xtreme_gym_class_reservations";
-const PINS_COLLECTION = "xtreme_gym_pins";
-const ADMIN_CODE = process.env.XTREME_ADMIN_CODE || "xtreme-admin";
-const GYM_CAPACITY = 85;
-
-const TRAININGS = [
-  { id: "fuerza-total", name: "Fuerza Total", capacity: 8 },
-  { id: "hiit-quemador", name: "HIIT Quemador", capacity: 12 },
-  { id: "glute-lab", name: "Glute Lab", capacity: 10 },
-  { id: "xtreme-core", name: "Xtreme Core", capacity: 15 },
-];
-
-type WorkoutEntry = { minutes?: number; completedDate?: string };
-type Membership = { plan?: string; nextBillingDate?: string; startedAt?: string };
-type BodyMetric = { date: string; weightKg: number; waistCm: number };
-type PlanItem = {
-  id: string;
-  day: string;
-  focus: string;
-  exercises: string;
-  targetMinutes: number;
-  done: boolean;
-  doneDate: string | null;
-};
-type TrainingPlan = {
-  title: string;
-  objective: string;
-  coachNote: string;
-  startDate: string;
-  endDate: string;
-  weeklySessions: number;
-  items: PlanItem[];
-  createdAt?: Date;
-  updatedAt?: Date;
-};
-type MemberDoc = {
-  normalizedName?: string;
-  memberName?: string;
-  goal?: string;
-  favoriteTraining?: string;
-  workouts?: WorkoutEntry[];
-  membership?: Membership;
-  bodyMetrics?: BodyMetric[];
-  trainingPlan?: TrainingPlan;
-  seeded?: boolean;
-  createdAt?: Date;
-};
-
-function normalizeName(value: unknown) {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
-function normalizeKey(value: string) {
-  return value.trim().toUpperCase();
-}
-function toUtcDate(date: string) {
-  return new Date(`${date}T00:00:00.000Z`);
-}
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
-}
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+function roleFromReq(req: NextRequest): AdminRole | null {
+  return resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
 }
 
-function computeStreak(workouts: WorkoutEntry[]) {
-  const dates = new Set(workouts.map((w) => w.completedDate).filter(Boolean) as string[]);
-  if (!dates.size) return 0;
-  const latest = [...dates].sort().at(-1)!;
-  let cursor = toUtcDate(latest);
-  let streak = 0;
-  while (dates.has(cursor.toISOString().slice(0, 10))) {
-    streak += 1;
-    cursor = addDays(cursor, -1);
-  }
-  return streak;
+function unauthorized() {
+  return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 }
 
-function membershipStatus(membership?: Membership) {
-  const plan = membership?.plan ?? "—";
-  const nextBillingDate = membership?.nextBillingDate ?? todayIso();
-  const today = toUtcDate(todayIso());
-  const daysRemaining = Math.ceil((toUtcDate(nextBillingDate).getTime() - today.getTime()) / 86_400_000);
-  const status = daysRemaining < 0 ? "expired" : daysRemaining <= 5 ? "warning" : "active";
-  return { plan, nextBillingDate, daysRemaining, status };
+function forbidden() {
+  return NextResponse.json({ error: "Solo super admin." }, { status: 403 });
 }
 
-function hourLoadBoost() {
-  const hour = new Date().getHours();
-  if ((hour >= 5 && hour <= 7) || (hour >= 17 && hour <= 20)) return 22;
-  if ((hour >= 8 && hour <= 10) || (hour >= 15 && hour <= 16)) return 12;
-  return 5;
+function startOfMonthIso() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }
 
-function toAdminPlan(plan?: TrainingPlan) {
-  if (!plan) return null;
-  const items = plan.items ?? [];
-  const doneItems = items.filter((i) => i.done).length;
-  const totalItems = items.length;
-  return {
-    title: plan.title ?? "",
-    objective: plan.objective ?? "",
-    coachNote: plan.coachNote ?? "",
-    startDate: plan.startDate ?? "",
-    endDate: plan.endDate ?? "",
-    weeklySessions: plan.weeklySessions ?? 0,
-    items,
-    doneItems,
-    totalItems,
-    progressPct: totalItems ? Math.round((doneItems / totalItems) * 100) : 0,
-    updatedAt: plan.updatedAt ?? null,
-  };
+function daysAgoIso(days: number) {
+  return addDays(toUtcDate(todayIso()), -days).toISOString().slice(0, 10);
 }
 
-function toAdminMember(doc: MemberDoc) {
-  const workouts = doc.workouts ?? [];
-  const metrics = [...(doc.bodyMetrics ?? [])].sort((a, b) => a.date.localeCompare(b.date));
-  const membership = membershipStatus(doc.membership);
-  return {
-    trainingPlan: toAdminPlan(doc.trainingPlan),
-    memberName: doc.memberName ?? "",
-    normalizedName: doc.normalizedName ?? "",
-    goal: doc.goal ?? "",
-    favoriteTraining: doc.favoriteTraining || workouts.at(-1)?.completedDate || "",
-    streak: computeStreak(workouts),
-    totalWorkouts: workouts.length,
-    totalMinutes: workouts.reduce((sum, w) => sum + (w.minutes || 0), 0),
-    lastWorkoutDate: workouts.map((w) => w.completedDate).filter(Boolean).sort().at(-1) ?? null,
-    plan: membership.plan,
-    membershipStatus: membership.status,
-    daysRemaining: membership.daysRemaining,
-    nextBillingDate: membership.nextBillingDate,
-    latestWeight: metrics.at(-1)?.weightKg ?? null,
-    seeded: Boolean(doc.seeded),
-    createdAt: doc.createdAt ?? null,
-  };
-}
+async function revenueSummary(db: Awaited<ReturnType<typeof getDb>>) {
+  const date = todayIso();
+  const weekStart = daysAgoIso(6);
+  const monthStart = startOfMonthIso();
 
-function unauthorized(req: NextRequest) {
-  return (req.headers.get("x-xtreme-admin") ?? "") !== ADMIN_CODE;
-}
+  const payments = await db
+    .collection<PaymentDoc>(PAYMENTS_COLLECTION)
+    .find({ status: "completed" })
+    .sort({ createdAt: -1 })
+    .limit(500)
+    .toArray();
 
-function isoDateOrEmpty(value: unknown) {
-  const raw = String(value ?? "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
-}
-
-function sanitizePlan(input: unknown): TrainingPlan {
-  const raw = (input ?? {}) as Record<string, unknown>;
-  const now = new Date();
-  const rawItems = Array.isArray(raw.items) ? raw.items : [];
-  const items: PlanItem[] = rawItems.slice(0, 30).map((entry, index) => {
-    const it = (entry ?? {}) as Record<string, unknown>;
-    return {
-      id: String(it.id ?? "").trim() || `plan-${now.getTime()}-${index}`,
-      day: String(it.day ?? "").trim().slice(0, 40),
-      focus: String(it.focus ?? "").trim().slice(0, 80),
-      exercises: String(it.exercises ?? "").trim().slice(0, 500),
-      targetMinutes: Math.max(0, Math.min(240, Number(it.targetMinutes) || 0)),
-      done: Boolean(it.done),
-      doneDate: isoDateOrEmpty(it.doneDate) || null,
-    };
+  const sum = (list: PaymentDoc[]) => ({
+    count: list.length,
+    crc: list.reduce((s, p) => s + (p.amountCrc || 0), 0),
+    usd: Math.round(list.reduce((s, p) => s + (p.amountUsd || 0), 0) * 100) / 100,
   });
+
+  const today = payments.filter((p) => p.date === date);
+  const week = payments.filter((p) => p.date >= weekStart);
+  const month = payments.filter((p) => p.date >= monthStart);
+
+  const byOption: Record<string, { label: string; count: number; crc: number }> = {};
+  const byMethod: Record<string, { count: number; crc: number }> = {};
+  for (const p of month) {
+    const key = p.optionId || "other";
+    if (!byOption[key]) byOption[key] = { label: p.optionLabel || key, count: 0, crc: 0 };
+    byOption[key].count += 1;
+    byOption[key].crc += p.amountCrc || 0;
+
+    const method = p.method || "other";
+    if (!byMethod[method]) byMethod[method] = { count: 0, crc: 0 };
+    byMethod[method].count += 1;
+    byMethod[method].crc += p.amountCrc || 0;
+  }
+
   return {
-    title: String(raw.title ?? "").trim().slice(0, 80),
-    objective: String(raw.objective ?? "").trim().slice(0, 160),
-    coachNote: String(raw.coachNote ?? "").trim().slice(0, 500),
-    startDate: isoDateOrEmpty(raw.startDate),
-    endDate: isoDateOrEmpty(raw.endDate),
-    weeklySessions: Math.max(0, Math.min(14, Number(raw.weeklySessions) || 0)),
-    items,
-    updatedAt: now,
+    today: sum(today),
+    week: sum(week),
+    month: sum(month),
+    all: sum(payments),
+    byOption: Object.entries(byOption)
+      .map(([id, v]) => ({ optionId: id, ...v }))
+      .sort((a, b) => b.crc - a.crc),
+    byMethod: Object.entries(byMethod)
+      .map(([method, v]) => ({ method, ...v }))
+      .sort((a, b) => b.crc - a.crc),
+    recent: payments.slice(0, 40).map((p) => ({
+      id: p.id,
+      customerName: p.customerName || p.memberName,
+      memberName: p.memberName,
+      optionLabel: p.optionLabel,
+      category: p.category,
+      amountCrc: p.amountCrc,
+      amountUsd: p.amountUsd,
+      method: p.method,
+      status: p.status,
+      date: p.date,
+      note: p.note || "",
+      paypalCaptureId: p.paypalCaptureId ?? null,
+      recordedBy: p.recordedBy,
+    })),
   };
 }
 
 export async function GET(req: NextRequest) {
-  if (unauthorized(req)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
+  const role = roleFromReq(req);
+  if (!role) return unauthorized();
 
   try {
     const db = await getDb();
@@ -206,6 +139,10 @@ export async function GET(req: NextRequest) {
     const avgStreak = members.length
       ? Math.round((members.reduce((s, m) => s + m.streak, 0) / members.length) * 10) / 10
       : 0;
+    const withPlan = members.filter((m) => m.trainingPlan).length;
+    const expiringSoon = members.filter((m) => m.membershipStatus === "warning").length;
+    const expired = members.filter((m) => m.membershipStatus === "expired").length;
+    const activeMemberships = members.filter((m) => m.membershipStatus === "active").length;
 
     const reservationDocs = await db
       .collection<{ trainingId: string }>(RESERVATIONS_COLLECTION)
@@ -219,19 +156,25 @@ export async function GET(req: NextRequest) {
       reserved: reservationDocs.filter((r) => r.trainingId === t.id).length,
     }));
 
+    const checkinDocs = await db
+      .collection<CheckinDoc>(CHECKINS_COLLECTION)
+      .find({ date })
+      .sort({ checkedInAt: -1 })
+      .limit(100)
+      .toArray();
+
+    const checkinsToday = checkinDocs.length;
+    const uniqueCheckins = new Set(checkinDocs.map((c) => c.normalizedName)).size;
     const reservationsToday = reservationDocs.length;
-    const checkinsToday = members.reduce(
-      (sum, m) => sum + (m.lastWorkoutDate === date ? 1 : 0),
-      0,
-    );
     const currentPeople = Math.min(
       GYM_CAPACITY,
-      checkinsToday + Math.ceil(reservationsToday * 0.35) + hourLoadBoost(),
+      Math.max(uniqueCheckins, 0) + Math.ceil(reservationsToday * 0.25) + hourLoadBoost(),
     );
     const occupancyPct = Math.round((currentPeople / GYM_CAPACITY) * 100);
     const level = occupancyPct >= 78 ? "Lleno" : occupancyPct >= 48 ? "Medio" : "Tranquilo";
 
-    return NextResponse.json({
+    const payload: Record<string, unknown> = {
+      role,
       members,
       totals: {
         memberCount: members.length,
@@ -240,6 +183,10 @@ export async function GET(req: NextRequest) {
         totalWorkouts,
         totalMinutes,
         avgStreak,
+        withPlan,
+        expiringSoon,
+        expired,
+        activeMemberships,
       },
       today: {
         date,
@@ -248,67 +195,270 @@ export async function GET(req: NextRequest) {
         occupancyPct,
         level,
         checkinsToday,
+        uniqueCheckins,
         reservationsToday,
         classes,
       },
-    });
+      checkins: checkinDocs.map((c) => ({
+        id: c.id,
+        memberName: c.memberName,
+        accessCode: c.accessCode,
+        method: c.method,
+        membershipStatus: c.membershipStatus,
+        checkedInAt: c.checkedInAt,
+        by: c.by,
+        note: c.note ?? "",
+      })),
+    };
+
+    if (role === "super") {
+      payload.revenue = await revenueSummary(db);
+    }
+
+    return NextResponse.json(payload);
   } catch (err) {
     console.error("XTREME ADMIN GET", err);
     return NextResponse.json({ error: "No se pudo cargar el panel." }, { status: 500 });
   }
 }
 
-// Crear o reemplazar el plan de entrenamiento personalizado de un socio.
 export async function POST(req: NextRequest) {
-  if (unauthorized(req)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
+  const role = roleFromReq(req);
+  if (!role) return unauthorized();
 
   try {
-    const body = (await req.json().catch(() => ({}))) as { memberName?: string; plan?: unknown };
-    const memberName = normalizeName(body.memberName);
-    if (!memberName) {
-      return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
-    }
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const action = String(body.action ?? "plan");
 
-    const plan = sanitizePlan(body.plan);
-    if (!plan.title) {
-      return NextResponse.json({ error: "El plan necesita un titulo." }, { status: 400 });
-    }
+    // Plan personalizado
+    if (action === "plan") {
+      const memberName = normalizeName(body.memberName);
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+      const plan = sanitizePlan(body.plan);
+      if (!plan.title) {
+        return NextResponse.json({ error: "El plan necesita un titulo." }, { status: 400 });
+      }
 
-    const db = await getDb();
-    const normalizedName = normalizeKey(memberName);
-    const now = new Date();
-    const result = await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
-      { normalizedName },
-      {
-        $set: {
-          normalizedName,
-          memberName,
-          trainingPlan: { ...plan, createdAt: now },
-          updatedAt: now,
+      const db = await getDb();
+      const normalizedName = normalizeKey(memberName);
+      const now = new Date();
+      await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName },
+        {
+          $set: {
+            normalizedName,
+            memberName,
+            trainingPlan: { ...plan, createdAt: now },
+            updatedAt: now,
+          },
+          $setOnInsert: { workouts: [], bodyMetrics: [], createdAt: now },
         },
-        $setOnInsert: { workouts: [], bodyMetrics: [], createdAt: now },
-      },
-      { upsert: true },
-    );
-
-    if (!result.matchedCount && !result.upsertedCount) {
-      return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+        { upsert: true },
+      );
+      return NextResponse.json({ ok: true });
     }
 
-    return NextResponse.json({ ok: true });
+    // Perfil / membresia personalizada
+    if (action === "member") {
+      const memberName = normalizeName(body.memberName);
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+
+      const db = await getDb();
+      const normalizedName = normalizeKey(memberName);
+      const now = new Date();
+      const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+
+      const plan = String(body.plan ?? existing?.membership?.plan ?? "Xtreme Mensual")
+        .trim()
+        .slice(0, 80);
+      const nextBillingDate =
+        String(body.nextBillingDate ?? existing?.membership?.nextBillingDate ?? todayIso()).slice(0, 10) ||
+        todayIso();
+      const startedAt =
+        String(body.startedAt ?? existing?.membership?.startedAt ?? todayIso()).slice(0, 10) || todayIso();
+
+      await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName },
+        {
+          $set: {
+            normalizedName,
+            memberName: normalizeName(body.displayName) || memberName,
+            goal: String(body.goal ?? existing?.goal ?? "").trim().slice(0, 80),
+            favoriteTraining: String(body.favoriteTraining ?? existing?.favoriteTraining ?? "")
+              .trim()
+              .slice(0, 80),
+            phone: String(body.phone ?? existing?.phone ?? "").trim().slice(0, 40),
+            email: String(body.email ?? existing?.email ?? "").trim().slice(0, 80),
+            coach: String(body.coach ?? existing?.coach ?? "").trim().slice(0, 60),
+            notes: String(body.notes ?? existing?.notes ?? "").trim().slice(0, 800),
+            membership: {
+              plan,
+              nextBillingDate,
+              startedAt,
+              status: membershipStatus({ plan, nextBillingDate, startedAt }).status,
+            },
+            updatedAt: now,
+          },
+          $setOnInsert: { workouts: [], bodyMetrics: [], createdAt: now },
+        },
+        { upsert: true },
+      );
+
+      return NextResponse.json({ ok: true });
+    }
+
+    // Ingreso manual (admin desde panel)
+    if (action === "checkin") {
+      const memberName = normalizeName(body.memberName);
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+
+      const db = await getDb();
+      const normalizedName = normalizeKey(memberName);
+      const member = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      if (!member) {
+        return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+      }
+
+      const ms = membershipStatus(member.membership);
+      const now = new Date();
+      const date = todayIso();
+      const accessCode = formatAccessCode(memberAccessCode(normalizedName));
+
+      // Evitar check-in duplicado en los ultimos 20 minutos
+      const recent = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).findOne({
+        normalizedName,
+        date,
+        checkedInAt: { $gte: new Date(now.getTime() - 20 * 60 * 1000) },
+      });
+      if (recent) {
+        return NextResponse.json({
+          ok: true,
+          duplicate: true,
+          message: "Ya tiene un ingreso reciente.",
+          checkin: recent,
+          membershipStatus: ms.status,
+        });
+      }
+
+      const checkin: CheckinDoc = {
+        id: `chk-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
+        memberName: member.memberName || memberName,
+        normalizedName,
+        accessCode,
+        method: "admin",
+        membershipStatus: ms.status,
+        date,
+        checkedInAt: now,
+        by: "admin",
+        note: String(body.note ?? "").trim().slice(0, 120),
+      };
+
+      await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+      return NextResponse.json({ ok: true, checkin, membershipStatus: ms.status });
+    }
+
+    // Pago manual — solo super admin
+    if (action === "payment") {
+      if (role !== "super") return forbidden();
+
+      const customerName = normalizeName(body.customerName || body.memberName);
+      if (!customerName) {
+        return NextResponse.json({ error: "Cliente requerido." }, { status: 400 });
+      }
+
+      const amountCrc = Math.max(0, Math.round(Number(body.amountCrc) || 0));
+      if (!amountCrc) {
+        return NextResponse.json({ error: "Monto CRC invalido." }, { status: 400 });
+      }
+
+      const methodRaw = String(body.method ?? "cash");
+      const method = (
+        ["paypal", "cash", "transfer", "sinpe", "other"].includes(methodRaw) ? methodRaw : "cash"
+      ) as PaymentDoc["method"];
+
+      const now = new Date();
+      const payment: PaymentDoc = {
+        id: `pay-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
+        memberName: customerName,
+        normalizedName: normalizeKey(customerName),
+        customerName,
+        phone: String(body.phone ?? "").trim().slice(0, 40),
+        email: String(body.email ?? "").trim().slice(0, 80),
+        optionId: String(body.optionId ?? "manual").trim().slice(0, 40),
+        optionLabel: String(body.optionLabel ?? "Pago manual").trim().slice(0, 80),
+        category: (["Plan", "Clase", "Otro"].includes(String(body.category))
+          ? String(body.category)
+          : "Otro") as PaymentDoc["category"],
+        amountCrc,
+        amountUsd: Math.max(0, Math.round((Number(body.amountUsd) || amountCrc / 500) * 100) / 100),
+        currency: "CRC",
+        method,
+        status: "completed",
+        paypalOrderId: null,
+        paypalCaptureId: null,
+        note: String(body.note ?? "").trim().slice(0, 200),
+        date: String(body.date ?? todayIso()).slice(0, 10) || todayIso(),
+        createdAt: now,
+        recordedBy: "admin",
+      };
+
+      const db = await getDb();
+      await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).insertOne(payment);
+
+      // Extender membresia si se elige plan y existe el socio
+      if (body.extendMembership && payment.category === "Plan") {
+        const days = Math.max(1, Math.min(365, Number(body.extendDays) || 30));
+        const member = await db
+          .collection<MemberDoc>(MEMBERS_COLLECTION)
+          .findOne({ normalizedName: payment.normalizedName });
+        const base =
+          member?.membership?.nextBillingDate && member.membership.nextBillingDate > todayIso()
+            ? member.membership.nextBillingDate
+            : todayIso();
+        const nextBillingDate = addDays(toUtcDate(base), days).toISOString().slice(0, 10);
+        await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+          { normalizedName: payment.normalizedName },
+          {
+            $set: {
+              normalizedName: payment.normalizedName,
+              memberName: customerName,
+              "membership.plan": payment.optionLabel,
+              "membership.nextBillingDate": nextBillingDate,
+              "membership.status": "active",
+              updatedAt: now,
+            },
+            $setOnInsert: {
+              workouts: [],
+              bodyMetrics: [],
+              goal: "",
+              favoriteTraining: "",
+              createdAt: now,
+              "membership.startedAt": todayIso(),
+            },
+          },
+          { upsert: true },
+        );
+      }
+
+      return NextResponse.json({ ok: true, payment });
+    }
+
+    return NextResponse.json({ error: "Accion invalida." }, { status: 400 });
   } catch (err) {
     console.error("XTREME ADMIN POST", err);
-    return NextResponse.json({ error: "No se pudo guardar el plan." }, { status: 500 });
+    return NextResponse.json({ error: "No se pudo procesar." }, { status: 500 });
   }
 }
 
-// Marcar/desmarcar una sesion del plan (monitoreo de avance).
 export async function PATCH(req: NextRequest) {
-  if (unauthorized(req)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
+  const role = roleFromReq(req);
+  if (!role) return unauthorized();
 
   try {
     const body = (await req.json().catch(() => ({}))) as {
@@ -350,12 +500,20 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (unauthorized(req)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
+  const role = roleFromReq(req);
+  if (!role) return unauthorized();
 
   try {
-    const body = (await req.json().catch(() => ({}))) as { memberName?: string };
+    const body = (await req.json().catch(() => ({}))) as { memberName?: string; paymentId?: string };
+    const paymentId = String(body.paymentId ?? "").trim();
+
+    if (paymentId) {
+      if (role !== "super") return forbidden();
+      const db = await getDb();
+      await db.collection(PAYMENTS_COLLECTION).deleteOne({ id: paymentId });
+      return NextResponse.json({ ok: true });
+    }
+
     const memberName = normalizeName(body.memberName);
     if (!memberName) {
       return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
@@ -367,11 +525,12 @@ export async function DELETE(req: NextRequest) {
       db.collection(MEMBERS_COLLECTION).deleteOne({ normalizedName }),
       db.collection(PINS_COLLECTION).deleteOne({ normalizedName }),
       db.collection(RESERVATIONS_COLLECTION).deleteMany({ normalizedName }),
+      db.collection(CHECKINS_COLLECTION).deleteMany({ normalizedName }),
     ]);
 
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("XTREME ADMIN DELETE", err);
-    return NextResponse.json({ error: "No se pudo eliminar el socio." }, { status: 500 });
+    return NextResponse.json({ error: "No se pudo eliminar." }, { status: 500 });
   }
 }

@@ -26,6 +26,7 @@ import {
   Star,
   Target,
   Timer,
+  TrendingUp,
   Trophy,
   UserRound,
   Users,
@@ -116,6 +117,15 @@ const REMINDERS = [
   "No rompas la racha: hoy toca aunque sea suave.",
   "Tu membresia vence pronto, pasate por recepcion.",
 ];
+
+const TABS = [
+  { id: "resumen", label: "Resumen", icon: Activity },
+  { id: "entrenar", label: "Entrenar", icon: Dumbbell },
+  { id: "progreso", label: "Progreso", icon: TrendingUp },
+  { id: "perfil", label: "Perfil", icon: UserRound },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
 
 type Workout = {
   id: string;
@@ -489,6 +499,7 @@ export default function ExtremeGymSite() {
   const [selectedReminder, setSelectedReminder] = useState(REMINDERS[0]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [tab, setTab] = useState<TabId>("resumen");
 
   const unlocked = Boolean(memberName) && !showPin;
   const currentMember = member ?? initialMember(memberName);
@@ -837,14 +848,42 @@ export default function ExtremeGymSite() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-5 py-8 sm:px-8 lg:grid-cols-[1.35fr_.65fr]">
-        <div className="space-y-6">
-          {isLoading ? (
-            <div className="grid min-h-[420px] place-items-center border border-white/10 bg-white/[0.03]">
-              <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
-            </div>
-          ) : (
-            <>
+      <nav className="sticky top-0 z-30 border-b border-white/10 bg-[#050505]/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-3 sm:px-8">
+          {TABS.map((item) => {
+            const Icon = item.icon;
+            const active = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTab(item.id)}
+                className={`relative flex items-center gap-2 whitespace-nowrap px-4 py-4 text-xs font-black uppercase tracking-[0.14em] transition ${active ? "text-[#d8ff3e]" : "text-white/45 hover:text-white/80"}`}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+                {active && <span className="absolute inset-x-3 bottom-0 h-0.5 bg-[#d8ff3e]" />}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <section className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
+        {isLoading ? (
+          <div className="grid min-h-[420px] place-items-center border border-white/10 bg-white/[0.03]">
+            <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {(message || error) && (
+              <div className={`border px-4 py-3 text-sm font-bold ${error ? "border-red-400/40 bg-red-500/10 text-red-200" : "border-[#d8ff3e]/40 bg-[#d8ff3e]/10 text-[#eaff93]"}`}>
+                {error || message}
+              </div>
+            )}
+
+            {tab === "resumen" && (
+              <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-4">
                 <StatTile icon={Flame} label="Racha" value={`${currentMember.streak} dias`} accent="from-orange-400 to-red-500" />
                 <StatTile icon={CalendarCheck} label="Entrenos" value={`${currentMember.totalWorkouts}`} accent="from-[#d8ff3e] to-emerald-300" />
@@ -959,6 +998,11 @@ export default function ExtremeGymSite() {
                 </div>
               </div>
 
+              </div>
+            )}
+
+            {tab === "entrenar" && (
+              <div className="space-y-6">
               <div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
                 <div className="border border-white/10 bg-white/[0.04] p-5">
                   <div className="flex items-center gap-3">
@@ -1097,6 +1141,37 @@ export default function ExtremeGymSite() {
 
               <div className="border border-white/10 bg-white/[0.04] p-5">
                 <div className="flex items-center gap-3">
+                  <Video className="h-5 w-5 text-orange-300" />
+                  <h2 className="text-lg font-black uppercase">Rutinas guiadas</h2>
+                </div>
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                  {ROUTINES.map((routine) => (
+                    <div key={routine.name} className="border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">{routine.level}</p>
+                      <h3 className="mt-2 font-black uppercase">{routine.name}</h3>
+                      <ul className="mt-3 space-y-2 text-sm font-semibold text-white/55">
+                        {routine.exercises.map((exercise) => (
+                          <li key={exercise}>{exercise}</li>
+                        ))}
+                      </ul>
+                      <button
+                        type="button"
+                        className="mt-4 inline-flex items-center gap-2 border border-white/10 px-3 py-2 text-xs font-black uppercase text-white/65 transition hover:border-orange-300 hover:text-orange-200"
+                      >
+                        <Video className="h-4 w-4" />
+                        {routine.video}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              </div>
+            )}
+
+            {tab === "progreso" && (
+              <div className="space-y-6">
+              <div className="border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-3">
                   <Award className="h-5 w-5 text-yellow-300" />
                   <h2 className="text-lg font-black uppercase">Logros</h2>
                   <span className="ml-auto text-sm font-black text-white/45">
@@ -1212,173 +1287,143 @@ export default function ExtremeGymSite() {
 
               <div className="border border-white/10 bg-white/[0.04] p-5">
                 <div className="flex items-center gap-3">
-                  <Video className="h-5 w-5 text-orange-300" />
-                  <h2 className="text-lg font-black uppercase">Rutinas guiadas</h2>
+                  <Medal className="h-5 w-5 text-orange-300" />
+                  <h2 className="text-lg font-black uppercase">Leaderboard</h2>
                 </div>
-                <div className="mt-5 grid gap-3 md:grid-cols-3">
-                  {ROUTINES.map((routine) => (
-                    <div key={routine.name} className="border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">{routine.level}</p>
-                      <h3 className="mt-2 font-black uppercase">{routine.name}</h3>
-                      <ul className="mt-3 space-y-2 text-sm font-semibold text-white/55">
-                        {routine.exercises.map((exercise) => (
-                          <li key={exercise}>{exercise}</li>
-                        ))}
-                      </ul>
-                      <button
-                        type="button"
-                        className="mt-4 inline-flex items-center gap-2 border border-white/10 px-3 py-2 text-xs font-black uppercase text-white/65 transition hover:border-orange-300 hover:text-orange-200"
-                      >
-                        <Video className="h-4 w-4" />
-                        {routine.video}
-                      </button>
-                    </div>
-                  ))}
+                <div className="mt-5 space-y-3">
+                  {leaderboard.length ? (
+                    leaderboard.slice(0, 5).map((entry, index) => (
+                      <div key={entry.normalizedName || entry.memberName} className="flex items-center gap-3 border border-white/10 bg-black/20 p-3">
+                        <span className={`grid h-9 w-9 place-items-center font-black ${index === 0 ? "bg-orange-300 text-black" : "bg-white/10 text-white"}`}>
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-black uppercase">{entry.memberName}</p>
+                          <p className="text-xs font-semibold text-white/45">
+                            {entry.streak} dias - {entry.totalWorkouts} entrenos
+                          </p>
+                        </div>
+                        <Flame className="h-5 w-5 text-orange-300" />
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm font-semibold text-white/45">El ranking aparece cuando alguien marque entrenos.</p>
+                  )}
                 </div>
               </div>
-            </>
-          )}
 
-          {(message || error) && (
-            <div className={`border px-4 py-3 text-sm font-bold ${error ? "border-red-400/40 bg-red-500/10 text-red-200" : "border-[#d8ff3e]/40 bg-[#d8ff3e]/10 text-[#eaff93]"}`}>
-              {error || message}
-            </div>
-          )}
-        </div>
-
-        <aside className="space-y-6">
-          <div className="border border-white/10 bg-gradient-to-br from-[#d8ff3e]/10 to-orange-400/[0.06] p-5">
-            <div className="flex items-center gap-3">
-              <QrCode className="h-5 w-5 text-[#d8ff3e]" />
-              <h2 className="text-lg font-black uppercase">Carne digital</h2>
-            </div>
-            {memberName ? (
-              <>
-                <div className="mt-4 border border-white/10 bg-black/40 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
-                        Socio Xtreme
-                      </p>
-                      <p className="mt-1 truncate text-lg font-black uppercase leading-tight">{memberName}</p>
-                    </div>
-                    <span className="shrink-0 border border-[#d8ff3e]/40 bg-[#d8ff3e]/10 px-2 py-1 text-[10px] font-black uppercase text-[#eaff93]">
-                      Activo
-                    </span>
-                  </div>
-                  <div className="mt-4">
-                    <Barcode value={accessCode} />
-                  </div>
-                  <p className="mt-2 text-center text-sm font-black tracking-[0.3em] text-white/70">{accessCode}</p>
+              <div className="border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-3">
+                  <Timer className="h-5 w-5 text-cyan-300" />
+                  <h2 className="text-lg font-black uppercase">Ultimos registros</h2>
                 </div>
-                <p className="mt-3 text-xs font-semibold text-white/45">
-                  Mostra este codigo en recepcion para tu check-in.
+                <div className="mt-5 space-y-3">
+                  {recentWorkouts.length ? (
+                    recentWorkouts.map((workout) => (
+                      <div key={workout.id} className="border border-white/10 bg-black/20 p-3">
+                        <p className="font-black uppercase">{workout.trainingName}</p>
+                        <p className="mt-1 text-xs font-semibold text-white/45">
+                          {workout.completedDate} - {workout.minutes} min - {workout.intensity}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm font-semibold text-white/45">
+                      Todavia no hay registros. Primer entreno y arranca la racha, pura vida.
+                    </p>
+                  )}
+                </div>
+              </div>
+              </div>
+            )}
+
+            {tab === "perfil" && (
+              <div className="space-y-6">
+              <div className="border border-white/10 bg-gradient-to-br from-[#d8ff3e]/10 to-orange-400/[0.06] p-5">
+                <div className="flex items-center gap-3">
+                  <QrCode className="h-5 w-5 text-[#d8ff3e]" />
+                  <h2 className="text-lg font-black uppercase">Carne digital</h2>
+                </div>
+                {memberName ? (
+                  <>
+                    <div className="mt-4 border border-white/10 bg-black/40 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
+                            Socio Xtreme
+                          </p>
+                          <p className="mt-1 truncate text-lg font-black uppercase leading-tight">{memberName}</p>
+                        </div>
+                        <span className="shrink-0 border border-[#d8ff3e]/40 bg-[#d8ff3e]/10 px-2 py-1 text-[10px] font-black uppercase text-[#eaff93]">
+                          Activo
+                        </span>
+                      </div>
+                      <div className="mt-4">
+                        <Barcode value={accessCode} />
+                      </div>
+                      <p className="mt-2 text-center text-sm font-black tracking-[0.3em] text-white/70">{accessCode}</p>
+                    </div>
+                    <p className="mt-3 text-xs font-semibold text-white/45">
+                      Mostra este codigo en recepcion para tu check-in.
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-4 text-sm font-semibold text-white/45">
+                    Entra con tu nombre para generar tu carne de acceso.
+                  </p>
+                )}
+              </div>
+
+              <div className="border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-3">
+                  <Bell className="h-5 w-5 text-yellow-300" />
+                  <h2 className="text-lg font-black uppercase">Recordatorios</h2>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {REMINDERS.map((reminder) => (
+                    <button
+                      key={reminder}
+                      type="button"
+                      onClick={() => setSelectedReminder(reminder)}
+                      className={`border px-3 py-3 text-left text-sm font-bold transition ${
+                        selectedReminder === reminder
+                          ? "border-yellow-300 bg-yellow-300/10 text-yellow-100"
+                          : "border-white/10 bg-black/20 text-white/55 hover:border-white/25"
+                      }`}
+                    >
+                      {reminder}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMessage(`Recordatorio listo: ${selectedReminder}`)}
+                  disabled={!unlocked}
+                  className="mt-4 w-full bg-yellow-300 px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
+                >
+                  Activar aviso
+                </button>
+              </div>
+
+              <div className="border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-[#d8ff3e]" />
+                  <h2 className="text-lg font-black uppercase">Invita a un compa</h2>
+                </div>
+                <p className="mt-4 text-sm font-semibold text-white/55">
+                  Pase de cortesia para entrenar una vez con usted.
                 </p>
-              </>
-            ) : (
-              <p className="mt-4 text-sm font-semibold text-white/45">
-                Entra con tu nombre para generar tu carne de acceso.
-              </p>
+                <div className="mt-4 border border-[#d8ff3e]/30 bg-[#d8ff3e]/10 p-4 text-center">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d8ff3e]">Codigo invitado</p>
+                  <p className="mt-2 text-2xl font-black tracking-[0.18em] text-white">
+                    XT-{accessCode.replace(/\s/g, "").slice(0, 5)}
+                  </p>
+                </div>
+              </div>
+              </div>
             )}
           </div>
-
-          <div className="border border-white/10 bg-white/[0.04] p-5">
-            <div className="flex items-center gap-3">
-              <Bell className="h-5 w-5 text-yellow-300" />
-              <h2 className="text-lg font-black uppercase">Recordatorios</h2>
-            </div>
-            <div className="mt-4 grid gap-2">
-              {REMINDERS.map((reminder) => (
-                <button
-                  key={reminder}
-                  type="button"
-                  onClick={() => setSelectedReminder(reminder)}
-                  className={`border px-3 py-3 text-left text-sm font-bold transition ${
-                    selectedReminder === reminder
-                      ? "border-yellow-300 bg-yellow-300/10 text-yellow-100"
-                      : "border-white/10 bg-black/20 text-white/55 hover:border-white/25"
-                  }`}
-                >
-                  {reminder}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => setMessage(`Recordatorio listo: ${selectedReminder}`)}
-              disabled={!unlocked}
-              className="mt-4 w-full bg-yellow-300 px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
-            >
-              Activar aviso
-            </button>
-          </div>
-
-          <div className="border border-white/10 bg-white/[0.04] p-5">
-            <div className="flex items-center gap-3">
-              <Users className="h-5 w-5 text-[#d8ff3e]" />
-              <h2 className="text-lg font-black uppercase">Invita a un compa</h2>
-            </div>
-            <p className="mt-4 text-sm font-semibold text-white/55">
-              Pase de cortesia para entrenar una vez con usted.
-            </p>
-            <div className="mt-4 border border-[#d8ff3e]/30 bg-[#d8ff3e]/10 p-4 text-center">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d8ff3e]">Codigo invitado</p>
-              <p className="mt-2 text-2xl font-black tracking-[0.18em] text-white">
-                XT-{accessCode.replace(/\s/g, "").slice(0, 5)}
-              </p>
-            </div>
-          </div>
-
-          <div className="border border-white/10 bg-white/[0.04] p-5">
-            <div className="flex items-center gap-3">
-              <Medal className="h-5 w-5 text-orange-300" />
-              <h2 className="text-lg font-black uppercase">Leaderboard</h2>
-            </div>
-            <div className="mt-5 space-y-3">
-              {leaderboard.length ? (
-                leaderboard.map((entry, index) => (
-                  <div key={entry.normalizedName || entry.memberName} className="flex items-center gap-3 border border-white/10 bg-black/20 p-3">
-                    <span className={`grid h-9 w-9 place-items-center font-black ${index === 0 ? "bg-orange-300 text-black" : "bg-white/10 text-white"}`}>
-                      {index + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-black uppercase">{entry.memberName}</p>
-                      <p className="text-xs font-semibold text-white/45">
-                        {entry.streak} dias - {entry.totalWorkouts} entrenos
-                      </p>
-                    </div>
-                    <Flame className="h-5 w-5 text-orange-300" />
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm font-semibold text-white/45">El ranking aparece cuando alguien marque entrenos.</p>
-              )}
-            </div>
-          </div>
-
-          <div className="border border-white/10 bg-white/[0.04] p-5">
-            <div className="flex items-center gap-3">
-              <Timer className="h-5 w-5 text-cyan-300" />
-              <h2 className="text-lg font-black uppercase">Ultimos registros</h2>
-            </div>
-            <div className="mt-5 space-y-3">
-              {recentWorkouts.length ? (
-                recentWorkouts.map((workout) => (
-                  <div key={workout.id} className="border border-white/10 bg-black/20 p-3">
-                    <p className="font-black uppercase">{workout.trainingName}</p>
-                    <p className="mt-1 text-xs font-semibold text-white/45">
-                      {workout.completedDate} - {workout.minutes} min - {workout.intensity}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm font-semibold text-white/45">
-                  Todavia no hay registros. Primer entreno y arranca la racha, pura vida.
-                </p>
-              )}
-            </div>
-          </div>
-        </aside>
+        )}
       </section>
     </main>
   );
