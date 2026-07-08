@@ -19,6 +19,26 @@ const TRAININGS = [
 type WorkoutEntry = { minutes?: number; completedDate?: string };
 type Membership = { plan?: string; nextBillingDate?: string; startedAt?: string };
 type BodyMetric = { date: string; weightKg: number; waistCm: number };
+type PlanItem = {
+  id: string;
+  day: string;
+  focus: string;
+  exercises: string;
+  targetMinutes: number;
+  done: boolean;
+  doneDate: string | null;
+};
+type TrainingPlan = {
+  title: string;
+  objective: string;
+  coachNote: string;
+  startDate: string;
+  endDate: string;
+  weeklySessions: number;
+  items: PlanItem[];
+  createdAt?: Date;
+  updatedAt?: Date;
+};
 type MemberDoc = {
   normalizedName?: string;
   memberName?: string;
@@ -27,6 +47,7 @@ type MemberDoc = {
   workouts?: WorkoutEntry[];
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
+  trainingPlan?: TrainingPlan;
   seeded?: boolean;
   createdAt?: Date;
 };
@@ -78,11 +99,32 @@ function hourLoadBoost() {
   return 5;
 }
 
+function toAdminPlan(plan?: TrainingPlan) {
+  if (!plan) return null;
+  const items = plan.items ?? [];
+  const doneItems = items.filter((i) => i.done).length;
+  const totalItems = items.length;
+  return {
+    title: plan.title ?? "",
+    objective: plan.objective ?? "",
+    coachNote: plan.coachNote ?? "",
+    startDate: plan.startDate ?? "",
+    endDate: plan.endDate ?? "",
+    weeklySessions: plan.weeklySessions ?? 0,
+    items,
+    doneItems,
+    totalItems,
+    progressPct: totalItems ? Math.round((doneItems / totalItems) * 100) : 0,
+    updatedAt: plan.updatedAt ?? null,
+  };
+}
+
 function toAdminMember(doc: MemberDoc) {
   const workouts = doc.workouts ?? [];
   const metrics = [...(doc.bodyMetrics ?? [])].sort((a, b) => a.date.localeCompare(b.date));
   const membership = membershipStatus(doc.membership);
   return {
+    trainingPlan: toAdminPlan(doc.trainingPlan),
     memberName: doc.memberName ?? "",
     normalizedName: doc.normalizedName ?? "",
     goal: doc.goal ?? "",
@@ -103,6 +145,39 @@ function toAdminMember(doc: MemberDoc) {
 
 function unauthorized(req: NextRequest) {
   return (req.headers.get("x-xtreme-admin") ?? "") !== ADMIN_CODE;
+}
+
+function isoDateOrEmpty(value: unknown) {
+  const raw = String(value ?? "").slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
+}
+
+function sanitizePlan(input: unknown): TrainingPlan {
+  const raw = (input ?? {}) as Record<string, unknown>;
+  const now = new Date();
+  const rawItems = Array.isArray(raw.items) ? raw.items : [];
+  const items: PlanItem[] = rawItems.slice(0, 30).map((entry, index) => {
+    const it = (entry ?? {}) as Record<string, unknown>;
+    return {
+      id: String(it.id ?? "").trim() || `plan-${now.getTime()}-${index}`,
+      day: String(it.day ?? "").trim().slice(0, 40),
+      focus: String(it.focus ?? "").trim().slice(0, 80),
+      exercises: String(it.exercises ?? "").trim().slice(0, 500),
+      targetMinutes: Math.max(0, Math.min(240, Number(it.targetMinutes) || 0)),
+      done: Boolean(it.done),
+      doneDate: isoDateOrEmpty(it.doneDate) || null,
+    };
+  });
+  return {
+    title: String(raw.title ?? "").trim().slice(0, 80),
+    objective: String(raw.objective ?? "").trim().slice(0, 160),
+    coachNote: String(raw.coachNote ?? "").trim().slice(0, 500),
+    startDate: isoDateOrEmpty(raw.startDate),
+    endDate: isoDateOrEmpty(raw.endDate),
+    weeklySessions: Math.max(0, Math.min(14, Number(raw.weeklySessions) || 0)),
+    items,
+    updatedAt: now,
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -180,6 +255,97 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("XTREME ADMIN GET", err);
     return NextResponse.json({ error: "No se pudo cargar el panel." }, { status: 500 });
+  }
+}
+
+// Crear o reemplazar el plan de entrenamiento personalizado de un socio.
+export async function POST(req: NextRequest) {
+  if (unauthorized(req)) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
+
+  try {
+    const body = (await req.json().catch(() => ({}))) as { memberName?: string; plan?: unknown };
+    const memberName = normalizeName(body.memberName);
+    if (!memberName) {
+      return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+    }
+
+    const plan = sanitizePlan(body.plan);
+    if (!plan.title) {
+      return NextResponse.json({ error: "El plan necesita un titulo." }, { status: 400 });
+    }
+
+    const db = await getDb();
+    const normalizedName = normalizeKey(memberName);
+    const now = new Date();
+    const result = await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+      { normalizedName },
+      {
+        $set: {
+          normalizedName,
+          memberName,
+          trainingPlan: { ...plan, createdAt: now },
+          updatedAt: now,
+        },
+        $setOnInsert: { workouts: [], bodyMetrics: [], createdAt: now },
+      },
+      { upsert: true },
+    );
+
+    if (!result.matchedCount && !result.upsertedCount) {
+      return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("XTREME ADMIN POST", err);
+    return NextResponse.json({ error: "No se pudo guardar el plan." }, { status: 500 });
+  }
+}
+
+// Marcar/desmarcar una sesion del plan (monitoreo de avance).
+export async function PATCH(req: NextRequest) {
+  if (unauthorized(req)) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
+
+  try {
+    const body = (await req.json().catch(() => ({}))) as {
+      memberName?: string;
+      itemId?: string;
+      done?: boolean;
+    };
+    const memberName = normalizeName(body.memberName);
+    const itemId = String(body.itemId ?? "").trim();
+    if (!memberName || !itemId) {
+      return NextResponse.json({ error: "Faltan datos." }, { status: 400 });
+    }
+
+    const db = await getDb();
+    const normalizedName = normalizeKey(memberName);
+    const done = Boolean(body.done);
+    const result = await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+      { normalizedName },
+      {
+        $set: {
+          "trainingPlan.items.$[el].done": done,
+          "trainingPlan.items.$[el].doneDate": done ? todayIso() : null,
+          "trainingPlan.updatedAt": new Date(),
+          updatedAt: new Date(),
+        },
+      },
+      { arrayFilters: [{ "el.id": itemId }] },
+    );
+
+    if (!result.matchedCount) {
+      return NextResponse.json({ error: "Sesion no encontrada." }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("XTREME ADMIN PATCH", err);
+    return NextResponse.json({ error: "No se pudo actualizar el avance." }, { status: 500 });
   }
 }
 

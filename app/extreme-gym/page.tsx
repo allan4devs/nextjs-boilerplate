@@ -149,40 +149,9 @@ function ImageTile({ src, alt, className = "" }: { src: string; alt: string; cla
   );
 }
 
-function VersionSwitcher() {
-  const links = [
-    { href: "/extreme-gym", label: "V1 Industrial", active: true },
-    { href: "/extreme-gym/v2", label: "V2 Studio" },
-    { href: "/extreme-gym/v3", label: "V3 Neon" },
-  ];
-
-  return (
-    <div className="bg-black px-5 py-2 text-white sm:px-8">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-[11px] font-black uppercase tracking-[0.16em]">
-        <span className="text-white/50">Propuesta · Opción Industrial (1/3)</span>
-        <div className="flex items-center gap-1.5">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`px-2.5 py-1 transition ${
-                link.active ? "bg-[#f6c400] text-black" : "text-white/60 hover:text-white"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function ExtremeGymLandingPage() {
   return (
     <main className="min-h-screen bg-[#070707] text-white selection:bg-[#f6c400] selection:text-black">
-      <VersionSwitcher />
-
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070707]/65 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
           <Link href="/extreme-gym" className="flex min-w-0 items-center gap-3">
@@ -234,8 +203,8 @@ export default function ExtremeGymLandingPage() {
                 {BUSINESS.location}
               </div>
               <h1 className="mt-7 max-w-4xl text-[2.45rem] font-black uppercase leading-[0.9] tracking-tight min-[420px]:text-5xl sm:text-6xl lg:text-7xl 2xl:text-8xl">
-                Conviértete en la versión
-                <span className="block text-[#f6c400]">más saludable de ti.</span>
+                Construye una rutina
+                <span className="block text-[#f6c400]">más saludable para ti.</span>
               </h1>
               <p className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-white/72">
                 Entrene en un ambiente completo para mejorar condición física, ganar energía

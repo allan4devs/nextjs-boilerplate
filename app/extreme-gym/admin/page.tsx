@@ -4,10 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Activity,
   CalendarCheck,
+  CheckCircle2,
+  ClipboardList,
   Database,
   Flame,
   Loader2,
   Lock,
+  Plus,
   RefreshCw,
   ShieldAlert,
   Timer,
@@ -15,9 +18,34 @@ import {
   TrendingUp,
   Trophy,
   Users,
+  X,
 } from "lucide-react";
 
 const ADMIN_CODE_KEY = "xtreme-admin-code";
+
+type PlanItem = {
+  id: string;
+  day: string;
+  focus: string;
+  exercises: string;
+  targetMinutes: number;
+  done: boolean;
+  doneDate: string | null;
+};
+
+type TrainingPlan = {
+  title: string;
+  objective: string;
+  coachNote: string;
+  startDate: string;
+  endDate: string;
+  weeklySessions: number;
+  items: PlanItem[];
+  doneItems: number;
+  totalItems: number;
+  progressPct: number;
+  updatedAt: string | null;
+};
 
 type AdminMember = {
   memberName: string;
@@ -33,6 +61,7 @@ type AdminMember = {
   daysRemaining: number;
   nextBillingDate: string;
   latestWeight: number | null;
+  trainingPlan: TrainingPlan | null;
   seeded: boolean;
 };
 
@@ -57,6 +86,52 @@ type AdminData = {
     classes: { trainingId: string; trainingName: string; capacity: number; reserved: number }[];
   };
 };
+
+type PlanDraft = {
+  title: string;
+  objective: string;
+  coachNote: string;
+  startDate: string;
+  endDate: string;
+  weeklySessions: number;
+  items: PlanItem[];
+};
+
+function makeItem(): PlanItem {
+  return {
+    id: `plan-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    day: "",
+    focus: "",
+    exercises: "",
+    targetMinutes: 45,
+    done: false,
+    doneDate: null,
+  };
+}
+
+function draftFromMember(member: AdminMember): PlanDraft {
+  const plan = member.trainingPlan;
+  if (!plan) {
+    return {
+      title: "",
+      objective: member.goal || "",
+      coachNote: "",
+      startDate: new Date().toISOString().slice(0, 10),
+      endDate: "",
+      weeklySessions: 3,
+      items: [makeItem(), makeItem(), makeItem()],
+    };
+  }
+  return {
+    title: plan.title,
+    objective: plan.objective,
+    coachNote: plan.coachNote,
+    startDate: plan.startDate,
+    endDate: plan.endDate,
+    weeklySessions: plan.weeklySessions,
+    items: plan.items.length ? plan.items.map((i) => ({ ...i })) : [makeItem()],
+  };
+}
 
 const STATUS_STYLES: Record<AdminMember["membershipStatus"], string> = {
   active: "border-lime-300/40 bg-lime-300/10 text-lime-200",
@@ -100,6 +175,9 @@ export default function XtremeAdminPage() {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [planMember, setPlanMember] = useState<AdminMember | null>(null);
+  const [planDraft, setPlanDraft] = useState<PlanDraft | null>(null);
+  const [savingPlan, setSavingPlan] = useState(false);
 
   const load = useCallback(async (adminCode: string) => {
     setIsLoading(true);
@@ -175,6 +253,72 @@ export default function XtremeAdminPage() {
       setError(err instanceof Error ? err.message : "Error al eliminar.");
     } finally {
       setBusy("");
+    }
+  }
+
+  function openPlan(member: AdminMember) {
+    setPlanMember(member);
+    setPlanDraft(draftFromMember(member));
+    setError("");
+    setMessage("");
+  }
+
+  function closePlan() {
+    setPlanMember(null);
+    setPlanDraft(null);
+  }
+
+  function updateItem(id: string, patch: Partial<PlanItem>) {
+    setPlanDraft((draft) =>
+      draft
+        ? { ...draft, items: draft.items.map((i) => (i.id === id ? { ...i, ...patch } : i)) }
+        : draft,
+    );
+  }
+
+  async function savePlan() {
+    if (!code || !planMember || !planDraft) return;
+    if (!planDraft.title.trim()) {
+      setError("El plan necesita un titulo.");
+      return;
+    }
+    setSavingPlan(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/xtreme/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        body: JSON.stringify({ memberName: planMember.memberName, plan: planDraft }),
+      });
+      const json = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok) throw new Error(json.error ?? "No se pudo guardar el plan.");
+      setMessage(`Plan guardado para ${planMember.memberName}.`);
+      closePlan();
+      await load(code);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar el plan.");
+    } finally {
+      setSavingPlan(false);
+    }
+  }
+
+  async function toggleItem(memberName: string, item: PlanItem) {
+    if (!code) return;
+    const nextDone = !item.done;
+    // Optimista en el modal.
+    updateItem(item.id, { done: nextDone, doneDate: nextDone ? new Date().toISOString().slice(0, 10) : null });
+    try {
+      const response = await fetch("/api/xtreme/admin", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        body: JSON.stringify({ memberName, itemId: item.id, done: nextDone }),
+      });
+      if (!response.ok) throw new Error();
+      await load(code);
+    } catch {
+      updateItem(item.id, { done: item.done, doneDate: item.doneDate });
+      setError("No se pudo actualizar el avance.");
     }
   }
 
@@ -347,6 +491,7 @@ export default function XtremeAdminPage() {
                       <th className="px-3 py-3">Membresia</th>
                       <th className="px-3 py-3">Ultimo</th>
                       <th className="px-3 py-3">Peso</th>
+                      <th className="px-3 py-3">Plan</th>
                       <th className="px-3 py-3" />
                     </tr>
                   </thead>
@@ -386,6 +531,36 @@ export default function XtremeAdminPage() {
                         <td className="px-3 py-3 text-white/60">{m.lastWorkoutDate ?? "—"}</td>
                         <td className="px-3 py-3 text-white/60">{m.latestWeight ? `${m.latestWeight} kg` : "—"}</td>
                         <td className="px-3 py-3">
+                          {m.trainingPlan ? (
+                            <button
+                              type="button"
+                              onClick={() => openPlan(m)}
+                              className="min-w-[132px] text-left"
+                            >
+                              <div className="flex items-center justify-between gap-2 text-[11px] font-black uppercase text-lime-200">
+                                <span className="truncate">{m.trainingPlan.title || "Plan"}</span>
+                                <span className="shrink-0 text-white/50">
+                                  {m.trainingPlan.doneItems}/{m.trainingPlan.totalItems}
+                                </span>
+                              </div>
+                              <div className="mt-1.5 h-2 w-full border border-white/10 bg-black/45">
+                                <div
+                                  className="h-full bg-lime-300"
+                                  style={{ width: `${m.trainingPlan.progressPct}%` }}
+                                />
+                              </div>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openPlan(m)}
+                              className="inline-flex items-center gap-1.5 border border-white/15 px-2.5 py-1.5 text-[11px] font-black uppercase text-white/70 transition hover:border-lime-300 hover:text-lime-200"
+                            >
+                              <Plus className="h-3.5 w-3.5" /> Crear
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-3 py-3">
                           <button
                             type="button"
                             onClick={() => void removeMember(m.memberName)}
@@ -404,7 +579,7 @@ export default function XtremeAdminPage() {
                     ))}
                     {!data.members.length && (
                       <tr>
-                        <td colSpan={10} className="px-5 py-10 text-center text-sm font-semibold text-white/45">
+                        <td colSpan={11} className="px-5 py-10 text-center text-sm font-semibold text-white/45">
                           No hay socios todavia. Toca &quot;Seed demo&quot; para generar clientes de prueba.
                         </td>
                       </tr>
@@ -416,6 +591,260 @@ export default function XtremeAdminPage() {
           </>
         ) : null}
       </section>
+
+      {planMember && planDraft && (
+        <PlanModal
+          member={planMember}
+          draft={planDraft}
+          saving={savingPlan}
+          onClose={closePlan}
+          onChange={setPlanDraft}
+          onSave={() => void savePlan()}
+          onToggleItem={(item) => void toggleItem(planMember.memberName, item)}
+        />
+      )}
     </main>
+  );
+}
+
+function PlanModal({
+  member,
+  draft,
+  saving,
+  onClose,
+  onChange,
+  onSave,
+  onToggleItem,
+}: {
+  member: AdminMember;
+  draft: PlanDraft;
+  saving: boolean;
+  onClose: () => void;
+  onChange: (draft: PlanDraft) => void;
+  onSave: () => void;
+  onToggleItem: (item: PlanItem) => void;
+}) {
+  const doneItems = draft.items.filter((i) => i.done).length;
+  const progressPct = draft.items.length ? Math.round((doneItems / draft.items.length) * 100) : 0;
+
+  function setItem(id: string, patch: Partial<PlanItem>) {
+    onChange({ ...draft, items: draft.items.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
+  }
+  function addItem() {
+    onChange({ ...draft, items: [...draft.items, makeItem()] });
+  }
+  function removeItem(id: string) {
+    onChange({ ...draft, items: draft.items.filter((i) => i.id !== id) });
+  }
+
+  const inputClass =
+    "w-full border border-white/12 bg-black/40 px-3 py-2 text-sm font-semibold text-white outline-none transition placeholder:text-white/30 focus:border-lime-300";
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-start overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm sm:place-items-center">
+      <div className="w-full max-w-3xl border border-white/12 bg-[#0d0d0d] text-white">
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <ClipboardList className="h-5 w-5 text-lime-300" />
+            <div>
+              <h2 className="text-lg font-black uppercase leading-tight">Plan personalizado</h2>
+              <p className="text-xs font-bold uppercase tracking-wide text-white/45">{member.memberName}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="grid h-9 w-9 place-items-center border border-white/10 text-white/60 transition hover:border-white/30 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
+          {/* Progreso / monitoreo */}
+          <div className="border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center justify-between text-xs font-black uppercase tracking-wide text-white/55">
+              <span>Avance del plan</span>
+              <span className="text-lime-300">
+                {doneItems}/{draft.items.length} · {progressPct}%
+              </span>
+            </div>
+            <div className="mt-3 h-2.5 w-full border border-white/10 bg-black/45">
+              <div className="h-full bg-lime-300 transition-all" style={{ width: `${progressPct}%` }} />
+            </div>
+          </div>
+
+          {/* Cabecera del plan */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block sm:col-span-2">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-white/45">Titulo</span>
+              <input
+                value={draft.title}
+                onChange={(e) => onChange({ ...draft, title: e.target.value })}
+                placeholder="Ej. Hipertrofia 8 semanas"
+                className={inputClass}
+              />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-white/45">Objetivo</span>
+              <input
+                value={draft.objective}
+                onChange={(e) => onChange({ ...draft, objective: e.target.value })}
+                placeholder="Ej. Bajar grasa y ganar fuerza"
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-white/45">Inicio</span>
+              <input
+                type="date"
+                value={draft.startDate}
+                onChange={(e) => onChange({ ...draft, startDate: e.target.value })}
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-white/45">Fin</span>
+              <input
+                type="date"
+                value={draft.endDate}
+                onChange={(e) => onChange({ ...draft, endDate: e.target.value })}
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-white/45">
+                Sesiones / semana
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={14}
+                value={draft.weeklySessions}
+                onChange={(e) => onChange({ ...draft, weeklySessions: Number(e.target.value) })}
+                className={inputClass}
+              />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-white/45">
+                Nota del coach
+              </span>
+              <textarea
+                value={draft.coachNote}
+                onChange={(e) => onChange({ ...draft, coachNote: e.target.value })}
+                rows={2}
+                placeholder="Indicaciones, descanso, nutricion..."
+                className={`${inputClass} resize-none`}
+              />
+            </label>
+          </div>
+
+          {/* Sesiones */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase text-white/70">Sesiones</h3>
+              <button
+                type="button"
+                onClick={addItem}
+                className="inline-flex items-center gap-1.5 border border-white/15 px-3 py-1.5 text-xs font-black uppercase text-white/70 transition hover:border-lime-300 hover:text-lime-200"
+              >
+                <Plus className="h-3.5 w-3.5" /> Agregar
+              </button>
+            </div>
+
+            {draft.items.map((item, index) => (
+              <div
+                key={item.id}
+                className={`border p-3 ${item.done ? "border-lime-300/40 bg-lime-300/[0.06]" : "border-white/10 bg-black/25"}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onToggleItem(item)}
+                      aria-label={item.done ? "Marcar como pendiente" : "Marcar como hecha"}
+                      className={`grid h-7 w-7 place-items-center border transition ${
+                        item.done
+                          ? "border-lime-300 bg-lime-300 text-black"
+                          : "border-white/20 text-white/40 hover:border-lime-300 hover:text-lime-200"
+                      }`}
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                    </button>
+                    <span className="text-xs font-black uppercase text-white/45">
+                      Sesion {index + 1}
+                      {item.done && item.doneDate ? ` · ${item.doneDate}` : ""}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.id)}
+                    aria-label="Eliminar sesion"
+                    className="grid h-7 w-7 place-items-center border border-white/10 text-white/40 transition hover:border-red-400 hover:text-red-300"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_120px]">
+                  <input
+                    value={item.day}
+                    onChange={(e) => setItem(item.id, { day: e.target.value })}
+                    placeholder="Dia (Lunes)"
+                    className={inputClass}
+                  />
+                  <input
+                    value={item.focus}
+                    onChange={(e) => setItem(item.id, { focus: e.target.value })}
+                    placeholder="Enfoque (Piernas)"
+                    className={inputClass}
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={240}
+                    value={item.targetMinutes}
+                    onChange={(e) => setItem(item.id, { targetMinutes: Number(e.target.value) })}
+                    placeholder="Min"
+                    className={inputClass}
+                  />
+                </div>
+                <textarea
+                  value={item.exercises}
+                  onChange={(e) => setItem(item.id, { exercises: e.target.value })}
+                  rows={2}
+                  placeholder="Ejercicios: Sentadilla 4x8, Peso muerto 3x10..."
+                  className={`${inputClass} mt-2 resize-none`}
+                />
+              </div>
+            ))}
+            {!draft.items.length && (
+              <p className="border border-dashed border-white/12 px-4 py-6 text-center text-sm font-semibold text-white/40">
+                Sin sesiones. Toca &quot;Agregar&quot; para armar el plan.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-white/10 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="border border-white/15 px-4 py-2.5 text-sm font-black uppercase text-white/70 transition hover:border-white/30 hover:text-white"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 bg-lime-300 px-5 py-2.5 text-sm font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+            Guardar plan
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
