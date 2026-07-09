@@ -130,6 +130,11 @@ export default function ExtremeGymCheckout() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const paypalRef = useRef<HTMLDivElement>(null);
+  const checkoutRef = useRef<{
+    form: FormState;
+    formReady: boolean;
+    selected: CheckoutOption;
+  } | null>(null);
 
   const selected = useMemo(
     () => CHECKOUT_OPTIONS.find((option) => option.id === selectedId) ?? CHECKOUT_OPTIONS[0],
@@ -137,6 +142,10 @@ export default function ExtremeGymCheckout() {
   );
 
   const formReady = Boolean(form.name.trim() && form.phone.trim() && form.email.trim());
+
+  useEffect(() => {
+    checkoutRef.current = { form, formReady, selected };
+  }, [form, formReady, selected]);
 
   const whatsappMessage = useMemo(
     () =>
@@ -214,24 +223,28 @@ export default function ExtremeGymCheckout() {
               label: "paypal",
             },
             createOrder: async () => {
+              const currentCheckout = checkoutRef.current;
               setError("");
               setStatus("Creando orden segura...");
 
-              if (!formReady) {
+              if (!currentCheckout?.formReady) {
                 throw new Error("Complete nombre, teléfono y correo antes de pagar.");
               }
 
               const response = await fetch("/api/xtreme/checkout/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ optionId: selected.id, customer: form }),
+                body: JSON.stringify({ optionId: currentCheckout.selected.id, customer: currentCheckout.form }),
               });
               const data = (await response.json()) as { orderID?: string; message?: string };
               if (!response.ok || !data.orderID) throw new Error(data.message || "No se pudo crear la orden.");
               return data.orderID;
             },
             onApprove: async (data: { orderID?: string }) => {
+              const currentCheckout = checkoutRef.current;
               if (!data.orderID) throw new Error("PayPal no devolvió número de orden.");
+
+              if (!currentCheckout?.formReady) throw new Error("Complete nombre, teléfono y correo antes de confirmar.");
 
               setStatus("Confirmando pago...");
               const response = await fetch("/api/xtreme/checkout/capture-order", {
@@ -239,8 +252,8 @@ export default function ExtremeGymCheckout() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   orderID: data.orderID,
-                  optionId: selected.id,
-                  customer: form,
+                  optionId: currentCheckout.selected.id,
+                  customer: currentCheckout.form,
                 }),
               });
               const result = (await response.json()) as { success?: boolean; captureID?: string; message?: string };
@@ -270,7 +283,7 @@ export default function ExtremeGymCheckout() {
       cancelled = true;
       container.innerHTML = "";
     };
-  }, [form, formReady, paypalConfig, selected]);
+  }, [paypalConfig]);
 
   function updateForm(field: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -327,6 +340,7 @@ export default function ExtremeGymCheckout() {
             <label className="block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Nombre</span>
               <input
+                autoComplete="name"
                 value={form.name}
                 onChange={(event) => updateForm("name", event.target.value)}
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
@@ -336,6 +350,8 @@ export default function ExtremeGymCheckout() {
             <label className="block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Teléfono</span>
               <input
+                autoComplete="tel"
+                inputMode="tel"
                 value={form.phone}
                 onChange={(event) => updateForm("phone", event.target.value)}
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
@@ -346,6 +362,8 @@ export default function ExtremeGymCheckout() {
               <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Correo</span>
               <input
                 type="email"
+                autoComplete="email"
+                inputMode="email"
                 value={form.email}
                 onChange={(event) => updateForm("email", event.target.value)}
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"

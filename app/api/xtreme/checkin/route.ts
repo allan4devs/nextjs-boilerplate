@@ -151,7 +151,9 @@ export async function POST(req: NextRequest) {
       if (!/^\d{4}$/.test(pin)) {
         return NextResponse.json({ error: "PIN invalido." }, { status: 400 });
       }
-      const pinDoc = await db.collection(PINS_COLLECTION).findOne({ normalizedName });
+      const pinDoc = await db
+        .collection<{ pinHash?: string }>(PINS_COLLECTION)
+        .findOne({ normalizedName });
       if (!pinDoc?.pinHash) {
         return NextResponse.json({ error: "Este socio no tiene PIN configurado." }, { status: 400 });
       }

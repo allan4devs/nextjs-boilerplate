@@ -449,6 +449,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, payment });
     }
 
+    // Registrar metrica corporal (para que la entrenadora personal haga seguimiento)
+    if (action === "metric") {
+      const memberName = normalizeName(body.memberName);
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+      const weightKg = Number(body.weightKg);
+      const waistCm = Number(body.waistCm);
+      if (!weightKg || !waistCm) {
+        return NextResponse.json({ error: "Peso y cintura son requeridos." }, { status: 400 });
+      }
+
+      const db = await getDb();
+      const normalizedName = normalizeKey(memberName);
+      const now = new Date();
+      const date = String(body.date ?? todayIso()).slice(0, 10) || todayIso();
+      const note = String(body.note ?? "").trim().slice(0, 200);
+
+      const metric = {
+        id: `metric-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
+        date,
+        weightKg: Math.round(weightKg * 10) / 10,
+        waistCm: Math.round(waistCm),
+        note,
+        createdAt: now,
+      };
+
+      await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName },
+        {
+          $push: { bodyMetrics: metric },
+          $set: { updatedAt: now },
+          $setOnInsert: { workouts: [], createdAt: now },
+        },
+        { upsert: true },
+      );
+
+      return NextResponse.json({ ok: true, metric });
+    }
+
     return NextResponse.json({ error: "Accion invalida." }, { status: 400 });
   } catch (err) {
     console.error("XTREME ADMIN POST", err);

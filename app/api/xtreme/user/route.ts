@@ -31,14 +31,37 @@ type BodyMetric = {
   createdAt: Date;
 };
 
+type PlanItem = {
+  id: string;
+  day: string;
+  focus: string;
+  exercises: string;
+  targetMinutes: number;
+  done: boolean;
+  doneDate: string | null;
+};
+
+type TrainingPlan = {
+  title: string;
+  objective: string;
+  coachNote: string;
+  startDate: string;
+  endDate: string;
+  weeklySessions: number;
+  items: PlanItem[];
+};
+
 type XtremeMemberDoc = {
   normalizedName: string;
   memberName: string;
   goal: string;
   favoriteTraining: string;
+  phone?: string;
+  email?: string;
   workouts: WorkoutEntry[];
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
+  trainingPlan?: TrainingPlan;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -49,6 +72,14 @@ function normalizeName(value: unknown) {
 
 function normalizeKey(value: string) {
   return value.trim().toUpperCase();
+}
+
+function normalizePhone(value: unknown) {
+  return String(value ?? "").replace(/[^\d+]/g, "").slice(0, 24);
+}
+
+function normalizeEmail(value: unknown) {
+  return String(value ?? "").trim().toLowerCase().slice(0, 80);
 }
 
 function isoDate(value: unknown) {
@@ -113,6 +144,25 @@ function membershipWithStatus(membership?: Membership) {
   };
 }
 
+function publicPlan(plan?: TrainingPlan) {
+  if (!plan) return null;
+  const items = plan.items ?? [];
+  const doneItems = items.filter((item) => item.done).length;
+  const totalItems = items.length;
+  return {
+    title: plan.title ?? "",
+    objective: plan.objective ?? "",
+    coachNote: plan.coachNote ?? "",
+    startDate: plan.startDate ?? "",
+    endDate: plan.endDate ?? "",
+    weeklySessions: plan.weeklySessions ?? 0,
+    items,
+    doneItems,
+    totalItems,
+    progressPct: totalItems ? Math.round((doneItems / totalItems) * 100) : 0,
+  };
+}
+
 function publicMember(doc: XtremeMemberDoc | null) {
   const workouts = doc?.workouts ?? [];
   const bodyMetrics = [...(doc?.bodyMetrics ?? [])].sort((a, b) => a.date.localeCompare(b.date));
@@ -124,6 +174,8 @@ function publicMember(doc: XtremeMemberDoc | null) {
     normalizedName: doc?.normalizedName ?? "",
     goal: doc?.goal ?? "",
     favoriteTraining,
+    phone: doc?.phone ?? "",
+    email: doc?.email ?? "",
     workouts,
     streak: computeStreak(workouts),
     totalWorkouts: workouts.length,
@@ -132,6 +184,7 @@ function publicMember(doc: XtremeMemberDoc | null) {
     membership: membershipWithStatus(doc?.membership),
     bodyMetrics,
     latestBodyMetric: bodyMetrics.at(-1) ?? null,
+    trainingPlan: publicPlan(doc?.trainingPlan),
   };
 }
 
@@ -167,6 +220,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       member: publicMember(doc),
+      exists: Boolean(doc),
       leaderboard: await leaderboard(),
     });
   } catch (err) {
@@ -183,6 +237,8 @@ export async function POST(req: NextRequest) {
     const favoriteTraining = String(body.favoriteTraining ?? "").trim().slice(0, 80);
     const plan = String(body.plan ?? "Xtreme Mensual").trim().slice(0, 80);
     const nextBillingDate = isoDate(body.nextBillingDate);
+    const phone = normalizePhone(body.phone);
+    const email = normalizeEmail(body.email);
 
     if (!memberName) {
       return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
@@ -191,22 +247,56 @@ export async function POST(req: NextRequest) {
     const db = await getDb();
     const normalizedName = normalizeKey(memberName);
     const now = new Date();
+    const existing = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+
+    if (phone || email) {
+      const duplicate = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({
+        normalizedName: { $ne: normalizedName },
+        $or: [
+          ...(phone ? [{ phone }] : []),
+          ...(email ? [{ email }] : []),
+        ],
+      });
+
+      if (duplicate) {
+        return NextResponse.json(
+          {
+            error: `Ese contacto ya esta ligado a ${duplicate.memberName}. Use ese perfil o hable con recepcion.`,
+            duplicate: {
+              memberName: duplicate.memberName,
+              phone: duplicate.phone ?? "",
+              email: duplicate.email ?? "",
+            },
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    const set: Partial<XtremeMemberDoc> = {
+      normalizedName,
+      memberName,
+      goal,
+      favoriteTraining,
+      updatedAt: now,
+    };
+
+    if (phone) set.phone = phone;
+    if (email) set.email = email;
+
+    if (!existing) {
+      set.membership = {
+        plan,
+        nextBillingDate,
+        startedAt: new Date().toISOString().slice(0, 10),
+        status: "active",
+      };
+    }
+
     await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
       { normalizedName },
       {
-        $set: {
-          normalizedName,
-          memberName,
-          goal,
-          favoriteTraining,
-          membership: {
-            plan,
-            nextBillingDate,
-            startedAt: new Date().toISOString().slice(0, 10),
-            status: "active",
-          },
-          updatedAt: now,
-        },
+        $set: set,
         $setOnInsert: {
           workouts: [],
           bodyMetrics: [],
@@ -234,6 +324,35 @@ export async function PATCH(req: NextRequest) {
     const intensity = String(body.intensity ?? "").trim();
     const minutes = Math.max(1, Math.min(240, Number(body.minutes) || 45));
     const completedDate = isoDate(body.completedDate);
+
+    if (action === "planItem") {
+      const itemId = String(body.itemId ?? "").trim();
+      if (!memberName || !itemId) {
+        return NextResponse.json({ error: "Falta la sesion del plan." }, { status: 400 });
+      }
+
+      const db = await getDb();
+      const normalizedName = normalizeKey(memberName);
+      const done = Boolean(body.done);
+      const result = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName },
+        {
+          $set: {
+            "trainingPlan.items.$[el].done": done,
+            "trainingPlan.items.$[el].doneDate": done ? completedDate : null,
+            updatedAt: new Date(),
+          },
+        },
+        { arrayFilters: [{ "el.id": itemId }] },
+      );
+
+      if (!result.matchedCount) {
+        return NextResponse.json({ error: "No se encontro la sesion." }, { status: 404 });
+      }
+
+      const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });
+    }
 
     if (action === "bodyMetric") {
       const weightKg = Math.max(1, Math.min(400, Number(body.weightKg) || 0));

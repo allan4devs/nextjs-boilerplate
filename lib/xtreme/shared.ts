@@ -46,6 +46,14 @@ export type BodyMetric = {
   note?: string;
 };
 
+export type WorkoutHistoryItem = {
+  id?: string;
+  completedDate: string;
+  trainingName: string;
+  minutes: number;
+  intensity?: string;
+};
+
 export type PlanItem = {
   id: string;
   day: string;
@@ -236,6 +244,19 @@ export function toAdminMember(doc: MemberDoc) {
   const membership = membershipStatus(doc.membership);
   const name = doc.memberName ?? "";
   const key = doc.normalizedName ?? normalizeKey(name);
+
+  // Recent workouts for admin detail view (last 8)
+  const recentWorkouts: WorkoutHistoryItem[] = [...workouts]
+    .sort((a, b) => (b.completedDate || "").localeCompare(a.completedDate || ""))
+    .slice(0, 8)
+    .map((w) => ({
+      id: w.id,
+      completedDate: w.completedDate || "",
+      trainingName: w.trainingName || "Entrenamiento",
+      minutes: w.minutes || 0,
+      intensity: w.intensity,
+    }));
+
   return {
     trainingPlan: toAdminPlan(doc.trainingPlan),
     memberName: name,
@@ -265,6 +286,9 @@ export function toAdminMember(doc: MemberDoc) {
     latestWaist: metrics.at(-1)?.waistCm ?? null,
     seeded: Boolean(doc.seeded),
     createdAt: doc.createdAt ?? null,
+    // Rich data for detailed view (entrenadora)
+    bodyMetrics: metrics.slice(-10), // last 10 measurements
+    recentWorkouts,
   };
 }
 

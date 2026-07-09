@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Check,
   ChevronRight,
+  ClipboardList,
   CreditCard,
   Delete,
   Dumbbell,
@@ -112,6 +113,96 @@ const ROUTINES = [
   },
 ];
 
+const MACHINE_GUIDE = [
+  {
+    id: "leg-press",
+    name: "Prensa de pierna",
+    zone: "Pierna",
+    level: "Base",
+    muscles: ["Cuadriceps", "Gluteo", "Femoral"],
+    setup: "Espalda completa apoyada, pies al ancho de hombros y rodillas alineadas con los pies.",
+    tips: ["Baje controlado sin despegar la cadera", "Empuje con todo el pie", "No bloquee las rodillas arriba"],
+    mistakes: ["Rodillas hacia adentro", "Rango corto sin control", "Levantar la cadera del asiento"],
+    starter: "3 series de 10 a 12 reps con peso que pueda controlar.",
+    accent: "from-yellow-300 to-orange-400",
+  },
+  {
+    id: "chest-press",
+    name: "Press de pecho",
+    zone: "Pecho",
+    level: "Base",
+    muscles: ["Pecho", "Triceps", "Hombro frontal"],
+    setup: "Ajuste el asiento para que las agarraderas queden a media altura del pecho.",
+    tips: ["Mantenga escapulas atras", "Empuje sin despegar la espalda", "Regrese lento hasta sentir estiramiento"],
+    mistakes: ["Subir los hombros", "Rebotar el peso", "Abrir demasiado los codos"],
+    starter: "3 series de 8 a 12 reps, descansando 60 a 90 segundos.",
+    accent: "from-red-400 to-rose-500",
+  },
+  {
+    id: "lat-pulldown",
+    name: "Jalon al pecho",
+    zone: "Espalda",
+    level: "Base",
+    muscles: ["Dorsal", "Biceps", "Espalda media"],
+    setup: "Asegure las piernas, pecho alto y agarre un poco mas ancho que hombros.",
+    tips: ["Jale hacia la parte alta del pecho", "Piense en bajar los codos", "Controle el regreso sin soltar tension"],
+    mistakes: ["Jalar detras de la nuca", "Usar impulso del torso", "Encoger los hombros"],
+    starter: "3 series de 10 reps con pausa corta abajo.",
+    accent: "from-sky-300 to-cyan-500",
+  },
+  {
+    id: "seated-row",
+    name: "Remo sentado",
+    zone: "Espalda",
+    level: "Intermedio",
+    muscles: ["Espalda media", "Dorsal", "Biceps"],
+    setup: "Pecho firme, columna neutral y agarre con brazos estirados sin redondear la espalda.",
+    tips: ["Lleve los codos atras", "Apriete espalda un segundo", "Vuelva lento al inicio"],
+    mistakes: ["Balancear el cuerpo", "Redondear la espalda", "Jalar solo con brazos"],
+    starter: "3 series de 10 a 12 reps con tempo controlado.",
+    accent: "from-cyan-300 to-blue-500",
+  },
+  {
+    id: "leg-curl",
+    name: "Curl femoral",
+    zone: "Pierna",
+    level: "Base",
+    muscles: ["Femoral", "Pantorrilla", "Gluteo estabilizador"],
+    setup: "Alinee la rodilla con el eje de la maquina y el rodillo sobre la parte baja de la pierna.",
+    tips: ["Contraiga atras sin arquear la espalda", "No deje caer el peso", "Use rango completo"],
+    mistakes: ["Levantar la cadera", "Mover muy rapido", "Peso excesivo"],
+    starter: "3 series de 12 reps, perfecto para cerrar pierna.",
+    accent: "from-lime-300 to-emerald-500",
+  },
+  {
+    id: "cable-station",
+    name: "Polea ajustable",
+    zone: "Full body",
+    level: "Versatil",
+    muscles: ["Core", "Hombros", "Brazos", "Gluteo"],
+    setup: "Ajuste la polea segun el ejercicio y mantenga una postura estable antes de iniciar.",
+    tips: ["Empiece liviano para sentir trayectoria", "Mantenga abdomen firme", "Evite tirones bruscos"],
+    mistakes: ["Perder postura", "Cambiar angulo a mitad de repeticion", "Usar impulso"],
+    starter: "2 a 4 series de 12 reps segun el ejercicio elegido.",
+    accent: "from-fuchsia-400 to-purple-500",
+  },
+];
+
+const GUIDE_WORKOUTS = [
+  {
+    goal: "Primer dia",
+    steps: ["Prensa 3x10", "Press pecho 3x10", "Jalon 3x10", "Curl femoral 2x12"],
+  },
+  {
+    goal: "Fuerza base",
+    steps: ["Prensa 4x8", "Remo sentado 4x8", "Press pecho 4x8", "Polea core 3x12"],
+  },
+  {
+    goal: "Control tecnico",
+    steps: ["Jalon 3x12 lento", "Curl femoral 3x12", "Remo sentado 3x10", "Polea 3x15"],
+  },
+];
+
 const REMINDERS = [
   "Tu clase reservada es en 1 hora.",
   "No rompas la racha: hoy toca aunque sea suave.",
@@ -121,6 +212,7 @@ const REMINDERS = [
 const TABS = [
   { id: "resumen", label: "Resumen", icon: Activity },
   { id: "entrenar", label: "Entrenar", icon: Dumbbell },
+  { id: "maquinas", label: "Maquinas", icon: ShieldCheck },
   { id: "progreso", label: "Progreso", icon: TrendingUp },
   { id: "perfil", label: "Perfil", icon: UserRound },
 ] as const;
@@ -142,6 +234,8 @@ type Member = {
   normalizedName: string;
   goal: string;
   favoriteTraining: string;
+  phone: string;
+  email: string;
   workouts: Workout[];
   streak: number;
   totalWorkouts: number;
@@ -156,6 +250,7 @@ type Member = {
   };
   bodyMetrics: BodyMetric[];
   latestBodyMetric: BodyMetric | null;
+  trainingPlan: MemberPlan | null;
 };
 
 type BodyMetric = {
@@ -166,10 +261,39 @@ type BodyMetric = {
   note: string;
 };
 
+type PlanItem = {
+  id: string;
+  day: string;
+  focus: string;
+  exercises: string;
+  targetMinutes: number;
+  done: boolean;
+  doneDate: string | null;
+};
+
+type MemberPlan = {
+  title: string;
+  objective: string;
+  coachNote: string;
+  startDate: string;
+  endDate: string;
+  weeklySessions: number;
+  items: PlanItem[];
+  doneItems: number;
+  totalItems: number;
+  progressPct: number;
+};
+
 type MembersResponse = {
   member: Member | null;
   leaderboard: Member[];
+  exists?: boolean;
   error?: string;
+  duplicate?: {
+    memberName: string;
+    phone: string;
+    email: string;
+  };
 };
 
 type ReservationState = Record<
@@ -232,6 +356,8 @@ function initialMember(name = ""): Member {
     normalizedName: name.toUpperCase(),
     goal: "",
     favoriteTraining: "",
+    phone: "",
+    email: "",
     workouts: [],
     streak: 0,
     totalWorkouts: 0,
@@ -246,6 +372,7 @@ function initialMember(name = ""): Member {
     },
     bodyMetrics: [],
     latestBodyMetric: null,
+    trainingPlan: null,
   };
 }
 
@@ -318,18 +445,35 @@ function PinModal({
   mode: initialMode,
   onSuccess,
   onChangeMember,
+  onDone,
 }: {
   memberName: string;
-  mode: "set" | "verify";
+  mode: "set" | "verify" | "change";
   onSuccess: () => void;
   onChangeMember: () => void;
+  onDone?: (message: string) => void;
 }) {
-  const [mode, setMode] = useState(initialMode);
-  const [step, setStep] = useState<"enter" | "confirm">("enter");
+  const [mode, setMode] = useState<"set" | "verify" | "change" | "recover">(initialMode);
+  const [step, setStep] = useState<"enter" | "new" | "confirm">("enter");
   const [firstPin, setFirstPin] = useState("");
+  const [currentPin, setCurrentPin] = useState("");
+  const [recoveryContact, setRecoveryContact] = useState("");
   const [digits, setDigits] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const resetPinFlow = useCallback((nextMode: "set" | "verify" | "change" | "recover") => {
+    setMode(nextMode);
+    setStep("enter");
+    setDigits("");
+    setFirstPin("");
+    setCurrentPin("");
+    setError("");
+  }, []);
+
+  useEffect(() => {
+    resetPinFlow(initialMode);
+  }, [initialMode, resetPinFlow]);
 
   const completePin = useCallback(
     async (pin: string) => {
@@ -340,20 +484,53 @@ function PinModal({
         return;
       }
 
-      if (mode === "set" && pin !== firstPin) {
+      if (mode === "change" && step === "enter") {
+        setCurrentPin(pin);
+        setDigits("");
+        setStep("new");
+        return;
+      }
+
+      if (mode === "change" && step === "new") {
+        setFirstPin(pin);
+        setDigits("");
+        setStep("confirm");
+        return;
+      }
+
+      if (mode === "recover" && step === "enter") {
+        if (!recoveryContact.trim()) {
+          setError("Escriba su telefono o correo registrado.");
+          setDigits("");
+          return;
+        }
+        setFirstPin(pin);
+        setDigits("");
+        setStep("confirm");
+        return;
+      }
+
+      if ((mode === "set" || mode === "change" || mode === "recover") && pin !== firstPin) {
         setError("Los PIN no coinciden.");
         setDigits("");
         setFirstPin("");
-        setStep("enter");
+        setStep(mode === "change" ? "new" : "enter");
         return;
       }
 
       setIsLoading(true);
       try {
+        const action = mode === "recover" ? "recover" : mode;
         const response = await fetch("/api/xtreme/pin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ memberName, pin, action: mode }),
+          body: JSON.stringify({
+            memberName,
+            pin,
+            action,
+            currentPin,
+            recoveryContact,
+          }),
         });
         const data = (await response.json()) as { valid?: boolean; error?: string };
 
@@ -372,6 +549,13 @@ function PinModal({
           return;
         }
 
+        if (mode === "change") {
+          onDone?.("PIN actualizado. Sesion protegida.");
+        }
+        if (mode === "recover") {
+          onDone?.("PIN recuperado. Guardelo bien para la proxima.");
+        }
+
         onSuccess();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error de conexion.");
@@ -380,7 +564,7 @@ function PinModal({
         setIsLoading(false);
       }
     },
-    [firstPin, memberName, mode, onSuccess, step],
+    [currentPin, firstPin, memberName, mode, onDone, onSuccess, recoveryContact, step],
   );
 
   const pressDigit = useCallback(
@@ -396,6 +580,8 @@ function PinModal({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") return;
       if (/^\d$/.test(event.key)) {
         event.preventDefault();
         pressDigit(event.key);
@@ -409,11 +595,30 @@ function PinModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [pressDigit]);
 
-  const title = mode === "set" ? (step === "enter" ? "Cree su PIN" : "Confirme su PIN") : "Ingrese su PIN";
+  const title =
+    mode === "set"
+      ? step === "enter"
+        ? "Cree su PIN"
+        : "Confirme su PIN"
+      : mode === "change"
+        ? step === "enter"
+          ? "PIN actual"
+          : step === "new"
+            ? "Nuevo PIN"
+            : "Confirme PIN"
+        : mode === "recover"
+          ? step === "enter"
+            ? "Nuevo PIN"
+            : "Confirme PIN"
+          : "Ingrese su PIN";
   const subtitle =
     mode === "set"
       ? "4 digitos para proteger su racha y entrenos"
-      : "Entramos a su perfil Xtreme";
+      : mode === "change"
+        ? "Primero validamos el PIN actual"
+        : mode === "recover"
+          ? "Validamos su telefono o correo registrado"
+          : "Entramos a su perfil Xtreme";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
@@ -425,6 +630,15 @@ function PinModal({
         <h2 className="mt-2 text-2xl font-black uppercase text-white">{title}</h2>
         <p className="mt-2 text-sm font-semibold text-white/55">{subtitle}</p>
 
+        {mode === "recover" && (
+          <input
+            value={recoveryContact}
+            onChange={(event) => setRecoveryContact(event.target.value)}
+            placeholder="Telefono o correo registrado"
+            className="mt-4 w-full border border-white/12 bg-black/45 px-3 py-3 text-center text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]"
+          />
+        )}
+
         <button
           type="button"
           onClick={onChangeMember}
@@ -432,6 +646,26 @@ function PinModal({
         >
           Cambiar usuario
         </button>
+
+        {initialMode === "verify" && mode !== "recover" && (
+          <button
+            type="button"
+            onClick={() => resetPinFlow("recover")}
+            className="ml-2 mt-4 border border-orange-300/30 px-3 py-2 text-xs font-black uppercase tracking-wide text-orange-200 transition hover:border-orange-300 hover:text-white"
+          >
+            Olvide mi PIN
+          </button>
+        )}
+
+        {mode === "recover" && (
+          <button
+            type="button"
+            onClick={() => resetPinFlow("verify")}
+            className="ml-2 mt-4 border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 transition hover:text-white"
+          >
+            Volver al PIN
+          </button>
+        )}
 
         <div className="mt-7 flex justify-center gap-4">
           {[0, 1, 2, 3].map((index) => (
@@ -482,11 +716,13 @@ function PinModal({
 
 export default function ExtremeGymSite() {
   const [memberNameInput, setMemberNameInput] = useState("");
+  const [memberPhoneInput, setMemberPhoneInput] = useState("");
+  const [memberEmailInput, setMemberEmailInput] = useState("");
   const [memberName, setMemberName] = useState("");
   const [goal, setGoal] = useState(GOALS[0]);
   const [member, setMember] = useState<Member | null>(null);
   const [leaderboard, setLeaderboard] = useState<Member[]>([]);
-  const [pinMode, setPinMode] = useState<"set" | "verify">("verify");
+  const [pinMode, setPinMode] = useState<"set" | "verify" | "change">("verify");
   const [showPin, setShowPin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [savingTrainingId, setSavingTrainingId] = useState("");
@@ -544,18 +780,6 @@ export default function ExtremeGymSite() {
     );
   }, []);
 
-  const loadMember = useCallback(async (name: string) => {
-    const params = new URLSearchParams({ memberName: name });
-    const response = await fetch(`/api/xtreme/user?${params}`, { cache: "no-store" });
-    const data = await readJson<MembersResponse>(response);
-    setMember(data.member ?? initialMember(name));
-    setGoal(data.member?.goal || GOALS[0]);
-    setLeaderboard(data.leaderboard ?? []);
-    const metric = data.member?.latestBodyMetric;
-    setWeightKg(metric?.weightKg ? String(metric.weightKg) : "");
-    setWaistCm(metric?.waistCm ? String(metric.waistCm) : "");
-  }, []);
-
   const loadReservations = useCallback(async (name: string) => {
     const params = new URLSearchParams({ memberName: name, date: todayIso() });
     const response = await fetch(`/api/xtreme/reservations?${params}`, { cache: "no-store" });
@@ -570,7 +794,11 @@ export default function ExtremeGymSite() {
   }, []);
 
   const startMember = useCallback(
-    async (name: string, allowSession = true) => {
+    async (
+      name: string,
+      allowSession = true,
+      contact: { phone?: string; email?: string } = {},
+    ) => {
       const trimmed = normalizeName(name);
       if (!trimmed) return;
 
@@ -581,7 +809,50 @@ export default function ExtremeGymSite() {
       setMemberNameInput(trimmed);
 
       try {
-        await loadMember(trimmed);
+        const params = new URLSearchParams({ memberName: trimmed });
+        const memberResponse = await fetch(`/api/xtreme/user?${params}`, { cache: "no-store" });
+        const memberData = await readJson<MembersResponse>(memberResponse);
+        const phone = contact.phone?.trim() ?? "";
+        const email = contact.email?.trim() ?? "";
+
+        if (!memberData.exists && !phone) {
+          setError("Para crear un perfil nuevo, escriba al menos el telefono.");
+          setMember(memberData.member ?? initialMember(trimmed));
+          setLeaderboard(memberData.leaderboard ?? []);
+          setShowPin(false);
+          return;
+        }
+
+        if (phone || email || !memberData.exists) {
+          const createResponse = await fetch("/api/xtreme/user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              memberName: trimmed,
+              goal: memberData.member?.goal || goal,
+              favoriteTraining: memberData.member?.favoriteTraining || "",
+              phone,
+              email,
+            }),
+          });
+          const createData = await readJson<MembersResponse>(createResponse);
+          setMember(createData.member ?? initialMember(trimmed));
+          setGoal(createData.member?.goal || GOALS[0]);
+          setMemberPhoneInput(createData.member?.phone ?? phone);
+          setMemberEmailInput(createData.member?.email ?? email);
+          setLeaderboard(createData.leaderboard ?? []);
+          setWeightKg(createData.member?.latestBodyMetric?.weightKg ? String(createData.member.latestBodyMetric.weightKg) : "");
+          setWaistCm(createData.member?.latestBodyMetric?.waistCm ? String(createData.member.latestBodyMetric.waistCm) : "");
+        } else {
+          setMember(memberData.member ?? initialMember(trimmed));
+          setGoal(memberData.member?.goal || GOALS[0]);
+          setMemberPhoneInput(memberData.member?.phone ?? "");
+          setMemberEmailInput(memberData.member?.email ?? "");
+          setLeaderboard(memberData.leaderboard ?? []);
+          setWeightKg(memberData.member?.latestBodyMetric?.weightKg ? String(memberData.member.latestBodyMetric.weightKg) : "");
+          setWaistCm(memberData.member?.latestBodyMetric?.waistCm ? String(memberData.member.latestBodyMetric.waistCm) : "");
+        }
+
         await Promise.all([loadReservations(trimmed), loadGymStatus()]);
 
         if (allowSession) {
@@ -611,7 +882,7 @@ export default function ExtremeGymSite() {
         setIsLoading(false);
       }
     },
-    [loadGymStatus, loadMember, loadReservations],
+    [goal, loadGymStatus, loadReservations],
   );
 
   useEffect(() => {
@@ -630,7 +901,13 @@ export default function ExtremeGymSite() {
       const response = await fetch("/api/xtreme/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberName: trimmed, goal, favoriteTraining: currentMember.favoriteTraining }),
+        body: JSON.stringify({
+          memberName: trimmed,
+          goal,
+          favoriteTraining: currentMember.favoriteTraining,
+          phone: memberPhoneInput,
+          email: memberEmailInput,
+        }),
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
@@ -755,11 +1032,38 @@ export default function ExtremeGymSite() {
     }
   }
 
+  async function togglePlanItem(item: PlanItem) {
+    if (!unlocked) return;
+    setError("");
+    setMessage("");
+    const nextDone = !item.done;
+    try {
+      const response = await fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "planItem",
+          memberName,
+          itemId: item.id,
+          done: nextDone,
+          completedDate: todayIso(),
+        }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      setMessage(nextDone ? "Sesion del plan completada. Sigalo asi." : "Sesion marcada como pendiente.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo actualizar el plan.");
+    }
+  }
+
   function resetMember() {
     window.localStorage.removeItem(SESSION_KEY);
     setShowPin(false);
     setMemberName("");
     setMemberNameInput("");
+    setMemberPhoneInput("");
+    setMemberEmailInput("");
     setMember(null);
     setMessage("");
     setError("");
@@ -772,10 +1076,11 @@ export default function ExtremeGymSite() {
           memberName={memberName}
           mode={pinMode}
           onChangeMember={resetMember}
+          onDone={setMessage}
           onSuccess={() => {
             storeSession(memberName);
             setShowPin(false);
-            setMessage("Sesion protegida. Bienvenido a Xtreme.");
+            setMessage((current) => current || "Sesion protegida. Bienvenido a Xtreme.");
           }}
         />
       )}
@@ -817,24 +1122,48 @@ export default function ExtremeGymSite() {
 
           {!memberName ? (
             <form
-              className="flex w-full max-w-md gap-2 border border-white/10 bg-black/40 p-2 backdrop-blur-sm"
+              className="grid w-full max-w-md gap-2 border border-white/10 bg-black/40 p-2 backdrop-blur-sm"
               onSubmit={(event) => {
                 event.preventDefault();
-                void startMember(memberNameInput, false);
+                void startMember(memberNameInput, false, {
+                  phone: memberPhoneInput,
+                  email: memberEmailInput,
+                });
               }}
             >
-              <input
-                value={memberNameInput}
-                onChange={(event) => setMemberNameInput(event.target.value)}
-                placeholder="Su nombre"
-                className="min-w-0 flex-1 border border-white/12 bg-black/45 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
-              />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black transition hover:bg-white"
-              >
-                Entrar seguro <ArrowRight className="h-4 w-4" />
-              </button>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <input
+                  value={memberNameInput}
+                  onChange={(event) => setMemberNameInput(event.target.value)}
+                  placeholder="Su nombre"
+                  className="min-w-0 border border-white/12 bg-black/45 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center gap-2 bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black transition hover:bg-white"
+                >
+                  Entrar <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  value={memberPhoneInput}
+                  onChange={(event) => setMemberPhoneInput(event.target.value)}
+                  placeholder="Telefono si es nuevo"
+                  inputMode="tel"
+                  className="border border-white/12 bg-black/35 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
+                />
+                <input
+                  value={memberEmailInput}
+                  onChange={(event) => setMemberEmailInput(event.target.value)}
+                  placeholder="Correo opcional"
+                  type="email"
+                  className="border border-white/12 bg-black/35 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
+                />
+              </div>
+              <p className="px-1 text-xs font-semibold text-white/38">
+                Si ya tiene perfil, puede entrar solo con nombre. Si es nuevo, el telefono evita duplicados.
+              </p>
             </form>
           ) : (
             <div className="flex items-center gap-3 border border-white/12 bg-black/45 px-4 py-3 backdrop-blur-sm">
@@ -1003,6 +1332,100 @@ export default function ExtremeGymSite() {
 
             {tab === "entrenar" && (
               <div className="space-y-6">
+              {currentMember.trainingPlan ? (
+                <div className="border border-[#d8ff3e]/30 bg-[#d8ff3e]/[0.06] p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center bg-[#d8ff3e] text-black">
+                        <ClipboardList className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Plan de tu coach</p>
+                        <h2 className="text-xl font-black uppercase leading-tight">{currentMember.trainingPlan.title}</h2>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-sm font-black text-[#eaff93]">
+                      {currentMember.trainingPlan.doneItems}/{currentMember.trainingPlan.totalItems} · {currentMember.trainingPlan.progressPct}%
+                    </span>
+                  </div>
+
+                  {currentMember.trainingPlan.objective && (
+                    <p className="mt-3 text-sm font-semibold text-white/60">
+                      Objetivo: {currentMember.trainingPlan.objective}
+                    </p>
+                  )}
+
+                  <div className="mt-4 h-2.5 border border-white/10 bg-black/45">
+                    <div className="h-full bg-[#d8ff3e] transition-all" style={{ width: `${currentMember.trainingPlan.progressPct}%` }} />
+                  </div>
+
+                  {currentMember.trainingPlan.coachNote && (
+                    <p className="mt-4 border-l-2 border-[#d8ff3e]/40 pl-3 text-sm font-semibold italic text-white/55">
+                      {currentMember.trainingPlan.coachNote}
+                    </p>
+                  )}
+
+                  <div className="mt-5 grid gap-3">
+                    {currentMember.trainingPlan.items.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className={`flex gap-3 border p-3 ${item.done ? "border-[#d8ff3e]/40 bg-[#d8ff3e]/[0.08]" : "border-white/10 bg-black/20"}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void togglePlanItem(item)}
+                          disabled={!unlocked}
+                          aria-label={item.done ? "Marcar pendiente" : "Marcar hecha"}
+                          className={`grid h-8 w-8 shrink-0 place-items-center border transition ${
+                            item.done
+                              ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                              : "border-white/25 text-white/40 hover:border-[#d8ff3e] hover:text-[#eaff93]"
+                          } disabled:cursor-not-allowed disabled:opacity-40`}
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className={`font-black uppercase ${item.done ? "text-white/60 line-through" : "text-white"}`}>
+                              {item.day || `Sesion ${index + 1}`}
+                            </p>
+                            {item.focus && (
+                              <span className="bg-white/10 px-2 py-0.5 text-[11px] font-black uppercase text-white/60">
+                                {item.focus}
+                              </span>
+                            )}
+                            {item.targetMinutes > 0 && (
+                              <span className="text-[11px] font-bold uppercase text-white/40">{item.targetMinutes} min</span>
+                            )}
+                          </div>
+                          {item.exercises && (
+                            <p className="mt-1 text-sm font-semibold text-white/55">{item.exercises}</p>
+                          )}
+                          {item.done && item.doneDate && (
+                            <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-[#eaff93]">
+                              Hecho · {item.doneDate}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {!currentMember.trainingPlan.items.length && (
+                      <p className="text-sm font-semibold text-white/45">Tu coach aun no agrego sesiones al plan.</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-white/10 bg-white/[0.04] p-5">
+                  <div className="flex items-center gap-3">
+                    <ClipboardList className="h-5 w-5 text-white/45" />
+                    <h2 className="text-lg font-black uppercase">Plan personalizado</h2>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold text-white/45">
+                    Tu coach aun no te asigno un plan. Pedilo en recepcion y aparece aqui para seguirlo dia a dia.
+                  </p>
+                </div>
+              )}
+
               <div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
                 <div className="border border-white/10 bg-white/[0.04] p-5">
                   <div className="flex items-center gap-3">
@@ -1165,6 +1588,135 @@ export default function ExtremeGymSite() {
                   ))}
                 </div>
               </div>
+              </div>
+            )}
+
+            {tab === "maquinas" && (
+              <div className="space-y-6">
+                <div className="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
+                  <div className="border border-[#d8ff3e]/30 bg-[#d8ff3e]/[0.07] p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">
+                          Guia de maquinas
+                        </p>
+                        <h2 className="mt-2 text-3xl font-black uppercase leading-none">
+                          Use el equipo con mas confianza.
+                        </h2>
+                        <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-white/58">
+                          Ajuste primero, controle el peso y pregunte en recepcion si siente dolor articular.
+                          La meta es entrenar fuerte sin sacrificar tecnica.
+                        </p>
+                      </div>
+                      <ShieldCheck className="h-9 w-9 shrink-0 text-[#d8ff3e]" />
+                    </div>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                      {["Ajuste", "Control", "Progreso"].map((item) => (
+                        <div key={item} className="border border-white/10 bg-black/25 p-3">
+                          <p className="text-sm font-black uppercase text-white">{item}</p>
+                          <p className="mt-1 text-xs font-semibold text-white/45">
+                            Paso clave antes de subir peso.
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border border-white/10 bg-white/[0.04] p-5">
+                    <div className="flex items-center gap-3">
+                      <Target className="h-5 w-5 text-orange-300" />
+                      <h2 className="text-lg font-black uppercase">Rutinas rapidas</h2>
+                    </div>
+                    <div className="mt-5 space-y-3">
+                      {GUIDE_WORKOUTS.map((workout) => (
+                        <div key={workout.goal} className="border border-white/10 bg-black/20 p-4">
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">
+                            {workout.goal}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {workout.steps.map((step) => (
+                              <span
+                                key={step}
+                                className="border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs font-bold text-white/65"
+                              >
+                                {step}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {MACHINE_GUIDE.map((machine) => (
+                    <article key={machine.id} className="overflow-hidden border border-white/10 bg-white/[0.04]">
+                      <div className={`h-2 bg-gradient-to-r ${machine.accent}`} />
+                      <div className="p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
+                              {machine.zone} / {machine.level}
+                            </p>
+                            <h2 className="mt-2 text-2xl font-black uppercase leading-tight">
+                              {machine.name}
+                            </h2>
+                          </div>
+                          <span className={`grid h-12 w-12 place-items-center bg-gradient-to-br ${machine.accent} text-black`}>
+                            <Dumbbell className="h-6 w-6" />
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {machine.muscles.map((muscle) => (
+                            <span
+                              key={muscle}
+                              className="border border-[#d8ff3e]/25 bg-[#d8ff3e]/10 px-2.5 py-1 text-[11px] font-black uppercase text-[#eaff93]"
+                            >
+                              {muscle}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="mt-5 border border-white/10 bg-black/25 p-4">
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Ajuste inicial</p>
+                          <p className="mt-2 text-sm font-semibold leading-6 text-white/62">{machine.setup}</p>
+                        </div>
+
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#d8ff3e]">Tips</p>
+                            <ul className="mt-3 space-y-2 text-sm font-semibold text-white/58">
+                              {machine.tips.map((tip) => (
+                                <li key={tip} className="flex gap-2">
+                                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#d8ff3e]" />
+                                  <span>{tip}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.16em] text-red-300">Evite</p>
+                            <ul className="mt-3 space-y-2 text-sm font-semibold text-white/58">
+                              {machine.mistakes.map((mistake) => (
+                                <li key={mistake} className="flex gap-2">
+                                  <Lock className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+                                  <span>{mistake}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 flex items-center gap-3 border border-white/10 bg-white/[0.04] p-3">
+                          <Timer className="h-5 w-5 shrink-0 text-orange-300" />
+                          <p className="text-sm font-black uppercase text-white/70">{machine.starter}</p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1372,6 +1924,61 @@ export default function ExtremeGymSite() {
                     Entra con tu nombre para generar tu carne de acceso.
                   </p>
                 )}
+              </div>
+
+              <div className="border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="h-5 w-5 text-[#d8ff3e]" />
+                  <h2 className="text-lg font-black uppercase">Seguridad y contacto</h2>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Telefono</span>
+                    <input
+                      value={memberPhoneInput}
+                      onChange={(event) => setMemberPhoneInput(event.target.value)}
+                      inputMode="tel"
+                      placeholder="Ej. 88984000"
+                      className="mt-2 w-full border border-white/10 bg-black/30 px-3 py-3 font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Correo</span>
+                    <input
+                      value={memberEmailInput}
+                      onChange={(event) => setMemberEmailInput(event.target.value)}
+                      type="email"
+                      placeholder="correo@ejemplo.com"
+                      className="mt-2 w-full border border-white/10 bg-black/30 px-3 py-3 font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]"
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={saveProfile}
+                    disabled={!unlocked}
+                    className="bg-[#d8ff3e] px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
+                  >
+                    Guardar contacto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError("");
+                      setMessage("");
+                      setPinMode("change");
+                      setShowPin(true);
+                    }}
+                    disabled={!memberName}
+                    className="border border-white/15 px-4 py-3 font-black uppercase text-white/70 transition hover:border-[#d8ff3e] hover:text-[#eaff93] disabled:opacity-45"
+                  >
+                    Cambiar PIN
+                  </button>
+                </div>
+                <p className="mt-3 text-xs font-semibold text-white/42">
+                  El contacto sirve para recuperar el PIN y evitar perfiles duplicados.
+                </p>
               </div>
 
               <div className="border border-white/10 bg-white/[0.04] p-5">

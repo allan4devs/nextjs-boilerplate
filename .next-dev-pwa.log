@@ -1,0 +1,16 @@
+
+> nextjs@0.1.0 dev
+> next dev -p 3000
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.50.14:3000
+- Environments: .env
+✓ Ready in 727ms
+Creating turbopack project {
+  dir: 'C:\\Users\\aroja\\OneDrive\\Documents\\GitHub\\nextjs-boilerplate',
+  testMode: true
+}
+
+ GET /manifest.webmanifest 200 in 539ms (next.js: 514ms, application-code: 25ms)
+ GET /manifest.webmanifest 200 in 16ms (next.js: 7ms, application-code: 9ms)
