@@ -2,10 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { sendWelcomeEmail } from "@/lib/helpers/email";
 import {
+  clampPinnedBadges,
   computeStreak as sharedComputeStreak,
   formatAccessCode,
   memberAccessCode,
+  mergeNotificationPrefs,
+  type NotificationPrefs,
 } from "@/lib/xtreme/shared";
+import {
+  BADGES,
+  WEEKLY_GOAL_DEFAULT,
+  WEEKLY_GOAL_MAX,
+  WEEKLY_GOAL_MIN,
+  buildMemberView,
+  computeWeeklyStats,
+  computeXp,
+  evaluateBadges,
+  freezesAvailable,
+  levelForXp,
+  planFreezeUsage,
+  reconcileBadges,
+  type EarnedBadge,
+} from "@/lib/xtreme/gamification";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +88,13 @@ type XtremeMemberDoc = {
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
   trainingPlan?: TrainingPlan;
+  weeklyGoal?: number;
+  earnedBadges?: EarnedBadge[];
+  freezeHistory?: string[];
+  xpBonus?: number;
+  freezesBonus?: number;
+  notificationPrefs?: Partial<NotificationPrefs>;
+  pinnedBadges?: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -166,11 +191,124 @@ function publicPlan(plan?: TrainingPlan) {
   };
 }
 
+function gamificationFor(doc: XtremeMemberDoc | null) {
+  const workouts = doc?.workouts ?? [];
+  const freezeHistory = doc?.freezeHistory ?? [];
+  const weeklyGoal = doc?.weeklyGoal ?? WEEKLY_GOAL_DEFAULT;
+  const xpBonus = Number(doc?.xpBonus) || 0;
+  const freezesBonus = Number(doc?.freezesBonus) || 0;
+  const planItems = doc?.trainingPlan?.items ?? [];
+  const planItemsDone = planItems.filter((item) => item.done).length;
+  const planProgressPct = planItems.length
+    ? Math.round((planItemsDone / planItems.length) * 100)
+    : 0;
+
+  const view = buildMemberView({
+    workouts,
+    weeklyGoal,
+    freezeHistory,
+    metricsCount: doc?.bodyMetrics?.length ?? 0,
+    planProgressPct,
+  });
+  const weekly = computeWeeklyStats(workouts, weeklyGoal);
+  const earned = doc?.earnedBadges ?? [];
+  const earnedIds = earned.map((badge) => badge.badgeId);
+  const xp = computeXp({
+    totalWorkouts: view.totalWorkouts,
+    totalMinutes: view.totalMinutes,
+    metricsCount: view.metricsCount,
+    planItemsDone,
+    totalWeeksMet: weekly.totalWeeksMet,
+    earnedBadgeIds: earnedIds,
+    xpBonus,
+  });
+
+  const badges = BADGES.filter((def) => !def.secret || earnedIds.includes(def.id)).map((def) => {
+    const entry = earned.find((badge) => badge.badgeId === def.id);
+    return {
+      id: def.id,
+      name: def.name,
+      desc: def.desc,
+      icon: def.icon,
+      tier: def.tier,
+      secret: Boolean(def.secret),
+      earned: Boolean(entry),
+      earnedAt: entry?.earnedAt ?? null,
+      seen: entry?.seen ?? true,
+      progress: def.progress ? def.progress(view) : null,
+    };
+  });
+
+  const pinnedBadges = clampPinnedBadges(doc?.pinnedBadges).filter((id) => earnedIds.includes(id));
+
+  return {
+    streak: view.streak,
+    weeklyGoal,
+    weekCount: weekly.weekCount,
+    weekMet: weekly.weekMet,
+    weeksStreak: weekly.weeksStreak,
+    totalWeeksMet: weekly.totalWeeksMet,
+    freezesAvailable: freezesAvailable(view.totalWorkouts, freezeHistory, freezesBonus),
+    freezesUsed: freezeHistory.length,
+    freezeHistory,
+    xp,
+    level: levelForXp(xp),
+    badges,
+    earnedBadgeCount: earnedIds.length,
+    unseenBadgeIds: earned.filter((badge) => !badge.seen).map((badge) => badge.badgeId),
+    pinnedBadges,
+  };
+}
+
+/**
+ * Consume protectores de racha y otorga badges nuevos. Persiste solo si
+ * hay cambios. Devuelve los ids recien ganados (para celebrar en cliente).
+ */
+async function syncGamification(normalizedName: string): Promise<string[]> {
+  const db = await getDb();
+  const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+  if (!doc) return [];
+
+  const workouts = doc.workouts ?? [];
+  const freezeHistory = doc.freezeHistory ?? [];
+  const workoutDates = new Set(
+    workouts.map((workout) => workout.completedDate).filter(Boolean),
+  );
+  const newFreezes = planFreezeUsage(
+    workoutDates,
+    freezeHistory,
+    workouts.length,
+    undefined,
+    Number(doc.freezesBonus) || 0,
+  );
+  const allFreezes = [...freezeHistory, ...newFreezes];
+
+  const planItems = doc.trainingPlan?.items ?? [];
+  const planItemsDone = planItems.filter((item) => item.done).length;
+  const view = buildMemberView({
+    workouts,
+    weeklyGoal: doc.weeklyGoal ?? WEEKLY_GOAL_DEFAULT,
+    freezeHistory: allFreezes,
+    metricsCount: doc.bodyMetrics?.length ?? 0,
+    planProgressPct: planItems.length ? Math.round((planItemsDone / planItems.length) * 100) : 0,
+  });
+  const { all, newlyEarned } = reconcileBadges(evaluateBadges(view), doc.earnedBadges ?? []);
+
+  if (newFreezes.length || newlyEarned.length) {
+    await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+      { normalizedName },
+      { $set: { freezeHistory: allFreezes, earnedBadges: all, updatedAt: new Date() } },
+    );
+  }
+  return newlyEarned;
+}
+
 function publicMember(doc: XtremeMemberDoc | null) {
   const workouts = doc?.workouts ?? [];
   const bodyMetrics = [...(doc?.bodyMetrics ?? [])].sort((a, b) => a.date.localeCompare(b.date));
   const totalMinutes = workouts.reduce((sum, workout) => sum + (workout.minutes || 0), 0);
   const favoriteTraining = doc?.favoriteTraining || workouts.at(-1)?.trainingName || "";
+  const gamification = gamificationFor(doc);
 
   return {
     memberName: doc?.memberName ?? "",
@@ -182,7 +320,7 @@ function publicMember(doc: XtremeMemberDoc | null) {
     photoUrl: doc?.photoUrl ?? "",
     accessCode: formatAccessCode(memberAccessCode(doc?.normalizedName ?? "")),
     workouts,
-    streak: computeStreak(workouts),
+    streak: gamification.streak || computeStreak(workouts),
     totalWorkouts: workouts.length,
     totalMinutes,
     lastWorkoutDate: workouts.at(-1)?.completedDate ?? null,
@@ -190,6 +328,9 @@ function publicMember(doc: XtremeMemberDoc | null) {
     bodyMetrics,
     latestBodyMetric: bodyMetrics.at(-1) ?? null,
     trainingPlan: publicPlan(doc?.trainingPlan),
+    notificationPrefs: mergeNotificationPrefs(doc?.notificationPrefs),
+    pinnedBadges: gamification.pinnedBadges,
+    gamification,
   };
 }
 
@@ -197,7 +338,7 @@ async function leaderboard() {
   const db = await getDb();
   const docs = await db
     .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
-    .find({}, { projection: { memberName: 1, normalizedName: 1, workouts: 1, favoriteTraining: 1, goal: 1, photoUrl: 1 } })
+    .find({}, { projection: { memberName: 1, normalizedName: 1, workouts: 1, favoriteTraining: 1, goal: 1, photoUrl: 1, weeklyGoal: 1, freezeHistory: 1, earnedBadges: 1 } })
     .toArray();
 
   return docs
@@ -221,11 +362,14 @@ export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const normalizedName = normalizeKey(memberName);
+    // Consumir protectores / otorgar badges pendientes antes de responder.
+    const newBadges = await syncGamification(normalizedName);
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
 
     return NextResponse.json({
       member: publicMember(doc),
       exists: Boolean(doc),
+      newBadges,
       leaderboard: await leaderboard(),
     });
   } catch (err) {
@@ -342,6 +486,94 @@ export async function PATCH(req: NextRequest) {
     const minutes = Math.max(1, Math.min(240, Number(body.minutes) || 45));
     const completedDate = isoDate(body.completedDate);
 
+    if (action === "weeklyGoal") {
+      const weeklyGoal = Math.max(
+        WEEKLY_GOAL_MIN,
+        Math.min(WEEKLY_GOAL_MAX, Number(body.weeklyGoal) || WEEKLY_GOAL_DEFAULT),
+      );
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+      const db = await getDb();
+      const normalizedName = normalizeKey(memberName);
+      await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName },
+        { $set: { weeklyGoal, updatedAt: new Date() } },
+      );
+      const newBadges = await syncGamification(normalizedName);
+      const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
+    }
+
+    if (action === "badgesSeen") {
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+      const db = await getDb();
+      const normalizedName = normalizeKey(memberName);
+      await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName },
+        { $set: { "earnedBadges.$[].seen": true, updatedAt: new Date() } },
+      );
+      const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      return NextResponse.json({ member: publicMember(doc) });
+    }
+
+    // Perfil self-service (Fase 3): prefs, showcase, meta/contacto
+    if (action === "profile") {
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+      const db = await getDb();
+      const normalizedName = normalizeKey(memberName);
+      const existing = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      if (!existing) {
+        return NextResponse.json({ error: "Perfil no encontrado." }, { status: 404 });
+      }
+
+      const set: Partial<XtremeMemberDoc> = { updatedAt: new Date() };
+
+      if (body.goal !== undefined) set.goal = String(body.goal ?? "").trim().slice(0, 80);
+      if (body.favoriteTraining !== undefined) {
+        set.favoriteTraining = String(body.favoriteTraining ?? "").trim().slice(0, 80);
+      }
+      if (body.phone !== undefined) {
+        const phone = normalizePhone(body.phone);
+        if (phone) set.phone = phone;
+      }
+      if (body.email !== undefined) {
+        const email = normalizeEmail(body.email);
+        if (email) set.email = email;
+      }
+      if (body.weeklyGoal !== undefined) {
+        set.weeklyGoal = Math.max(
+          WEEKLY_GOAL_MIN,
+          Math.min(WEEKLY_GOAL_MAX, Number(body.weeklyGoal) || WEEKLY_GOAL_DEFAULT),
+        );
+      }
+      if (body.notificationPrefs !== undefined && body.notificationPrefs && typeof body.notificationPrefs === "object") {
+        const raw = body.notificationPrefs as Record<string, unknown>;
+        set.notificationPrefs = mergeNotificationPrefs({
+          ...existing.notificationPrefs,
+          ...(raw.streakRisk !== undefined ? { streakRisk: Boolean(raw.streakRisk) } : {}),
+          ...(raw.milestones !== undefined ? { milestones: Boolean(raw.milestones) } : {}),
+          ...(raw.renewalReminders !== undefined
+            ? { renewalReminders: Boolean(raw.renewalReminders) }
+            : {}),
+          ...(raw.winBack !== undefined ? { winBack: Boolean(raw.winBack) } : {}),
+          ...(raw.weeklyRecap !== undefined ? { weeklyRecap: Boolean(raw.weeklyRecap) } : {}),
+        });
+      }
+      if (body.pinnedBadges !== undefined) {
+        const earnedIds = new Set((existing.earnedBadges ?? []).map((b) => b.badgeId));
+        set.pinnedBadges = clampPinnedBadges(body.pinnedBadges).filter((id) => earnedIds.has(id));
+      }
+
+      await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne({ normalizedName }, { $set: set });
+      const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });
+    }
+
     if (action === "planItem") {
       const itemId = String(body.itemId ?? "").trim();
       if (!memberName || !itemId) {
@@ -367,8 +599,9 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "No se encontro la sesion." }, { status: 404 });
       }
 
+      const newBadges = await syncGamification(normalizedName);
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });
+      return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
     }
 
     if (action === "bodyMetric") {
@@ -412,8 +645,9 @@ export async function PATCH(req: NextRequest) {
         { upsert: true },
       );
 
+      const newBadges = await syncGamification(normalizedName);
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });
+      return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
     }
 
     if (!memberName || !trainingId || !trainingName) {
@@ -453,8 +687,9 @@ export async function PATCH(req: NextRequest) {
       { upsert: true },
     );
 
+    const newBadges = await syncGamification(normalizedName);
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-    return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });
+    return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
   } catch (err) {
     console.error("XTREME USER PATCH", err);
     return NextResponse.json({ error: "No se pudo registrar el entreno." }, { status: 500 });

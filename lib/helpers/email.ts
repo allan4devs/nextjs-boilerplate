@@ -234,3 +234,99 @@ export async function sendCustomReminderEmail(args: {
     ),
   });
 }
+
+function appButton(label: string, path = "/app") {
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "").trim();
+  const origin = baseUrl ? (baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`) : "";
+  const href = `${origin}${path}`;
+  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin-top:12px;background:#0b0b0b;color:#d8ff3e;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">${escapeHtml(label)}</a>`;
+}
+
+export async function sendStreakRiskEmail(args: {
+  to: string;
+  memberName: string;
+  streak: number;
+}) {
+  return sendEmail({
+    to: args.to,
+    subject: `Tu racha de ${args.streak} días sigue viva 🔥`,
+    html: layout(
+      "Entrená hoy y mantené la racha",
+      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Llevás <strong>${args.streak} días</strong> construyendo constancia. Un entreno hoy mantiene ese impulso.</p>
+      <p style="font-size:14px;line-height:1.6;">No tiene que ser perfecto ni largo. Solo tenés que aparecer.</p>
+      ${appButton("Abrir mi app")}`,
+    ),
+  });
+}
+
+export async function sendMilestoneEmail(args: { to: string; memberName: string; streak: number }) {
+  return sendEmail({
+    to: args.to,
+    subject: `¡${args.streak} días de constancia! 🏆`,
+    html: layout(
+      "Nuevo hito desbloqueado",
+      `<p style="font-size:14px;line-height:1.6;">${escapeHtml(args.memberName)}, llegaste a una racha de <strong>${args.streak} días</strong>.</p>
+      <div style="background:#d8ff3e;color:#0b0b0b;padding:20px;text-align:center;font-size:32px;font-weight:900;margin:16px 0;">${args.streak} DÍAS 🔥</div>
+      <p style="font-size:14px;line-height:1.6;">Celebralo, compartilo y seguí construyendo.</p>${appButton("Ver mi logro")}`,
+    ),
+  });
+}
+
+export async function sendWinBackEmail(args: {
+  to: string;
+  memberName: string;
+  inactiveDays: number;
+}) {
+  return sendEmail({
+    to: args.to,
+    subject: "Volvé a Xtreme — lo importante es retomar",
+    html: layout(
+      "Tu próximo entreno cuenta",
+      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Han pasado ${args.inactiveDays} días desde tu último entreno. Eso no borra lo que ya avanzaste.</p>
+      <p style="font-size:14px;line-height:1.6;">Volvé con una sesión sencilla. El pase del día cuesta CRC 3.000 y podés reservarlo en línea.</p>
+      ${appButton("Reservar mi regreso", "/primer-dia#reservar")}`,
+    ),
+  });
+}
+
+export async function sendMonthlyRecapEmail(args: {
+  to: string;
+  memberName: string;
+  month: string;
+  workouts: number;
+  minutes: number;
+}) {
+  return sendEmail({
+    to: args.to,
+    subject: `Tu mes en Xtreme — ${args.workouts} entrenos 💪`,
+    html: layout(
+      "Tu mes en Xtreme",
+      `<p style="font-size:14px;line-height:1.6;">${escapeHtml(args.memberName)}, esto fue lo que construiste en ${escapeHtml(args.month)}:</p>
+      <div style="display:flex;gap:10px;margin:18px 0;">
+        <div style="flex:1;background:#0b0b0b;color:#d8ff3e;padding:16px;text-align:center;"><strong style="font-size:28px;">${args.workouts}</strong><br><span style="font-size:11px;text-transform:uppercase;">entrenos</span></div>
+        <div style="flex:1;background:#0b0b0b;color:#d8ff3e;padding:16px;text-align:center;"><strong style="font-size:28px;">${args.minutes}</strong><br><span style="font-size:11px;text-transform:uppercase;">minutos</span></div>
+      </div>
+      <p style="font-size:14px;line-height:1.6;">Cada sesión cuenta. Compartí tu avance y seguí construyendo el próximo mes.</p>
+      ${appButton("Ver mi progreso")}`,
+    ),
+  });
+}
+
+/** Codigo de un solo uso para recuperar el PIN (Fase 3). */
+export async function sendPinRecoveryOtpEmail(args: {
+  to: string;
+  memberName: string;
+  code: string;
+  expiresMinutes: number;
+}) {
+  return sendEmail({
+    to: args.to,
+    subject: "Codigo para recuperar su PIN — Xtreme Gym",
+    html: layout(
+      "Recuperar PIN",
+      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Use este codigo para restablecer su PIN de 4 digitos:</p>
+      <div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:16px;font-size:28px;font-weight:900;letter-spacing:8px;margin:16px 0;">${escapeHtml(args.code)}</div>
+      <p style="font-size:14px;line-height:1.6;">Vence en ${args.expiresMinutes} minutos. Si usted no lo pidio, ignore este correo y avise en recepcion.</p>`,
+    ),
+  });
+}

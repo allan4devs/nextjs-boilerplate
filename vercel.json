@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/xtreme/jobs/lifecycle",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

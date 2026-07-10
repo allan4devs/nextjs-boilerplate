@@ -86,12 +86,12 @@ export default function PreciosPage() {
                   </div>
                   <p className="mt-6 text-4xl font-black uppercase leading-none">{item.price}</p>
                   <a
-                    href={waLink(`Hola Xtreme Gym, me interesa el plan de ${item.period}. ¿Me confirma disponibilidad y requisitos?`)}
+                    href="#inscripcion"
                     className={`mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 text-sm font-black uppercase transition ${
                       featured ? "bg-black text-white hover:bg-white hover:text-black" : "bg-white text-black hover:bg-[#f6c400]"
                     }`}
                   >
-                    Consultar plan
+                    Elegir y pagar
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 </article>

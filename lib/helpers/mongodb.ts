@@ -31,6 +31,12 @@ async function ensureIndexes(db: Db) {
     db.collection("xtreme_gym_checkins").createIndex({ normalizedName: 1, date: 1 }),
     db.collection("xtreme_gym_payments").createIndex({ status: 1, date: -1 }),
     db.collection("xtreme_gym_payments").createIndex({ id: 1 }),
+    // Fase 3: OTP de recuperacion de PIN (TTL) + audit + badges admin
+    db.collection("xtreme_gym_otps").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.collection("xtreme_gym_otps").createIndex({ normalizedName: 1, purpose: 1 }),
+    db.collection("xtreme_gym_audit").createIndex({ at: -1 }),
+    db.collection("xtreme_gym_audit").createIndex({ targetId: 1, at: -1 }),
+    db.collection("xtreme_gym_badges").createIndex({ id: 1 }, { unique: true }),
   ]);
   for (const r of results) {
     if (r.status === "rejected") console.error("MONGO INDEX", r.reason);

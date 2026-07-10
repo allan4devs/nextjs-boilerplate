@@ -123,8 +123,11 @@ const initialForm: FormState = {
   goal: "",
 };
 
-export default function ExtremeGymCheckout() {
-  const [selectedId, setSelectedId] = useState(CHECKOUT_OPTIONS[3].id);
+export default function ExtremeGymCheckout({ initialOption = "month" }: { initialOption?: string }) {
+  const validInitialOption = CHECKOUT_OPTIONS.some((option) => option.id === initialOption)
+    ? initialOption
+    : "month";
+  const [selectedId, setSelectedId] = useState(validInitialOption);
   const [form, setForm] = useState<FormState>(initialForm);
   const [paypalConfig, setPaypalConfig] = useState<PayPalConfig | null>(null);
   const [status, setStatus] = useState("");

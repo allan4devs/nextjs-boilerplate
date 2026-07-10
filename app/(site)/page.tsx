@@ -90,10 +90,10 @@ export default function ExtremeGymLandingPage() {
 
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link
-                  href="/precios"
+                  href="/primer-dia"
                   className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black shadow-[0_0_40px_-16px_rgba(246,196,0,.95)] transition hover:bg-white"
                 >
-                  Ver precios
+                  Reservá tu primer día — CRC 3.000
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link

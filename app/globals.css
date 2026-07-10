@@ -24,3 +24,73 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* --- Xtreme gamification micro-interactions --- */
+
+@keyframes xg-confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(105vh) rotate(720deg);
+    opacity: 0.4;
+  }
+}
+
+@keyframes xg-pop-in {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes xg-ring-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(216, 255, 62, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(216, 255, 62, 0.75));
+  }
+}
+
+@keyframes xg-flame-bounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.08);
+  }
+}
+
+.xg-confetti {
+  position: absolute;
+  top: 0;
+  will-change: transform;
+  animation: xg-confetti-fall linear forwards;
+}
+
+.xg-pop {
+  animation: xg-pop-in 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+}
+
+.xg-ring {
+  animation: xg-ring-glow 2.4s ease-in-out infinite;
+}
+
+.xg-ring-progress {
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.xg-flame {
+  animation: xg-flame-bounce 1.6s ease-in-out infinite;
+}

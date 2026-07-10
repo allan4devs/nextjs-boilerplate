@@ -24,6 +24,7 @@ import {
   Ruler,
   Rocket,
   ShieldCheck,
+  Snowflake,
   Sparkles,
   Star,
   Target,
@@ -34,8 +35,23 @@ import {
   Users,
   Video,
   Zap,
+  Mail,
+  Pin,
 } from "lucide-react";
 import { CHART_CYAN, CHART_LIME, LineTrendChart } from "./components/charts";
+import {
+  BadgeGallery,
+  CelebrationOverlay,
+  StreakRing,
+  XpBar,
+  nextBadgeUp,
+  phraseContextFor,
+  tierStyle,
+  badgeIcon,
+  type CelebrationData,
+} from "./components/gamification";
+import { pickPhrase } from "@/lib/xtreme/phrases";
+import { STREAK_MILESTONES, WEEKLY_GOAL_MAX, WEEKLY_GOAL_MIN } from "@/lib/xtreme/gamification";
 
 const STORAGE_KEY = "xtreme-gym-member-name";
 const SESSION_KEY = "xtreme-gym-session";
@@ -231,6 +247,42 @@ type Workout = {
   completedAt: string;
 };
 
+type NotificationPrefs = {
+  streakRisk: boolean;
+  milestones: boolean;
+  renewalReminders: boolean;
+  winBack: boolean;
+  weeklyRecap: boolean;
+};
+
+type PublicBadge = {
+  id: string;
+  name: string;
+  desc: string;
+  icon: string;
+  tier: string;
+  secret: boolean;
+  earned: boolean;
+  earnedAt: string | null;
+  seen: boolean;
+  progress: { current: number; target: number } | null;
+};
+
+type Gamification = {
+  streak: number;
+  weeklyGoal: number;
+  weekCount: number;
+  weekMet: boolean;
+  weeksStreak: number;
+  freezesAvailable: number;
+  xp: number;
+  level: { index: number; name: string; minXp: number; nextXp: number | null; progressPct: number };
+  badges: PublicBadge[];
+  earnedBadgeCount: number;
+  pinnedBadges: string[];
+  unseenBadgeIds: string[];
+};
+
 type Member = {
   memberName: string;
   normalizedName: string;
@@ -254,6 +306,9 @@ type Member = {
   bodyMetrics: BodyMetric[];
   latestBodyMetric: BodyMetric | null;
   trainingPlan: MemberPlan | null;
+  notificationPrefs?: NotificationPrefs;
+  pinnedBadges?: string[];
+  gamification?: Gamification;
 };
 
 type BodyMetric = {
@@ -409,6 +464,14 @@ function dayLabel(date: string) {
   return labels[index] ?? "";
 }
 
+const DEFAULT_NOTIF_PREFS: NotificationPrefs = {
+  streakRisk: true,
+  milestones: true,
+  renewalReminders: true,
+  winBack: true,
+  weeklyRecap: true,
+};
+
 function initialMember(name = ""): Member {
   return {
     memberName: name,
@@ -433,6 +496,8 @@ function initialMember(name = ""): Member {
     bodyMetrics: [],
     latestBodyMetric: null,
     trainingPlan: null,
+    notificationPrefs: { ...DEFAULT_NOTIF_PREFS },
+    pinnedBadges: [],
   };
 }
 
@@ -518,6 +583,9 @@ function PinModal({
   const [firstPin, setFirstPin] = useState("");
   const [currentPin, setCurrentPin] = useState("");
   const [recoveryContact, setRecoveryContact] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSentTo, setOtpSentTo] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
   const [digits, setDigits] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -528,12 +596,44 @@ function PinModal({
     setDigits("");
     setFirstPin("");
     setCurrentPin("");
+    setOtpCode("");
+    setOtpSentTo("");
     setError("");
   }, []);
 
   useEffect(() => {
     resetPinFlow(initialMode);
   }, [initialMode, resetPinFlow]);
+
+  const requestOtp = useCallback(async () => {
+    setOtpSending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/xtreme/pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberName,
+          action: "requestOtp",
+          recoveryContact: recoveryContact.trim() || undefined,
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        maskedEmail?: string;
+        expiresInMin?: number;
+      };
+      if (!response.ok) throw new Error(data.error ?? "No se pudo enviar el codigo.");
+      setOtpSentTo(data.maskedEmail ?? "su correo");
+      onDone?.(
+        `Codigo enviado a ${data.maskedEmail ?? "su correo"} (vence en ${data.expiresInMin ?? 15} min).`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo enviar el codigo.");
+    } finally {
+      setOtpSending(false);
+    }
+  }, [memberName, onDone, recoveryContact]);
 
   const completePin = useCallback(
     async (pin: string) => {
@@ -559,8 +659,8 @@ function PinModal({
       }
 
       if (mode === "recover" && step === "enter") {
-        if (!recoveryContact.trim()) {
-          setError("Escriba su telefono o correo registrado.");
+        if (!otpCode.trim() && !recoveryContact.trim()) {
+          setError("Pida el codigo al correo, o escriba su telefono/correo registrado.");
           setDigits("");
           return;
         }
@@ -590,6 +690,7 @@ function PinModal({
             action,
             currentPin,
             recoveryContact,
+            otp: otpCode.replace(/\D/g, "").slice(0, 6),
           }),
         });
         const data = (await response.json()) as { valid?: boolean; error?: string };
@@ -624,7 +725,7 @@ function PinModal({
         setIsLoading(false);
       }
     },
-    [currentPin, firstPin, memberName, mode, onDone, onSuccess, recoveryContact, step],
+    [currentPin, firstPin, memberName, mode, onDone, onSuccess, otpCode, recoveryContact, step],
   );
 
   const pressDigit = useCallback(
@@ -677,7 +778,7 @@ function PinModal({
       : mode === "change"
         ? "Primero validamos el PIN actual"
         : mode === "recover"
-          ? "Validamos su telefono o correo registrado"
+          ? "Codigo al correo del perfil (o contacto registrado)"
           : "Entramos a su perfil Xtreme";
 
   return (
@@ -691,12 +792,35 @@ function PinModal({
         <p className="mt-2 text-sm font-semibold text-white/55">{subtitle}</p>
 
         {mode === "recover" && (
-          <input
-            value={recoveryContact}
-            onChange={(event) => setRecoveryContact(event.target.value)}
-            placeholder="Telefono o correo registrado"
-            className="mt-4 w-full border border-white/12 bg-black/45 px-3 py-3 text-center text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]"
-          />
+          <div className="mt-4 space-y-2 text-left">
+            <button
+              type="button"
+              onClick={() => void requestOtp()}
+              disabled={otpSending}
+              className="flex w-full items-center justify-center gap-2 border border-[#d8ff3e]/40 bg-[#d8ff3e]/10 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-[#eaff93] transition hover:bg-[#d8ff3e] hover:text-black disabled:opacity-50"
+            >
+              {otpSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+              {otpSentTo ? "Reenviar codigo" : "Enviar codigo al correo"}
+            </button>
+            {otpSentTo ? (
+              <p className="text-center text-[11px] font-semibold text-white/50">
+                Enviado a {otpSentTo}
+              </p>
+            ) : null}
+            <input
+              value={otpCode}
+              onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric"
+              placeholder="Codigo de 6 digitos"
+              className="w-full border border-white/12 bg-black/45 px-3 py-3 text-center text-sm font-bold tracking-[0.3em] text-white outline-none placeholder:tracking-normal placeholder:text-white/30 focus:border-[#d8ff3e]"
+            />
+            <input
+              value={recoveryContact}
+              onChange={(event) => setRecoveryContact(event.target.value)}
+              placeholder="O telefono/correo (fallback)"
+              className="w-full border border-white/12 bg-black/45 px-3 py-3 text-center text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]"
+            />
+          </div>
         )}
 
         <button
@@ -816,14 +940,29 @@ export default function ExtremeGymSite() {
     [currentMember.workouts],
   );
   const weekDates = useMemo(() => getWeekDates(), []);
-  const weekDoneCount = weekDates.filter((date) => workoutDates.has(date)).length;
-  const weeklyGoal = 4;
+  const gami = currentMember.gamification;
+  const weekDoneCount = gami?.weekCount ?? weekDates.filter((date) => workoutDates.has(date)).length;
+  const weeklyGoal = gami?.weeklyGoal ?? 4;
   const weeklyProgressPct = Math.min(100, Math.round((weekDoneCount / weeklyGoal) * 100));
-  const level = Math.floor(currentMember.totalWorkouts / 10) + 1;
-  const nextMilestone = level * 10;
-  const milestoneLeft = Math.max(0, nextMilestone - currentMember.totalWorkouts);
-  const achievements = ACHIEVEMENTS.map((a) => ({ ...a, done: a.test(currentMember) }));
+  const level = gami?.level?.index ?? Math.floor(currentMember.totalWorkouts / 10) + 1;
+  const levelName = gami?.level?.name ?? "Novato";
+  const nextMilestone = gami?.level?.nextXp ?? level * 10;
+  const milestoneLeft = gami
+    ? Math.max(0, (gami.level.nextXp ?? gami.xp) - gami.xp)
+    : Math.max(0, nextMilestone - currentMember.totalWorkouts);
+  const serverBadges = gami?.badges ?? [];
+  const achievements = serverBadges.length
+    ? serverBadges.map((b) => ({
+        id: b.id,
+        name: b.name,
+        desc: b.desc,
+        icon: Award,
+        done: b.earned,
+      }))
+    : ACHIEVEMENTS.map((a) => ({ ...a, done: a.test(currentMember) }));
   const unlockedCount = achievements.filter((a) => a.done).length;
+  const pinnedBadgeIds = currentMember.pinnedBadges ?? gami?.pinnedBadges ?? [];
+  const notifPrefs = currentMember.notificationPrefs ?? DEFAULT_NOTIF_PREFS;
   const accessCode = memberCode(currentMember.normalizedName || memberName.toUpperCase() || "XTREME01");
   const latestMetric = currentMember.latestBodyMetric;
   const metricTrend = currentMember.bodyMetrics.slice(-12);
@@ -833,6 +972,84 @@ export default function ExtremeGymSite() {
       : currentMember.membership.status === "warning"
         ? "border-orange-300/40 bg-orange-300/10 text-orange-100"
         : "border-[#d8ff3e]/35 bg-[#d8ff3e]/10 text-[#efffb8]";
+
+  // --- Gamificacion: frase del dia, proximo logro y celebraciones ---
+  const trainedToday = completedToday.size > 0;
+  const effectiveStreak = gami?.streak ?? currentMember.streak;
+  const dayPhrase = pickPhrase(
+    phraseContextFor({
+      trainedToday,
+      streak: effectiveStreak,
+      totalWorkouts: currentMember.totalWorkouts,
+      lastWorkoutDate: currentMember.lastWorkoutDate,
+    }),
+    memberName || "Xtreme",
+    { streak: effectiveStreak },
+  );
+  const nextBadge = nextBadgeUp(serverBadges);
+  const quickTraining =
+    TRAININGS.find((t) => t.name === currentMember.favoriteTraining) ?? TRAININGS[0];
+
+  const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+  const prevGamiRef = useRef<{ streak: number; levelIndex: number } | null>(null);
+
+  useEffect(() => {
+    if (!gami || !unlocked) return;
+    const prev = prevGamiRef.current;
+    prevGamiRef.current = { streak: gami.streak, levelIndex: gami.level.index };
+
+    const unseen = gami.badges.filter((badge) => gami.unseenBadgeIds.includes(badge.id));
+    if (unseen.length) {
+      setCelebration({
+        title: unseen.length > 1 ? "Logros desbloqueados" : "Logro desbloqueado",
+        subtitle: unseen.length > 1 ? `${unseen.length} badges nuevos` : unseen[0].name,
+        phraseContext: "milestone",
+        badges: unseen,
+      });
+      // Marcar como vistos en segundo plano (la proxima carga ya no celebra).
+      void fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberName, action: "badgesSeen" }),
+      }).catch(() => {});
+      return;
+    }
+    if (prev && gami.level.index > prev.levelIndex) {
+      setCelebration({
+        title: "Subida de nivel",
+        subtitle: `Nivel ${gami.level.index}: ${gami.level.name}`,
+        phraseContext: "levelUp",
+        badges: [],
+      });
+      return;
+    }
+    if (prev && gami.streak > prev.streak && STREAK_MILESTONES.includes(gami.streak)) {
+      setCelebration({
+        title: "Hito de racha",
+        subtitle: `${gami.streak} dias seguidos`,
+        phraseContext: "milestone",
+        badges: [],
+      });
+    }
+  }, [gami, unlocked, memberName]);
+
+  async function updateWeeklyGoal(goalDays: number) {
+    if (!unlocked) return;
+    setError("");
+    try {
+      const response = await fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberName, action: "weeklyGoal", weeklyGoal: goalDays }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      if (data.leaderboard) setLeaderboard(data.leaderboard);
+      setMessage(`Meta semanal: ${goalDays} dias. A cumplirla.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar la meta.");
+    }
+  }
 
   const storeSession = useCallback((name: string) => {
     window.localStorage.setItem(STORAGE_KEY, name);
@@ -966,14 +1183,18 @@ export default function ExtremeGymSite() {
 
     try {
       const response = await fetch("/api/xtreme/user", {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "profile",
           memberName: trimmed,
           goal,
           favoriteTraining: currentMember.favoriteTraining,
           phone: memberPhoneInput,
           email: memberEmailInput,
+          weeklyGoal,
+          notificationPrefs: notifPrefs,
+          pinnedBadges: pinnedBadgeIds,
         }),
       });
       const data = await readJson<MembersResponse>(response);
@@ -983,6 +1204,51 @@ export default function ExtremeGymSite() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar.");
     }
+  }
+
+  async function saveProfileField(patch: Record<string, unknown>, okMessage: string) {
+    const trimmed = normalizeName(memberName);
+    if (!trimmed || !unlocked) return;
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "profile", memberName: trimmed, ...patch }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      setLeaderboard(data.leaderboard ?? []);
+      setMessage(okMessage);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar.");
+    }
+  }
+
+  function togglePinnedBadge(badgeId: string) {
+    if (!unlocked) return;
+    const earned = serverBadges.find((b) => b.id === badgeId)?.earned;
+    if (!earned) {
+      setError("Solo puede fijar badges que ya gano.");
+      return;
+    }
+    const next = pinnedBadgeIds.includes(badgeId)
+      ? pinnedBadgeIds.filter((id) => id !== badgeId)
+      : pinnedBadgeIds.length >= 3
+        ? pinnedBadgeIds
+        : [...pinnedBadgeIds, badgeId];
+    if (!pinnedBadgeIds.includes(badgeId) && pinnedBadgeIds.length >= 3) {
+      setError("Maximo 3 badges en el showcase.");
+      return;
+    }
+    void saveProfileField({ pinnedBadges: next }, "Showcase de badges actualizado.");
+  }
+
+  function toggleNotifPref(key: keyof NotificationPrefs) {
+    if (!unlocked) return;
+    const next = { ...notifPrefs, [key]: !notifPrefs[key] };
+    void saveProfileField({ notificationPrefs: next }, "Preferencias de correo guardadas.");
   }
 
   async function completeTraining(training: (typeof TRAININGS)[number]) {
@@ -1181,6 +1447,14 @@ export default function ExtremeGymSite() {
 
   return (
     <main className="min-h-screen bg-[#050505] text-white selection:bg-[#d8ff3e] selection:text-black">
+      {celebration && !showPin && (
+        <CelebrationOverlay
+          data={celebration}
+          memberName={memberName || "Xtreme"}
+          streak={effectiveStreak}
+          onClose={() => setCelebration(null)}
+        />
+      )}
       {showPin && (
         <PinModal
           memberName={memberName}
@@ -1323,6 +1597,131 @@ export default function ExtremeGymSite() {
 
             {tab === "resumen" && (
               <div className="space-y-6">
+
+              {gami && (
+                <div className="grid gap-4 lg:grid-cols-[.95fr_1.05fr]">
+                  {/* Hero: anillo de racha + frase + accion rapida */}
+                  <div className="relative overflow-hidden border border-orange-400/25 bg-gradient-to-br from-orange-400/[0.08] to-transparent p-5">
+                    <StreakRing
+                      streak={gami.streak}
+                      freezes={gami.freezesAvailable}
+                      weekCount={gami.weekCount}
+                      weeklyGoal={gami.weeklyGoal}
+                    />
+                    <p className="mt-3 text-center text-sm font-bold italic text-[#eaff93]">
+                      “{dayPhrase}”
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => !trainedToday && void completeTraining(quickTraining)}
+                      disabled={!unlocked || trainedToday || Boolean(savingTrainingId)}
+                      className={`mt-4 inline-flex w-full items-center justify-center gap-2 px-4 py-4 text-base font-black uppercase transition ${
+                        trainedToday
+                          ? "border border-[#d8ff3e]/50 bg-[#d8ff3e]/10 text-[#eaff93]"
+                          : "bg-[#d8ff3e] text-black hover:bg-white"
+                      } disabled:cursor-not-allowed`}
+                    >
+                      {savingTrainingId ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : trainedToday ? (
+                        <Check className="h-5 w-5" />
+                      ) : (
+                        <Flame className="h-5 w-5" />
+                      )}
+                      {trainedToday ? "Hoy ya quedo marcado" : "Marcar entreno de hoy"}
+                    </button>
+                    {gami.freezesAvailable > 0 && (
+                      <p className="mt-3 text-center text-xs font-semibold text-cyan-200/70">
+                        <Snowflake className="mr-1 inline h-3.5 w-3.5" />
+                        {gami.freezesAvailable === 1
+                          ? "1 protector de racha disponible: cubre un dia libre."
+                          : `${gami.freezesAvailable} protectores de racha disponibles.`}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Nivel + meta semanal + proximo logro */}
+                  <div className="grid gap-4">
+                    <div className="border border-white/10 bg-white/[0.04] p-5">
+                      <XpBar xp={gami.xp} level={gami.level} />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="border border-white/10 bg-white/[0.04] p-5">
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">
+                          Meta semanal
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {Array.from(
+                            { length: WEEKLY_GOAL_MAX - WEEKLY_GOAL_MIN + 1 },
+                            (_, i) => WEEKLY_GOAL_MIN + i,
+                          ).map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => void updateWeeklyGoal(n)}
+                              disabled={!unlocked}
+                              className={`h-9 w-9 border text-sm font-black transition ${
+                                gami.weeklyGoal === n
+                                  ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                                  : "border-white/15 bg-black/25 text-white/55 hover:border-white/40"
+                              } disabled:opacity-40`}
+                            >
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-3 text-xs font-semibold text-white/45">
+                          {gami.weeksStreak > 0
+                            ? `${gami.weeksStreak} ${gami.weeksStreak === 1 ? "semana" : "semanas"} seguidas cumpliendo.`
+                            : "Dias por semana que se compromete a entrenar."}
+                        </p>
+                      </div>
+                      {nextBadge ? (
+                        <div className="border border-white/10 bg-white/[0.04] p-5">
+                          <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-300">
+                            Proximo logro
+                          </p>
+                          <div className="mt-3 flex items-center gap-3">
+                            <span className={`grid h-11 w-11 shrink-0 place-items-center ${tierStyle(nextBadge.tier).icon}`}>
+                              {(() => {
+                                const Icon = badgeIcon(nextBadge.icon);
+                                return <Icon className="h-5 w-5" />;
+                              })()}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-black uppercase text-white">{nextBadge.name}</p>
+                              <p className="truncate text-xs font-semibold text-white/45">{nextBadge.desc}</p>
+                            </div>
+                          </div>
+                          {nextBadge.progress && (
+                            <>
+                              <div className="mt-3 h-2 border border-white/10 bg-black/40">
+                                <div
+                                  className="h-full bg-yellow-300/80 transition-all"
+                                  style={{
+                                    width: `${Math.min(100, Math.round((nextBadge.progress.current / Math.max(1, nextBadge.progress.target)) * 100))}%`,
+                                  }}
+                                />
+                              </div>
+                              <p className="mt-2 text-xs font-black text-white/50">
+                                {nextBadge.progress.current}/{nextBadge.progress.target} — le falta poco.
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="border border-white/10 bg-white/[0.04] p-5">
+                          <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-300">Logros</p>
+                          <p className="mt-3 text-sm font-semibold text-white/50">
+                            {gami.earnedBadgeCount} badges ganados. Vea la galeria en Progreso.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-4 sm:grid-cols-4">
                 <StatTile icon={Flame} label="Racha" value={`${currentMember.streak} dias`} accent="from-orange-400 to-red-500" />
                 <StatTile icon={CalendarCheck} label="Entrenos" value={`${currentMember.totalWorkouts}`} accent="from-[#d8ff3e] to-emerald-300" />
@@ -1427,11 +1826,13 @@ export default function ExtremeGymSite() {
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Nivel</p>
                   <div className="mt-3 flex items-end gap-3">
                     <span className="text-5xl font-black text-white">{level}</span>
-                    <span className="pb-2 text-sm font-bold uppercase text-white/45">Xtreme</span>
+                    <span className="pb-2 text-sm font-bold uppercase text-white/45">{levelName}</span>
                   </div>
                   <p className="mt-3 text-sm font-semibold text-white/55">
-                    {milestoneLeft === 0
-                      ? "Subio de nivel. Tremendo."
+                    {gami
+                      ? milestoneLeft === 0
+                        ? "Nivel maximo. Usted ES el gym."
+                        : `${milestoneLeft.toLocaleString()} XP para el nivel ${level + 1}.`
                       : `${milestoneLeft} entrenos para el nivel ${level + 1}.`}
                   </p>
                 </div>
@@ -1840,37 +2241,41 @@ export default function ExtremeGymSite() {
                     {unlockedCount}/{achievements.length}
                   </span>
                 </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {achievements.map((a) => {
-                    const Icon = a.icon;
-                    return (
-                      <div
-                        key={a.id}
-                        className={`flex items-center gap-3 border p-3 ${
-                          a.done ? "border-[#d8ff3e]/40 bg-[#d8ff3e]/10" : "border-white/10 bg-black/20"
-                        }`}
-                      >
-                        <span
-                          className={`grid h-11 w-11 shrink-0 place-items-center ${
-                            a.done ? "bg-[#d8ff3e] text-black" : "bg-white/10 text-white/40"
+                {serverBadges.length ? (
+                  <BadgeGallery badges={serverBadges} />
+                ) : (
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {achievements.map((a) => {
+                      const Icon = a.icon;
+                      return (
+                        <div
+                          key={a.id}
+                          className={`flex items-center gap-3 border p-3 ${
+                            a.done ? "border-[#d8ff3e]/40 bg-[#d8ff3e]/10" : "border-white/10 bg-black/20"
                           }`}
                         >
-                          {a.done ? <Icon className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
-                        </span>
-                        <div className="min-w-0">
-                          <p
-                            className={`truncate text-sm font-black uppercase ${
-                              a.done ? "text-white" : "text-white/55"
+                          <span
+                            className={`grid h-11 w-11 shrink-0 place-items-center ${
+                              a.done ? "bg-[#d8ff3e] text-black" : "bg-white/10 text-white/40"
                             }`}
                           >
-                            {a.name}
-                          </p>
-                          <p className="text-xs font-semibold text-white/40">{a.desc}</p>
+                            {a.done ? <Icon className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
+                          </span>
+                          <div className="min-w-0">
+                            <p
+                              className={`truncate text-sm font-black uppercase ${
+                                a.done ? "text-white" : "text-white/55"
+                              }`}
+                            >
+                              {a.name}
+                            </p>
+                            <p className="text-xs font-semibold text-white/40">{a.desc}</p>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
@@ -2014,6 +2419,10 @@ export default function ExtremeGymSite() {
 
             {tab === "perfil" && (
               <div className="space-y-6">
+              <a href="/app/comunidad" className="flex items-center justify-between border border-cyan-300/30 bg-cyan-300/10 p-5 transition hover:bg-cyan-300/15">
+                <div><p className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Comunidad Xtreme</p><p className="mt-1 font-black uppercase">Liga mensual, referidos y compas</p></div>
+                <Users className="h-6 w-6 text-cyan-300" />
+              </a>
               <div className="border border-white/10 bg-white/[0.04] p-5">
                 <div className="flex items-center gap-3">
                   <Camera className="h-5 w-5 text-[#d8ff3e]" />
@@ -2050,12 +2459,114 @@ export default function ExtremeGymSite() {
                         }}
                       />
                     </label>
-                    <p className="mt-3 text-xs font-semibold text-white/45">
+                    <p className="mt-2 text-sm font-black uppercase text-white/70">
+                      {levelName} · Nv. {level}
+                      {gami ? ` · ${gami.xp} XP` : ""}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-white/45">
                       Se recorta al centro y se guarda en su perfil. Aparece en el carne digital,
                       la pantalla de ingreso y el panel del coach.
                     </p>
                   </div>
                 </div>
+              </div>
+
+              <div className="border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-3">
+                  <Goal className="h-5 w-5 text-[#d8ff3e]" />
+                  <h2 className="text-lg font-black uppercase">Meta y preferencias</h2>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <label className="block sm:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Mi meta</span>
+                    <select
+                      value={goal}
+                      onChange={(event) => setGoal(event.target.value)}
+                      disabled={!unlocked}
+                      className="mt-2 w-full border border-white/10 bg-black/30 px-3 py-3 font-bold text-white outline-none focus:border-[#d8ff3e] disabled:opacity-45"
+                    >
+                      {GOALS.map((g) => (
+                        <option key={g} value={g} className="bg-black">
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block sm:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.16em] text-white/45">
+                      Entrenamiento favorito
+                    </span>
+                    <select
+                      value={currentMember.favoriteTraining}
+                      onChange={(event) => {
+                        const favoriteTraining = event.target.value;
+                        setMember((prev) =>
+                          prev ? { ...prev, favoriteTraining } : prev,
+                        );
+                      }}
+                      disabled={!unlocked}
+                      className="mt-2 w-full border border-white/10 bg-black/30 px-3 py-3 font-bold text-white outline-none focus:border-[#d8ff3e] disabled:opacity-45"
+                    >
+                      <option value="" className="bg-black">
+                        Sin preferencia
+                      </option>
+                      {TRAININGS.map((t) => (
+                        <option key={t.id} value={t.name} className="bg-black">
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="sm:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.16em] text-white/45">
+                      Meta semanal (dias)
+                    </span>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {[2, 3, 4, 5, 6, 7].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          disabled={!unlocked}
+                          onClick={() =>
+                            void saveProfileField(
+                              { weeklyGoal: n },
+                              `Meta semanal: ${n} dias. A entrenar.`,
+                            )
+                          }
+                          className={`min-w-12 border px-3 py-2.5 text-sm font-black transition disabled:opacity-45 ${
+                            weeklyGoal === n
+                              ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                              : "border-white/15 text-white/70 hover:border-[#d8ff3e]/50"
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs font-semibold text-white/42">
+                      Esta semana: {weekDoneCount}/{weeklyGoal}
+                      {gami?.weeksStreak ? ` · ${gami.weeksStreak} semanas en racha` : ""}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void saveProfileField(
+                      {
+                        goal,
+                        favoriteTraining: currentMember.favoriteTraining,
+                        phone: memberPhoneInput,
+                        email: memberEmailInput,
+                      },
+                      "Meta y contacto guardados.",
+                    )
+                  }
+                  disabled={!unlocked}
+                  className="mt-4 bg-[#d8ff3e] px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
+                >
+                  Guardar meta y favorito
+                </button>
               </div>
 
               <div className="border border-white/10 bg-gradient-to-br from-[#d8ff3e]/10 to-orange-400/[0.06] p-5">
@@ -2076,7 +2587,7 @@ export default function ExtremeGymSite() {
                           />
                           <div className="min-w-0">
                             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
-                              Socio Xtreme
+                              Socio Xtreme · {levelName}
                             </p>
                             <p className="mt-1 truncate text-lg font-black uppercase leading-tight">{memberName}</p>
                           </div>
@@ -2085,6 +2596,21 @@ export default function ExtremeGymSite() {
                           Activo
                         </span>
                       </div>
+                      {pinnedBadgeIds.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {pinnedBadgeIds.map((id) => {
+                            const b = serverBadges.find((x) => x.id === id);
+                            return (
+                              <span
+                                key={id}
+                                className="border border-[#d8ff3e]/30 bg-[#d8ff3e]/10 px-2 py-1 text-[10px] font-black uppercase text-[#eaff93]"
+                              >
+                                {b?.name ?? id}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                       <div className="mt-4">
                         <Barcode value={accessCode} />
                       </div>
@@ -2099,6 +2625,48 @@ export default function ExtremeGymSite() {
                     Entra con tu nombre para generar tu carne de acceso.
                   </p>
                 )}
+              </div>
+
+              <div className="border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-3">
+                  <Pin className="h-5 w-5 text-[#d8ff3e]" />
+                  <h2 className="text-lg font-black uppercase">Showcase de badges</h2>
+                </div>
+                <p className="mt-2 text-xs font-semibold text-white/45">
+                  Elija hasta 3 badges ganados para mostrar en su carne.
+                </p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {(serverBadges.length ? serverBadges.filter((b) => b.earned) : achievements.filter((a) => a.done))
+                    .slice(0, 12)
+                    .map((b) => {
+                      const id = "id" in b ? b.id : (b as { id: string }).id;
+                      const name = "name" in b ? b.name : "";
+                      const pinned = pinnedBadgeIds.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          disabled={!unlocked}
+                          onClick={() => togglePinnedBadge(id)}
+                          className={`flex items-center justify-between border px-3 py-3 text-left text-sm font-bold transition disabled:opacity-45 ${
+                            pinned
+                              ? "border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#eaff93]"
+                              : "border-white/10 bg-black/20 text-white/60 hover:border-white/25"
+                          }`}
+                        >
+                          <span>{name}</span>
+                          <span className="text-[10px] font-black uppercase tracking-wide">
+                            {pinned ? "Fijado" : "Fijar"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  {!unlockedCount && (
+                    <p className="text-sm font-semibold text-white/45 sm:col-span-2">
+                      Todavia no tiene badges. Entrene y vuelva.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="border border-white/10 bg-white/[0.04] p-5">
@@ -2152,43 +2720,74 @@ export default function ExtremeGymSite() {
                   </button>
                 </div>
                 <p className="mt-3 text-xs font-semibold text-white/42">
-                  El contacto sirve para recuperar el PIN y evitar perfiles duplicados.
+                  El correo sirve para recuperar el PIN con codigo OTP. El telefono evita perfiles
+                  duplicados.
                 </p>
               </div>
 
               <div className="border border-white/10 bg-white/[0.04] p-5">
                 <div className="flex items-center gap-3">
                   <Bell className="h-5 w-5 text-yellow-300" />
-                  <h2 className="text-lg font-black uppercase">Recordatorios</h2>
+                  <h2 className="text-lg font-black uppercase">Preferencias de correo</h2>
                 </div>
                 <div className="mt-4 grid gap-2">
-                  {REMINDERS.map((reminder) => (
+                  {(
+                    [
+                      ["streakRisk", "Racha en riesgo"],
+                      ["milestones", "Hitos y badges"],
+                      ["renewalReminders", "Renovacion de membresia"],
+                      ["winBack", "Volver a entrenar"],
+                      ["weeklyRecap", "Resumen semanal / mensual"],
+                    ] as const
+                  ).map(([key, label]) => (
                     <button
-                      key={reminder}
+                      key={key}
                       type="button"
-                      onClick={() => setSelectedReminder(reminder)}
-                      className={`border px-3 py-3 text-left text-sm font-bold transition ${
-                        selectedReminder === reminder
-                          ? "border-yellow-300 bg-yellow-300/10 text-yellow-100"
-                          : "border-white/10 bg-black/20 text-white/55 hover:border-white/25"
+                      disabled={!unlocked}
+                      onClick={() => toggleNotifPref(key)}
+                      className={`flex items-center justify-between border px-3 py-3 text-left text-sm font-bold transition disabled:opacity-45 ${
+                        notifPrefs[key]
+                          ? "border-yellow-300/50 bg-yellow-300/10 text-yellow-100"
+                          : "border-white/10 bg-black/20 text-white/45"
                       }`}
                     >
-                      {reminder}
+                      <span>{label}</span>
+                      <span className="text-[10px] font-black uppercase">
+                        {notifPrefs[key] ? "On" : "Off"}
+                      </span>
                     </button>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void activateReminder()}
-                  disabled={!unlocked || isSendingReminder}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-yellow-300 px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
-                >
-                  {isSendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-                  Enviar aviso a mi correo
-                </button>
-                <p className="mt-3 text-xs font-semibold text-white/42">
-                  Le llega al correo registrado en su perfil.
-                </p>
+                <div className="mt-5 border-t border-white/10 pt-4">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">
+                    Aviso rapido ahora
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    {REMINDERS.map((reminder) => (
+                      <button
+                        key={reminder}
+                        type="button"
+                        onClick={() => setSelectedReminder(reminder)}
+                        className={`border px-3 py-3 text-left text-sm font-bold transition ${
+                          selectedReminder === reminder
+                            ? "border-yellow-300 bg-yellow-300/10 text-yellow-100"
+                            : "border-white/10 bg-black/20 text-white/55 hover:border-white/25"
+                        }`}
+                      >
+                        {reminder}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void activateReminder()}
+                    disabled={!unlocked || isSendingReminder}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-yellow-300 px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
+                  >
+                    {isSendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+                    Enviar aviso a mi correo
+                  </button>
+                </div>
               </div>
 
               <div className="border border-white/10 bg-white/[0.04] p-5">

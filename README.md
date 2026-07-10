@@ -16,6 +16,12 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Xtreme Gym lifecycle job
+
+Phase 4 email and push triggers run daily through `GET /api/xtreme/jobs/lifecycle`. Configure `CRON_SECRET`, `RESEND_API_KEY`, `SMTP_FROM`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` (for example `mailto:admin@example.com`) in the deployment environment. Generate the VAPID pair with `npx web-push generate-vapid-keys`.
+
+`vercel.json` schedules the job at `00:00 UTC` (6:00 PM in Costa Rica). Vercel sends `CRON_SECRET` as a Bearer token automatically. MongoDB delivery keys prevent retries from sending duplicate messages.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

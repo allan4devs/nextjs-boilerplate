@@ -24,6 +24,7 @@ import {
   toAdminMember,
   toUtcDate,
 } from "@/lib/xtreme/shared";
+import { writeAudit } from "@/lib/xtreme/audit";
 import { sendMembershipReminderEmail, sendPaymentReceiptEmail } from "@/lib/helpers/email";
 
 export const dynamic = "force-dynamic";
@@ -281,6 +282,13 @@ export async function POST(req: NextRequest) {
         },
         { upsert: true },
       );
+      await writeAudit(db, {
+        actorRole: role,
+        action: "member.save_plan",
+        targetType: "member",
+        targetId: normalizedName,
+        summary: `Plan guardado: ${plan.title} → ${memberName}`,
+      });
       return NextResponse.json({ ok: true });
     }
 
@@ -305,12 +313,13 @@ export async function POST(req: NextRequest) {
       const startedAt =
         String(body.startedAt ?? existing?.membership?.startedAt ?? todayIso()).slice(0, 10) || todayIso();
 
+      const displayName = normalizeName(body.displayName) || memberName;
       await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
         { normalizedName },
         {
           $set: {
             normalizedName,
-            memberName: normalizeName(body.displayName) || memberName,
+            memberName: displayName,
             goal: String(body.goal ?? existing?.goal ?? "").trim().slice(0, 80),
             favoriteTraining: String(body.favoriteTraining ?? existing?.favoriteTraining ?? "")
               .trim()
@@ -331,6 +340,15 @@ export async function POST(req: NextRequest) {
         },
         { upsert: true },
       );
+
+      await writeAudit(db, {
+        actorRole: role,
+        action: "member.update_profile",
+        targetType: "member",
+        targetId: normalizedName,
+        summary: `Perfil actualizado: ${displayName}`,
+        meta: { plan, nextBillingDate },
+      });
 
       return NextResponse.json({ ok: true });
     }
@@ -384,6 +402,13 @@ export async function POST(req: NextRequest) {
       };
 
       await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+      await writeAudit(db, {
+        actorRole: role,
+        action: "member.checkin",
+        targetType: "member",
+        targetId: normalizedName,
+        summary: `Ingreso manual: ${checkin.memberName}`,
+      });
       return NextResponse.json({ ok: true, checkin, membershipStatus: ms.status });
     }
 
@@ -483,6 +508,15 @@ export async function POST(req: NextRequest) {
         });
         receiptSent = receipt.ok;
       }
+
+      await writeAudit(db, {
+        actorRole: role,
+        action: "payment.create",
+        targetType: "payment",
+        targetId: payment.id,
+        summary: `Pago ${payment.amountCrc} CRC — ${payment.optionLabel} (${payment.customerName})`,
+        meta: { method: payment.method, category: payment.category },
+      });
 
       return NextResponse.json({ ok: true, payment, receiptSent });
     }

@@ -1,17 +1,45 @@
 import { createHash } from "crypto";
 import type { Db } from "mongodb";
+import type { EarnedBadge } from "./gamification";
+import {
+  WEEKLY_GOAL_DEFAULT,
+  buildMemberView,
+  computeXp,
+  freezesAvailable,
+  levelForXp,
+} from "./gamification";
 
 export const MEMBERS_COLLECTION = "xtreme_gym_members";
 export const RESERVATIONS_COLLECTION = "xtreme_gym_class_reservations";
 export const PINS_COLLECTION = "xtreme_gym_pins";
 export const PAYMENTS_COLLECTION = "xtreme_gym_payments";
 export const CHECKINS_COLLECTION = "xtreme_gym_checkins";
+export const OTPS_COLLECTION = "xtreme_gym_otps";
+export const AUDIT_COLLECTION = "xtreme_gym_audit";
+export const BADGES_COLLECTION = "xtreme_gym_badges";
+export const REFERRALS_COLLECTION = "xtreme_gym_referrals";
+export const BUDDY_REQUESTS_COLLECTION = "xtreme_gym_buddy_requests";
 
 export const GYM_CAPACITY = 85;
 export const PIN_PEPPER = "xtreme-gym-member-pin-v1";
 
-export const ADMIN_CODE = process.env.XTREME_ADMIN_CODE || "xtreme-admin";
-export const SUPER_ADMIN_CODE = process.env.XTREME_SUPER_ADMIN_CODE || "xtreme-super";
+/**
+ * Sin fallbacks en produccion (Fase 3 hygiene). En desarrollo se aceptan
+ * defaults solo si las env no estan, con warning en consola.
+ */
+function adminEnv(name: "XTREME_ADMIN_CODE" | "XTREME_SUPER_ADMIN_CODE", devFallback: string) {
+  const value = process.env[name]?.trim() ?? "";
+  if (value) return value;
+  if (process.env.NODE_ENV === "production") {
+    console.error(`[xtreme] Missing required env ${name} — admin auth disabled for this role.`);
+    return "";
+  }
+  console.warn(`[xtreme] ${name} not set; using dev fallback. Set it before production.`);
+  return devFallback;
+}
+
+export const ADMIN_CODE = adminEnv("XTREME_ADMIN_CODE", "xtreme-admin");
+export const SUPER_ADMIN_CODE = adminEnv("XTREME_SUPER_ADMIN_CODE", "xtreme-super");
 
 export const TRAININGS = [
   { id: "fuerza-total", name: "Fuerza Total", capacity: 8 },
@@ -77,6 +105,22 @@ export type TrainingPlan = {
   updatedAt?: Date;
 };
 
+export type NotificationPrefs = {
+  streakRisk: boolean;
+  milestones: boolean;
+  renewalReminders: boolean;
+  winBack: boolean;
+  weeklyRecap: boolean;
+};
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  streakRisk: true,
+  milestones: true,
+  renewalReminders: true,
+  winBack: true,
+  weeklyRecap: true,
+};
+
 export type MemberDoc = {
   normalizedName?: string;
   memberName?: string;
@@ -91,9 +135,60 @@ export type MemberDoc = {
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
   trainingPlan?: TrainingPlan;
+  /** Gamificacion (Fase 1) */
+  weeklyGoal?: number;
+  earnedBadges?: EarnedBadge[];
+  freezeHistory?: string[];
+  /** Ajustes manuales admin (Fase 3) */
+  xpBonus?: number;
+  freezesBonus?: number;
+  /** Preferencias + showcase (Fase 3) */
+  notificationPrefs?: Partial<NotificationPrefs>;
+  pinnedBadges?: string[];
+  /** Social (Fase 5) */
+  leaderboardOptIn?: boolean;
+  buddies?: string[];
+  referredBy?: string;
+  referralCount?: number;
   seeded?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+};
+
+export type OtpDoc = {
+  normalizedName: string;
+  purpose: "pin_recovery";
+  codeHash: string;
+  attempts: number;
+  expiresAt: Date;
+  createdAt: Date;
+};
+
+export type AuditDoc = {
+  id: string;
+  at: Date;
+  actorRole: AdminRole;
+  action: string;
+  targetType: "member" | "badge" | "payment" | "system";
+  targetId: string;
+  summary: string;
+  meta?: Record<string, unknown>;
+};
+
+/** Definicion de badge personalizada / override de catalogo (Fase 3). */
+export type BadgeDoc = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  tier: "bronze" | "silver" | "gold" | "platinum";
+  /** manual = solo se otorga por admin; catalog = override de activo */
+  source: "catalog" | "manual";
+  active: boolean;
+  secret?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+  createdBy?: string;
 };
 
 export type PaymentDoc = {
@@ -181,9 +276,31 @@ export function formatAccessCode(code: string) {
 export function resolveAdminRole(code: string): AdminRole | null {
   const value = code.trim();
   if (!value) return null;
-  if (value === SUPER_ADMIN_CODE) return "super";
-  if (value === ADMIN_CODE) return "admin";
+  // Super primero: si ambos codigos coinciden por error, gana super.
+  if (SUPER_ADMIN_CODE && value === SUPER_ADMIN_CODE) return "super";
+  if (ADMIN_CODE && value === ADMIN_CODE) return "admin";
   return null;
+}
+
+export function mergeNotificationPrefs(prefs?: Partial<NotificationPrefs> | null): NotificationPrefs {
+  return {
+    ...DEFAULT_NOTIFICATION_PREFS,
+    ...(prefs ?? {}),
+  };
+}
+
+export function clampPinnedBadges(ids: unknown, max = 3): string[] {
+  if (!Array.isArray(ids)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of ids) {
+    const id = String(raw ?? "").trim().slice(0, 64);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    if (out.length >= max) break;
+  }
+  return out;
 }
 
 export function membershipStatus(membership?: Membership) {
@@ -318,6 +435,33 @@ export function toAdminMember(doc: MemberDoc) {
   const membership = membershipStatus(doc.membership);
   const name = doc.memberName ?? "";
   const key = doc.normalizedName ?? normalizeKey(name);
+  const freezeHistory = doc.freezeHistory ?? [];
+  const weeklyGoal = doc.weeklyGoal ?? WEEKLY_GOAL_DEFAULT;
+  const plan = toAdminPlan(doc.trainingPlan);
+  const planItemsDone = plan?.doneItems ?? 0;
+  const earnedBadges = doc.earnedBadges ?? [];
+  const earnedBadgeIds = earnedBadges.map((b) => b.badgeId);
+  const xpBonus = Number(doc.xpBonus) || 0;
+  const freezesBonus = Number(doc.freezesBonus) || 0;
+
+  const view = buildMemberView({
+    workouts,
+    weeklyGoal,
+    freezeHistory,
+    metricsCount: metrics.length,
+    planProgressPct: plan?.progressPct ?? 0,
+  });
+  const xp = computeXp({
+    totalWorkouts: view.totalWorkouts,
+    totalMinutes: view.totalMinutes,
+    metricsCount: view.metricsCount,
+    planItemsDone,
+    totalWeeksMet: view.totalWeeksMet,
+    earnedBadgeIds,
+    xpBonus,
+  });
+  const level = levelForXp(xp);
+  const freezesBanked = freezesAvailable(view.totalWorkouts, freezeHistory, freezesBonus);
 
   // Recent workouts for admin detail view (last 8)
   const recentWorkouts: WorkoutHistoryItem[] = [...workouts]
@@ -332,7 +476,7 @@ export function toAdminMember(doc: MemberDoc) {
     }));
 
   return {
-    trainingPlan: toAdminPlan(doc.trainingPlan),
+    trainingPlan: plan,
     memberName: name,
     normalizedName: key,
     goal: doc.goal ?? "",
@@ -343,7 +487,20 @@ export function toAdminMember(doc: MemberDoc) {
     notes: doc.notes ?? "",
     photoUrl: doc.photoUrl ?? "",
     accessCode: formatAccessCode(memberAccessCode(key)),
-    streak: computeStreak(workouts),
+    streak: view.streak || computeStreak(workouts),
+    weeksStreak: view.weeksStreak,
+    weeklyGoal,
+    freezesBanked,
+    freezesUsed: freezeHistory.length,
+    freezesBonus,
+    xp,
+    xpBonus,
+    levelName: level.name,
+    levelIndex: level.index,
+    earnedBadges,
+    earnedBadgeCount: earnedBadgeIds.length,
+    pinnedBadges: clampPinnedBadges(doc.pinnedBadges),
+    notificationPrefs: mergeNotificationPrefs(doc.notificationPrefs),
     totalWorkouts: workouts.length,
     totalMinutes: workouts.reduce((sum, w) => sum + (w.minutes || 0), 0),
     lastWorkoutDate:
