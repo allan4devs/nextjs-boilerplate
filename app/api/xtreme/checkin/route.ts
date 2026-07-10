@@ -16,6 +16,7 @@ import {
   todayIso,
   toAdminMember,
 } from "@/lib/xtreme/shared";
+import { recordEvent } from "@/lib/xtreme/events";
 
 export const dynamic = "force-dynamic";
 
@@ -159,6 +160,13 @@ export async function POST(req: NextRequest) {
     };
 
     await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+    await recordEvent(db, {
+      type: "checkin_completed",
+      memberId: normalizedName,
+      source: "kiosk",
+      entity: { type: "checkin", id: checkin.id },
+      properties: { method, membershipStatus: ms.status, date },
+    });
     const status = await computeOccupancy(db);
 
     return NextResponse.json({

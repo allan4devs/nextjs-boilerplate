@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { sendWelcomeEmail } from "@/lib/helpers/email";
+import { recordEvent } from "@/lib/xtreme/events";
 import {
   clampPinnedBadges,
   computeStreak as sharedComputeStreak,
@@ -24,6 +25,7 @@ import {
   reconcileBadges,
   type EarnedBadge,
 } from "@/lib/xtreme/gamification";
+import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 
 export const dynamic = "force-dynamic";
 
@@ -118,12 +120,6 @@ function normalizeEmail(value: unknown) {
 function isoDate(value: unknown) {
   const raw = String(value ?? "").slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : new Date().toISOString().slice(0, 10);
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
 }
 
 function toUtcDate(date: string) {
@@ -303,7 +299,7 @@ async function syncGamification(normalizedName: string): Promise<string[]> {
   return newlyEarned;
 }
 
-function publicMember(doc: XtremeMemberDoc | null) {
+function publicMember(doc: XtremeMemberDoc | null, entitlements: unknown[] = []) {
   const workouts = doc?.workouts ?? [];
   const bodyMetrics = [...(doc?.bodyMetrics ?? [])].sort((a, b) => a.date.localeCompare(b.date));
   const totalMinutes = workouts.reduce((sum, workout) => sum + (workout.minutes || 0), 0);
@@ -331,6 +327,7 @@ function publicMember(doc: XtremeMemberDoc | null) {
     notificationPrefs: mergeNotificationPrefs(doc?.notificationPrefs),
     pinnedBadges: gamification.pinnedBadges,
     gamification,
+    entitlements,
   };
 }
 
@@ -342,7 +339,7 @@ async function leaderboard() {
     .toArray();
 
   return docs
-    .map(publicMember)
+    .map((doc) => publicMember(doc))
     .sort(
       (a, b) =>
         b.streak - a.streak ||
@@ -365,7 +362,6 @@ export async function GET(req: NextRequest) {
     // Consumir protectores / otorgar badges pendientes antes de responder.
     const newBadges = await syncGamification(normalizedName);
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-
     return NextResponse.json({
       member: publicMember(doc),
       exists: Boolean(doc),
@@ -468,6 +464,15 @@ export async function POST(req: NextRequest) {
     }
 
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+    if (!existing) {
+      await recordEvent(db, {
+        type: "profile_created",
+        memberId: normalizedName,
+        source: "member_app",
+        entity: { type: "member", id: normalizedName },
+        properties: { hasEmail: Boolean(email), hasPhone: Boolean(phone), plan },
+      });
+    }
     return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });
   } catch (err) {
     console.error("XTREME USER POST", err);
@@ -478,7 +483,10 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
-    const memberName = normalizeName(body.memberName);
+    // Strategy 2.0: identity from session cookie — body.memberName is not authorization.
+    const sessionOrErr = await requireMemberSession(req);
+    if (!isSession(sessionOrErr)) return sessionOrErr;
+    const memberName = sessionOrErr.memberName;
     const action = String(body.action ?? "workout");
     const trainingId = String(body.trainingId ?? "").trim();
     const trainingName = String(body.trainingName ?? "").trim();
@@ -495,7 +503,7 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
       }
       const db = await getDb();
-      const normalizedName = normalizeKey(memberName);
+      const normalizedName = sessionOrErr.memberKey;
       await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
         { normalizedName },
         { $set: { weeklyGoal, updatedAt: new Date() } },
@@ -506,11 +514,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "badgesSeen") {
-      if (!memberName) {
-        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
-      }
       const db = await getDb();
-      const normalizedName = normalizeKey(memberName);
+      const normalizedName = sessionOrErr.memberKey;
       await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
         { normalizedName },
         { $set: { "earnedBadges.$[].seen": true, updatedAt: new Date() } },
@@ -521,11 +526,8 @@ export async function PATCH(req: NextRequest) {
 
     // Perfil self-service (Fase 3): prefs, showcase, meta/contacto
     if (action === "profile") {
-      if (!memberName) {
-        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
-      }
       const db = await getDb();
-      const normalizedName = normalizeKey(memberName);
+      const normalizedName = sessionOrErr.memberKey;
       const existing = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       if (!existing) {
         return NextResponse.json({ error: "Perfil no encontrado." }, { status: 404 });
@@ -576,12 +578,12 @@ export async function PATCH(req: NextRequest) {
 
     if (action === "planItem") {
       const itemId = String(body.itemId ?? "").trim();
-      if (!memberName || !itemId) {
+      if (!itemId) {
         return NextResponse.json({ error: "Falta la sesion del plan." }, { status: 400 });
       }
 
       const db = await getDb();
-      const normalizedName = normalizeKey(memberName);
+      const normalizedName = sessionOrErr.memberKey;
       const done = Boolean(body.done);
       const result = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
         { normalizedName },
@@ -609,12 +611,12 @@ export async function PATCH(req: NextRequest) {
       const waistCm = Math.max(1, Math.min(300, Number(body.waistCm) || 0));
       const note = String(body.note ?? "").trim().slice(0, 120);
 
-      if (!memberName || !weightKg || !waistCm) {
+      if (!weightKg || !waistCm) {
         return NextResponse.json({ error: "Faltan medidas." }, { status: 400 });
       }
 
       const db = await getDb();
-      const normalizedName = normalizeKey(memberName);
+      const normalizedName = sessionOrErr.memberKey;
       const now = new Date();
       const metric: BodyMetric = {
         id: `metric-${completedDate}-${now.getTime()}`,
@@ -646,16 +648,23 @@ export async function PATCH(req: NextRequest) {
       );
 
       const newBadges = await syncGamification(normalizedName);
+      await recordEvent(db, {
+        type: "body_metric_logged",
+        memberId: normalizedName,
+        source: "member_app",
+        entity: { type: "body_metric", id: metric.id },
+        properties: { date: completedDate },
+      });
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
     }
 
-    if (!memberName || !trainingId || !trainingName) {
+    if (!trainingId || !trainingName) {
       return NextResponse.json({ error: "Faltan datos del entreno." }, { status: 400 });
     }
 
     const db = await getDb();
-    const normalizedName = normalizeKey(memberName);
+    const normalizedName = sessionOrErr.memberKey;
     const now = new Date();
     const entry: WorkoutEntry = {
       id: `${trainingId}-${completedDate}-${now.getTime()}`,
@@ -688,6 +697,13 @@ export async function PATCH(req: NextRequest) {
     );
 
     const newBadges = await syncGamification(normalizedName);
+    await recordEvent(db, {
+      type: "workout_logged",
+      memberId: normalizedName,
+      source: "member_app",
+      entity: { type: "workout", id: entry.id },
+      properties: { trainingId, trainingName, minutes, intensity, completedDate },
+    });
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
     return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
   } catch (err) {

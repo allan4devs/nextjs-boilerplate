@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { PAYPAL_CURRENCY } from "@/lib/constants/paypal";
 import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal";
+import { getDb } from "@/lib/helpers/mongodb";
+import { recordEvent } from "@/lib/xtreme/events";
+import { normalizeKey, normalizeName } from "@/lib/xtreme/shared";
 import { getXtremeCheckoutOption } from "../catalog";
 
 type Customer = {
@@ -121,6 +124,15 @@ export async function POST(req: Request) {
         { status: response.status || 500 },
       );
     }
+
+    const db = await getDb();
+    await recordEvent(db, {
+      type: "checkout_started",
+      memberId: normalizeKey(normalizeName(customer.name)),
+      source: "site",
+      entity: { type: "paypal_order", id: data.id },
+      properties: { optionId: option.id, amountUsd: Number(option.usdAmount), priceCrc: option.priceCrc },
+    });
 
     return NextResponse.json({
       success: true,

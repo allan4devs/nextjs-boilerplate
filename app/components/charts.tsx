@@ -54,7 +54,7 @@ export function LineTrendChart({
   const H = height;
   const pad = { top: 16, right: 56, bottom: 24, left: 44 };
 
-  const { points, ticks, xFor, yFor } = useMemo(() => {
+  const { points, ticks, yFor } = useMemo(() => {
     const values = data.map((d) => d.value);
     const rawMin = Math.min(...values);
     const rawMax = Math.max(...values);
@@ -69,7 +69,6 @@ export function LineTrendChart({
     return {
       points: data.map((d, i) => ({ ...d, x: xFor(i), y: yFor(d.value) })),
       ticks: niceTicks(rawMin, rawMax),
-      xFor,
       yFor,
     };
   }, [data, H, pad.left, pad.right, pad.top, pad.bottom]);

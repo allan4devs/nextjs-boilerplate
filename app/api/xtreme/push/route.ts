@@ -6,6 +6,7 @@ import {
   type StoredPushSubscription,
 } from "@/lib/helpers/push";
 import { MEMBERS_COLLECTION, normalizeKey, normalizeName } from "@/lib/xtreme/shared";
+import { recordEvent } from "@/lib/xtreme/events";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,13 @@ export async function POST(req: NextRequest) {
     { $set: { endpoint, keys: { p256dh, auth }, memberKey, updatedAt: now }, $setOnInsert: { createdAt: now } },
     { upsert: true },
   );
+  await recordEvent(db, {
+    type: "push_subscribed",
+    memberId: memberKey,
+    source: "member_app",
+    entity: { type: "push_endpoint", id: endpoint.slice(-48) },
+    properties: {},
+  });
   return NextResponse.json({ ok: true });
 }
 
@@ -43,6 +51,15 @@ export async function DELETE(req: NextRequest) {
   const endpoint = String(body.endpoint ?? "").trim();
   if (!endpoint) return NextResponse.json({ error: "Endpoint requerido." }, { status: 400 });
   const db = await getDb();
-  await db.collection(PUSH_SUBSCRIPTIONS_COLLECTION).deleteOne({ endpoint });
+  const removed = await db.collection<StoredPushSubscription>(PUSH_SUBSCRIPTIONS_COLLECTION).findOneAndDelete({ endpoint });
+  if (removed?.memberKey) {
+    await recordEvent(db, {
+      type: "push_unsubscribed",
+      memberId: removed.memberKey,
+      source: "member_app",
+      entity: { type: "push_endpoint", id: endpoint.slice(-48) },
+      properties: {},
+    });
+  }
   return NextResponse.json({ ok: true });
 }

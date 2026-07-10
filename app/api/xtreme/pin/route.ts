@@ -11,6 +11,11 @@ import {
   normalizeKey,
   normalizeName,
 } from "@/lib/xtreme/shared";
+import {
+  attachSessionCookie,
+  createMemberSession,
+  revokeAllMemberSessions,
+} from "@/lib/xtreme/session";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +43,27 @@ function hashOtp(code: string, normalizedName: string) {
 
 function generateOtp() {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
+}
+
+/** Strategy 2.0: issue HttpOnly session cookie after successful PIN auth. */
+async function withMemberSession(
+  db: Awaited<ReturnType<typeof getDb>>,
+  req: NextRequest,
+  args: { memberKey: string; memberName: string },
+  payload: Record<string, unknown>,
+  opts?: { rotateAll?: boolean },
+) {
+  if (opts?.rotateAll) {
+    await revokeAllMemberSessions(db, args.memberKey);
+  }
+  const { token, expiresAt } = await createMemberSession(db, {
+    memberKey: args.memberKey,
+    memberName: args.memberName,
+    userAgent: req.headers.get("user-agent") ?? undefined,
+  });
+  const res = NextResponse.json({ ...payload, session: true, memberKey: args.memberKey });
+  attachSessionCookie(res, token, expiresAt);
+  return res;
 }
 
 export async function GET(req: NextRequest) {
@@ -195,7 +221,12 @@ export async function POST(req: NextRequest) {
       );
 
       await notifyPinEvent("set");
-      return NextResponse.json({ ok: true });
+      return withMemberSession(
+        db,
+        req,
+        { memberKey: normalizedName, memberName },
+        { ok: true },
+      );
     }
 
     const doc = await col.findOne({ normalizedName });
@@ -213,7 +244,14 @@ export async function POST(req: NextRequest) {
         { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
       );
       await notifyPinEvent("changed");
-      return NextResponse.json({ ok: true, changed: true, hasPinSet: true });
+      // Rotate all sessions after PIN change (Strategy 2.0).
+      return withMemberSession(
+        db,
+        req,
+        { memberKey: normalizedName, memberName },
+        { ok: true, changed: true, hasPinSet: true },
+        { rotateAll: true },
+      );
     }
 
     if (action === "recover") {
@@ -250,7 +288,13 @@ export async function POST(req: NextRequest) {
         );
         await db.collection(OTPS_COLLECTION).deleteMany({ normalizedName, purpose: "pin_recovery" });
         await notifyPinEvent("recovered");
-        return NextResponse.json({ ok: true, recovered: true, hasPinSet: true, method: "otp" });
+        return withMemberSession(
+          db,
+          req,
+          { memberKey: normalizedName, memberName },
+          { ok: true, recovered: true, hasPinSet: true, method: "otp" },
+          { rotateAll: true },
+        );
       }
 
       // Fallback: contacto (telefono o correo) debe coincidir con el perfil.
@@ -279,13 +323,26 @@ export async function POST(req: NextRequest) {
         { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
       );
       await notifyPinEvent("recovered");
-      return NextResponse.json({ ok: true, recovered: true, hasPinSet: true, method: "contact" });
+      return withMemberSession(
+        db,
+        req,
+        { memberKey: normalizedName, memberName },
+        { ok: true, recovered: true, hasPinSet: true, method: "contact" },
+        { rotateAll: true },
+      );
     }
 
-    return NextResponse.json({
-      valid: doc.pinHash === hashPin(pin, normalizedName),
-      hasPinSet: true,
-    });
+    // verify
+    const valid = doc.pinHash === hashPin(pin, normalizedName);
+    if (!valid) {
+      return NextResponse.json({ valid: false, hasPinSet: true });
+    }
+    return withMemberSession(
+      db,
+      req,
+      { memberKey: normalizedName, memberName },
+      { valid: true, hasPinSet: true },
+    );
   } catch (err) {
     console.error("XTREME PIN POST", err);
     return NextResponse.json({ error: "No se pudo procesar el PIN." }, { status: 500 });

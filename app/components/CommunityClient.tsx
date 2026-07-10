@@ -26,11 +26,17 @@ export default function CommunityClient() {
   const [referral, setReferral] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pushSubscription, setPushSubscription] = useState<PushSubscription | null>(null);
 
   useEffect(() => {
     const name = localStorage.getItem("xtreme-gym-member-name") || "";
     setMemberName(name);
     if (!name) return;
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      void navigator.serviceWorker.ready
+        .then((registration) => registration.pushManager.getSubscription())
+        .then(setPushSubscription);
+    }
     fetch(`/api/xtreme/social?memberName=${encodeURIComponent(name)}`, { cache: "no-store" })
       .then(async (response) => {
         const json = await response.json();
@@ -62,8 +68,23 @@ export default function CommunityClient() {
       const subscription = (await registration.pushManager.getSubscription()) || (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKey(config.publicKey) }));
       const response = await fetch("/api/xtreme/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memberName, subscription: subscription.toJSON() }) });
       if (!response.ok) throw new Error((await response.json()).error || "No se pudo activar push.");
+      setPushSubscription(subscription);
       setMessage("Notificaciones activadas en este dispositivo.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo activar push."); }
+    finally { setBusy(false); }
+  }
+
+  async function disablePush() {
+    if (!pushSubscription) return;
+    setBusy(true); setMessage("");
+    try {
+      const endpoint = pushSubscription.endpoint;
+      const response = await fetch("/api/xtreme/push", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint }) });
+      if (!response.ok) throw new Error("No se pudo desactivar push.");
+      await pushSubscription.unsubscribe();
+      setPushSubscription(null);
+      setMessage("Notificaciones desactivadas en este dispositivo.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo desactivar push."); }
     finally { setBusy(false); }
   }
 
@@ -93,7 +114,7 @@ export default function CommunityClient() {
             {data.pendingRequests.map((request) => <div key={request.memberKey} className="mt-3 flex items-center gap-3 border border-cyan-300/20 p-3"><span className="flex-1 font-bold">{request.firstName} quiere ser tu compa</span><button onClick={() => void action("buddy-accept", { target: request.memberKey })} className="p-2 text-[#d8ff3e]" aria-label="Aceptar"><Check /></button></div>)}
             {data.buddies.map((buddy) => <div key={buddy.memberKey} className="mt-3 flex justify-between border border-white/10 p-3"><span className="font-black uppercase">{buddy.firstName}</span><span className="text-xs font-bold text-white/45">{buddy.lastWorkoutDate ? `Entrenó ${buddy.lastWorkoutDate}` : "Sin entrenos"}</span></div>)}
           </section>
-          <section className="border border-white/10 bg-gradient-to-br from-[#d8ff3e]/10 to-transparent p-5"><h2 className="flex items-center gap-2 text-xl font-black uppercase"><Bell className="text-[#d8ff3e]" />Avisos en el celular</h2><p className="mt-2 text-sm leading-6 text-white/55">Recibí alertas de racha, renovación y tu resumen mensual aunque la app esté cerrada.</p><button disabled={busy} onClick={() => void enablePush()} className="mt-5 bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black disabled:opacity-40">Activar notificaciones</button></section>
+          <section className="border border-white/10 bg-gradient-to-br from-[#d8ff3e]/10 to-transparent p-5"><h2 className="flex items-center gap-2 text-xl font-black uppercase"><Bell className="text-[#d8ff3e]" />Avisos en el celular</h2><p className="mt-2 text-sm leading-6 text-white/55">Recibí alertas de racha, renovación y tu resumen mensual aunque la app esté cerrada.</p>{pushSubscription ? <button disabled={busy} onClick={() => void disablePush()} className="mt-5 border border-white/20 px-5 py-3 font-black uppercase text-white disabled:opacity-40">Desactivar en este dispositivo</button> : <button disabled={busy} onClick={() => void enablePush()} className="mt-5 bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black disabled:opacity-40">Activar notificaciones</button>}</section>
         </div>
       </div>
     </main>

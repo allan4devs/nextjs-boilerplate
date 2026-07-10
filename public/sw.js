@@ -1,4 +1,4 @@
-const CACHE_NAME = "xtreme-gym-pwa-v1";
+const CACHE_NAME = "xtreme-gym-pwa-v2";
 const APP_SHELL = ["/", "/app", "/ingreso", "/xtreme/logo.jpg", "/pwa-icon-192.png", "/pwa-icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -67,7 +67,12 @@ self.addEventListener("push", (event) => {
       body: data.body || "Nuevo aviso de Xtreme Gym.",
       icon: data.icon || "/pwa-icon-192.png",
       badge: "/pwa-icon-192.png",
-      data: { url: data.url || "/app" },
+      data: {
+        url: data.url || "/app",
+        deliveryKey: data.deliveryKey || "",
+        memberKey: data.memberKey || "",
+        clickToken: data.clickToken || "",
+      },
     }),
   );
 });
@@ -75,5 +80,20 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url || "/app";
-  event.waitUntil(self.clients.openWindow(url));
+  const data = event.notification.data || {};
+  const tasks = [self.clients.openWindow(url)];
+  if (data.deliveryKey && data.memberKey && data.clickToken) {
+    tasks.push(
+      fetch("/api/xtreme/events/notification-click", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deliveryKey: data.deliveryKey,
+          memberKey: data.memberKey,
+          token: data.clickToken,
+        }),
+      }).catch(() => undefined),
+    );
+  }
+  event.waitUntil(Promise.all(tasks));
 });

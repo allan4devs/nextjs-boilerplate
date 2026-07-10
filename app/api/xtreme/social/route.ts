@@ -10,6 +10,7 @@ import {
   type MemberDoc,
 } from "@/lib/xtreme/shared";
 import { BUDDIES_MAX, REFERRAL_REDEEM_WINDOW_DAYS, REFERRAL_REWARD_DAYS, computeMonthlyXp, firstNameOf, leagueForMonthlyXp, monthKeyOf } from "@/lib/xtreme/social";
+import { recordEvent } from "@/lib/xtreme/events";
 
 export const dynamic = "force-dynamic";
 
@@ -82,9 +83,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const memberKey = normalizeKey(normalizeName(body.memberName));
+  // Strategy 2.0: session identity only
+  const { isSession, requireMemberSession } = await import("@/lib/xtreme/session");
+  const sessionOrErr = await requireMemberSession(req);
+  if (!isSession(sessionOrErr)) return sessionOrErr;
+  const memberKey = sessionOrErr.memberKey;
   const action = String(body.action ?? "");
-  if (!memberKey) return NextResponse.json({ error: "Socio requerido." }, { status: 400 });
   const db = await getDb();
   const members = db.collection<MemberDoc>(MEMBERS_COLLECTION);
   const member = await members.findOne({ normalizedName: memberKey });
@@ -146,6 +150,20 @@ export async function POST(req: NextRequest) {
   } else {
     return NextResponse.json({ error: "Acción social inválida." }, { status: 400 });
   }
+
+  const eventTypes: Record<string, string> = {
+    leaderboard: Boolean(body.enabled) ? "leaderboard_joined" : "leaderboard_left",
+    "buddy-request": "buddy_requested",
+    "buddy-accept": "buddy_connected",
+    "buddy-remove": "buddy_removed",
+    "referral-redeem": "referral_redeemed",
+  };
+  await recordEvent(db, {
+    type: eventTypes[action] || "social_updated",
+    memberId: memberKey,
+    source: "member_app",
+    properties: { target: String(body.target ?? ""), codeUsed: action === "referral-redeem" },
+  });
 
   return NextResponse.json(await socialSnapshot(memberKey));
 }

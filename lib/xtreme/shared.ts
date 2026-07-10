@@ -19,6 +19,14 @@ export const AUDIT_COLLECTION = "xtreme_gym_audit";
 export const BADGES_COLLECTION = "xtreme_gym_badges";
 export const REFERRALS_COLLECTION = "xtreme_gym_referrals";
 export const BUDDY_REQUESTS_COLLECTION = "xtreme_gym_buddy_requests";
+/** Strategy 2.0 — trust + operations */
+export const SESSIONS_COLLECTION = "xtreme_gym_sessions";
+export const ENTITLEMENTS_COLLECTION = "xtreme_gym_entitlements";
+export const ENTITLEMENT_LEDGER_COLLECTION = "xtreme_gym_entitlement_ledger";
+export const CLASS_TEMPLATES_COLLECTION = "xtreme_gym_class_templates";
+export const CLASS_SESSIONS_COLLECTION = "xtreme_gym_class_sessions";
+export const BOOKINGS_COLLECTION = "xtreme_gym_bookings";
+export const WAITLIST_COLLECTION = "xtreme_gym_waitlist";
 
 export const GYM_CAPACITY = 85;
 export const PIN_PEPPER = "xtreme-gym-member-pin-v1";

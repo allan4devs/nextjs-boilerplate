@@ -1,73 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { sendReservationEmail } from "@/lib/helpers/email";
+import {
+  MEMBERS_COLLECTION,
+  RESERVATIONS_COLLECTION,
+  normalizeKey,
+  normalizeName,
+  todayIso,
+} from "@/lib/xtreme/shared";
+import { isSession, requireMemberSession } from "@/lib/xtreme/session";
+import { bookSession, cancelBooking, sessionSnapshot } from "@/lib/xtreme/inventory";
 
 export const dynamic = "force-dynamic";
 
-const RESERVATIONS_COLLECTION = "xtreme_gym_class_reservations";
-const MEMBERS_COLLECTION = "xtreme_gym_members";
-
-const TRAINING_CAPACITY: Record<string, number> = {
-  "fuerza-total": 8,
-  "hiit-quemador": 12,
-  "glute-lab": 10,
-  "xtreme-core": 15,
-};
-
-type ReservationDoc = {
-  memberName: string;
-  normalizedName: string;
-  trainingId: string;
-  trainingName: string;
-  trainingDate: string;
-  status: "reserved" | "cancelled";
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-function normalizeName(value: unknown) {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
-
-function normalizeKey(value: string) {
-  return value.trim().toUpperCase();
-}
-
 function isoDate(value: unknown) {
   const raw = String(value ?? "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : new Date().toISOString().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : todayIso();
 }
 
-async function reservationSnapshot(trainingDate: string, memberName = "") {
-  const db = await getDb();
-  const normalizedName = normalizeKey(memberName);
-  const docs = await db
-    .collection<ReservationDoc>(RESERVATIONS_COLLECTION)
-    .find({ trainingDate, status: "reserved" })
-    .toArray();
-
-  const byTraining: Record<string, { reserved: number; capacity: number; remaining: number; isMine: boolean }> = {};
-
-  for (const [trainingId, capacity] of Object.entries(TRAINING_CAPACITY)) {
-    const reservations = docs.filter((doc) => doc.trainingId === trainingId);
-    byTraining[trainingId] = {
-      reserved: reservations.length,
-      capacity,
-      remaining: Math.max(0, capacity - reservations.length),
-      isMine: Boolean(normalizedName && reservations.some((doc) => doc.normalizedName === normalizedName)),
-    };
-  }
-
-  return byTraining;
-}
-
+/**
+ * Strategy 2.0: reservations require a member session + active entitlement.
+ * Capacity is claimed atomically on class_sessions.bookedCount.
+ */
 export async function GET(req: NextRequest) {
   try {
     const trainingDate = isoDate(req.nextUrl.searchParams.get("date"));
     const memberName = normalizeName(req.nextUrl.searchParams.get("memberName"));
+    const session = await requireMemberSession(req);
+    const memberKey = isSession(session)
+      ? session.memberKey
+      : memberName
+        ? normalizeKey(memberName)
+        : "";
+
+    const db = await getDb();
+    const reservations = await sessionSnapshot(db, trainingDate, memberKey);
+
     return NextResponse.json({
       date: trainingDate,
-      reservations: await reservationSnapshot(trainingDate, memberName),
+      reservations,
+      auth: isSession(session) ? "session" : memberKey ? "name" : "anon",
     });
   } catch (err) {
     console.error("XTREME RESERVATIONS GET", err);
@@ -78,59 +50,84 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
-    const memberName = normalizeName(body.memberName);
     const trainingId = String(body.trainingId ?? "").trim();
     const trainingName = String(body.trainingName ?? "").trim();
     const trainingDate = isoDate(body.trainingDate);
-    const capacity = TRAINING_CAPACITY[trainingId];
 
-    if (!memberName || !trainingId || !trainingName || !capacity) {
+    if (!trainingId || !trainingName) {
       return NextResponse.json({ error: "Faltan datos de la reserva." }, { status: 400 });
     }
 
+    // Identity from session only (Strategy 2.0 §4.1).
+    const sessionOrErr = await requireMemberSession(req);
+    if (!isSession(sessionOrErr)) return sessionOrErr;
+
     const db = await getDb();
-    const col = db.collection<ReservationDoc>(RESERVATIONS_COLLECTION);
-    const normalizedName = normalizeKey(memberName);
+    const result = await bookSession(db, {
+      memberKey: sessionOrErr.memberKey,
+      memberName: sessionOrErr.memberName,
+      trainingId,
+      trainingName,
+      date: trainingDate,
+    });
 
-    const existing = await col.findOne({ normalizedName, trainingId, trainingDate, status: "reserved" });
-    if (existing) {
-      return NextResponse.json({
-        ok: true,
-        reservations: await reservationSnapshot(trainingDate, memberName),
-      });
-    }
-
-    const reserved = await col.countDocuments({ trainingId, trainingDate, status: "reserved" });
-    if (reserved >= capacity) {
+    if (!result.ok) {
+      const status =
+        result.code === "full"
+          ? 409
+          : result.code === "payment_required" || result.code === "expired" || result.code === "limit_reached"
+            ? 402
+            : 400;
       return NextResponse.json(
         {
-          error: "Clase llena. Probá otro horario.",
-          reservations: await reservationSnapshot(trainingDate, memberName),
+          error: result.message,
+          code: result.code,
+          paymentRequired: result.code === "payment_required" || result.code === "expired",
+          checkoutOptionId: "day-pass",
+          trainingId,
+          trainingDate,
+          reservations: await sessionSnapshot(db, trainingDate, sessionOrErr.memberKey),
         },
-        { status: 409 },
+        { status },
       );
     }
 
-    const now = new Date();
-    await col.insertOne({
-      memberName,
-      normalizedName,
-      trainingId,
-      trainingName,
-      trainingDate,
-      status: "reserved",
-      createdAt: now,
-      updatedAt: now,
-    });
+    // Legacy mirror for older readers of xtreme_gym_class_reservations
+    try {
+      await db.collection(RESERVATIONS_COLLECTION).updateOne(
+        {
+          normalizedName: sessionOrErr.memberKey,
+          trainingId,
+          trainingDate,
+        },
+        {
+          $set: {
+            memberName: sessionOrErr.memberName,
+            normalizedName: sessionOrErr.memberKey,
+            trainingId,
+            trainingName,
+            trainingDate,
+            status: "reserved",
+            bookingId: result.booking.id,
+            sessionId: result.session.id,
+            entitlementId: result.entitlementId,
+            updatedAt: new Date(),
+          },
+          $setOnInsert: { createdAt: new Date() },
+        },
+        { upsert: true },
+      );
+    } catch (legacyErr) {
+      console.error("LEGACY RESERVATION MIRROR", legacyErr);
+    }
 
-    // Confirmacion por correo si el socio tiene email registrado
     const member = await db
       .collection<{ email?: string; memberName?: string }>(MEMBERS_COLLECTION)
-      .findOne({ normalizedName }, { projection: { email: 1, memberName: 1 } });
+      .findOne({ normalizedName: sessionOrErr.memberKey }, { projection: { email: 1, memberName: 1 } });
     if (member?.email) {
       await sendReservationEmail({
         to: member.email,
-        memberName: member.memberName || memberName,
+        memberName: member.memberName || sessionOrErr.memberName,
         trainingName,
         trainingDate,
       });
@@ -138,7 +135,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      reservations: await reservationSnapshot(trainingDate, memberName),
+      bookingId: result.booking.id,
+      sessionId: result.session.id,
+      entitlementId: result.entitlementId,
+      duplicate: Boolean(result.duplicate),
+      reservations: await sessionSnapshot(db, trainingDate, sessionOrErr.memberKey),
     });
   } catch (err) {
     console.error("XTREME RESERVATIONS POST", err);
@@ -149,18 +150,27 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
-    const memberName = normalizeName(body.memberName);
     const trainingId = String(body.trainingId ?? "").trim();
     const trainingDate = isoDate(body.trainingDate);
 
-    if (!memberName || !trainingId) {
+    if (!trainingId) {
       return NextResponse.json({ error: "Faltan datos para cancelar." }, { status: 400 });
     }
 
+    const sessionOrErr = await requireMemberSession(req);
+    if (!isSession(sessionOrErr)) return sessionOrErr;
+
     const db = await getDb();
-    await db.collection<ReservationDoc>(RESERVATIONS_COLLECTION).updateOne(
+    await cancelBooking(db, {
+      memberKey: sessionOrErr.memberKey,
+      trainingId,
+      date: trainingDate,
+    });
+
+    // Legacy mirror
+    await db.collection(RESERVATIONS_COLLECTION).updateOne(
       {
-        normalizedName: normalizeKey(memberName),
+        normalizedName: sessionOrErr.memberKey,
         trainingId,
         trainingDate,
         status: "reserved",
@@ -170,7 +180,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      reservations: await reservationSnapshot(trainingDate, memberName),
+      reservations: await sessionSnapshot(db, trainingDate, sessionOrErr.memberKey),
     });
   } catch (err) {
     console.error("XTREME RESERVATIONS DELETE", err);

@@ -1291,6 +1291,7 @@ export default function ExtremeGymSite() {
     try {
       const response = await fetch("/api/xtreme/reservations", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           memberName,
@@ -1299,7 +1300,29 @@ export default function ExtremeGymSite() {
           trainingDate: todayIso(),
         }),
       });
-      const data = await readJson<ReservationsResponse>(response);
+      const data = (await response.json()) as ReservationsResponse & {
+        error?: string;
+        code?: string;
+        paymentRequired?: boolean;
+        checkoutOptionId?: string;
+      };
+      if (!response.ok) {
+        if (data.paymentRequired || response.status === 402) {
+          setError(
+            data.error ||
+              "Necesita un plan activo o un pase del dia. Vaya a Precios / Primer dia para pagar.",
+          );
+          setMessage("");
+          // Soft nudge: open first-day offer
+          if (typeof window !== "undefined") {
+            // Keep user in app; show clear next step
+          }
+        } else {
+          throw new Error(data.error ?? "No se pudo reservar.");
+        }
+        if (data.reservations) setReservations(data.reservations);
+        return;
+      }
       setReservations(data.reservations ?? {});
       await loadGymStatus();
       setMessage(`Reservado: ${training.name}. Llegue 5 minutos antes, pura vida.`);

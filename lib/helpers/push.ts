@@ -32,7 +32,7 @@ function configure() {
 export async function sendMemberPush(
   db: Db,
   memberKey: string,
-  payload: { title: string; body: string; url?: string },
+  payload: { title: string; body: string; url?: string; deliveryKey?: string; memberKey?: string; clickToken?: string },
 ) {
   if (!configure()) return { sent: 0, skipped: true };
   const collection = db.collection<StoredPushSubscription>(PUSH_SUBSCRIPTIONS_COLLECTION);

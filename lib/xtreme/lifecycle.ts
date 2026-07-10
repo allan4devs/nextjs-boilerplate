@@ -19,8 +19,6 @@ function dateDiffDays(laterIso: string, earlierIso: string) {
 }
 
 export function evaluateLifecycle(member: MemberDoc, today: string): LifecycleTrigger[] {
-  if (!member.email?.trim()) return [];
-
   const triggers: LifecycleTrigger[] = [];
   const prefs = mergeNotificationPrefs(member.notificationPrefs);
   const workouts = member.workouts ?? [];

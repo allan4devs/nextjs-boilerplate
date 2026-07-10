@@ -37,6 +37,39 @@ async function ensureIndexes(db: Db) {
     db.collection("xtreme_gym_audit").createIndex({ at: -1 }),
     db.collection("xtreme_gym_audit").createIndex({ targetId: 1, at: -1 }),
     db.collection("xtreme_gym_badges").createIndex({ id: 1 }, { unique: true }),
+    // Fase 2.0: eventos, sesiones sociales y entregas de lifecycle
+    db.collection("xtreme_gym_events").createIndex({ type: 1, occurredAt: -1 }),
+    db.collection("xtreme_gym_events").createIndex({ memberId: 1, occurredAt: -1 }),
+    db.collection("xtreme_gym_lifecycle_deliveries").createIndex({ deliveryKey: 1 }, { unique: true }),
+    db.collection("xtreme_gym_job_runs").createIndex({ job: 1, startedAt: -1 }),
+    db.collection("xtreme_gym_push_subscriptions").createIndex({ endpoint: 1 }, { unique: true }),
+    db.collection("xtreme_gym_push_subscriptions").createIndex({ memberKey: 1 }),
+    db.collection("xtreme_gym_referrals").createIndex({ referred: 1 }, { unique: true }),
+    db.collection("xtreme_gym_referrals").createIndex({ referrer: 1, createdAt: -1 }),
+    db.collection("xtreme_gym_buddy_requests").createIndex({ from: 1, to: 1 }, { unique: true }),
+    db.collection("xtreme_gym_buddy_requests").createIndex({ to: 1, status: 1 }),
+    // Strategy 2.0 hard path — member sessions, entitlements, class inventory
+    db.collection("xtreme_gym_sessions").createIndex({ tokenHash: 1 }, { unique: true }),
+    db.collection("xtreme_gym_sessions").createIndex({ memberKey: 1, revokedAt: 1 }),
+    db.collection("xtreme_gym_sessions").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.collection("xtreme_gym_entitlements").createIndex({ id: 1 }, { unique: true }),
+    db.collection("xtreme_gym_entitlements").createIndex({ memberKey: 1, status: 1, endsOn: -1 }),
+    db.collection("xtreme_gym_entitlement_ledger").createIndex({ memberKey: 1, at: -1 }),
+    db.collection("xtreme_gym_entitlement_ledger").createIndex({ entitlementId: 1, at: -1 }),
+    db.collection("xtreme_gym_class_templates").createIndex({ id: 1 }, { unique: true }),
+    db.collection("xtreme_gym_class_templates").createIndex({ trainingId: 1 }),
+    db.collection("xtreme_gym_class_sessions").createIndex({ id: 1 }, { unique: true }),
+    db.collection("xtreme_gym_class_sessions").createIndex({ date: 1, trainingId: 1 }),
+    db.collection("xtreme_gym_bookings").createIndex({ id: 1 }, { unique: true }),
+    db
+      .collection("xtreme_gym_bookings")
+      .createIndex(
+        { sessionId: 1, memberKey: 1 },
+        { unique: true, partialFilterExpression: { status: "reserved" } },
+      ),
+    db.collection("xtreme_gym_bookings").createIndex({ memberKey: 1, trainingDate: -1 }),
+    db.collection("xtreme_gym_bookings").createIndex({ sessionId: 1, status: 1 }),
+    db.collection("xtreme_gym_waitlist").createIndex({ sessionId: 1, position: 1 }),
   ]);
   for (const r of results) {
     if (r.status === "rejected") console.error("MONGO INDEX", r.reason);

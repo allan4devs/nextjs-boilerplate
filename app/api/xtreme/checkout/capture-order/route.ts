@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal";
 import { getDb } from "@/lib/helpers/mongodb";
 import { sendPaymentReceiptEmail } from "@/lib/helpers/email";
+import { recordEvent } from "@/lib/xtreme/events";
 import { getXtremeCheckoutOption } from "../catalog";
 import {
   MEMBERS_COLLECTION,
@@ -15,10 +16,20 @@ import {
   todayIso,
   toUtcDate,
 } from "@/lib/xtreme/shared";
+import {
+  entitlementFromPayment,
+  grantEntitlement,
+  type EntitlementDoc,
+} from "@/lib/xtreme/entitlements";
+import { bookSession } from "@/lib/xtreme/inventory";
 
 type CaptureBody = {
   orderID?: string;
   optionId?: string;
+  /** Optional class hold — capture creates booking after entitlement grant. */
+  trainingId?: string;
+  trainingName?: string;
+  trainingDate?: string;
   customer?: {
     name?: string;
     phone?: string;
@@ -125,9 +136,35 @@ export async function POST(req: Request) {
     };
 
     let membershipUntil: string | undefined;
+    let entitlement: EntitlementDoc | null = null;
+    let bookingId: string | null = null;
     try {
       const db = await getDb();
+      // Idempotent payment insert (retry-safe on paypalCaptureId when present)
+      if (payment.paypalCaptureId) {
+        const existingPay = await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).findOne({
+          paypalCaptureId: payment.paypalCaptureId,
+        });
+        if (existingPay) {
+          return NextResponse.json({
+            success: true,
+            id: data.id,
+            status: data.status,
+            captureID: payment.paypalCaptureId,
+            paymentId: existingPay.id,
+            idempotent: true,
+          });
+        }
+      }
+
       await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).insertOne(payment);
+      await recordEvent(db, {
+        type: "payment_completed",
+        memberId: normalizedName,
+        source: "paypal",
+        entity: { type: "payment", id: payment.id },
+        properties: { optionId: payment.optionId, amountCrc, amountUsd, currency: payment.currency },
+      });
 
       // Activar / extender membresia del socio si es plan
       if (option?.category === "Plan" || option?.id === "day-pass" || option?.id === "senior") {
@@ -168,6 +205,60 @@ export async function POST(req: Request) {
           },
           { upsert: true },
         );
+
+        // Strategy 2.0: grant entitlement from payment (source of truth for booking)
+        const entShape = entitlementFromPayment({
+          memberKey: normalizedName,
+          optionId: option?.id ?? payment.optionId,
+          optionLabel: planLabel,
+          paymentId: payment.id,
+          startDate: todayIso(),
+          category: option?.category,
+        });
+        // Align plan window with membership nextBillingDate for multi-day plans
+        if (entShape.kind === "plan") {
+          entShape.endsOn = nextBillingDate;
+        }
+        entitlement = await grantEntitlement(db, entShape);
+        membershipUntil = entitlement.endsOn;
+
+        await recordEvent(db, {
+          type: existing ? "renewal_completed" : "membership_started",
+          memberId: normalizedName,
+          source: "paypal",
+          entity: { type: "payment", id: payment.id },
+          properties: {
+            optionId: payment.optionId,
+            nextBillingDate: entitlement.endsOn,
+            entitlementId: entitlement.id,
+          },
+        });
+
+        // Optional: auto-book class when checkout carried session metadata
+        const trainingId = String(body.trainingId ?? "").trim();
+        const trainingName = String(body.trainingName ?? "").trim();
+        const trainingDate = String(body.trainingDate ?? todayIso()).slice(0, 10);
+        if (trainingId && trainingName) {
+          const booked = await bookSession(db, {
+            memberKey: normalizedName,
+            memberName: customerName,
+            trainingId,
+            trainingName,
+            date: trainingDate,
+            paymentId: payment.id,
+            forceEntitlementId: entitlement.id,
+          });
+          if (booked.ok) {
+            bookingId = booked.booking.id;
+            await recordEvent(db, {
+              type: "first_class_reserved",
+              memberId: normalizedName,
+              source: "paypal",
+              entity: { type: "booking", id: booked.booking.id },
+              properties: { trainingId, trainingDate, sessionId: booked.session.id },
+            });
+          }
+        }
       }
     } catch (persistErr) {
       console.error("Xtreme payment persist error:", persistErr);
@@ -196,6 +287,9 @@ export async function POST(req: Request) {
       captureID: capture?.id ?? null,
       captureStatus: capture?.status ?? null,
       paymentId: payment.id,
+      entitlementId: entitlement?.id ?? null,
+      bookingId,
+      membershipUntil: membershipUntil ?? null,
     });
   } catch (error) {
     console.error("Xtreme checkout capture-order error:", error);
