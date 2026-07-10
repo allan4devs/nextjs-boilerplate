@@ -5,8 +5,9 @@ import {
   pushEnabled,
   type StoredPushSubscription,
 } from "@/lib/helpers/push";
-import { MEMBERS_COLLECTION, normalizeKey, normalizeName } from "@/lib/xtreme/shared";
+import { MEMBERS_COLLECTION } from "@/lib/xtreme/shared";
 import { recordEvent } from "@/lib/xtreme/events";
+import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +16,17 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const sessionOrErr = await requireMemberSession(req);
+  if (!isSession(sessionOrErr)) return sessionOrErr;
+  const memberKey = sessionOrErr.memberKey;
+
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const memberKey = normalizeKey(normalizeName(body.memberName));
   const subscription = (body.subscription ?? {}) as Record<string, unknown>;
   const endpoint = String(subscription.endpoint ?? "").trim();
   const keys = (subscription.keys ?? {}) as Record<string, unknown>;
   const p256dh = String(keys.p256dh ?? "").trim();
   const auth = String(keys.auth ?? "").trim();
-  if (!memberKey || !endpoint || !p256dh || !auth) {
+  if (!endpoint || !p256dh || !auth) {
     return NextResponse.json({ error: "Suscripción inválida." }, { status: 400 });
   }
 
@@ -47,11 +51,18 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const sessionOrErr = await requireMemberSession(req);
+  if (!isSession(sessionOrErr)) return sessionOrErr;
+  const memberKey = sessionOrErr.memberKey;
+
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const endpoint = String(body.endpoint ?? "").trim();
   if (!endpoint) return NextResponse.json({ error: "Endpoint requerido." }, { status: 400 });
   const db = await getDb();
-  const removed = await db.collection<StoredPushSubscription>(PUSH_SUBSCRIPTIONS_COLLECTION).findOneAndDelete({ endpoint });
+  // Only remove own device subscription
+  const removed = await db
+    .collection<StoredPushSubscription>(PUSH_SUBSCRIPTIONS_COLLECTION)
+    .findOneAndDelete({ endpoint, memberKey });
   if (removed?.memberKey) {
     await recordEvent(db, {
       type: "push_unsubscribed",

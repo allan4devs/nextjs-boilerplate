@@ -342,10 +342,28 @@ type MemberPlan = {
   progressPct: number;
 };
 
+type NextBestAction = {
+  kind: string;
+  title: string;
+  body: string;
+  cta: string;
+  href: string;
+  priority: number;
+};
+
+type DayPassCreditInfo = {
+  creditId: string;
+  amountCrc: number;
+  expiresOn: string;
+  windowDays: number;
+};
+
 type MembersResponse = {
   member: Member | null;
   leaderboard: Member[];
   exists?: boolean;
+  nextBestAction?: NextBestAction | null;
+  dayPassCredit?: DayPassCreditInfo | null;
   error?: string;
   duplicate?: {
     memberName: string;
@@ -922,6 +940,8 @@ export default function ExtremeGymSite() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [tab, setTab] = useState<TabId>("resumen");
+  const [nextBestAction, setNextBestAction] = useState<NextBestAction | null>(null);
+  const [dayPassCredit, setDayPassCredit] = useState<DayPassCreditInfo | null>(null);
 
   const unlocked = Boolean(memberName) && !showPin;
   const currentMember = member ?? initialMember(memberName);
@@ -1098,6 +1118,8 @@ export default function ExtremeGymSite() {
           setError("Para crear un perfil nuevo, escriba al menos el telefono.");
           setMember(memberData.member ?? initialMember(trimmed));
           setLeaderboard(memberData.leaderboard ?? []);
+          setNextBestAction(memberData.nextBestAction ?? null);
+          setDayPassCredit(memberData.dayPassCredit ?? null);
           setShowPin(false);
           return;
         }
@@ -1120,6 +1142,8 @@ export default function ExtremeGymSite() {
           setMemberPhoneInput(createData.member?.phone ?? phone);
           setMemberEmailInput(createData.member?.email ?? email);
           setLeaderboard(createData.leaderboard ?? []);
+          setNextBestAction(createData.nextBestAction ?? null);
+          setDayPassCredit(createData.dayPassCredit ?? null);
           setWeightKg(createData.member?.latestBodyMetric?.weightKg ? String(createData.member.latestBodyMetric.weightKg) : "");
           setWaistCm(createData.member?.latestBodyMetric?.waistCm ? String(createData.member.latestBodyMetric.waistCm) : "");
         } else {
@@ -1128,6 +1152,8 @@ export default function ExtremeGymSite() {
           setMemberPhoneInput(memberData.member?.phone ?? "");
           setMemberEmailInput(memberData.member?.email ?? "");
           setLeaderboard(memberData.leaderboard ?? []);
+          setNextBestAction(memberData.nextBestAction ?? null);
+          setDayPassCredit(memberData.dayPassCredit ?? null);
           setWeightKg(memberData.member?.latestBodyMetric?.weightKg ? String(memberData.member.latestBodyMetric.weightKg) : "");
           setWaistCm(memberData.member?.latestBodyMetric?.waistCm ? String(memberData.member.latestBodyMetric.waistCm) : "");
         }
@@ -1621,10 +1647,102 @@ export default function ExtremeGymSite() {
             {tab === "resumen" && (
               <div className="space-y-6">
 
+              {/* Phase 3: one-tap renewal + day-pass credit + next-best action */}
+              {unlocked && currentMember.membership.daysRemaining <= 5 && (
+                <div className="flex flex-col gap-3 border border-orange-300/40 bg-orange-300/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-200">Renovación</p>
+                    <p className="mt-1 text-sm font-bold text-orange-50">
+                      {currentMember.membership.daysRemaining <= 0
+                        ? "Tu plan venció. Renová en 1 toque y no pierdas la racha."
+                        : `Tu plan vence en ${currentMember.membership.daysRemaining} día${currentMember.membership.daysRemaining === 1 ? "" : "s"}.`}
+                    </p>
+                  </div>
+                  <a
+                    href={`/precios#inscripcion`}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#d8ff3e] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
+                    onClick={() => {
+                      void fetch("/api/xtreme/events/track", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          type: "cta_clicked",
+                          source: "member_app",
+                          memberName,
+                          properties: { cta: "one_tap_renewal", daysRemaining: currentMember.membership.daysRemaining },
+                        }),
+                      }).catch(() => {});
+                    }}
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Renovar en 1 toque
+                  </a>
+                </div>
+              )}
+
+              {unlocked && dayPassCredit && (
+                <div className="flex flex-col gap-3 border border-[#d8ff3e]/35 bg-[#d8ff3e]/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#eaff93]">Crédito pase del día</p>
+                    <p className="mt-1 text-sm font-bold text-white/85">
+                      Tenés CRC {dayPassCredit.amountCrc.toLocaleString("es-CR")} para un plan hasta {dayPassCredit.expiresOn}.
+                    </p>
+                  </div>
+                  <a
+                    href="/precios#inscripcion"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 border border-[#d8ff3e]/50 bg-black/30 px-5 py-3 text-sm font-black uppercase text-[#eaff93] transition hover:bg-[#d8ff3e] hover:text-black"
+                  >
+                    Aplicar a un plan
+                  </a>
+                </div>
+              )}
+
+              {unlocked && nextBestAction && (
+                <div
+                  id={nextBestAction.href.startsWith("#") ? nextBestAction.href.slice(1) : undefined}
+                  className="border border-cyan-300/30 bg-gradient-to-br from-cyan-400/[0.08] to-transparent p-5"
+                >
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Siguiente paso</p>
+                  <h3 className="mt-2 text-xl font-black uppercase text-white">{nextBestAction.title}</h3>
+                  <p className="mt-2 text-sm font-semibold text-white/60">{nextBestAction.body}</p>
+                  <button
+                    type="button"
+                    className="mt-4 inline-flex items-center justify-center gap-2 bg-cyan-300 px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
+                    onClick={() => {
+                      void fetch("/api/xtreme/events/track", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          type: "recommendation_acted",
+                          source: "member_app",
+                          memberName,
+                          properties: { kind: nextBestAction.kind },
+                        }),
+                      }).catch(() => {});
+                      if (nextBestAction.href.startsWith("#")) {
+                        if (nextBestAction.kind === "train_today" || nextBestAction.kind === "protect_streak" || nextBestAction.kind === "second_visit") {
+                          if (!trainedToday) void completeTraining(quickTraining);
+                        } else if (nextBestAction.kind === "renew_plan") {
+                          window.location.href = "/precios#inscripcion";
+                        } else if (nextBestAction.href === "/app/comunidad") {
+                          window.location.href = nextBestAction.href;
+                        } else {
+                          setTab(nextBestAction.href === "#plan" ? "progreso" : "entrenar");
+                        }
+                      } else {
+                        window.location.href = nextBestAction.href;
+                      }
+                    }}
+                  >
+                    {nextBestAction.cta}
+                  </button>
+                </div>
+              )}
+
               {gami && (
                 <div className="grid gap-4 lg:grid-cols-[.95fr_1.05fr]">
                   {/* Hero: anillo de racha + frase + accion rapida */}
-                  <div className="relative overflow-hidden border border-orange-400/25 bg-gradient-to-br from-orange-400/[0.08] to-transparent p-5">
+                  <div id="entrenar-hoy" className="relative overflow-hidden border border-orange-400/25 bg-gradient-to-br from-orange-400/[0.08] to-transparent p-5">
                     <StreakRing
                       streak={gami.streak}
                       freezes={gami.freezesAvailable}

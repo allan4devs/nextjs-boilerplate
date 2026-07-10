@@ -31,6 +31,7 @@ import {
   UserRound,
   Users,
   X,
+  Zap,
 } from "lucide-react";
 import { BarTrendChart, CHART_CYAN, CHART_LIME, LineTrendChart } from "../components/charts";
 
@@ -168,6 +169,39 @@ type AdminData = {
   checkins: CheckinRow[];
   checkinSeries: { date: string; checkins: number; unique: number }[];
   revenue?: Revenue;
+  growth?: {
+    windowDays: number;
+    fromDate: string;
+    toDate: string;
+    dayPasses: number;
+    plansSold: number;
+    checkoutsStarted: number;
+    paymentsCompleted: number;
+    firstCheckins: number;
+    membershipsStarted: number;
+    renewalsCompleted: number;
+    referralsRedeemed: number;
+    referralsRewarded: number;
+    dayPassToVisit: { dayPasses: number; visited: number; ratePct: number };
+    dayPassToPlan: {
+      dayPasses: number;
+      converted1d: number;
+      converted3d: number;
+      converted7d: number;
+      rate7dPct: number;
+    };
+    d7Retention: { newMembers: number; returned: number; ratePct: number };
+    recentEvents: Array<{
+      type: string;
+      memberId?: string;
+      occurredAt: string;
+      properties: Record<string, string | number | boolean | null>;
+    }>;
+  } | null;
+  system?: {
+    lifecycle: { status: string; startedAt: Date; finishedAt?: Date; summary?: unknown } | null;
+    checkedAt: string;
+  } | null;
 };
 
 type PlanDraft = {
@@ -982,6 +1016,67 @@ export default function XtremeAdminPage() {
                   <Kpi icon={ClipboardList} label="Con plan" value={`${data.totals.withPlan}`} accent="from-fuchsia-400 to-rose-400" />
                   <Kpi icon={Activity} label="Ocupacion" value={`${t?.occupancyPct ?? 0}%`} accent="from-lime-300 to-cyan-300" />
                 </div>
+
+                {data.growth && (
+                  <div className="border border-lime-300/25 bg-lime-300/[0.05] p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <Zap className="h-5 w-5 text-lime-300" />
+                        <div>
+                          <h2 className="text-lg font-black uppercase">Crecimiento (30 días)</h2>
+                          <p className="text-xs font-semibold text-white/45">
+                            {data.growth.fromDate} → {data.growth.toDate} · embudo desde eventos
+                          </p>
+                        </div>
+                      </div>
+                      {data.system?.lifecycle && (
+                        <span className="border border-white/10 bg-black/30 px-3 py-1.5 text-[11px] font-black uppercase text-white/55">
+                          Cron: {data.system.lifecycle.status}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="border border-white/10 bg-black/25 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-white/45">Pase → visita ≤48h</p>
+                        <p className="mt-2 text-2xl font-black text-lime-200">{data.growth.dayPassToVisit.ratePct}%</p>
+                        <p className="mt-1 text-xs font-bold text-white/40">
+                          {data.growth.dayPassToVisit.visited}/{data.growth.dayPassToVisit.dayPasses} pases
+                        </p>
+                      </div>
+                      <div className="border border-white/10 bg-black/25 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-white/45">Pase → plan ≤7d</p>
+                        <p className="mt-2 text-2xl font-black text-cyan-200">{data.growth.dayPassToPlan.rate7dPct}%</p>
+                        <p className="mt-1 text-xs font-bold text-white/40">
+                          1d {data.growth.dayPassToPlan.converted1d} · 3d {data.growth.dayPassToPlan.converted3d} · 7d{" "}
+                          {data.growth.dayPassToPlan.converted7d}
+                        </p>
+                      </div>
+                      <div className="border border-white/10 bg-black/25 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-white/45">Retención D7</p>
+                        <p className="mt-2 text-2xl font-black text-orange-200">{data.growth.d7Retention.ratePct}%</p>
+                        <p className="mt-1 text-xs font-bold text-white/40">
+                          {data.growth.d7Retention.returned}/{data.growth.d7Retention.newMembers} volvieron
+                        </p>
+                      </div>
+                      <div className="border border-white/10 bg-black/25 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-white/45">Referidos</p>
+                        <p className="mt-2 text-2xl font-black text-fuchsia-200">
+                          {data.growth.referralsRewarded}
+                          <span className="text-base text-white/40"> / {data.growth.referralsRedeemed}</span>
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-white/40">recompensados / canjeados</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6 text-center text-xs font-bold text-white/55">
+                      <div className="border border-white/10 bg-black/20 px-2 py-2">Checkout {data.growth.checkoutsStarted}</div>
+                      <div className="border border-white/10 bg-black/20 px-2 py-2">Pagos {data.growth.paymentsCompleted}</div>
+                      <div className="border border-white/10 bg-black/20 px-2 py-2">Pases {data.growth.dayPasses}</div>
+                      <div className="border border-white/10 bg-black/20 px-2 py-2">Planes {data.growth.plansSold}</div>
+                      <div className="border border-white/10 bg-black/20 px-2 py-2">1er ingreso {data.growth.firstCheckins}</div>
+                      <div className="border border-white/10 bg-black/20 px-2 py-2">Renovaciones {data.growth.renewalsCompleted}</div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid gap-4 lg:grid-cols-3">
                   <div className="border border-white/10 bg-white/[0.04] p-5 lg:col-span-2">

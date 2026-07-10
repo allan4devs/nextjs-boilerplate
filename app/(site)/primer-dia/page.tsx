@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock3, MapPin, ShieldCheck } from "lucide-react";
 import ExtremeGymCheckout from "../../ExtremeGymCheckout";
+import LandingTrack from "../../components/LandingTrack";
 import { BUSINESS, SCHEDULE } from "../../lib/site";
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ const INCLUDED = [
 export default function PrimerDiaPage() {
   return (
     <>
+      <LandingTrack surface="primer-dia" />
       <section className="relative overflow-hidden border-b border-white/10 px-5 py-16 sm:px-8 lg:py-24">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(246,196,0,.2),transparent_34%),linear-gradient(135deg,#070707,#121212)]" />
         <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.1fr_.9fr] lg:items-center">

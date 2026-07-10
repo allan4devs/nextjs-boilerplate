@@ -3,6 +3,7 @@ import { PAYPAL_CURRENCY } from "@/lib/constants/paypal";
 import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal";
 import { getDb } from "@/lib/helpers/mongodb";
 import { recordEvent } from "@/lib/xtreme/events";
+import { findPendingDayPassCredit, priceWithDayPassCredit } from "@/lib/xtreme/offers";
 import { normalizeKey, normalizeName } from "@/lib/xtreme/shared";
 import { getXtremeCheckoutOption } from "../catalog";
 
@@ -18,6 +19,8 @@ type Customer = {
 type CreateOrderBody = {
   optionId?: string;
   customer?: Customer;
+  /** Apply pending day-pass credit toward a plan (server validates). */
+  applyDayPassCredit?: boolean;
 };
 
 type PayPalCreateOrderResponse = {
@@ -91,6 +94,38 @@ export async function POST(req: Request) {
       );
     }
 
+    const memberKey = normalizeKey(normalizeName(customer.name));
+    const db = await getDb();
+    let creditId: string | null = null;
+    let usdAmount = option.usdAmount;
+    let priceCrc = option.priceCrc;
+    let creditAppliedCrc = 0;
+    let creditAppliedUsd = 0;
+
+    if (body.applyDayPassCredit) {
+      const credit = await findPendingDayPassCredit(db, memberKey);
+      const priced = priceWithDayPassCredit(option, credit);
+      usdAmount = priced.usdAmount;
+      priceCrc = priced.priceCrc;
+      creditAppliedCrc = priced.creditAppliedCrc;
+      creditAppliedUsd = priced.creditAppliedUsd;
+      creditId = priced.creditId;
+      if (body.applyDayPassCredit && !creditId) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "No hay crédito de pase del día disponible para este nombre (o ya venció).",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const priceLabel =
+      creditAppliedCrc > 0
+        ? `CRC ${priceCrc.toLocaleString("es-CR")} (crédito −${creditAppliedCrc})`
+        : option.priceLabel;
+
     const accessToken = await getPayPalAccessToken();
     const response = await fetch(`${getPayPalApiBaseUrl()}/v2/checkout/orders`, {
       method: "POST",
@@ -106,9 +141,9 @@ export async function POST(req: Request) {
           {
             amount: {
               currency_code: PAYPAL_CURRENCY,
-              value: option.usdAmount,
+              value: usdAmount,
             },
-            description: `Xtreme Gym - ${option.label} (${option.priceLabel})`,
+            description: `Xtreme Gym - ${option.label} (${priceLabel})`,
             custom_id: createCustomId(option.id, customer),
           },
         ],
@@ -125,21 +160,30 @@ export async function POST(req: Request) {
       );
     }
 
-    const db = await getDb();
     await recordEvent(db, {
       type: "checkout_started",
-      memberId: normalizeKey(normalizeName(customer.name)),
+      memberId: memberKey,
       source: "site",
       entity: { type: "paypal_order", id: data.id },
-      properties: { optionId: option.id, amountUsd: Number(option.usdAmount), priceCrc: option.priceCrc },
+      properties: {
+        optionId: option.id,
+        amountUsd: Number(usdAmount),
+        priceCrc,
+        creditAppliedCrc,
+        creditId: creditId ?? null,
+        applyDayPassCredit: Boolean(creditId),
+      },
     });
 
     return NextResponse.json({
       success: true,
       orderID: data.id,
-      amount: option.usdAmount,
+      amount: usdAmount,
       currency: PAYPAL_CURRENCY,
-      option,
+      option: { ...option, priceCrc, usdAmount, priceLabel },
+      dayPassCredit: creditId
+        ? { creditId, creditAppliedCrc, creditAppliedUsd, finalPriceCrc: priceCrc, finalUsd: usdAmount }
+        : null,
     });
   } catch (error) {
     console.error("Xtreme checkout create-order error:", error);

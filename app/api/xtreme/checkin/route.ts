@@ -160,13 +160,43 @@ export async function POST(req: NextRequest) {
     };
 
     await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+
+    const priorCheckins = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).countDocuments({
+      normalizedName,
+      id: { $ne: checkin.id },
+    });
+    const isFirstCheckin = priorCheckins === 0;
+
     await recordEvent(db, {
       type: "checkin_completed",
       memberId: normalizedName,
       source: "kiosk",
       entity: { type: "checkin", id: checkin.id },
-      properties: { method, membershipStatus: ms.status, date },
+      properties: { method, membershipStatus: ms.status, date, first: isFirstCheckin },
     });
+    if (isFirstCheckin) {
+      await recordEvent(db, {
+        type: "first_checkin",
+        memberId: normalizedName,
+        source: "kiosk",
+        entity: { type: "checkin", id: checkin.id },
+        properties: { method, membershipStatus: ms.status, date },
+      });
+    }
+
+    // Phase 3: qualify referral after first paid verified visit
+    let referralReward: { rewarded: boolean; referrer?: string } = { rewarded: false };
+    try {
+      const { tryQualifyReferralOnCheckin } = await import("@/lib/xtreme/referrals");
+      referralReward = await tryQualifyReferralOnCheckin(db, {
+        memberKey: normalizedName,
+        checkinId: checkin.id,
+        date,
+      });
+    } catch (refErr) {
+      console.error("XTREME REFERRAL QUALIFY", refErr);
+    }
+
     const status = await computeOccupancy(db);
 
     return NextResponse.json({
@@ -177,11 +207,15 @@ export async function POST(req: NextRequest) {
           ? "Ingreso registrado. Membresia vencida — hablar con recepcion."
           : ms.status === "warning"
             ? "Bienvenido. Tu membresia vence pronto."
-            : "Bienvenido a Xtreme Gym.",
+            : referralReward.rewarded
+              ? "Bienvenido. Referido calificado: +7 dias para vos y tu amigo."
+              : "Bienvenido a Xtreme Gym.",
       member: toAdminMember(member),
       membershipStatus: ms.status,
       checkin,
       status,
+      firstCheckin: isFirstCheckin,
+      referralReward,
     });
   } catch (err) {
     console.error("XTREME CHECKIN POST", err);

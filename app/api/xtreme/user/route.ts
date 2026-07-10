@@ -26,6 +26,8 @@ import {
   type EarnedBadge,
 } from "@/lib/xtreme/gamification";
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
+import { pickNextBestAction } from "@/lib/xtreme/next-best-action";
+import { findPendingDayPassCredit, DAY_PASS_CREDIT_WINDOW_DAYS } from "@/lib/xtreme/offers";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +99,9 @@ type XtremeMemberDoc = {
   freezesBonus?: number;
   notificationPrefs?: Partial<NotificationPrefs>;
   pinnedBadges?: string[];
+  buddies?: string[];
+  referredBy?: string;
+  referralCount?: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -362,11 +367,55 @@ export async function GET(req: NextRequest) {
     // Consumir protectores / otorgar badges pendientes antes de responder.
     const newBadges = await syncGamification(normalizedName);
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+    const member = publicMember(doc);
+    const gami = member.gamification;
+    const today = new Date().toISOString().slice(0, 10);
+    const trainedToday = member.lastWorkoutDate === today;
+    const nextBadge = (gami?.badges ?? []).find(
+      (b: { earned: boolean; progress: { current: number; target: number } | null }) =>
+        !b.earned && b.progress && b.progress.current < b.progress.target,
+    ) as { name: string; progress: { current: number; target: number } } | undefined;
+
+    const nextBestAction = pickNextBestAction({
+      trainedToday,
+      weekCount: gami?.weekCount ?? 0,
+      weeklyGoal: gami?.weeklyGoal ?? WEEKLY_GOAL_DEFAULT,
+      streak: gami?.streak ?? member.streak,
+      freezesAvailable: gami?.freezesAvailable ?? 0,
+      daysRemaining: member.membership.daysRemaining,
+      membershipStatus: member.membership.status,
+      totalWorkouts: member.totalWorkouts,
+      lastWorkoutDate: member.lastWorkoutDate,
+      today,
+      hasUnseenCoachNote: Boolean(
+        doc?.trainingPlan?.coachNote &&
+          String(doc.trainingPlan.coachNote).trim() &&
+          // surface coach note when plan exists and not fully done
+          (doc.trainingPlan.items?.some((item) => !item.done) ?? true),
+      ),
+      nextBadgeName: nextBadge?.name ?? null,
+      nextBadgeRemaining: nextBadge
+        ? Math.max(0, nextBadge.progress.target - nextBadge.progress.current)
+        : null,
+      buddyInviteAvailable: (doc?.buddies?.length ?? 0) < 3 && member.totalWorkouts >= 3,
+    });
+
+    const dayPassCredit = await findPendingDayPassCredit(db, normalizedName);
+
     return NextResponse.json({
-      member: publicMember(doc),
+      member,
       exists: Boolean(doc),
       newBadges,
       leaderboard: await leaderboard(),
+      nextBestAction,
+      dayPassCredit: dayPassCredit
+        ? {
+            creditId: dayPassCredit.id,
+            amountCrc: dayPassCredit.amountCrc,
+            expiresOn: dayPassCredit.expiresOn,
+            windowDays: DAY_PASS_CREDIT_WINDOW_DAYS,
+          }
+        : null,
     });
   } catch (err) {
     console.error("XTREME USER GET", err);

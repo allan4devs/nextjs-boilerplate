@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ImageTile from "../components/ImageTile";
 import CtaBand from "../components/CtaBand";
+import LandingTrack from "../components/LandingTrack";
 import {
   BUSINESS,
   HERO_IMAGES,
@@ -59,6 +60,7 @@ const EXPLORE = [
 export default function ExtremeGymLandingPage() {
   return (
     <>
+      <LandingTrack surface="home" />
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}

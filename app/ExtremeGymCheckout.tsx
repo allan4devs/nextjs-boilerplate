@@ -123,7 +123,14 @@ const initialForm: FormState = {
   goal: "",
 };
 
-export default function ExtremeGymCheckout({ initialOption = "month" }: { initialOption?: string }) {
+export default function ExtremeGymCheckout({
+  initialOption = "month",
+  enableDayPassCredit = true,
+}: {
+  initialOption?: string;
+  /** Offer day-pass → plan credit when name matches a pending credit. */
+  enableDayPassCredit?: boolean;
+}) {
   const validInitialOption = CHECKOUT_OPTIONS.some((option) => option.id === initialOption)
     ? initialOption
     : "month";
@@ -132,11 +139,19 @@ export default function ExtremeGymCheckout({ initialOption = "month" }: { initia
   const [paypalConfig, setPaypalConfig] = useState<PayPalConfig | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [applyCredit, setApplyCredit] = useState(false);
+  const [upsell, setUpsell] = useState<{
+    message: string;
+    creditCrc: number;
+    expiresOn: string;
+    href: string;
+  } | null>(null);
   const paypalRef = useRef<HTMLDivElement>(null);
   const checkoutRef = useRef<{
     form: FormState;
     formReady: boolean;
     selected: CheckoutOption;
+    applyCredit: boolean;
   } | null>(null);
 
   const selected = useMemo(
@@ -147,8 +162,31 @@ export default function ExtremeGymCheckout({ initialOption = "month" }: { initia
   const formReady = Boolean(form.name.trim() && form.phone.trim() && form.email.trim());
 
   useEffect(() => {
-    checkoutRef.current = { form, formReady, selected };
-  }, [form, formReady, selected]);
+    checkoutRef.current = { form, formReady, selected, applyCredit };
+  }, [form, formReady, selected, applyCredit]);
+
+  // Landing funnel events
+  useEffect(() => {
+    const anon =
+      typeof window !== "undefined"
+        ? window.sessionStorage.getItem("xtreme-anon-id") ||
+          (() => {
+            const id = `anon-${Math.random().toString(36).slice(2, 12)}`;
+            window.sessionStorage.setItem("xtreme-anon-id", id);
+            return id;
+          })()
+        : "";
+    void fetch("/api/xtreme/events/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "landing_viewed",
+        source: "site",
+        anonymousId: anon,
+        properties: { surface: "checkout", optionId: validInitialOption },
+      }),
+    }).catch(() => {});
+  }, [validInitialOption]);
 
   const whatsappMessage = useMemo(
     () =>
@@ -234,10 +272,17 @@ export default function ExtremeGymCheckout({ initialOption = "month" }: { initia
                 throw new Error("Complete nombre, teléfono y correo antes de pagar.");
               }
 
+              const useCredit =
+                Boolean(currentCheckout?.applyCredit) &&
+                ["week", "fortnight", "month"].includes(currentCheckout.selected.id);
               const response = await fetch("/api/xtreme/checkout/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ optionId: currentCheckout.selected.id, customer: currentCheckout.form }),
+                body: JSON.stringify({
+                  optionId: currentCheckout.selected.id,
+                  customer: currentCheckout.form,
+                  applyDayPassCredit: useCredit,
+                }),
               });
               const data = (await response.json()) as { orderID?: string; message?: string };
               if (!response.ok || !data.orderID) throw new Error(data.message || "No se pudo crear la orden.");
@@ -250,6 +295,9 @@ export default function ExtremeGymCheckout({ initialOption = "month" }: { initia
               if (!currentCheckout?.formReady) throw new Error("Complete nombre, teléfono y correo antes de confirmar.");
 
               setStatus("Confirmando pago...");
+              const useCredit =
+                Boolean(currentCheckout.applyCredit) &&
+                ["week", "fortnight", "month"].includes(currentCheckout.selected.id);
               const response = await fetch("/api/xtreme/checkout/capture-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -257,13 +305,20 @@ export default function ExtremeGymCheckout({ initialOption = "month" }: { initia
                   orderID: data.orderID,
                   optionId: currentCheckout.selected.id,
                   customer: currentCheckout.form,
+                  applyDayPassCredit: useCredit,
                 }),
               });
-              const result = (await response.json()) as { success?: boolean; captureID?: string; message?: string };
+              const result = (await response.json()) as {
+                success?: boolean;
+                captureID?: string;
+                message?: string;
+                upsell?: { message: string; creditCrc: number; expiresOn: string; href: string } | null;
+              };
               if (!response.ok || !result.success) throw new Error(result.message || "No se pudo confirmar el pago.");
 
               setStatus(`Pago confirmado. Comprobante: ${result.captureID || data.orderID}`);
               setError("");
+              if (result.upsell) setUpsell(result.upsell);
             },
             onCancel: () => setStatus("Pago cancelado antes de confirmar."),
             onError: (err: unknown) => {
@@ -401,6 +456,39 @@ export default function ExtremeGymCheckout({ initialOption = "month" }: { initia
               />
             </label>
           </div>
+
+          {enableDayPassCredit && ["week", "fortnight", "month"].includes(selected.id) && (
+            <label className="mt-4 flex cursor-pointer items-start gap-3 border border-black/10 bg-black/[0.04] p-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4"
+                checked={applyCredit}
+                onChange={(e) => setApplyCredit(e.target.checked)}
+              />
+              <span className="text-sm font-bold leading-5 text-black/75">
+                Aplicar crédito de pase del día (CRC 3.000). Usá el mismo nombre con el que compraste el pase. Válido 7 días.
+              </span>
+            </label>
+          )}
+
+          {upsell && (
+            <div className="mt-4 border border-black bg-[#f6c400]/25 p-4">
+              <p className="text-sm font-black uppercase text-black">Siguiente paso</p>
+              <p className="mt-2 text-sm font-bold text-black/80">{upsell.message}</p>
+              <button
+                type="button"
+                className="mt-3 inline-flex min-h-11 items-center justify-center bg-black px-4 text-sm font-black uppercase text-white"
+                onClick={() => {
+                  setSelectedId("week");
+                  setApplyCredit(true);
+                  setUpsell(null);
+                  setStatus("Elegí plan semanal o mensual y pagá con el crédito aplicado.");
+                }}
+              >
+                Aplicar crédito a un plan
+              </button>
+            </div>
+          )}
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <a

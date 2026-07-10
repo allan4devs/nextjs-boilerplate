@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import {
@@ -11,22 +10,19 @@ import {
 } from "@/lib/xtreme/shared";
 import { BUDDIES_MAX, REFERRAL_REDEEM_WINDOW_DAYS, REFERRAL_REWARD_DAYS, computeMonthlyXp, firstNameOf, leagueForMonthlyXp, monthKeyOf } from "@/lib/xtreme/social";
 import { recordEvent } from "@/lib/xtreme/events";
+import {
+  ensureReferralIndexes,
+  referralCodeFor,
+  type ReferralDoc,
+} from "@/lib/xtreme/referrals";
+import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 
 export const dynamic = "force-dynamic";
 
 type BuddyRequest = { from: string; to: string; status: "pending" | "accepted"; createdAt: Date; updatedAt: Date };
-type ReferralDoc = { code: string; referrer: string; referred: string; rewardDays: number; createdAt: Date };
 
 function referralCode(memberKey: string) {
-  return `XT-${createHash("sha256").update(memberKey).digest("hex").slice(0, 7).toUpperCase()}`;
-}
-
-function addMembershipDays(member: MemberDoc, days: number) {
-  const today = new Date();
-  const current = member.membership?.nextBillingDate ? new Date(`${member.membership.nextBillingDate}T00:00:00.000Z`) : today;
-  const base = current > today ? current : today;
-  base.setUTCDate(base.getUTCDate() + days);
-  return base.toISOString().slice(0, 10);
+  return referralCodeFor(memberKey);
 }
 
 async function socialSnapshot(memberKey: string) {
@@ -75,8 +71,10 @@ async function socialSnapshot(memberKey: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const memberKey = normalizeKey(normalizeName(req.nextUrl.searchParams.get("memberName")));
-  if (!memberKey) return NextResponse.json({ error: "Socio requerido." }, { status: 400 });
+  // Phase 3: personal social graph requires session (not memberName alone)
+  const sessionOrErr = await requireMemberSession(req);
+  if (!isSession(sessionOrErr)) return sessionOrErr;
+  const memberKey = sessionOrErr.memberKey;
   const snapshot = await socialSnapshot(memberKey);
   return snapshot ? NextResponse.json(snapshot) : NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
 }
@@ -84,7 +82,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   // Strategy 2.0: session identity only
-  const { isSession, requireMemberSession } = await import("@/lib/xtreme/session");
   const sessionOrErr = await requireMemberSession(req);
   if (!isSession(sessionOrErr)) return sessionOrErr;
   const memberKey = sessionOrErr.memberKey;
@@ -95,7 +92,7 @@ export async function POST(req: NextRequest) {
   if (!member) return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
 
   await db.collection<BuddyRequest>(BUDDY_REQUESTS_COLLECTION).createIndex({ from: 1, to: 1 }, { unique: true });
-  await db.collection<ReferralDoc>(REFERRALS_COLLECTION).createIndex({ referred: 1 }, { unique: true });
+  await ensureReferralIndexes(db);
 
   if (action === "leaderboard") {
     await members.updateOne({ normalizedName: memberKey }, { $set: { leaderboardOptIn: Boolean(body.enabled), updatedAt: new Date() } });
@@ -126,6 +123,7 @@ export async function POST(req: NextRequest) {
       members.updateOne({ normalizedName: target }, { $pull: { buddies: memberKey } }),
     ]);
   } else if (action === "referral-redeem") {
+    // Phase 3: redeem only records pending referral — reward after first paid check-in
     const code = String(body.code ?? "").trim().toUpperCase();
     const accountAgeDays = member.createdAt
       ? Math.floor((Date.now() - new Date(member.createdAt).getTime()) / 86_400_000)
@@ -133,20 +131,40 @@ export async function POST(req: NextRequest) {
     if (accountAgeDays > REFERRAL_REDEEM_WINDOW_DAYS) {
       return NextResponse.json({ error: "El código se puede usar durante los primeros 30 días." }, { status: 400 });
     }
-    const candidates = await members.find({}, { projection: { normalizedName: 1, memberName: 1, membership: 1 } }).toArray();
+    if (member.referredBy) {
+      return NextResponse.json({ error: "Este socio ya usó un referido." }, { status: 409 });
+    }
+    const candidates = await members
+      .find({}, { projection: { normalizedName: 1, memberName: 1 } })
+      .toArray();
     const owner = candidates.find((candidate) => referralCode(candidate.normalizedName || "") === code);
     if (!owner) return NextResponse.json({ error: "Código de referido inválido." }, { status: 404 });
-    if (owner.normalizedName === memberKey) return NextResponse.json({ error: "No podés usar tu propio código." }, { status: 400 });
+    if (owner.normalizedName === memberKey) {
+      return NextResponse.json({ error: "No podés usar tu propio código." }, { status: 400 });
+    }
     try {
-      await db.collection<ReferralDoc>(REFERRALS_COLLECTION).insertOne({ code, referrer: owner.normalizedName!, referred: memberKey, rewardDays: REFERRAL_REWARD_DAYS, createdAt: new Date() });
+      await db.collection<ReferralDoc>(REFERRALS_COLLECTION).insertOne({
+        code,
+        referrer: owner.normalizedName!,
+        referred: memberKey,
+        rewardDays: REFERRAL_REWARD_DAYS,
+        status: "pending",
+        createdAt: new Date(),
+        qualifiedAt: null,
+        rewardedAt: null,
+        checkinId: null,
+        paymentId: null,
+      });
     } catch (error) {
-      if ((error as { code?: number }).code === 11000) return NextResponse.json({ error: "Este socio ya usó un referido." }, { status: 409 });
+      if ((error as { code?: number }).code === 11000) {
+        return NextResponse.json({ error: "Este socio ya usó un referido." }, { status: 409 });
+      }
       throw error;
     }
-    await Promise.all([
-      members.updateOne({ normalizedName: owner.normalizedName }, { $set: { "membership.nextBillingDate": addMembershipDays(owner, REFERRAL_REWARD_DAYS), updatedAt: new Date() }, $inc: { referralCount: 1 } }),
-      members.updateOne({ normalizedName: memberKey }, { $set: { "membership.nextBillingDate": addMembershipDays(member, REFERRAL_REWARD_DAYS), referredBy: owner.normalizedName, updatedAt: new Date() } }),
-    ]);
+    await members.updateOne(
+      { normalizedName: memberKey },
+      { $set: { referredBy: owner.normalizedName, updatedAt: new Date() } },
+    );
   } else {
     return NextResponse.json({ error: "Acción social inválida." }, { status: 400 });
   }
@@ -162,8 +180,22 @@ export async function POST(req: NextRequest) {
     type: eventTypes[action] || "social_updated",
     memberId: memberKey,
     source: "member_app",
-    properties: { target: String(body.target ?? ""), codeUsed: action === "referral-redeem" },
+    properties: {
+      target: String(body.target ?? ""),
+      codeUsed: action === "referral-redeem",
+      pendingReward: action === "referral-redeem",
+    },
   });
 
-  return NextResponse.json(await socialSnapshot(memberKey));
+  const snapshot = await socialSnapshot(memberKey);
+  return NextResponse.json({
+    ...snapshot,
+    ...(action === "referral-redeem"
+      ? {
+          referralPending: true,
+          message:
+            "Código guardado. Ambos ganan 7 días cuando hagas tu primer ingreso con plan o pase pagado.",
+        }
+      : {}),
+  });
 }

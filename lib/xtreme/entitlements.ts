@@ -302,17 +302,30 @@ export async function grantEntitlement(
   });
 
   // Keep legacy membership field in sync for admin UI / lifecycle.
-  if (doc.kind === "plan" || doc.kind === "day_pass") {
+  if (doc.kind === "plan" || doc.kind === "day_pass" || doc.kind === "referral_bonus") {
+    const planLabel =
+      doc.kind === "referral_bonus"
+        ? undefined // extend dates only; keep existing plan name when present
+        : doc.label || doc.offerId || "Plan";
+    const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne(
+      { normalizedName: doc.memberKey },
+      { projection: { membership: 1 } },
+    );
+    const nextBillingDate =
+      existing?.membership?.nextBillingDate && existing.membership.nextBillingDate > doc.endsOn
+        ? existing.membership.nextBillingDate
+        : doc.endsOn;
+    const label = planLabel || existing?.membership?.plan || doc.label || "Plan";
     await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
       { normalizedName: doc.memberKey },
       {
         $set: {
-          "membership.plan": doc.label || doc.offerId || "Plan",
-          "membership.nextBillingDate": doc.endsOn,
+          "membership.plan": label,
+          "membership.nextBillingDate": nextBillingDate,
           "membership.status": membershipStatus({
-            plan: doc.label,
-            nextBillingDate: doc.endsOn,
-            startedAt: doc.startsOn,
+            plan: label,
+            nextBillingDate,
+            startedAt: existing?.membership?.startedAt || doc.startsOn,
           }).status,
           updatedAt: now,
         },

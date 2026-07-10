@@ -37,10 +37,10 @@ export default function CommunityClient() {
         .then((registration) => registration.pushManager.getSubscription())
         .then(setPushSubscription);
     }
-    fetch(`/api/xtreme/social?memberName=${encodeURIComponent(name)}`, { cache: "no-store" })
+    fetch("/api/xtreme/social", { cache: "no-store", credentials: "include" })
       .then(async (response) => {
         const json = await response.json();
-        if (!response.ok) throw new Error(json.error || "No se pudo cargar la comunidad.");
+        if (!response.ok) throw new Error(json.error || "Ingresá tu PIN en la app para ver la comunidad.");
         setData(json);
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "No se pudo cargar."));
@@ -49,29 +49,61 @@ export default function CommunityClient() {
   async function action(actionName: string, extra: Record<string, unknown> = {}) {
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/api/xtreme/social", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: actionName, memberName, ...extra }) });
+      const response = await fetch("/api/xtreme/social", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: actionName, ...extra }),
+      });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || "No se pudo guardar.");
-      setData(json); setTarget(""); setReferral(""); setMessage("Listo. Tu comunidad quedó actualizada.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo guardar."); }
-    finally { setBusy(false); }
+      setData(json);
+      setTarget("");
+      setReferral("");
+      setMessage(
+        typeof json.message === "string"
+          ? json.message
+          : "Listo. Tu comunidad quedó actualizada.",
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo guardar.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function enablePush() {
     setBusy(true); setMessage("");
     try {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Este navegador no admite notificaciones push.");
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        throw new Error("Este navegador no admite notificaciones push.");
+      }
       const configResponse = await fetch("/api/xtreme/push");
       const config = await configResponse.json();
-      if (!config.configured || !config.publicKey) throw new Error("Push todavía no está configurado en el servidor.");
+      if (!config.configured || !config.publicKey) {
+        throw new Error("Push todavía no está configurado en el servidor.");
+      }
       const registration = await navigator.serviceWorker.ready;
-      const subscription = (await registration.pushManager.getSubscription()) || (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKey(config.publicKey) }));
-      const response = await fetch("/api/xtreme/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memberName, subscription: subscription.toJSON() }) });
+      const subscription =
+        (await registration.pushManager.getSubscription()) ||
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidKey(config.publicKey),
+        }));
+      const response = await fetch("/api/xtreme/push", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      });
       if (!response.ok) throw new Error((await response.json()).error || "No se pudo activar push.");
       setPushSubscription(subscription);
       setMessage("Notificaciones activadas en este dispositivo.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo activar push."); }
-    finally { setBusy(false); }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo activar push.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function disablePush() {
@@ -79,13 +111,21 @@ export default function CommunityClient() {
     setBusy(true); setMessage("");
     try {
       const endpoint = pushSubscription.endpoint;
-      const response = await fetch("/api/xtreme/push", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint }) });
+      const response = await fetch("/api/xtreme/push", {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint }),
+      });
       if (!response.ok) throw new Error("No se pudo desactivar push.");
       await pushSubscription.unsubscribe();
       setPushSubscription(null);
       setMessage("Notificaciones desactivadas en este dispositivo.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo desactivar push."); }
-    finally { setBusy(false); }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo desactivar push.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (!memberName) return <main className="min-h-screen bg-[#080808] px-5 py-20 text-white"><div className="mx-auto max-w-xl border border-white/10 p-8"><h1 className="text-3xl font-black uppercase">Entrá primero a tu perfil</h1><a href="/app" className="mt-6 inline-block bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black">Abrir app</a></div></main>;
@@ -103,7 +143,7 @@ export default function CommunityClient() {
             <div className="mt-5 space-y-2">{data.leaderboard.map((entry) => <div key={`${entry.rank}-${entry.firstName}`} className="flex items-center gap-3 border border-white/10 p-3"><span className="grid h-8 w-8 place-items-center bg-white/10 font-black">{entry.rank}</span><span className="flex-1 font-black uppercase">{entry.firstName}</span><span className="text-sm font-bold text-[#d8ff3e]">{entry.monthlyXp} XP</span></div>)}</div>
           </section>
           <section className="border border-white/10 bg-white/[.04] p-5">
-            <h2 className="flex items-center gap-2 text-xl font-black uppercase"><UserPlus className="text-[#d8ff3e]" />Traé un amigo</h2><p className="mt-2 text-sm text-white/50">Ambos ganan 7 días cuando el nuevo socio usa tu código.</p>
+            <h2 className="flex items-center gap-2 text-xl font-black uppercase"><UserPlus className="text-[#d8ff3e]" />Traé un amigo</h2><p className="mt-2 text-sm text-white/50">Ambos ganan 7 días cuando el nuevo socio hace su primer ingreso con plan o pase pagado.</p>
             <div className="mt-5 flex gap-2"><code className="flex-1 bg-black/40 p-3 text-lg font-black text-[#d8ff3e]">{data.referralCode}</code><button onClick={() => void navigator.clipboard.writeText(data.referralCode)} className="border border-white/15 p-3" aria-label="Copiar código"><Copy /></button></div>
             <p className="mt-2 text-xs font-bold text-white/40">Referidos completados: {data.referralCount}</p>
             <div className="mt-5 flex gap-2"><input value={referral} onChange={(e) => setReferral(e.target.value)} placeholder="Código de quien te invitó" className="min-w-0 flex-1 border border-white/15 bg-black/30 px-3 py-2 outline-none" /><button disabled={busy || !referral} onClick={() => void action("referral-redeem", { code: referral })} className="bg-[#d8ff3e] px-4 font-black uppercase text-black disabled:opacity-40">Canjear</button></div>

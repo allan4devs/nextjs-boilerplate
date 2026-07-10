@@ -240,6 +240,29 @@ export async function GET(req: NextRequest) {
       payload.revenue = await revenueSummary(db);
     }
 
+    // Phase 3: Growth strip for all admin roles (funnel, not full revenue detail)
+    try {
+      const { computeGrowthSnapshot } = await import("@/lib/xtreme/growth");
+      payload.growth = await computeGrowthSnapshot(db, 30);
+    } catch (growthErr) {
+      console.error("XTREME ADMIN GROWTH", growthErr);
+      payload.growth = null;
+    }
+
+    // System health card
+    try {
+      const lifecycle = await db.collection("xtreme_gym_job_runs").findOne(
+        { job: "lifecycle" },
+        { sort: { startedAt: -1 }, projection: { _id: 0, status: 1, startedAt: 1, finishedAt: 1, summary: 1 } },
+      );
+      payload.system = {
+        lifecycle,
+        checkedAt: new Date().toISOString(),
+      };
+    } catch {
+      payload.system = null;
+    }
+
     return NextResponse.json(payload);
   } catch (err) {
     console.error("XTREME ADMIN GET", err);
