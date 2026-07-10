@@ -2,15 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import {
   CHECKINS_COLLECTION,
-  GYM_CAPACITY,
   MEMBERS_COLLECTION,
   PINS_COLLECTION,
-  RESERVATIONS_COLLECTION,
   type CheckinDoc,
   type MemberDoc,
+  computeOccupancy,
   formatAccessCode,
   hashPin,
-  hourLoadBoost,
   memberAccessCode,
   membershipStatus,
   normalizeKey,
@@ -21,51 +19,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
-async function occupancy(db: Awaited<ReturnType<typeof getDb>>, date: string) {
-  const checkinDocs = await db
-    .collection<CheckinDoc>(CHECKINS_COLLECTION)
-    .find({ date })
-    .sort({ checkedInAt: -1 })
-    .toArray();
-  const uniqueCheckins = new Set(checkinDocs.map((c) => c.normalizedName)).size;
-  const reservationsToday = await db
-    .collection(RESERVATIONS_COLLECTION)
-    .countDocuments({ trainingDate: date, status: "reserved" });
-  const currentPeople = Math.min(
-    GYM_CAPACITY,
-    uniqueCheckins + Math.ceil(reservationsToday * 0.25) + hourLoadBoost(),
-  );
-  const occupancyPct = Math.round((currentPeople / GYM_CAPACITY) * 100);
-  const level = occupancyPct >= 78 ? "Lleno" : occupancyPct >= 48 ? "Medio" : "Tranquilo";
-
-  return {
-    date,
-    capacity: GYM_CAPACITY,
-    currentPeople,
-    occupancyPct,
-    level,
-    checkinsToday: checkinDocs.length,
-    uniqueCheckins,
-    recent: checkinDocs.slice(0, 12).map((c) => ({
-      id: c.id,
-      memberName: c.memberName,
-      accessCode: c.accessCode,
-      membershipStatus: c.membershipStatus,
-      checkedInAt: c.checkedInAt,
-      method: c.method,
-    })),
-  };
-}
-
 /** Lista estado del gym + busqueda de socio por nombre o codigo. */
 export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
-    const date = todayIso();
     const q = normalizeName(req.nextUrl.searchParams.get("q"));
     const codeDigits = String(req.nextUrl.searchParams.get("code") ?? "").replace(/\D/g, "");
 
-    const status = await occupancy(db, date);
+    const status = await computeOccupancy(db);
 
     if (!q && !codeDigits) {
       return NextResponse.json({ status, member: null });
@@ -172,7 +133,7 @@ export async function POST(req: NextRequest) {
       checkedInAt: { $gte: new Date(now.getTime() - 20 * 60 * 1000) },
     });
     if (recent) {
-      const status = await occupancy(db, date);
+      const status = await computeOccupancy(db);
       return NextResponse.json({
         ok: true,
         duplicate: true,
@@ -198,7 +159,7 @@ export async function POST(req: NextRequest) {
     };
 
     await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
-    const status = await occupancy(db, date);
+    const status = await computeOccupancy(db);
 
     return NextResponse.json({
       ok: true,

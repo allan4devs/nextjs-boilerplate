@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import { sendWelcomeEmail } from "@/lib/helpers/email";
+import {
+  computeStreak as sharedComputeStreak,
+  formatAccessCode,
+  memberAccessCode,
+} from "@/lib/xtreme/shared";
 
 export const dynamic = "force-dynamic";
 
 const MEMBERS_COLLECTION = "xtreme_gym_members";
+const MAX_PHOTO_CHARS = 400_000; // ~300 KB binario en base64
 
 type WorkoutEntry = {
   id: string;
@@ -58,6 +65,7 @@ type XtremeMemberDoc = {
   favoriteTraining: string;
   phone?: string;
   email?: string;
+  photoUrl?: string;
   workouts: WorkoutEntry[];
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
@@ -98,19 +106,14 @@ function toUtcDate(date: string) {
 }
 
 function computeStreak(workouts: WorkoutEntry[]) {
-  const dates = new Set(workouts.map((workout) => workout.completedDate).filter(Boolean));
-  if (!dates.size) return 0;
+  return sharedComputeStreak(workouts);
+}
 
-  const latest = [...dates].sort().at(-1)!;
-  let cursor = toUtcDate(latest);
-  let streak = 0;
-
-  while (dates.has(cursor.toISOString().slice(0, 10))) {
-    streak += 1;
-    cursor = addDays(cursor, -1);
-  }
-
-  return streak;
+function normalizePhoto(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  if (!raw.startsWith("data:image/") || raw.length > MAX_PHOTO_CHARS) return "";
+  return raw;
 }
 
 function addMonths(date: Date, months: number) {
@@ -176,6 +179,8 @@ function publicMember(doc: XtremeMemberDoc | null) {
     favoriteTraining,
     phone: doc?.phone ?? "",
     email: doc?.email ?? "",
+    photoUrl: doc?.photoUrl ?? "",
+    accessCode: formatAccessCode(memberAccessCode(doc?.normalizedName ?? "")),
     workouts,
     streak: computeStreak(workouts),
     totalWorkouts: workouts.length,
@@ -192,7 +197,7 @@ async function leaderboard() {
   const db = await getDb();
   const docs = await db
     .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
-    .find({}, { projection: { memberName: 1, normalizedName: 1, workouts: 1, favoriteTraining: 1, goal: 1 } })
+    .find({}, { projection: { memberName: 1, normalizedName: 1, workouts: 1, favoriteTraining: 1, goal: 1, photoUrl: 1 } })
     .toArray();
 
   return docs
@@ -239,6 +244,7 @@ export async function POST(req: NextRequest) {
     const nextBillingDate = isoDate(body.nextBillingDate);
     const phone = normalizePhone(body.phone);
     const email = normalizeEmail(body.email);
+    const photo = normalizePhoto(body.photo);
 
     if (!memberName) {
       return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
@@ -276,13 +282,15 @@ export async function POST(req: NextRequest) {
     const set: Partial<XtremeMemberDoc> = {
       normalizedName,
       memberName,
-      goal,
-      favoriteTraining,
       updatedAt: now,
     };
 
+    // Solo tocar campos que el cliente mando, para no borrar datos existentes
+    if (body.goal !== undefined) set.goal = goal;
+    if (body.favoriteTraining !== undefined) set.favoriteTraining = favoriteTraining;
     if (phone) set.phone = phone;
     if (email) set.email = email;
+    if (photo) set.photoUrl = photo;
 
     if (!existing) {
       set.membership = {
@@ -305,6 +313,15 @@ export async function POST(req: NextRequest) {
       },
       { upsert: true },
     );
+
+    // Correo de bienvenida con el codigo de acceso al crear el perfil
+    if (!existing && email) {
+      await sendWelcomeEmail({
+        to: email,
+        memberName,
+        accessCode: formatAccessCode(memberAccessCode(normalizedName)),
+      });
+    }
 
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
     return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });

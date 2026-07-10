@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal";
 import { getDb } from "@/lib/helpers/mongodb";
+import { sendPaymentReceiptEmail } from "@/lib/helpers/email";
 import { getXtremeCheckoutOption } from "../catalog";
 import {
   MEMBERS_COLLECTION,
@@ -123,6 +124,7 @@ export async function POST(req: Request) {
       recordedBy: "paypal",
     };
 
+    let membershipUntil: string | undefined;
     try {
       const db = await getDb();
       await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).insertOne(payment);
@@ -136,6 +138,7 @@ export async function POST(req: Request) {
             ? existing.membership.nextBillingDate
             : todayIso();
         const nextBillingDate = addDays(toUtcDate(base), days).toISOString().slice(0, 10);
+        membershipUntil = nextBillingDate;
         const planLabel = option?.label ?? existing?.membership?.plan ?? "Xtreme Mensual";
         const startedAt = existing?.membership?.startedAt ?? todayIso();
 
@@ -169,6 +172,21 @@ export async function POST(req: Request) {
     } catch (persistErr) {
       console.error("Xtreme payment persist error:", persistErr);
       // No fallar el pago si Mongo falla; el capture de PayPal ya ocurrio.
+    }
+
+    // Recibo por correo al cliente (con copia a recepcion)
+    if (payment.email) {
+      await sendPaymentReceiptEmail({
+        to: payment.email,
+        customerName,
+        optionLabel: payment.optionLabel,
+        amountCrc: payment.amountCrc,
+        amountUsd: payment.amountUsd,
+        method: "paypal",
+        date: payment.date,
+        reference: payment.paypalCaptureId,
+        nextBillingDate: membershipUntil,
+      });
     }
 
     return NextResponse.json({

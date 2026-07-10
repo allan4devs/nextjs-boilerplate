@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import SiteHeader from "../components/SiteHeader";
 import ExtremeGymSite from "../ExtremeGymSite";
 
 export const metadata: Metadata = {
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function XtremeGymAppPage() {
-  return <ExtremeGymSite />;
+  return (
+    <>
+      <SiteHeader />
+      <ExtremeGymSite />
+    </>
+  );
 }

@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import type { Db } from "mongodb";
 
 export const MEMBERS_COLLECTION = "xtreme_gym_members";
 export const RESERVATIONS_COLLECTION = "xtreme_gym_class_reservations";
@@ -85,6 +86,7 @@ export type MemberDoc = {
   email?: string;
   coach?: string;
   notes?: string;
+  photoUrl?: string;
   workouts?: WorkoutEntry[];
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
@@ -196,13 +198,20 @@ export function membershipStatus(membership?: Membership) {
   return { plan, nextBillingDate, daysRemaining, status, startedAt: membership?.startedAt ?? "" };
 }
 
+/**
+ * Racha real: cuenta dias consecutivos terminando hoy (o ayer, si hoy aun
+ * no entrena). Si el ultimo entreno fue antes de ayer, la racha esta rota (0).
+ */
 export function computeStreak(workouts: WorkoutEntry[]) {
   const dates = new Set(
     workouts.map((w) => w.completedDate).filter(Boolean) as string[],
   );
   if (!dates.size) return 0;
-  const latest = [...dates].sort().at(-1)!;
-  let cursor = toUtcDate(latest);
+  let cursor = toUtcDate(todayIso());
+  if (!dates.has(cursor.toISOString().slice(0, 10))) {
+    cursor = addDays(cursor, -1);
+    if (!dates.has(cursor.toISOString().slice(0, 10))) return 0;
+  }
   let streak = 0;
   while (dates.has(cursor.toISOString().slice(0, 10))) {
     streak += 1;
@@ -211,11 +220,76 @@ export function computeStreak(workouts: WorkoutEntry[]) {
   return streak;
 }
 
-export function hourLoadBoost() {
-  const hour = new Date().getHours();
-  if ((hour >= 5 && hour <= 7) || (hour >= 17 && hour <= 20)) return 22;
-  if ((hour >= 8 && hour <= 10) || (hour >= 15 && hour <= 16)) return 12;
-  return 5;
+/** Ventana en la que un check-in cuenta como "persona adentro". */
+export const ACTIVE_CHECKIN_WINDOW_MIN = 90;
+
+export type OccupancySnapshot = {
+  date: string;
+  capacity: number;
+  currentPeople: number;
+  occupancyPct: number;
+  level: "Tranquilo" | "Medio" | "Lleno";
+  checkinsToday: number;
+  uniqueCheckins: number;
+  reservationsToday: number;
+  updatedAt: string;
+  recent: Array<{
+    id: string;
+    memberName: string;
+    accessCode: string;
+    membershipStatus: string;
+    checkedInAt: Date;
+    method: string;
+  }>;
+};
+
+/**
+ * Ocupacion real del gym: personas unicas con check-in dentro de la ventana
+ * activa. Sin estimados inventados — solo datos de la coleccion de ingresos.
+ */
+export async function computeOccupancy(db: Db): Promise<OccupancySnapshot> {
+  const date = todayIso();
+  const [checkinDocs, reservationsToday] = await Promise.all([
+    db
+      .collection<CheckinDoc>(CHECKINS_COLLECTION)
+      .find({ date })
+      .sort({ checkedInAt: -1 })
+      .toArray(),
+    db
+      .collection(RESERVATIONS_COLLECTION)
+      .countDocuments({ trainingDate: date, status: "reserved" }),
+  ]);
+
+  const activeSince = Date.now() - ACTIVE_CHECKIN_WINDOW_MIN * 60 * 1000;
+  const activeNow = new Set(
+    checkinDocs
+      .filter((c) => new Date(c.checkedInAt).getTime() >= activeSince)
+      .map((c) => c.normalizedName),
+  ).size;
+
+  const currentPeople = Math.min(GYM_CAPACITY, activeNow);
+  const occupancyPct = Math.round((currentPeople / GYM_CAPACITY) * 100);
+  const level = occupancyPct >= 78 ? "Lleno" : occupancyPct >= 48 ? "Medio" : "Tranquilo";
+
+  return {
+    date,
+    capacity: GYM_CAPACITY,
+    currentPeople,
+    occupancyPct,
+    level,
+    checkinsToday: checkinDocs.length,
+    uniqueCheckins: new Set(checkinDocs.map((c) => c.normalizedName)).size,
+    reservationsToday,
+    updatedAt: new Date().toISOString(),
+    recent: checkinDocs.slice(0, 12).map((c) => ({
+      id: c.id,
+      memberName: c.memberName,
+      accessCode: c.accessCode,
+      membershipStatus: c.membershipStatus,
+      checkedInAt: c.checkedInAt,
+      method: c.method,
+    })),
+  };
 }
 
 export function toAdminPlan(plan?: TrainingPlan) {
@@ -267,6 +341,7 @@ export function toAdminMember(doc: MemberDoc) {
     email: doc.email ?? "",
     coach: doc.coach ?? "",
     notes: doc.notes ?? "",
+    photoUrl: doc.photoUrl ?? "",
     accessCode: formatAccessCode(memberAccessCode(key)),
     streak: computeStreak(workouts),
     totalWorkouts: workouts.length,

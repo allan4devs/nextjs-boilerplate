@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -8,6 +8,7 @@ import {
   Bell,
   CalendarCheck,
   CalendarClock,
+  Camera,
   Check,
   ChevronRight,
   ClipboardList,
@@ -34,6 +35,7 @@ import {
   Video,
   Zap,
 } from "lucide-react";
+import { CHART_CYAN, CHART_LIME, LineTrendChart } from "./components/charts";
 
 const STORAGE_KEY = "xtreme-gym-member-name";
 const SESSION_KEY = "xtreme-gym-session";
@@ -236,6 +238,7 @@ type Member = {
   favoriteTraining: string;
   phone: string;
   email: string;
+  photoUrl: string;
   workouts: Workout[];
   streak: number;
   totalWorkouts: number;
@@ -330,6 +333,62 @@ function normalizeName(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
+/** Reduce la foto a un cuadrado de 256px (JPEG) para guardarla en Mongo. */
+async function resizePhoto(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No se pudo procesar la imagen.");
+    const side = Math.min(bitmap.width, bitmap.height);
+    const sx = (bitmap.width - side) / 2;
+    const sy = (bitmap.height - side) / 2;
+    ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, size, size);
+    return canvas.toDataURL("image/jpeg", 0.85);
+  } finally {
+    bitmap.close();
+  }
+}
+
+function Avatar({
+  name,
+  photoUrl,
+  className = "h-10 w-10",
+  textClass = "text-sm",
+}: {
+  name: string;
+  photoUrl?: string;
+  className?: string;
+  textClass?: string;
+}) {
+  if (photoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt={name}
+        className={`${className} shrink-0 rounded-full border border-[#d8ff3e]/40 object-cover`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`${className} grid shrink-0 place-items-center rounded-full bg-[#d8ff3e] font-black text-black ${textClass}`}
+    >
+      {initialsOf(name)}
+    </span>
+  );
+}
+
 function getWeekDates() {
   const today = new Date();
   const day = today.getDay() || 7;
@@ -358,6 +417,7 @@ function initialMember(name = ""): Member {
     favoriteTraining: "",
     phone: "",
     email: "",
+    photoUrl: "",
     workouts: [],
     streak: 0,
     totalWorkouts: 0,
@@ -733,6 +793,8 @@ export default function ExtremeGymSite() {
   const [waistCm, setWaistCm] = useState("");
   const [metricNote, setMetricNote] = useState("");
   const [selectedReminder, setSelectedReminder] = useState(REMINDERS[0]);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [tab, setTab] = useState<TabId>("resumen");
@@ -764,7 +826,7 @@ export default function ExtremeGymSite() {
   const unlockedCount = achievements.filter((a) => a.done).length;
   const accessCode = memberCode(currentMember.normalizedName || memberName.toUpperCase() || "XTREME01");
   const latestMetric = currentMember.latestBodyMetric;
-  const metricTrend = currentMember.bodyMetrics.slice(-5);
+  const metricTrend = currentMember.bodyMetrics.slice(-12);
   const membershipTone =
     currentMember.membership.status === "expired"
       ? "border-red-400/40 bg-red-500/10 text-red-200"
@@ -885,7 +947,12 @@ export default function ExtremeGymSite() {
     [goal, loadGymStatus, loadReservations],
   );
 
+  // Solo al montar: si esto dependiera de startMember, cambiar la meta
+  // relanzaria el login y el modal de PIN.
+  const bootedRef = useRef(false);
   useEffect(() => {
+    if (bootedRef.current) return;
+    bootedRef.current = true;
     const storedName = normalizeName(window.localStorage.getItem(STORAGE_KEY) ?? "");
     if (storedName) void startMember(storedName, true);
     else setIsLoading(false);
@@ -1057,6 +1124,49 @@ export default function ExtremeGymSite() {
     }
   }
 
+  async function uploadPhoto(file: File) {
+    if (!unlocked) return;
+    setError("");
+    setMessage("");
+    setIsUploadingPhoto(true);
+    try {
+      const photo = await resizePhoto(file);
+      const response = await fetch("/api/xtreme/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberName, photo }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      setLeaderboard(data.leaderboard ?? []);
+      setMessage("Foto de perfil actualizada.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo subir la foto.");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }
+
+  async function activateReminder() {
+    if (!unlocked) return;
+    setError("");
+    setMessage("");
+    setIsSendingReminder(true);
+    try {
+      const response = await fetch("/api/xtreme/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberName, message: selectedReminder }),
+      });
+      const data = await readJson<{ ok?: boolean; sentTo?: string }>(response);
+      setMessage(`Aviso enviado a ${data.sentTo}. Revise su correo.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo enviar el aviso.");
+    } finally {
+      setIsSendingReminder(false);
+    }
+  }
+
   function resetMember() {
     window.localStorage.removeItem(SESSION_KEY);
     setShowPin(false);
@@ -1167,7 +1277,7 @@ export default function ExtremeGymSite() {
             </form>
           ) : (
             <div className="flex items-center gap-3 border border-white/12 bg-black/45 px-4 py-3 backdrop-blur-sm">
-              <UserRound className="h-5 w-5 text-[#d8ff3e]" />
+              <Avatar name={memberName} photoUrl={currentMember.photoUrl} className="h-9 w-9" textClass="text-xs" />
               <span className="font-black uppercase">{memberName}</span>
               <button type="button" onClick={resetMember} className="text-xs font-bold text-white/45 hover:text-white">
                 cambiar
@@ -1177,7 +1287,7 @@ export default function ExtremeGymSite() {
         </div>
       </section>
 
-      <nav className="sticky top-0 z-30 border-b border-white/10 bg-[#050505]/85 backdrop-blur-md">
+      <nav className="sticky top-[72px] z-30 border-b border-white/10 bg-[#050505]/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-3 sm:px-8">
           {TABS.map((item) => {
             const Icon = item.icon;
@@ -1811,20 +1921,32 @@ export default function ExtremeGymSite() {
                 <div className="border border-white/10 bg-white/[0.04] p-5">
                   <div className="flex items-center gap-3">
                     <Target className="h-5 w-5 text-[#d8ff3e]" />
-                    <h2 className="text-lg font-black uppercase">Grafica rapida</h2>
+                    <h2 className="text-lg font-black uppercase">Evolucion corporal</h2>
                   </div>
                   {metricTrend.length ? (
-                    <div className="mt-5 flex h-40 items-end gap-3 border border-white/10 bg-black/25 p-4">
-                      {metricTrend.map((metric) => {
-                        const maxWeight = Math.max(...metricTrend.map((item) => item.weightKg));
-                        const height = Math.max(18, Math.round((metric.weightKg / maxWeight) * 100));
-                        return (
-                          <div key={metric.id} className="flex flex-1 flex-col items-center gap-2">
-                            <div className="w-full bg-[#d8ff3e]" style={{ height: `${height}%` }} />
-                            <span className="text-[10px] font-bold text-white/45">{metric.date.slice(5)}</span>
-                          </div>
-                        );
-                      })}
+                    <div className="mt-5 space-y-5">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Peso (kg)</p>
+                        <div className="mt-2 border border-white/10 bg-black/25 p-3">
+                          <LineTrendChart
+                            data={metricTrend.map((m) => ({ date: m.date, value: m.weightKg }))}
+                            unit="kg"
+                            color={CHART_LIME}
+                            height={150}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Cintura (cm)</p>
+                        <div className="mt-2 border border-white/10 bg-black/25 p-3">
+                          <LineTrendChart
+                            data={metricTrend.map((m) => ({ date: m.date, value: m.waistCm }))}
+                            unit="cm"
+                            color={CHART_CYAN}
+                            height={150}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-5 grid h-40 place-items-center border border-white/10 bg-black/25 text-sm font-semibold text-white/40">
@@ -1832,7 +1954,7 @@ export default function ExtremeGymSite() {
                     </div>
                   )}
                   <p className="mt-3 text-sm font-semibold text-white/45">
-                    Pensado para peso, medidas y seguimiento simple de recepcion.
+                    Peso y cintura por fecha. Pase el cursor para ver cada registro.
                   </p>
                 </div>
               </div>
@@ -1846,9 +1968,10 @@ export default function ExtremeGymSite() {
                   {leaderboard.length ? (
                     leaderboard.slice(0, 5).map((entry, index) => (
                       <div key={entry.normalizedName || entry.memberName} className="flex items-center gap-3 border border-white/10 bg-black/20 p-3">
-                        <span className={`grid h-9 w-9 place-items-center font-black ${index === 0 ? "bg-orange-300 text-black" : "bg-white/10 text-white"}`}>
+                        <span className={`grid h-9 w-9 shrink-0 place-items-center font-black ${index === 0 ? "bg-orange-300 text-black" : "bg-white/10 text-white"}`}>
                           {index + 1}
                         </span>
+                        <Avatar name={entry.memberName} photoUrl={entry.photoUrl} className="h-9 w-9" textClass="text-xs" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-black uppercase">{entry.memberName}</p>
                           <p className="text-xs font-semibold text-white/45">
@@ -1891,6 +2014,50 @@ export default function ExtremeGymSite() {
 
             {tab === "perfil" && (
               <div className="space-y-6">
+              <div className="border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-3">
+                  <Camera className="h-5 w-5 text-[#d8ff3e]" />
+                  <h2 className="text-lg font-black uppercase">Foto de perfil</h2>
+                </div>
+                <div className="mt-5 flex flex-wrap items-center gap-5">
+                  <Avatar
+                    name={memberName || "Xtreme"}
+                    photoUrl={currentMember.photoUrl}
+                    className="h-24 w-24"
+                    textClass="text-3xl"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <label
+                      className={`inline-flex cursor-pointer items-center gap-2 bg-[#d8ff3e] px-4 py-3 font-black uppercase text-black transition hover:bg-white ${
+                        !unlocked || isUploadingPhoto ? "pointer-events-none opacity-45" : ""
+                      }`}
+                    >
+                      {isUploadingPhoto ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                      {currentMember.photoUrl ? "Cambiar foto" : "Subir foto"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={!unlocked || isUploadingPhoto}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (file) void uploadPhoto(file);
+                        }}
+                      />
+                    </label>
+                    <p className="mt-3 text-xs font-semibold text-white/45">
+                      Se recorta al centro y se guarda en su perfil. Aparece en el carne digital,
+                      la pantalla de ingreso y el panel del coach.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="border border-white/10 bg-gradient-to-br from-[#d8ff3e]/10 to-orange-400/[0.06] p-5">
                 <div className="flex items-center gap-3">
                   <QrCode className="h-5 w-5 text-[#d8ff3e]" />
@@ -1900,11 +2067,19 @@ export default function ExtremeGymSite() {
                   <>
                     <div className="mt-4 border border-white/10 bg-black/40 p-4">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
-                            Socio Xtreme
-                          </p>
-                          <p className="mt-1 truncate text-lg font-black uppercase leading-tight">{memberName}</p>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <Avatar
+                            name={memberName}
+                            photoUrl={currentMember.photoUrl}
+                            className="h-12 w-12"
+                            textClass="text-base"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
+                              Socio Xtreme
+                            </p>
+                            <p className="mt-1 truncate text-lg font-black uppercase leading-tight">{memberName}</p>
+                          </div>
                         </div>
                         <span className="shrink-0 border border-[#d8ff3e]/40 bg-[#d8ff3e]/10 px-2 py-1 text-[10px] font-black uppercase text-[#eaff93]">
                           Activo
@@ -2004,12 +2179,16 @@ export default function ExtremeGymSite() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setMessage(`Recordatorio listo: ${selectedReminder}`)}
-                  disabled={!unlocked}
-                  className="mt-4 w-full bg-yellow-300 px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
+                  onClick={() => void activateReminder()}
+                  disabled={!unlocked || isSendingReminder}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-yellow-300 px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
                 >
-                  Activar aviso
+                  {isSendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+                  Enviar aviso a mi correo
                 </button>
+                <p className="mt-3 text-xs font-semibold text-white/42">
+                  Le llega al correo registrado en su perfil.
+                </p>
               </div>
 
               <div className="border border-white/10 bg-white/[0.04] p-5">

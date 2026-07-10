@@ -49,6 +49,7 @@ type MemberHit = {
   totalWorkouts: number;
   coach: string;
   phone: string;
+  photoUrl?: string;
   hasPin?: boolean;
 };
 
@@ -359,8 +360,17 @@ function ProfileCard({
   const expired = profile.membershipStatus === "expired";
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="relative grid h-36 w-36 place-items-center rounded-full bg-[#0b0b0b] text-[#d8ff3e] shadow-lg ring-4 ring-[#d8ff3e]/30">
-        <span className="text-5xl font-black">{initials(profile.memberName)}</span>
+      <div className="relative grid h-36 w-36 place-items-center overflow-visible rounded-full bg-[#0b0b0b] text-[#d8ff3e] shadow-lg ring-4 ring-[#d8ff3e]/30">
+        {profile.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={profile.photoUrl}
+            alt={profile.memberName}
+            className="h-full w-full rounded-full object-cover"
+          />
+        ) : (
+          <span className="text-5xl font-black">{initials(profile.memberName)}</span>
+        )}
         {profile.streak > 0 && (
           <span className="absolute -bottom-1 -right-1 inline-flex items-center gap-1 rounded-full bg-[#d8ff3e] px-2.5 py-1 text-xs font-black text-black">
             <Flame className="h-3.5 w-3.5" /> {profile.streak}
@@ -411,7 +421,7 @@ function ProfileCard({
       </button>
 
       <Link
-        href="/admin"
+        href="/app"
         className="mt-6 w-full rounded-full border border-[#8fbf00]/40 px-6 py-3.5 text-sm font-black uppercase tracking-wide text-[#6f9800] transition hover:border-[#8fbf00] hover:text-[#5c7d00]"
       >
         Registrar nuevo socio

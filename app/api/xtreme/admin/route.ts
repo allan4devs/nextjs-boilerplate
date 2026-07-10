@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import {
   CHECKINS_COLLECTION,
-  GYM_CAPACITY,
   MEMBERS_COLLECTION,
   PAYMENTS_COLLECTION,
   PINS_COLLECTION,
@@ -13,8 +12,8 @@ import {
   type MemberDoc,
   type PaymentDoc,
   addDays,
+  computeOccupancy,
   formatAccessCode,
-  hourLoadBoost,
   memberAccessCode,
   membershipStatus,
   normalizeKey,
@@ -25,6 +24,7 @@ import {
   toAdminMember,
   toUtcDate,
 } from "@/lib/xtreme/shared";
+import { sendMembershipReminderEmail, sendPaymentReceiptEmail } from "@/lib/helpers/email";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +71,18 @@ async function revenueSummary(db: Awaited<ReturnType<typeof getDb>>) {
   const week = payments.filter((p) => p.date >= weekStart);
   const month = payments.filter((p) => p.date >= monthStart);
 
+  // Serie diaria (ultimos 14 dias) para la grafica de ingresos
+  const daily: { date: string; crc: number; count: number }[] = [];
+  for (let i = 13; i >= 0; i -= 1) {
+    const day = daysAgoIso(i);
+    const dayPayments = payments.filter((p) => p.date === day);
+    daily.push({
+      date: day,
+      crc: dayPayments.reduce((s, p) => s + (p.amountCrc || 0), 0),
+      count: dayPayments.length,
+    });
+  }
+
   const byOption: Record<string, { label: string; count: number; crc: number }> = {};
   const byMethod: Record<string, { count: number; crc: number }> = {};
   for (const p of month) {
@@ -90,6 +102,7 @@ async function revenueSummary(db: Awaited<ReturnType<typeof getDb>>) {
     week: sum(week),
     month: sum(month),
     all: sum(payments),
+    daily,
     byOption: Object.entries(byOption)
       .map(([id, v]) => ({ optionId: id, ...v }))
       .sort((a, b) => b.crc - a.crc),
@@ -163,15 +176,25 @@ export async function GET(req: NextRequest) {
       .limit(100)
       .toArray();
 
-    const checkinsToday = checkinDocs.length;
-    const uniqueCheckins = new Set(checkinDocs.map((c) => c.normalizedName)).size;
-    const reservationsToday = reservationDocs.length;
-    const currentPeople = Math.min(
-      GYM_CAPACITY,
-      Math.max(uniqueCheckins, 0) + Math.ceil(reservationsToday * 0.25) + hourLoadBoost(),
-    );
-    const occupancyPct = Math.round((currentPeople / GYM_CAPACITY) * 100);
-    const level = occupancyPct >= 78 ? "Lleno" : occupancyPct >= 48 ? "Medio" : "Tranquilo";
+    const occupancySnapshot = await computeOccupancy(db);
+
+    // Serie de ingresos al gym de los ultimos 7 dias (para la grafica)
+    const weekStartIso = daysAgoIso(6);
+    const weekCheckins = await db
+      .collection<CheckinDoc>(CHECKINS_COLLECTION)
+      .find({ date: { $gte: weekStartIso } })
+      .project<{ date: string; normalizedName: string }>({ date: 1, normalizedName: 1 })
+      .toArray();
+    const checkinSeries: { date: string; checkins: number; unique: number }[] = [];
+    for (let i = 6; i >= 0; i -= 1) {
+      const day = daysAgoIso(i);
+      const dayDocs = weekCheckins.filter((c) => c.date === day);
+      checkinSeries.push({
+        date: day,
+        checkins: dayDocs.length,
+        unique: new Set(dayDocs.map((c) => c.normalizedName)).size,
+      });
+    }
 
     const payload: Record<string, unknown> = {
       role,
@@ -190,15 +213,16 @@ export async function GET(req: NextRequest) {
       },
       today: {
         date,
-        capacity: GYM_CAPACITY,
-        currentPeople,
-        occupancyPct,
-        level,
-        checkinsToday,
-        uniqueCheckins,
-        reservationsToday,
+        capacity: occupancySnapshot.capacity,
+        currentPeople: occupancySnapshot.currentPeople,
+        occupancyPct: occupancySnapshot.occupancyPct,
+        level: occupancySnapshot.level,
+        checkinsToday: occupancySnapshot.checkinsToday,
+        uniqueCheckins: occupancySnapshot.uniqueCheckins,
+        reservationsToday: occupancySnapshot.reservationsToday,
         classes,
       },
+      checkinSeries,
       checkins: checkinDocs.map((c) => ({
         id: c.id,
         memberName: c.memberName,
@@ -446,7 +470,82 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      return NextResponse.json({ ok: true, payment });
+      let receiptSent = false;
+      if (payment.email) {
+        const receipt = await sendPaymentReceiptEmail({
+          to: payment.email,
+          customerName: payment.customerName,
+          optionLabel: payment.optionLabel,
+          amountCrc: payment.amountCrc,
+          amountUsd: payment.amountUsd,
+          method: payment.method,
+          date: payment.date,
+        });
+        receiptSent = receipt.ok;
+      }
+
+      return NextResponse.json({ ok: true, payment, receiptSent });
+    }
+
+    // Enviar recordatorio de membresia a un socio
+    if (action === "notify") {
+      const memberName = normalizeName(body.memberName);
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+
+      const db = await getDb();
+      const member = await db
+        .collection<MemberDoc>(MEMBERS_COLLECTION)
+        .findOne({ normalizedName: normalizeKey(memberName) });
+      if (!member) {
+        return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+      }
+      if (!member.email) {
+        return NextResponse.json(
+          { error: "Este socio no tiene correo registrado." },
+          { status: 400 },
+        );
+      }
+
+      const ms = membershipStatus(member.membership);
+      const result = await sendMembershipReminderEmail({
+        to: member.email,
+        memberName: member.memberName || memberName,
+        plan: ms.plan,
+        nextBillingDate: ms.nextBillingDate,
+        daysRemaining: ms.daysRemaining,
+      });
+      if (!result.ok) {
+        return NextResponse.json(
+          { error: result.skipped ? "Correo no configurado (RESEND_API_KEY)." : "No se pudo enviar el correo." },
+          { status: 502 },
+        );
+      }
+      return NextResponse.json({ ok: true, sentTo: member.email });
+    }
+
+    // Recordatorio masivo a membresias por vencer / vencidas
+    if (action === "notifyExpiring") {
+      const db = await getDb();
+      const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
+      const targets = docs
+        .map((doc) => ({ doc, ms: membershipStatus(doc.membership) }))
+        .filter(({ doc, ms }) => doc.email && (ms.status === "warning" || ms.status === "expired"));
+
+      let sent = 0;
+      for (const { doc, ms } of targets) {
+        const result = await sendMembershipReminderEmail({
+          to: doc.email!,
+          memberName: doc.memberName || "",
+          plan: ms.plan,
+          nextBillingDate: ms.nextBillingDate,
+          daysRemaining: ms.daysRemaining,
+        });
+        if (result.ok) sent += 1;
+      }
+
+      return NextResponse.json({ ok: true, sent, eligible: targets.length });
     }
 
     // Registrar metrica corporal (para que la entrenadora personal haga seguimiento)

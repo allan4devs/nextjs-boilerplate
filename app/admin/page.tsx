@@ -15,6 +15,7 @@ import {
   Loader2,
   Lock,
   LogOut,
+  Mail,
   Pencil,
   Plus,
   RefreshCw,
@@ -30,6 +31,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { BarTrendChart, CHART_CYAN, CHART_LIME, LineTrendChart } from "../components/charts";
 
 const ADMIN_CODE_KEY = "xtreme-admin-code";
 
@@ -66,6 +68,7 @@ type AdminMember = {
   email: string;
   coach: string;
   notes: string;
+  photoUrl: string;
   accessCode: string;
   streak: number;
   totalWorkouts: number;
@@ -129,6 +132,7 @@ type Revenue = {
   week: { count: number; crc: number; usd: number };
   month: { count: number; crc: number; usd: number };
   all: { count: number; crc: number; usd: number };
+  daily: { date: string; crc: number; count: number }[];
   byOption: { optionId: string; label: string; count: number; crc: number }[];
   byMethod: { method: string; count: number; crc: number }[];
   recent: PaymentRow[];
@@ -161,6 +165,7 @@ type AdminData = {
     classes: { trainingId: string; trainingName: string; capacity: number; reserved: number }[];
   };
   checkins: CheckinRow[];
+  checkinSeries: { date: string; checkins: number; unique: number }[];
   revenue?: Revenue;
 };
 
@@ -457,6 +462,48 @@ export default function XtremeAdminPage() {
     }
   }
 
+  async function sendReminder(memberName: string) {
+    if (!code) return;
+    setBusy(`mail-${memberName}`);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/xtreme/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        body: JSON.stringify({ action: "notify", memberName }),
+      });
+      const json = (await response.json()) as { ok?: boolean; sentTo?: string; error?: string };
+      if (!response.ok) throw new Error(json.error ?? "No se pudo enviar el recordatorio.");
+      setMessage(`Recordatorio enviado a ${json.sentTo}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al enviar recordatorio.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function notifyExpiring() {
+    if (!code) return;
+    setBusy("notify-all");
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/xtreme/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        body: JSON.stringify({ action: "notifyExpiring" }),
+      });
+      const json = (await response.json()) as { ok?: boolean; sent?: number; eligible?: number; error?: string };
+      if (!response.ok) throw new Error(json.error ?? "No se pudieron enviar los recordatorios.");
+      setMessage(`Recordatorios enviados: ${json.sent}/${json.eligible} socios con correo.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al enviar recordatorios.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   function openPlan(member: AdminMember) {
     setPlanMember(member);
     setPlanDraft(draftFromMember(member));
@@ -706,10 +753,9 @@ export default function XtremeAdminPage() {
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
           </button>
-          <div className="mt-5 space-y-1 text-left text-xs font-semibold text-white/35">
-            <p>Admin: <span className="text-white/55">xtreme-admin</span></p>
-            <p>Super admin (ingresos): <span className="text-white/55">xtreme-super</span></p>
-          </div>
+          <p className="mt-5 text-xs font-semibold text-white/35">
+            Si no tiene el codigo, pidalo a la administracion del gym.
+          </p>
         </form>
       </main>
     );
@@ -886,6 +932,19 @@ export default function XtremeAdminPage() {
                           <span>{data.totals.seededCount}</span>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => void notifyExpiring()}
+                        disabled={Boolean(busy) || data.totals.expiringSoon + data.totals.expired === 0}
+                        className="mt-4 inline-flex w-full items-center justify-center gap-2 border border-orange-300/40 bg-orange-300/10 px-3 py-2.5 text-xs font-black uppercase text-orange-200 transition hover:bg-orange-300/20 disabled:opacity-40"
+                      >
+                        {busy === "notify-all" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Mail className="h-4 w-4" />
+                        )}
+                        Recordar renovacion por correo
+                      </button>
                     </div>
                     {isSuper && data.revenue && (
                       <div className="border border-amber-300/30 bg-amber-300/[0.06] p-5">
@@ -907,6 +966,24 @@ export default function XtremeAdminPage() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="border border-white/10 bg-white/[0.04] p-5">
+                  <div className="flex items-center gap-3">
+                    <DoorOpen className="h-5 w-5 text-cyan-300" />
+                    <h2 className="text-lg font-black uppercase">Ingresos al gym — ultimos 7 dias</h2>
+                  </div>
+                  <div className="mt-4 border border-white/10 bg-black/25 p-3">
+                    <BarTrendChart
+                      data={(data.checkinSeries ?? []).map((d) => ({ date: d.date, value: d.checkins }))}
+                      unit="ingresos"
+                      color={CHART_CYAN}
+                      height={160}
+                    />
+                  </div>
+                  <p className="mt-3 text-xs font-semibold text-white/45">
+                    Check-ins registrados por dia (kiosk + panel). Pase el cursor para el detalle.
+                  </p>
                 </div>
 
                 <div className="border border-white/10 bg-white/[0.04] p-5">
@@ -1072,6 +1149,23 @@ export default function XtremeAdminPage() {
                                 </button>
                                 <button
                                   type="button"
+                                  onClick={() => void sendReminder(m.memberName)}
+                                  disabled={Boolean(busy) || !m.email}
+                                  title={
+                                    m.email
+                                      ? "Enviar recordatorio de membresia por correo"
+                                      : "Sin correo registrado"
+                                  }
+                                  className="grid h-8 w-8 place-items-center border border-white/10 text-white/60 transition hover:border-orange-300 hover:text-orange-200 disabled:opacity-40"
+                                >
+                                  {busy === `mail-${m.memberName}` ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Mail className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => void adminCheckin(m.memberName)}
                                   disabled={Boolean(busy)}
                                   title="Registrar ingreso"
@@ -1182,6 +1276,24 @@ export default function XtremeAdminPage() {
                   <Kpi icon={TrendingUp} label="7 dias" value={money(data.revenue.week.crc)} accent="from-lime-300 to-emerald-400" />
                   <Kpi icon={CreditCard} label="Mes" value={money(data.revenue.month.crc)} accent="from-cyan-300 to-sky-500" />
                   <Kpi icon={Trophy} label="Pagos mes" value={`${data.revenue.month.count}`} accent="from-fuchsia-400 to-rose-400" />
+                </div>
+
+                <div className="border border-white/10 bg-white/[0.04] p-5">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="h-5 w-5 text-lime-300" />
+                    <h2 className="text-lg font-black uppercase">Ingresos por dia — ultimos 14 dias</h2>
+                  </div>
+                  <div className="mt-4 border border-white/10 bg-black/25 p-3">
+                    <BarTrendChart
+                      data={(data.revenue.daily ?? []).map((d) => ({ date: d.date, value: d.crc }))}
+                      unit="CRC"
+                      color={CHART_LIME}
+                      height={170}
+                      compactValue={(v) =>
+                        v >= 1000 ? `${(v / 1000).toLocaleString("es-CR", { maximumFractionDigits: 1 })}k` : `${v}`
+                      }
+                    />
+                  </div>
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -1653,9 +1765,18 @@ function UserDetailModal({
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-6 py-5">
           <div className="flex items-center gap-4">
-            <div className="grid h-12 w-12 place-items-center bg-lime-300/10 text-lime-300 border border-lime-300/30">
-              <UserRound className="h-6 w-6" />
-            </div>
+            {member.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={member.photoUrl}
+                alt={member.memberName}
+                className="h-12 w-12 rounded-full border border-lime-300/40 object-cover"
+              />
+            ) : (
+              <div className="grid h-12 w-12 place-items-center bg-lime-300/10 text-lime-300 border border-lime-300/30">
+                <UserRound className="h-6 w-6" />
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-black uppercase tracking-tight">{member.memberName}</h2>
@@ -1817,6 +1938,18 @@ function UserDetailModal({
                   {savingMetric ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Guardar
                 </button>
               </div>
+
+              {metrics.length >= 2 && (
+                <div className="mb-4 border border-white/10 bg-black/25 p-3">
+                  <div className="text-xs font-black uppercase text-white/40 mb-1">Peso (kg)</div>
+                  <LineTrendChart
+                    data={metrics.map((m) => ({ date: m.date, value: m.weightKg }))}
+                    unit="kg"
+                    color={CHART_LIME}
+                    height={140}
+                  />
+                </div>
+              )}
 
               {/* History table */}
               <div>

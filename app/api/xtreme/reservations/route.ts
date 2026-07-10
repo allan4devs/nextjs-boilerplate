@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import { sendReservationEmail } from "@/lib/helpers/email";
 
 export const dynamic = "force-dynamic";
 
 const RESERVATIONS_COLLECTION = "xtreme_gym_class_reservations";
+const MEMBERS_COLLECTION = "xtreme_gym_members";
 
 const TRAINING_CAPACITY: Record<string, number> = {
   "fuerza-total": 8,
@@ -120,6 +122,19 @@ export async function POST(req: NextRequest) {
       createdAt: now,
       updatedAt: now,
     });
+
+    // Confirmacion por correo si el socio tiene email registrado
+    const member = await db
+      .collection<{ email?: string; memberName?: string }>(MEMBERS_COLLECTION)
+      .findOne({ normalizedName }, { projection: { email: 1, memberName: 1 } });
+    if (member?.email) {
+      await sendReservationEmail({
+        to: member.email,
+        memberName: member.memberName || memberName,
+        trainingName,
+        trainingDate,
+      });
+    }
 
     return NextResponse.json({
       ok: true,

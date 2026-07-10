@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import { sendPinChangedEmail } from "@/lib/helpers/email";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,20 @@ export async function POST(req: NextRequest) {
     const db = await getDb();
     const col = db.collection(PINS_COLLECTION);
 
+    // Aviso de seguridad por correo (si el socio tiene email registrado)
+    async function notifyPinEvent(kind: "set" | "changed" | "recovered") {
+      const member = await db
+        .collection<MemberDoc>(MEMBERS_COLLECTION)
+        .findOne({ normalizedName }, { projection: { email: 1, memberName: 1 } });
+      if (member?.email) {
+        await sendPinChangedEmail({
+          to: member.email,
+          memberName: member.memberName || memberName,
+          kind,
+        });
+      }
+    }
+
     if (action === "set") {
       const existing = await col.findOne({ normalizedName });
       if (existing?.pinHash) {
@@ -101,6 +116,7 @@ export async function POST(req: NextRequest) {
         { upsert: true },
       );
 
+      await notifyPinEvent("set");
       return NextResponse.json({ ok: true });
     }
 
@@ -118,6 +134,7 @@ export async function POST(req: NextRequest) {
         { normalizedName },
         { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
       );
+      await notifyPinEvent("changed");
       return NextResponse.json({ ok: true, changed: true, hasPinSet: true });
     }
 
@@ -139,6 +156,7 @@ export async function POST(req: NextRequest) {
         { normalizedName },
         { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
       );
+      await notifyPinEvent("recovered");
       return NextResponse.json({ ok: true, recovered: true, hasPinSet: true });
     }
 
