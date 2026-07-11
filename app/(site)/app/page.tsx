@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ExtremeGymSite from "../ExtremeGymSite";
+import ExtremeGymSite from "../../ExtremeGymSite";
 
 export const metadata: Metadata = {
   title: "Xtreme Gym App | Streaks",

@@ -1,0 +1,617 @@
+/* Screen defaults live in Tailwind. This file owns print/PDF output. */
+
+@media print {
+  /*
+   * Zero @page margin removes Chrome/Edge date + title headers/footers.
+   * Content spacing is applied on .cv-root instead.
+   */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #0f172a !important;
+    font-size: 10pt !important;
+    line-height: 1.45 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .cv-no-print {
+    display: none !important;
+  }
+
+  .cv-root {
+    display: block !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    /* Generous page padding so the resume breathes */
+    padding: 14mm 14mm 12mm !important;
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+
+  .cv-page {
+    position: static !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .cv-page-inner {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .cv-sheet {
+    display: block !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    backdrop-filter: none !important;
+  }
+
+  /* ---- Global color reset (keep accents we re-set below) ---- */
+  .cv-sheet,
+  .cv-sheet * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .cv-sheet {
+    color: #0f172a !important;
+  }
+
+  .cv-sheet a {
+    color: #0f172a !important;
+    text-decoration: none !important;
+  }
+
+  /* =========================================================
+     HEADER — framed identity block
+     ========================================================= */
+  .cv-hero {
+    display: block !important;
+    position: relative !important;
+    margin: 0 0 14pt 0 !important;
+    padding: 12pt 14pt 14pt !important;
+    border: 1.25pt solid #0f172a !important;
+    background: #fff !important;
+  }
+
+  /* Inner decorative border */
+  .cv-hero::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 3.5pt !important;
+    border: 0.5pt solid #94a3b8 !important;
+    pointer-events: none !important;
+  }
+
+  .cv-hero-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 16pt !important;
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  .cv-badge {
+    display: none !important;
+  }
+
+  .cv-name {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 18pt !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.025em !important;
+    line-height: 1.12 !important;
+    color: #0f172a !important;
+  }
+
+  .cv-title {
+    margin: 5pt 0 0 0 !important;
+    padding: 0 !important;
+    font-size: 11.5pt !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.01em !important;
+    color: #0f172a !important;
+  }
+
+  .cv-focus {
+    margin: 3pt 0 0 0 !important;
+    padding: 0 !important;
+    font-size: 8.5pt !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    color: #475569 !important;
+  }
+
+  .cv-stack {
+    margin: 8pt 0 0 0 !important;
+    padding: 6pt 0 0 0 !important;
+    max-width: 420pt !important;
+    border-top: 0.6pt solid #cbd5e1 !important;
+    font-size: 8.5pt !important;
+    font-weight: 500 !important;
+    line-height: 1.45 !important;
+    color: #334155 !important;
+  }
+
+  .cv-contact {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-start !important;
+    gap: 4pt !important;
+    min-width: 42mm !important;
+    padding: 2pt 0 0 10pt !important;
+    border-left: 0.6pt solid #cbd5e1 !important;
+    text-align: right !important;
+    font-size: 8pt !important;
+    line-height: 1.4 !important;
+    white-space: nowrap !important;
+  }
+
+  .cv-contact a,
+  .cv-contact p {
+    display: block !important;
+    margin: 0 !important;
+    color: #0f172a !important;
+  }
+
+  .cv-contact-icon {
+    display: none !important;
+  }
+
+  /* =========================================================
+     BODY — force single column in print (override Tailwind grid)
+     Experience stays full-width; sidebar starts on its own page
+     so page 2 is not crowded by a right column.
+     ========================================================= */
+  .cv-sheet .cv-body,
+  .cv-body {
+    display: block !important;
+    grid: none !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    gap: 0 !important;
+    columns: auto !important;
+  }
+
+  .cv-sheet .cv-main,
+  .cv-main {
+    display: block !important;
+    float: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  /*
+   * Page 3 (or last): skills / education / strengths / languages.
+   * Always start after all experience so hoja 2 can breathe.
+   */
+  .cv-sheet .cv-side,
+  .cv-side {
+    display: grid !important;
+    float: none !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 14pt 16pt !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 10pt 0 0 0 !important;
+    border: none !important;
+    border-top: 1.25pt solid #0f172a !important;
+    box-shadow: inset 0 3.5pt 0 0 #e2e8f0 !important;
+    background: transparent !important;
+    break-before: page !important;
+    page-break-before: always !important;
+    break-inside: auto !important;
+  }
+
+  /* Skills span full width; other side cards share a row */
+  .cv-side > section:first-child {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Neutralize Tailwind space-y stacks; print classes own vertical rhythm */
+  .cv-main.space-y-10 > :not([hidden]) ~ :not([hidden]),
+  .cv-side.space-y-8 > :not([hidden]) ~ :not([hidden]),
+  .cv-jobs.space-y-8 > :not([hidden]) ~ :not([hidden]),
+  .cv-side .space-y-5 > :not([hidden]) ~ :not([hidden]),
+  .cv-side .space-y-2 > :not([hidden]) ~ :not([hidden]),
+  .cv-list.space-y-2\.5 > :not([hidden]) ~ :not([hidden]),
+  .cv-job-bullets.space-y-2 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
+  }
+
+  .cv-main > section {
+    margin: 0 0 14pt 0 !important;
+    padding: 0 !important;
+  }
+
+  .cv-main > section:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .cv-side > section {
+    margin: 0 !important;
+    padding: 0 !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* =========================================================
+     SECTION TITLES — double rule + letter-spacing
+     ========================================================= */
+  .cv-section-title {
+    display: block !important;
+    margin: 0 0 8pt 0 !important;
+    padding: 0 0 5pt 0 !important;
+    border: none !important;
+    border-bottom: 1.5pt solid #0f172a !important;
+    box-shadow: inset 0 -3.5pt 0 0 #e2e8f0 !important;
+    font-size: 8.5pt !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.16em !important;
+    text-transform: uppercase !important;
+    color: #0f172a !important;
+    line-height: 1.2 !important;
+  }
+
+  .cv-section-icon {
+    display: none !important;
+  }
+
+  /* =========================================================
+     SUMMARY & LISTS
+     ========================================================= */
+  .cv-summary {
+    margin: 0 !important;
+    padding: 0 1pt !important;
+    font-size: 9pt !important;
+    line-height: 1.5 !important;
+    color: #1e293b !important;
+    text-align: left !important;
+  }
+
+  .cv-list {
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+  }
+
+  .cv-list > li {
+    display: flex !important;
+    gap: 7pt !important;
+    margin: 0 0 5pt 0 !important;
+    padding: 0 !important;
+    font-size: 8.75pt !important;
+    line-height: 1.45 !important;
+    color: #1e293b !important;
+  }
+
+  .cv-list > li:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .cv-bullet {
+    flex-shrink: 0 !important;
+    width: 3.5pt !important;
+    height: 3.5pt !important;
+    margin-top: 5pt !important;
+    border-radius: 50% !important;
+    border: 0.7pt solid #0f172a !important;
+    background: #fff !important;
+  }
+
+  /* =========================================================
+     EXPERIENCE — card-like blocks with left accent
+     ========================================================= */
+  .cv-jobs {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .cv-job {
+    position: relative !important;
+    display: block !important;
+    margin: 0 0 14pt 0 !important;
+    padding: 0 0 0 10pt !important;
+    border: none !important;
+    border-left: 1.75pt solid #0f172a !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+    break-after: auto !important;
+  }
+
+  .cv-job:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  /*
+   * Page 1: header + summary + impact + current role (La Vieja).
+   * Page 2: remaining experience full-width (no right column).
+   * Page 3: .cv-side skills block (forced page break above).
+   */
+  .cv-page2-start {
+    break-before: page !important;
+    page-break-before: always !important;
+    margin-top: 0 !important;
+    padding-top: 8pt !important;
+    padding-right: 4pt !important;
+  }
+
+  .cv-page2-start,
+  .cv-page2-start ~ .cv-job {
+    max-width: 100% !important;
+  }
+
+  .cv-page2-start ~ .cv-job {
+    margin-top: 0 !important;
+    margin-bottom: 18pt !important;
+    padding-right: 4pt !important;
+  }
+
+  /* Extra air between job blocks on the experience-only page */
+  .cv-page2-start {
+    margin-bottom: 18pt !important;
+  }
+
+  .cv-job-rail,
+  .cv-job-dot {
+    display: none !important;
+  }
+
+  /* Subtle rule between jobs (keep DOM element, style it) */
+  .cv-job-rule {
+    display: none !important;
+  }
+
+  .cv-job-head {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 10pt !important;
+    margin: 0 0 5pt 0 !important;
+    padding: 0 0 5pt 0 !important;
+    border-bottom: 0.5pt solid #e2e8f0 !important;
+  }
+
+  .cv-job-role {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.01em !important;
+    color: #0f172a !important;
+  }
+
+  .cv-job-company {
+    margin: 2pt 0 0 0 !important;
+    padding: 0 !important;
+    font-size: 9pt !important;
+    font-weight: 600 !important;
+    font-style: italic !important;
+    color: #334155 !important;
+  }
+
+  .cv-job-location {
+    margin: 1pt 0 0 0 !important;
+    padding: 2pt 6pt !important;
+    flex-shrink: 0 !important;
+    border: 0.6pt solid #cbd5e1 !important;
+    border-radius: 2pt !important;
+    font-size: 7.5pt !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    color: #475569 !important;
+    white-space: nowrap !important;
+  }
+
+  .cv-job-bullets {
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+  }
+
+  .cv-job-bullets > li {
+    display: flex !important;
+    gap: 6pt !important;
+    margin: 0 0 3.5pt 0 !important;
+    padding: 0 !important;
+    font-size: 8.5pt !important;
+    line-height: 1.42 !important;
+    color: #1e293b !important;
+  }
+
+  .cv-job-bullets > li:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .cv-job-bullets .cv-bullet {
+    margin-top: 4.5pt !important;
+    width: 3pt !important;
+    height: 3pt !important;
+    border: none !important;
+    border-radius: 50% !important;
+    background: #64748b !important;
+  }
+
+  /* =========================================================
+     SIDEBAR — framed skill blocks
+     ========================================================= */
+  .cv-skill-group {
+    margin: 0 0 8pt 0 !important;
+    padding: 6pt 7pt 7pt !important;
+    border: 0.6pt solid #e2e8f0 !important;
+    border-radius: 2pt !important;
+    background: #f8fafc !important;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .cv-skill-group:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .cv-skill-label {
+    display: block !important;
+    margin: 0 0 3.5pt 0 !important;
+    padding: 0 0 2.5pt 0 !important;
+    border-bottom: 0.5pt solid #cbd5e1 !important;
+    font-size: 7.5pt !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    color: #0f172a !important;
+  }
+
+  .cv-skill-label svg {
+    display: none !important;
+  }
+
+  .cv-pills {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 3pt 3.5pt !important;
+    margin: 0 !important;
+    line-height: 1.3 !important;
+  }
+
+  .cv-pill {
+    display: inline-block !important;
+    margin: 0 !important;
+    padding: 1.5pt 5pt !important;
+    border: 0.5pt solid #cbd5e1 !important;
+    border-radius: 2pt !important;
+    background: #fff !important;
+    font-size: 7pt !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    color: #1e293b !important;
+    white-space: nowrap !important;
+  }
+
+  .cv-pill::after {
+    content: none !important;
+  }
+
+  /* Education card */
+  .cv-edu-card {
+    margin: 0 !important;
+    padding: 8pt 9pt !important;
+    border: 0.8pt solid #0f172a !important;
+    border-radius: 2pt !important;
+    background: #fff !important;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .cv-edu-degree {
+    margin: 0 !important;
+    font-size: 8.5pt !important;
+    font-weight: 800 !important;
+    line-height: 1.3 !important;
+    color: #0f172a !important;
+  }
+
+  .cv-edu-school {
+    margin: 3pt 0 0 0 !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    font-style: italic !important;
+    line-height: 1.35 !important;
+    color: #334155 !important;
+  }
+
+  /* Languages */
+  .cv-lang-item {
+    display: block !important;
+    margin: 0 0 5pt 0 !important;
+    padding: 5pt 7pt !important;
+    border: 0.6pt solid #e2e8f0 !important;
+    border-radius: 2pt !important;
+    background: #f8fafc !important;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .cv-lang-item:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .cv-lang-name {
+    display: block !important;
+    font-size: 8.5pt !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+
+  .cv-lang-level {
+    display: block !important;
+    margin-top: 1.5pt !important;
+    font-size: 7.5pt !important;
+    font-weight: 500 !important;
+    color: #475569 !important;
+  }
+
+  .cv-lang-level::before {
+    content: none !important;
+  }
+
+  /* =========================================================
+     FOOTER
+     ========================================================= */
+  .cv-footer {
+    margin-top: 14pt !important;
+    padding: 8pt 4pt 0 !important;
+    border: none !important;
+    border-top: 1.25pt solid #0f172a !important;
+    box-shadow: inset 0 3.5pt 0 0 #e2e8f0 !important;
+    text-align: center !important;
+  }
+
+  .cv-footer p {
+    margin: 0 !important;
+    padding-top: 2pt !important;
+    font-size: 7.5pt !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1.4 !important;
+    color: #475569 !important;
+    word-break: break-word !important;
+  }
+
+  .cv-avoid-break {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .cv-section-title + * {
+    orphans: 3;
+    widows: 3;
+  }
+}

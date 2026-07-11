@@ -24,7 +24,7 @@ import {
   GameChip,
   GameHudPill,
   GameLabel,
-} from "../components/GameOS";
+} from "../../components/GameOS";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/shared";
 
 const ADMIN_CODE_KEY = "xtreme-admin-code";

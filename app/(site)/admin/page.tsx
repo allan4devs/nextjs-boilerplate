@@ -33,7 +33,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { BarTrendChart, CHART_CYAN, CHART_LIME, LineTrendChart } from "../components/charts";
+import { BarTrendChart, CHART_CYAN, CHART_LIME, LineTrendChart } from "../../components/charts";
 import {
   GameButton,
   GameCallout,
@@ -41,7 +41,7 @@ import {
   GameDockItem,
   GameHudPill,
   GameLabel,
-} from "../components/GameOS";
+} from "../../components/GameOS";
 
 const ADMIN_CODE_KEY = "xtreme-admin-code";
 
