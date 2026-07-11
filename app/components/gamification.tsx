@@ -259,7 +259,7 @@ export function XpBar({ xp, level }: { xp: number; level: LevelPayload }) {
           )}
         </p>
       </div>
-      <div className="mt-3 h-3 border border-white/10 bg-black/45">
+      <div className="mt-3 h-3 border-[3px] border-white/15 bg-black/45">
         <div
           className="h-full bg-gradient-to-r from-cyan-300 to-[#d8ff3e] transition-all duration-700"
           style={{ width: `${level.progressPct}%` }}
@@ -287,12 +287,12 @@ export function BadgeCard({ badge }: { badge: PublicBadge }) {
 
   return (
     <div
-      className={`flex items-center gap-3 border p-3 ${
-        badge.earned ? `${style.border} bg-white/[0.06]` : "border-white/10 bg-black/20"
+      className={`flex items-center gap-3 border-[3px] p-3 shadow-[3px_3px_0_rgba(0,0,0,.4)] ${
+        badge.earned ? `${style.border} bg-white/[0.06]` : "border-white/15 bg-black/30"
       }`}
     >
       <span
-        className={`grid h-11 w-11 shrink-0 place-items-center ${
+        className={`grid h-11 w-11 shrink-0 place-items-center border-2 border-black/20 ${
           badge.earned ? style.icon : "bg-white/10 text-white/35"
         }`}
       >
@@ -303,7 +303,7 @@ export function BadgeCard({ badge }: { badge: PublicBadge }) {
           <p className={`truncate text-sm font-black uppercase ${badge.earned ? "text-white" : "text-white/55"}`}>
             {badge.name}
           </p>
-          <span className={`shrink-0 border px-1.5 py-0.5 text-[9px] font-black uppercase ${style.chip}`}>
+          <span className={`shrink-0 border-2 px-1.5 py-0.5 text-[9px] font-black uppercase ${style.chip}`}>
             {style.label}
           </span>
         </div>

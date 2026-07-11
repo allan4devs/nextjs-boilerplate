@@ -34,6 +34,14 @@ import {
   Zap,
 } from "lucide-react";
 import { BarTrendChart, CHART_CYAN, CHART_LIME, LineTrendChart } from "../components/charts";
+import {
+  GameButton,
+  GameCallout,
+  GameChip,
+  GameDockItem,
+  GameHudPill,
+  GameLabel,
+} from "../components/GameOS";
 
 const ADMIN_CODE_KEY = "xtreme-admin-code";
 
@@ -68,6 +76,7 @@ type AdminMember = {
   favoriteTraining: string;
   phone: string;
   email: string;
+  cedula?: string;
   coach: string;
   notes: string;
   photoUrl: string;
@@ -220,6 +229,7 @@ type MemberDraft = {
   favoriteTraining: string;
   phone: string;
   email: string;
+  cedula: string;
   coach: string;
   notes: string;
   plan: string;
@@ -339,6 +349,7 @@ function memberDraftFrom(member: AdminMember): MemberDraft {
     favoriteTraining: member.favoriteTraining,
     phone: member.phone,
     email: member.email,
+    cedula: member.cedula ?? "",
     coach: member.coach,
     notes: member.notes,
     plan: member.plan === "—" ? "Xtreme Mensual" : member.plan,
@@ -359,12 +370,16 @@ function Kpi({
   accent: string;
 }) {
   return (
-    <div className="border border-white/10 bg-white/[0.04] p-4">
-      <div className={`mb-3 grid h-9 w-9 place-items-center bg-gradient-to-br ${accent} text-black`}>
+    <div className="border-[3px] border-white/20 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:p-4">
+      <div
+        className={`mb-2 grid h-10 w-10 place-items-center border-2 border-black/30 bg-gradient-to-br ${accent} text-black`}
+      >
         <Icon className="h-5 w-5" />
       </div>
-      <div className="text-2xl font-black text-white">{value}</div>
-      <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/45">{label}</div>
+      <div className="truncate text-2xl font-black leading-none text-white sm:text-3xl">{value}</div>
+      <div className="mt-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+        {label}
+      </div>
     </div>
   );
 }
@@ -382,16 +397,24 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`border px-4 py-2 text-xs font-black uppercase tracking-wide transition ${
+      className={`min-h-11 border-[3px] px-3 py-2 text-xs font-black uppercase tracking-wide transition sm:px-4 ${
         active
-          ? "border-lime-300 bg-lime-300 text-black"
-          : "border-white/15 text-white/70 hover:border-lime-300/50 hover:text-lime-200"
+          ? "border-[#d8ff3e] bg-[#d8ff3e] text-black shadow-[3px_3px_0_rgba(216,255,62,0.35)]"
+          : "border-white/20 bg-black/30 text-white/70 hover:border-[#d8ff3e]/50 hover:text-[#eaff93]"
       }`}
     >
       {children}
     </button>
   );
 }
+
+const ADMIN_TABS = [
+  { id: "resumen" as const, label: "Resumen", icon: Activity },
+  { id: "socios" as const, label: "Socios", icon: Users },
+  { id: "accesos" as const, label: "Accesos", icon: DoorOpen },
+  { id: "gamificacion" as const, label: "Game", icon: Trophy },
+  { id: "ingresos" as const, label: "Ingresos", icon: Banknote, superOnly: true },
+];
 
 export default function XtremeAdminPage() {
   const [code, setCode] = useState("");
@@ -861,35 +884,38 @@ export default function XtremeAdminPage() {
 
   if (!code) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#090909] px-5 text-white">
+      <main className="grid min-h-screen place-items-end bg-[#050505] px-0 text-white sm:place-items-center sm:px-5">
         <form
           onSubmit={(event) => {
             event.preventDefault();
             if (codeInput.trim()) void load(codeInput.trim());
           }}
-          className="w-full max-w-md border border-white/12 bg-[#101010] p-7 text-center"
+          className="w-full max-w-md border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-7"
         >
-          <div className="mx-auto grid h-14 w-14 place-items-center bg-lime-300 text-black">
+          <div className="mx-auto grid h-14 w-14 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
             <Lock className="h-7 w-7" />
           </div>
-          <h1 className="mt-5 text-2xl font-black uppercase">Panel Xtreme</h1>
-          <p className="mt-2 text-sm font-semibold text-white/55">
+          <GameLabel tone="lime" className="mt-4">
+            Admin OS
+          </GameLabel>
+          <h1 className="mt-2 text-2xl font-black uppercase">Panel Xtreme</h1>
+          <p className="mt-2 text-sm font-bold text-white/55">
             Acceso para entrenadora personal y administracion del gym.
           </p>
           <input
             value={codeInput}
             onChange={(event) => setCodeInput(event.target.value)}
             placeholder="Codigo de acceso"
-            className="mt-5 w-full border border-white/12 bg-black/40 px-4 py-3 text-center font-bold text-white outline-none transition placeholder:text-white/35 focus:border-lime-300"
+            className="mt-5 min-h-12 w-full border-[3px] border-white/20 bg-black/40 px-4 py-3 text-center font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
           />
-          {error && <p className="mt-3 text-sm font-bold text-red-300">{error}</p>}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 bg-lime-300 px-5 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
-          >
+          {error && (
+            <div className="mt-3 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
+              {error}
+            </div>
+          )}
+          <GameButton type="submit" full className="mt-5" disabled={isLoading}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
-          </button>
+          </GameButton>
           <p className="mt-5 text-xs font-semibold text-white/35">
             Si no tiene el codigo, pidalo a la administracion del gym.
           </p>
@@ -900,64 +926,81 @@ export default function XtremeAdminPage() {
 
   const t = data?.today;
   const isSuper = data?.role === "super";
+  const visibleTabs = ADMIN_TABS.filter((item) => !item.superOnly || isSuper);
 
   return (
-    <main className="min-h-screen bg-[#090909] text-white">
-      <section className="border-b border-white/10 px-5 py-6 sm:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+    <main className="min-h-screen bg-[#050505] text-white">
+      <section className="xg-safe-top sticky top-0 z-30 border-b-[3px] border-white/15 bg-[#050505]/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-3 sm:px-6 sm:py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300">Xtreme Gym</p>
+              <GameLabel tone="lime">Xtreme · Admin OS</GameLabel>
               {isSuper ? (
-                <span className="inline-flex items-center gap-1 border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] font-black uppercase text-amber-200">
-                  <ShieldCheck className="h-3 w-3" /> Super admin
-                </span>
+                <GameChip tone="yellow">
+                  <ShieldCheck className="mr-1 inline h-3 w-3" /> Super
+                </GameChip>
               ) : (
-                <span className="inline-flex items-center gap-1 border border-white/15 px-2 py-0.5 text-[10px] font-black uppercase text-white/50">
-                  <Shield className="h-3 w-3" /> Admin
-                </span>
+                <GameChip>
+                  <Shield className="mr-1 inline h-3 w-3" /> Admin
+                </GameChip>
               )}
             </div>
-            <h1 className="text-3xl font-black uppercase tracking-tight sm:text-4xl">Panel de administracion</h1>
-            <p className="mt-2 text-sm font-semibold text-white/55">
-              Panel de la entrenadora personal · gestiona usuarios, genera planes de trabajo y sigue el progreso. {isSuper ? " (Super admin: ingresos completos)" : ""}
+            <h1 className="mt-1 text-xl font-black uppercase tracking-tight sm:text-3xl">
+              Panel de administracion
+            </h1>
+            <p className="mt-1 hidden text-sm font-bold text-white/50 sm:block">
+              Socios, planes, accesos y progreso · toca paneles y modales
+              {isSuper ? " · super: ingresos" : ""}
             </p>
+            {data && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <GameHudPill icon={Users} label="Socios" value={data.totals.memberCount} tone="lime" />
+                <GameHudPill icon={DoorOpen} label="Hoy" value={data.today.checkinsToday} tone="cyan" />
+                <GameHudPill
+                  icon={Activity}
+                  label="Gym"
+                  value={`${t?.occupancyPct ?? 0}%`}
+                  tone="orange"
+                />
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/recepcion"
-              className="inline-flex items-center gap-2 border border-lime-300/40 bg-lime-300/10 px-4 py-2.5 text-sm font-black uppercase text-lime-100 transition hover:bg-lime-300/20"
+              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-3 py-2 text-xs font-black uppercase text-[#eaff93] sm:text-sm"
             >
               <DoorOpen className="h-4 w-4" /> Recepcion
             </Link>
             <Link
               href="/ingreso"
-              className="inline-flex items-center gap-2 border border-cyan-300/40 bg-cyan-300/10 px-4 py-2.5 text-sm font-black uppercase text-cyan-100 transition hover:bg-cyan-300/20"
+              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-cyan-300/10 px-3 py-2 text-xs font-black uppercase text-cyan-100 sm:text-sm"
             >
-              <DoorOpen className="h-4 w-4" /> Ingreso socios
+              <DoorOpen className="h-4 w-4" /> Ingreso
             </Link>
             <button
               type="button"
               onClick={() => void load(code)}
               disabled={isLoading || Boolean(busy)}
-              className="inline-flex items-center gap-2 border border-white/15 px-4 py-2.5 text-sm font-black uppercase text-white/80 transition hover:border-lime-300 hover:text-lime-200 disabled:opacity-50"
+              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/80 disabled:opacity-50 sm:text-sm"
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} /> Refrescar
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Refrescar</span>
             </button>
             <button
               type="button"
               onClick={() => void seed(false)}
               disabled={Boolean(busy)}
-              className="inline-flex items-center gap-2 bg-lime-300 px-4 py-2.5 text-sm font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
+              className="hidden min-h-11 items-center gap-2 border-[3px] border-black/30 bg-[#d8ff3e] px-3 py-2 text-xs font-black uppercase text-black disabled:opacity-50 sm:inline-flex sm:text-sm"
             >
               {busy === "seed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              Seed demo
+              Seed
             </button>
             <button
               type="button"
               onClick={() => void seed(true)}
               disabled={Boolean(busy)}
-              className="inline-flex items-center gap-2 border border-red-400/40 bg-red-500/10 px-4 py-2.5 text-sm font-black uppercase text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
+              className="hidden min-h-11 items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-black uppercase text-red-200 disabled:opacity-50 md:inline-flex md:text-sm"
             >
               {busy === "reset" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
               Reset
@@ -965,56 +1008,60 @@ export default function XtremeAdminPage() {
             <button
               type="button"
               onClick={logout}
-              className="inline-flex items-center gap-2 border border-white/15 px-4 py-2.5 text-sm font-black uppercase text-white/60 transition hover:border-white/30 hover:text-white"
+              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/60 sm:text-sm"
             >
-              <LogOut className="h-4 w-4" /> Salir
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl space-y-6 px-5 py-8 sm:px-8">
-        <div className="flex flex-wrap gap-2">
-          <TabButton active={tab === "resumen"} onClick={() => setTab("resumen")}>
-            Resumen
-          </TabButton>
-          <TabButton active={tab === "socios"} onClick={() => setTab("socios")}>
-            Socios
-          </TabButton>
-          <TabButton active={tab === "accesos"} onClick={() => setTab("accesos")}>
-            Accesos hoy
-          </TabButton>
-          <TabButton active={tab === "gamificacion"} onClick={() => setTab("gamificacion")}>
-            Gamificacion
-          </TabButton>
-          {isSuper && (
-            <TabButton active={tab === "ingresos"} onClick={() => setTab("ingresos")}>
-              Ingresos
+      {/* Mobile dock */}
+      <nav
+        className="xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden"
+        aria-label="Zonas admin"
+      >
+        {visibleTabs.map((item) => (
+          <GameDockItem
+            key={item.id}
+            label={item.label}
+            icon={item.icon}
+            active={tab === item.id}
+            onClick={() => setTab(item.id)}
+          />
+        ))}
+      </nav>
+
+      <section className="xg-os-content mx-auto max-w-7xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-6">
+        <div className="hidden flex-wrap gap-2 lg:flex">
+          {visibleTabs.map((item) => (
+            <TabButton key={item.id} active={tab === item.id} onClick={() => setTab(item.id)}>
+              {item.id === "accesos" ? "Accesos hoy" : item.id === "gamificacion" ? "Gamificacion" : item.label}
             </TabButton>
-          )}
+          ))}
+        </div>
+
+        <div className="border-[3px] border-white/15 bg-[#0c0c0c] px-3 py-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] lg:hidden">
+          <GameLabel tone="lime">Zona activa</GameLabel>
+          <p className="mt-1 text-lg font-black uppercase">
+            {visibleTabs.find((item) => item.id === tab)?.label ?? tab}
+          </p>
         </div>
 
         {(message || error) && (
-          <div
-            className={`border px-4 py-3 text-sm font-bold ${
-              error
-                ? "border-red-400/40 bg-red-500/10 text-red-200"
-                : "border-lime-300/40 bg-lime-300/10 text-lime-200"
-            }`}
-          >
-            {error || message}
-          </div>
+          <GameCallout tone={error ? "red" : "lime"}>{error || message}</GameCallout>
         )}
 
         {isLoading && !data ? (
-          <div className="grid min-h-[360px] place-items-center border border-white/10 bg-white/[0.03]">
-            <Loader2 className="h-8 w-8 animate-spin text-lime-300" />
+          <div className="grid min-h-[360px] place-items-center border-[3px] border-white/15 bg-[#0c0c0c]">
+            <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
           </div>
         ) : data ? (
           <>
             {tab === "resumen" && (
               <>
-                <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
                   <Kpi icon={Users} label="Socios" value={`${data.totals.memberCount}`} accent="from-lime-300 to-emerald-400" />
                   <Kpi icon={CalendarCheck} label="Activos hoy" value={`${data.totals.activeToday}`} accent="from-cyan-300 to-sky-500" />
                   <Kpi icon={DoorOpen} label="Ingresos hoy" value={`${data.today.checkinsToday}`} accent="from-sky-300 to-blue-400" />
@@ -2140,37 +2187,40 @@ function PlanModal({
   const doneItems = draft.items.filter((i) => i.done).length;
   const progressPct = draft.items.length ? Math.round((doneItems / draft.items.length) * 100) : 0;
   const inputClass =
-    "w-full border border-white/12 bg-black/40 px-3 py-2 text-sm font-semibold text-white outline-none transition placeholder:text-white/30 focus:border-lime-300";
+    "min-h-11 w-full border-[3px] border-white/20 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]";
 
   function setItem(id: string, patch: Partial<PlanItem>) {
     onChange({ ...draft, items: draft.items.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-start overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm sm:place-items-center">
-      <div className="w-full max-w-3xl border border-white/12 bg-[#0d0d0d] text-white">
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <ClipboardList className="h-5 w-5 text-lime-300" />
-            <div>
-              <h2 className="text-lg font-black uppercase leading-tight">Plan personalizado</h2>
-              <p className="text-xs font-bold uppercase tracking-wide text-white/45">{member.memberName}</p>
+    <div className="xg-game-modal fixed inset-0 z-50 grid place-items-end overflow-y-auto bg-black/80 sm:place-items-center sm:px-4 sm:py-8">
+      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
+      <div className="xg-game-modal-panel relative w-full max-w-3xl border-[3px] border-[#d8ff3e] bg-[#0c0c0c] text-white shadow-[6px_6px_0_rgba(216,255,62,0.2)]">
+        <div className="flex items-center justify-between gap-3 border-b-[3px] border-black/25 bg-[#d8ff3e] px-4 py-3 text-black sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black/30 bg-black/15">
+              <ClipboardList className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-black uppercase leading-tight sm:text-lg">Plan personalizado</h2>
+              <p className="truncate text-[11px] font-bold uppercase tracking-wide text-black/65">{member.memberName}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center border border-white/10 text-white/60">
-            <X className="h-4 w-4" />
+          <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center border-2 border-black/30 bg-black/10">
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
-          <div className="border border-white/10 bg-white/[0.04] p-4">
-            <div className="flex items-center justify-between text-xs font-black uppercase tracking-wide text-white/55">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5">
+          <div className="border-[3px] border-white/15 bg-black/40 p-3 sm:p-4">
+            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wide text-white/55 sm:text-xs">
               <span>Avance</span>
-              <span className="text-lime-300">
+              <span className="border-2 border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-2 py-0.5 text-[#eaff93]">
                 {doneItems}/{draft.items.length} · {progressPct}%
               </span>
             </div>
-            <div className="mt-3 h-2.5 w-full border border-white/10 bg-black/45">
-              <div className="h-full bg-lime-300" style={{ width: `${progressPct}%` }} />
+            <div className="mt-3 h-3 w-full border-[3px] border-white/15 bg-black/45">
+              <div className="h-full bg-[#d8ff3e]" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -2229,14 +2279,14 @@ function PlanModal({
             ))}
           </div>
         </div>
-        <div className="flex justify-end gap-2 border-t border-white/10 px-6 py-4">
-          <button type="button" onClick={onClose} className="border border-white/15 px-4 py-2.5 text-sm font-black uppercase text-white/70">
+        <div className="flex flex-col gap-2 border-t-[3px] border-white/15 bg-black/40 px-3 py-3 sm:flex-row sm:justify-end sm:px-6 sm:py-4">
+          <GameButton variant="ghost" full className="sm:w-auto" onClick={onClose}>
             Cancelar
-          </button>
-          <button type="button" onClick={onSave} disabled={saving} className="inline-flex items-center gap-2 bg-lime-300 px-5 py-2.5 text-sm font-black uppercase text-black disabled:opacity-50">
+          </GameButton>
+          <GameButton full className="sm:w-auto" disabled={saving} onClick={onSave}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
             Guardar plan
-          </button>
+          </GameButton>
         </div>
       </div>
     </div>
@@ -2259,24 +2309,27 @@ function MemberModal({
   onSave: () => void;
 }) {
   const inputClass =
-    "w-full border border-white/12 bg-black/40 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-lime-300";
+    "min-h-11 w-full border-[3px] border-white/20 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]";
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-start overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm sm:place-items-center">
-      <div className="w-full max-w-xl border border-white/12 bg-[#0d0d0d] text-white">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <UserRound className="h-5 w-5 text-lime-300" />
-            <div>
-              <h2 className="text-lg font-black uppercase">Perfil personalizado</h2>
-              <p className="text-xs font-bold uppercase text-white/45">{member.accessCode}</p>
+    <div className="xg-game-modal fixed inset-0 z-50 grid place-items-end overflow-y-auto bg-black/80 sm:place-items-center sm:px-4 sm:py-8">
+      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
+      <div className="xg-game-modal-panel relative w-full max-w-xl border-[3px] border-[#d8ff3e] bg-[#0c0c0c] text-white shadow-[6px_6px_0_rgba(216,255,62,0.2)]">
+        <div className="flex items-center justify-between border-b-[3px] border-black/25 bg-[#d8ff3e] px-4 py-3 text-black sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black/30 bg-black/15">
+              <UserRound className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-black uppercase sm:text-lg">Perfil personalizado</h2>
+              <p className="truncate text-[11px] font-bold uppercase text-black/65">{member.accessCode}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center border border-white/10">
-            <X className="h-4 w-4" />
+          <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center border-2 border-black/30 bg-black/10">
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="grid max-h-[70vh] gap-3 overflow-y-auto px-6 py-5 sm:grid-cols-2">
+        <div className="grid max-h-[70vh] gap-3 overflow-y-auto px-3 py-4 sm:grid-cols-2 sm:px-6 sm:py-5">
           <label className="block sm:col-span-2">
             <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Nombre</span>
             <input value={draft.displayName} onChange={(e) => onChange({ ...draft, displayName: e.target.value })} className={inputClass} />
@@ -2288,6 +2341,18 @@ function MemberModal({
           <label className="block">
             <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Email</span>
             <input value={draft.email} onChange={(e) => onChange({ ...draft, email: e.target.value })} className={inputClass} />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">
+              Cedula (lector / app)
+            </span>
+            <input
+              value={draft.cedula}
+              onChange={(e) => onChange({ ...draft, cedula: e.target.value.replace(/[^\d-]/g, "").slice(0, 20) })}
+              inputMode="numeric"
+              placeholder="1-2345-6789"
+              className={`${inputClass} text-center font-black tracking-widest`}
+            />
           </label>
           <label className="block">
             <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Objetivo</span>
@@ -2318,31 +2383,31 @@ function MemberModal({
             <textarea value={draft.notes} onChange={(e) => onChange({ ...draft, notes: e.target.value })} rows={3} placeholder="Lesiones, preferencias, horario..." className={`${inputClass} resize-none`} />
           </label>
           <div className="grid grid-cols-3 gap-2 sm:col-span-2">
-            <div className="border border-white/10 bg-black/25 p-3 text-center">
+            <div className="border-[3px] border-white/15 bg-black/30 p-3 text-center">
               <Timer className="mx-auto h-4 w-4 text-white/40" />
               <p className="mt-1 text-lg font-black">{member.totalMinutes}</p>
-              <p className="text-[10px] font-bold uppercase text-white/40">Minutos</p>
+              <p className="text-[10px] font-black uppercase text-white/40">Minutos</p>
             </div>
-            <div className="border border-white/10 bg-black/25 p-3 text-center">
+            <div className="border-[3px] border-orange-300/40 bg-black/30 p-3 text-center">
               <Flame className="mx-auto h-4 w-4 text-orange-300" />
               <p className="mt-1 text-lg font-black">{member.streak}</p>
-              <p className="text-[10px] font-bold uppercase text-white/40">Racha</p>
+              <p className="text-[10px] font-black uppercase text-white/40">Racha</p>
             </div>
-            <div className="border border-white/10 bg-black/25 p-3 text-center">
-              <Activity className="mx-auto h-4 w-4 text-lime-300" />
+            <div className="border-[3px] border-[#d8ff3e]/40 bg-black/30 p-3 text-center">
+              <Activity className="mx-auto h-4 w-4 text-[#d8ff3e]" />
               <p className="mt-1 text-lg font-black">{member.latestWeight ? `${member.latestWeight}` : "—"}</p>
-              <p className="text-[10px] font-bold uppercase text-white/40">Peso kg</p>
+              <p className="text-[10px] font-black uppercase text-white/40">Peso kg</p>
             </div>
           </div>
         </div>
-        <div className="flex justify-end gap-2 border-t border-white/10 px-6 py-4">
-          <button type="button" onClick={onClose} className="border border-white/15 px-4 py-2.5 text-sm font-black uppercase text-white/70">
+        <div className="flex flex-col gap-2 border-t-[3px] border-white/15 bg-black/40 px-3 py-3 sm:flex-row sm:justify-end sm:px-6 sm:py-4">
+          <GameButton variant="ghost" full className="sm:w-auto" onClick={onClose}>
             Cancelar
-          </button>
-          <button type="button" onClick={onSave} disabled={saving} className="inline-flex items-center gap-2 bg-lime-300 px-5 py-2.5 text-sm font-black uppercase text-black disabled:opacity-50">
+          </GameButton>
+          <GameButton full className="sm:w-auto" disabled={saving} onClick={onSave}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}
             Guardar perfil
-          </button>
+          </GameButton>
         </div>
       </div>
     </div>
@@ -2375,65 +2440,75 @@ function UserDetailModal({
   const hasPlan = !!member.trainingPlan;
 
   const inputClass =
-    "w-full border border-white/12 bg-black/40 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-lime-300";
+    "min-h-11 w-full border-[3px] border-white/20 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]";
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-start overflow-y-auto bg-black/80 px-4 py-6 backdrop-blur-sm sm:place-items-center">
-      <div className="w-full max-w-5xl border border-white/10 bg-[#0a0a0a] text-white">
+    <div className="xg-game-modal fixed inset-0 z-[60] grid place-items-end overflow-y-auto bg-black/85 sm:place-items-center sm:px-4 sm:py-6">
+      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
+      <div className="xg-game-modal-panel relative w-full max-w-5xl border-[3px] border-[#d8ff3e] bg-[#0c0c0c] text-white shadow-[6px_6px_0_rgba(216,255,62,0.2)]">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-6 py-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-black/25 bg-[#d8ff3e] px-3 py-3 text-black sm:px-6 sm:py-4">
           <div className="flex items-center gap-4">
             {member.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={member.photoUrl}
                 alt={member.memberName}
-                className="h-12 w-12 rounded-full border border-lime-300/40 object-cover"
+                className="h-12 w-12 border-2 border-black/30 object-cover"
               />
             ) : (
-              <div className="grid h-12 w-12 place-items-center bg-lime-300/10 text-lime-300 border border-lime-300/30">
+              <div className="grid h-12 w-12 place-items-center border-2 border-black/30 bg-black/15 text-black">
                 <UserRound className="h-6 w-6" />
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-black uppercase tracking-tight">{member.memberName}</h2>
-                <span className={`inline-block border px-2 py-0.5 text-[10px] font-black uppercase ${STATUS_STYLES[member.membershipStatus]}`}>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-lg font-black uppercase tracking-tight sm:text-2xl">
+                  {member.memberName}
+                </h2>
+                <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
                   {STATUS_LABEL[member.membershipStatus]}
                 </span>
-                {member.seeded && <span className="border border-white/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-white/40">demo</span>}
+                {member.seeded && (
+                  <span className="border-2 border-black/25 px-1.5 py-0.5 text-[9px] font-black uppercase text-black/55">
+                    demo
+                  </span>
+                )}
               </div>
-              <div className="mt-0.5 text-xs font-mono tracking-[2px] text-cyan-200/90">{member.accessCode}</div>
+              <div className="mt-0.5 text-xs font-mono font-bold tracking-[2px] text-black/65">
+                {member.accessCode}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={onOpenPlan}
-              className="inline-flex items-center gap-2 bg-lime-300 px-4 py-2 text-sm font-black uppercase text-black transition hover:bg-white"
+              className="inline-flex min-h-11 items-center gap-2 border-2 border-black/30 bg-black/15 px-3 py-2 text-xs font-black uppercase sm:text-sm"
             >
               <ClipboardList className="h-4 w-4" />
-              {hasPlan ? "Editar plan de trabajo" : "Generar plan de trabajo"}
+              <span className="hidden sm:inline">{hasPlan ? "Editar plan" : "Generar plan"}</span>
+              <span className="sm:hidden">Plan</span>
             </button>
             <button
               type="button"
               onClick={onOpenEdit}
-              className="inline-flex items-center gap-2 border border-white/15 px-4 py-2 text-sm font-black uppercase text-white/80 transition hover:border-lime-300 hover:text-lime-200"
+              className="inline-flex min-h-11 items-center gap-2 border-2 border-black/30 bg-black/15 px-3 py-2 text-xs font-black uppercase sm:text-sm"
             >
-              <Pencil className="h-4 w-4" /> Editar perfil
+              <Pencil className="h-4 w-4" /> Perfil
             </button>
-            <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center border border-white/10 text-white/60 hover:text-white">
-              <X className="h-4 w-4" />
+            <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center border-2 border-black/30 bg-black/10">
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        <div className="grid gap-6 p-6 lg:grid-cols-5">
+        <div className="grid max-h-[75vh] gap-3 overflow-y-auto p-3 sm:gap-6 sm:p-6 lg:grid-cols-5">
           {/* LEFT: Key info + contact + stats */}
-          <div className="lg:col-span-2 space-y-5">
-            <div className="border border-white/10 bg-white/[0.02] p-5">
-              <div className="text-[11px] font-black uppercase tracking-[0.14em] text-white/45 mb-3">Informacion del socio</div>
+          <div className="space-y-3 sm:space-y-5 lg:col-span-2">
+            <div className="border-[3px] border-white/15 bg-black/30 p-3 sm:p-5">
+              <div className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Informacion del socio</div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-white/50">Telefono</span><span className="font-semibold">{member.phone || "—"}</span></div>
                 <div className="flex justify-between"><span className="text-white/50">Email</span><span className="font-semibold truncate max-w-[200px]">{member.email || "—"}</span></div>

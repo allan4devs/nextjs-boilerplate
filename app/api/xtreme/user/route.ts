@@ -3,11 +3,15 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { sendWelcomeEmail } from "@/lib/helpers/email";
 import { recordEvent } from "@/lib/xtreme/events";
 import {
+  cedulaDigits,
   clampPinnedBadges,
   computeStreak as sharedComputeStreak,
+  findMemberByCedula,
   formatAccessCode,
+  matchCedula,
   memberAccessCode,
   mergeNotificationPrefs,
+  normalizeCedula,
   type NotificationPrefs,
 } from "@/lib/xtreme/shared";
 import {
@@ -359,14 +363,50 @@ async function leaderboard() {
 }
 
 export async function GET(req: NextRequest) {
-  const memberName = normalizeName(req.nextUrl.searchParams.get("memberName"));
-  if (!memberName) {
+  const memberNameParam = normalizeName(req.nextUrl.searchParams.get("memberName"));
+  const cedulaParam = String(req.nextUrl.searchParams.get("cedula") ?? "").trim();
+  const digits = cedulaDigits(cedulaParam);
+
+  if (!memberNameParam && digits.length < 6) {
     return NextResponse.json({ member: null, leaderboard: await leaderboard() });
   }
 
   try {
     const db = await getDb();
-    const normalizedName = normalizeKey(memberName);
+
+    let normalizedName = memberNameParam ? normalizeKey(memberNameParam) : "";
+    let resolvedBy: "name" | "cedula" = "name";
+
+    // Login por cedula (lector de barras / teclado): resuelve el socio y sigue por nombre.
+    if (!normalizedName && digits.length >= 6) {
+      const candidates = await db
+        .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
+        .find(
+          { cedula: { $exists: true, $type: "string", $ne: "" } },
+          {
+            projection: {
+              memberName: 1,
+              normalizedName: 1,
+              cedula: 1,
+            },
+          },
+        )
+        .toArray();
+      const hit = findMemberByCedula(candidates, digits);
+      if (!hit?.normalizedName) {
+        return NextResponse.json({
+          member: null,
+          exists: false,
+          lookup: "cedula",
+          cedula: digits,
+          leaderboard: await leaderboard(),
+          nextBestAction: null,
+        });
+      }
+      normalizedName = hit.normalizedName;
+      resolvedBy = "cedula";
+    }
+
     // Consumir protectores / otorgar badges pendientes antes de responder.
     const newBadges = await syncGamification(normalizedName);
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
@@ -406,6 +446,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       member,
       exists: Boolean(doc),
+      lookup: resolvedBy,
+      cedula: member.cedula || digits || "",
       newBadges,
       leaderboard: await leaderboard(),
       nextBestAction,
@@ -427,9 +469,14 @@ export async function POST(req: NextRequest) {
     const phone = normalizePhone(body.phone);
     const email = normalizeEmail(body.email);
     const photo = normalizePhoto(body.photo);
+    const cedulaRaw = body.cedula !== undefined ? normalizeCedula(body.cedula) : "";
+    const cedulaKey = cedulaDigits(cedulaRaw);
 
     if (!memberName) {
       return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+    }
+    if (body.cedula !== undefined && cedulaKey && cedulaKey.length < 6) {
+      return NextResponse.json({ error: "Cedula invalida. Use al menos 6 digitos." }, { status: 400 });
     }
 
     const db = await getDb();
@@ -437,23 +484,40 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const existing = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
 
-    if (phone || email) {
-      const duplicate = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({
-        normalizedName: { $ne: normalizedName },
-        $or: [
-          ...(phone ? [{ phone }] : []),
-          ...(email ? [{ email }] : []),
-        ],
-      });
+    if (phone || email || cedulaKey) {
+      const orFilters: Record<string, unknown>[] = [];
+      if (phone) orFilters.push({ phone });
+      if (email) orFilters.push({ email });
+      if (cedulaKey) orFilters.push({ cedula: { $exists: true, $type: "string", $ne: "" } });
+
+      const contactCandidates = await db
+        .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
+        .find(
+          {
+            normalizedName: { $ne: normalizedName },
+            ...(orFilters.length ? { $or: orFilters } : {}),
+          } as Record<string, unknown>,
+          { projection: { memberName: 1, phone: 1, email: 1, cedula: 1, normalizedName: 1 } },
+        )
+        .toArray();
+
+      const duplicate =
+        contactCandidates.find((d) => {
+          if (phone && d.phone && d.phone === phone) return true;
+          if (email && d.email && d.email === email) return true;
+          if (cedulaKey && matchCedula(d.cedula, cedulaKey)) return true;
+          return false;
+        }) ?? null;
 
       if (duplicate) {
         return NextResponse.json(
           {
-            error: `Ese contacto ya esta ligado a ${duplicate.memberName}. Use ese perfil o hable con recepcion.`,
+            error: `Ese contacto/cedula ya esta ligado a ${duplicate.memberName}. Use ese perfil o hable con recepcion.`,
             duplicate: {
               memberName: duplicate.memberName,
               phone: duplicate.phone ?? "",
               email: duplicate.email ?? "",
+              cedula: duplicate.cedula ?? "",
             },
           },
           { status: 409 },
@@ -473,6 +537,7 @@ export async function POST(req: NextRequest) {
     if (phone) set.phone = phone;
     if (email) set.email = email;
     if (photo) set.photoUrl = photo;
+    if (body.cedula !== undefined && cedulaRaw) set.cedula = cedulaRaw;
 
     if (!existing) {
       set.membership = {
@@ -588,6 +653,33 @@ export async function PATCH(req: NextRequest) {
       if (body.email !== undefined) {
         const email = normalizeEmail(body.email);
         if (email) set.email = email;
+      }
+      if (body.cedula !== undefined) {
+        const cedulaRaw = normalizeCedula(body.cedula);
+        const cedulaKey = cedulaDigits(cedulaRaw);
+        if (cedulaKey && cedulaKey.length < 6) {
+          return NextResponse.json({ error: "Cedula invalida." }, { status: 400 });
+        }
+        if (cedulaKey) {
+          const others = await db
+            .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
+            .find(
+              {
+                normalizedName: { $ne: normalizedName },
+                cedula: { $exists: true, $type: "string", $ne: "" },
+              },
+              { projection: { memberName: 1, cedula: 1 } },
+            )
+            .toArray();
+          const taken = others.find((d) => matchCedula(d.cedula, cedulaKey));
+          if (taken) {
+            return NextResponse.json(
+              { error: `Esa cedula ya esta ligada a ${taken.memberName}.` },
+              { status: 409 },
+            );
+          }
+          set.cedula = cedulaRaw;
+        }
       }
       if (body.weeklyGoal !== undefined) {
         set.weeklyGoal = Math.max(

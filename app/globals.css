@@ -94,3 +94,76 @@ body {
 .xg-flame {
   animation: xg-flame-bounce 1.6s ease-in-out infinite;
 }
+
+/* --- Member OS: game HUD / inventory aesthetic --- */
+
+@keyframes xg-modal-rise {
+  0% {
+    transform: translateY(18px) scale(0.98);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes xg-hud-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(216, 255, 62, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(216, 255, 62, 0);
+  }
+}
+
+.xg-game-modal {
+  animation: xg-pop-in 0.2s ease-out both;
+}
+
+.xg-game-modal-panel {
+  animation: xg-modal-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.xg-game-panel {
+  image-rendering: auto;
+}
+
+.xg-game-stat {
+  image-rendering: auto;
+}
+
+.xg-hud-live {
+  animation: xg-hud-pulse 2.4s ease-in-out infinite;
+}
+
+/* Safe areas for mobile dock + notched phones */
+.xg-safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+.xg-safe-top {
+  padding-top: max(0px, env(safe-area-inset-top, 0px));
+}
+
+/* Dock keeps content readable above bottom nav on mobile */
+.xg-os-content {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+  .xg-os-content {
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* Chunkier touch targets on small screens */
+@media (max-width: 640px) {
+  .xg-game-modal-panel {
+    border-left-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    border-radius: 0;
+  }
+}

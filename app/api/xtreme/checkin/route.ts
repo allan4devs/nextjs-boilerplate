@@ -6,13 +6,12 @@ import {
   PINS_COLLECTION,
   type CheckinDoc,
   type MemberDoc,
-  cedulaDigits,
   computeOccupancy,
+  findMemberByCedula,
   formatAccessCode,
   hashPin,
   memberAccessCode,
   membershipStatus,
-  normalizeCedula,
   normalizeKey,
   normalizeName,
   todayIso,
@@ -23,18 +22,7 @@ import { recordEvent } from "@/lib/xtreme/events";
 export const dynamic = "force-dynamic";
 
 function findByCedula(docs: MemberDoc[], raw: string): MemberDoc | undefined {
-  const digits = cedulaDigits(raw);
-  const formatted = normalizeCedula(raw);
-  if (!digits && !formatted) return undefined;
-  return docs.find((d) => {
-    const docDigits = cedulaDigits(d.cedula);
-    const docFormatted = normalizeCedula(d.cedula);
-    if (!docDigits && !docFormatted) return false;
-    if (digits && docDigits && (docDigits === digits || docDigits.endsWith(digits) || digits.endsWith(docDigits))) {
-      return true;
-    }
-    return Boolean(formatted && docFormatted && docFormatted === formatted);
-  });
+  return findMemberByCedula(docs, raw);
 }
 
 /** Lista estado del gym + busqueda de socio por nombre, codigo o cedula. */

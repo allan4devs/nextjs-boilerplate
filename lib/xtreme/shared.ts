@@ -214,6 +214,34 @@ export function cedulaDigits(value: unknown) {
   return String(value ?? "").replace(/\D/g, "").slice(0, 20);
 }
 
+/**
+ * Match flexible de cedula (lector de barras / teclado).
+ * Acepta 1-0111-0222, 101110222 o sufijos si el lector manda basura de prefijo.
+ */
+export function matchCedula(stored: unknown, raw: unknown) {
+  const digits = cedulaDigits(raw);
+  const formatted = normalizeCedula(raw);
+  if (!digits && !formatted) return false;
+  const docDigits = cedulaDigits(stored);
+  const docFormatted = normalizeCedula(stored);
+  if (!docDigits && !docFormatted) return false;
+  if (
+    digits &&
+    docDigits &&
+    (docDigits === digits || docDigits.endsWith(digits) || digits.endsWith(docDigits))
+  ) {
+    return true;
+  }
+  return Boolean(formatted && docFormatted && docFormatted === formatted);
+}
+
+export function findMemberByCedula<T extends { cedula?: string }>(
+  docs: T[],
+  raw: string,
+): T | undefined {
+  return docs.find((d) => matchCedula(d.cedula, raw));
+}
+
 /** Hamming distance entre dos hashes hex (face dHash). */
 export function hammingHexDistance(a: string, b: string) {
   const left = String(a || "").toLowerCase().replace(/[^0-9a-f]/g, "");

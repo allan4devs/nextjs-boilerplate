@@ -18,6 +18,13 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import {
+  GameButton,
+  GameCallout,
+  GameChip,
+  GameHudPill,
+  GameLabel,
+} from "../components/GameOS";
 
 const ADMIN_CODE_KEY = "xtreme-admin-code";
 const AUTO_LOOKUP_MS = 280;
@@ -667,19 +674,26 @@ export default function RecepcionPage() {
 
   if (!unlocked) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#070707] px-4 text-white">
+      <main className="grid min-h-screen place-items-end bg-[#050505] px-0 text-white sm:place-items-center sm:px-4">
         <form
           onSubmit={(e) => void unlock(e)}
-          className="w-full max-w-md border border-white/10 bg-[#101010] p-8 shadow-2xl"
+          className="w-full max-w-md border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-8"
         >
-          <div className="grid h-14 w-14 place-items-center bg-[#d8ff3e] text-black">
+          <div className="grid h-14 w-14 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
             <DoorOpen className="h-7 w-7" />
           </div>
-          <h1 className="mt-5 text-3xl font-black uppercase tracking-tight">Recepcion</h1>
+          <GameLabel tone="lime" className="mt-4">
+            Reception OS
+          </GameLabel>
+          <h1 className="mt-2 text-3xl font-black uppercase tracking-tight">Recepcion</h1>
           <p className="mt-2 text-sm font-bold text-white/50">
-            Panel del mostrador — distinto del ingreso de socios (<Link href="/ingreso" className="text-[#d8ff3e] underline">/ingreso</Link>).
+            Panel del mostrador — distinto del ingreso de socios (
+            <Link href="/ingreso" className="text-[#d8ff3e] underline">
+              /ingreso
+            </Link>
+            ).
           </p>
-          <label className="mt-6 block text-xs font-black uppercase tracking-[0.2em] text-white/40">
+          <label className="mt-6 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
             Codigo de staff
           </label>
           <div className="relative mt-2">
@@ -690,22 +704,23 @@ export default function RecepcionPage() {
               onChange={(e) => setAdminCode(e.target.value)}
               autoFocus
               placeholder="Codigo admin"
-              className="w-full border border-white/15 bg-black/40 py-3.5 pl-10 pr-4 text-base font-bold outline-none focus:border-[#d8ff3e]"
+              className="min-h-12 w-full border-[3px] border-white/20 bg-black/40 py-3.5 pl-10 pr-4 text-base font-bold outline-none focus:border-[#d8ff3e]"
             />
           </div>
           {unlockError && (
-            <p className="mt-3 flex items-center gap-2 text-sm font-bold text-red-400">
+            <div className="mt-3 flex items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
               <XCircle className="h-4 w-4" /> {unlockError}
-            </p>
+            </div>
           )}
-          <button
+          <GameButton
             type="submit"
+            full
+            className="mt-5"
             disabled={isUnlocking || !adminCode.trim()}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 bg-[#d8ff3e] py-3.5 text-sm font-black uppercase tracking-wide text-black transition hover:bg-[#e8ff6a] disabled:opacity-50"
           >
             {isUnlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar a recepcion"}
-          </button>
-          <p className="mt-4 text-center text-xs text-white/35">
+          </GameButton>
+          <p className="mt-4 text-center text-xs font-bold text-white/35">
             <Link href="/admin" className="hover:text-white/70">
               Panel admin
             </Link>
@@ -720,15 +735,15 @@ export default function RecepcionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#070707] text-white">
+    <main className="min-h-screen bg-[#050505] text-white">
       {flash && (
         <div
-          className={`fixed inset-x-0 top-0 z-50 border-b px-5 py-5 text-center ${
+          className={`fixed inset-x-0 top-0 z-50 border-b-[3px] px-4 py-4 text-center shadow-[0_6px_0_rgba(0,0,0,.35)] sm:px-5 sm:py-5 ${
             flash.type === "ok"
-              ? "border-lime-300/40 bg-[#d8ff3e] text-black"
+              ? "border-black/30 bg-[#d8ff3e] text-black"
               : flash.type === "warn"
-                ? "border-orange-300/50 bg-orange-400 text-black"
-                : "border-red-400/50 bg-red-500 text-white"
+                ? "border-black/30 bg-orange-400 text-black"
+                : "border-black/30 bg-red-500 text-white"
           }`}
         >
           <p className="text-2xl font-black uppercase tracking-tight sm:text-4xl">{flash.title}</p>
@@ -736,37 +751,45 @@ export default function RecepcionPage() {
         </div>
       )}
 
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center bg-[#d8ff3e] text-black">
+      <header className="xg-safe-top sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-white/15 bg-[#050505]/95 px-3 py-3 backdrop-blur-md sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
             <DoorOpen className="h-5 w-5" />
           </div>
-          <div>
-            <p className="text-lg font-black uppercase tracking-tight">Recepcion Xtreme</p>
-            <p className="text-xs font-bold text-white/40">Ingreso rapido · alta walk-in</p>
+          <div className="min-w-0">
+            <GameLabel tone="lime">Reception OS</GameLabel>
+            <p className="truncate text-base font-black uppercase tracking-tight sm:text-lg">
+              Recepcion Xtreme
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <OccupancyPill status={status} />
+          <GameHudPill
+            icon={Users}
+            label="Hoy"
+            value={status?.checkinsToday ?? recent.length}
+            tone="lime"
+          />
           <Link
             href="/admin"
-            className="border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-white/30 hover:text-white"
+            className="inline-flex min-h-11 items-center border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-white/40 hover:text-white"
           >
             Admin
           </Link>
           <button
             type="button"
             onClick={logout}
-            className="inline-flex items-center gap-1.5 border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-red-400/40 hover:text-red-300"
+            className="inline-flex min-h-11 items-center gap-1.5 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-red-400/50 hover:text-red-300"
           >
             <LogOut className="h-3.5 w-3.5" /> Salir
           </button>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-[1fr_320px] lg:p-6">
-        <section className="border border-white/10 bg-[#0f0f0f]">
-          <div className="flex border-b border-white/10">
+      <div className="mx-auto grid max-w-7xl gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[1fr_320px] lg:p-6">
+        <section className="border-[3px] border-white/20 bg-[#0c0c0c] shadow-[4px_4px_0_rgba(0,0,0,.55)]">
+          <div className="flex border-b-[3px] border-white/15">
             {(
               [
                 { id: "cedula" as const, label: "Cedula", icon: IdCard },
@@ -785,13 +808,13 @@ export default function RecepcionPage() {
                     setError("");
                     setFaceMatches([]);
                   }}
-                  className={`flex flex-1 items-center justify-center gap-2 px-3 py-3.5 text-xs font-black uppercase tracking-wide transition sm:text-sm ${
+                  className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 border-t-[3px] px-2 py-2 text-[10px] font-black uppercase tracking-wide transition sm:flex-row sm:gap-2 sm:text-sm ${
                     active
-                      ? "bg-[#d8ff3e] text-black"
-                      : "text-white/50 hover:bg-white/5 hover:text-white"
+                      ? "border-t-[#d8ff3e] bg-[#d8ff3e] text-black"
+                      : "border-t-transparent text-white/50 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-5 w-5 sm:h-4 sm:w-4" />
                   {t.label}
                 </button>
               );
@@ -802,10 +825,8 @@ export default function RecepcionPage() {
             {tab === "cedula" && (
               <div className="mx-auto max-w-xl">
                 <div className="text-center">
-                  <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d8ff3e]/80">
-                    Via mas rapida
-                  </p>
-                  <h2 className="mt-1 text-2xl font-black uppercase tracking-tight sm:text-3xl">
+                  <GameLabel tone="lime">Via mas rapida · toca teclas grandes</GameLabel>
+                  <h2 className="mt-2 text-2xl font-black uppercase tracking-tight sm:text-3xl">
                     Digite o escanee la cedula
                   </h2>
                   <p className="mt-2 text-sm font-bold text-white/45">
@@ -814,7 +835,7 @@ export default function RecepcionPage() {
                 </div>
 
                 <form
-                  className="mt-6"
+                  className="mt-5"
                   onSubmit={(e) => {
                     e.preventDefault();
                     if (member) void confirmCheckin(member, "cedula");
@@ -835,15 +856,15 @@ export default function RecepcionPage() {
                       autoComplete="off"
                       autoFocus
                       placeholder="1-2345-6789"
-                      className="w-full border border-white/15 bg-black/50 py-5 pl-14 pr-14 text-center text-3xl font-black tracking-widest outline-none placeholder:text-white/20 focus:border-[#d8ff3e] sm:text-4xl"
+                      className="w-full border-[3px] border-white/20 bg-black/50 py-5 pl-14 pr-14 text-center text-3xl font-black tracking-widest outline-none placeholder:text-white/20 focus:border-[#d8ff3e] sm:text-4xl"
                     />
                     {isLooking && (
                       <Loader2 className="absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 animate-spin text-[#d8ff3e]" />
                     )}
                   </div>
 
-                  {/* Teclado numerico rapido (tablet) */}
-                  <div className="mt-4 grid grid-cols-3 gap-2">
+                  {/* Teclado numerico rapido (tablet) — estilo juego */}
+                  <div className="mt-3 grid grid-cols-3 gap-2">
                     {["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"].map((key) => (
                       <button
                         key={key}
@@ -853,7 +874,7 @@ export default function RecepcionPage() {
                           else if (key === "back") setCedula((v) => v.slice(0, -1));
                           else setCedula((v) => (v + key).slice(0, 20));
                         }}
-                        className="border border-white/10 bg-white/[0.03] py-3.5 text-lg font-black text-white/80 transition hover:border-[#d8ff3e]/40 hover:bg-[#d8ff3e]/10 active:scale-[0.98]"
+                        className="min-h-[52px] border-[3px] border-white/20 bg-black/40 py-3.5 text-xl font-black text-white shadow-[3px_3px_0_rgba(0,0,0,.45)] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black active:translate-x-px active:translate-y-px active:shadow-none"
                       >
                         {key === "clear" ? "C" : key === "back" ? "⌫" : key}
                       </button>
@@ -1200,11 +1221,11 @@ export default function RecepcionPage() {
           </div>
         </section>
 
-        <aside className="space-y-4">
-          <div className="border border-white/10 bg-[#0f0f0f] p-4">
-            <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
+        <aside className="space-y-3 sm:space-y-4">
+          <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
+            <GameLabel tone="cyan" className="flex items-center gap-2">
               <Users className="h-3.5 w-3.5" /> Ahora en el gym
-            </p>
+            </GameLabel>
             <p className="mt-2 text-4xl font-black text-[#d8ff3e]">
               {status?.currentPeople ?? 0}
               <span className="text-lg text-white/40"> / {status?.capacity ?? 85}</span>
@@ -1212,7 +1233,7 @@ export default function RecepcionPage() {
             <p className="mt-1 text-sm font-bold text-white/50">
               {status?.occupancyPct ?? 0}% · {status?.level ?? "—"} · hoy {status?.checkinsToday ?? 0} ingresos
             </p>
-            <div className="mt-3 h-2 overflow-hidden bg-white/10">
+            <div className="mt-3 h-3 border-[3px] border-white/15 bg-black/45">
               <div
                 className="h-full bg-[#d8ff3e] transition-all"
                 style={{ width: `${Math.min(100, status?.occupancyPct ?? 0)}%` }}
@@ -1220,15 +1241,13 @@ export default function RecepcionPage() {
             </div>
           </div>
 
-          <div className="border border-white/10 bg-[#0f0f0f] p-4">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
-              Ultimos ingresos
-            </p>
+          <div className="border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
+            <GameLabel tone="white">Ultimos ingresos</GameLabel>
             <ul className="mt-3 max-h-[28rem] space-y-2 overflow-y-auto">
               {recent.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-center justify-between gap-2 border border-white/5 bg-black/30 px-2.5 py-2"
+                  className="flex items-center justify-between gap-2 border-[3px] border-white/10 bg-black/40 px-2.5 py-2"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black uppercase">{c.memberName}</p>
@@ -1236,25 +1255,25 @@ export default function RecepcionPage() {
                       {c.method} · {c.by} · {formatTime(c.checkedInAt)}
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 text-[10px] font-black uppercase ${
+                  <GameChip
+                    tone={
                       c.membershipStatus === "expired"
-                        ? "text-orange-400"
+                        ? "orange"
                         : c.membershipStatus === "warning"
-                          ? "text-amber-300"
-                          : "text-[#d8ff3e]/80"
-                    }`}
+                          ? "yellow"
+                          : "lime"
+                    }
                   >
                     {c.membershipStatus === "expired"
                       ? "Vencida"
                       : c.membershipStatus === "warning"
                         ? "Pronto"
                         : "OK"}
-                  </span>
+                  </GameChip>
                 </li>
               ))}
               {!recent.length && (
-                <li className="py-6 text-center text-sm font-bold text-white/30">
+                <li className="border-[3px] border-dashed border-white/10 py-6 text-center text-sm font-bold text-white/30">
                   Sin ingresos hoy
                 </li>
               )}
@@ -1269,8 +1288,8 @@ export default function RecepcionPage() {
 
 function OccupancyPill({ status }: { status: GymStatus | null }) {
   return (
-    <span className="inline-flex items-center gap-2 border border-white/15 bg-black/40 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/70">
-      <span className="h-2 w-2 rounded-full bg-[#d8ff3e]" />
+    <span className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-black/50 px-3 py-2 text-xs font-black uppercase tracking-wide text-cyan-100 shadow-[3px_3px_0_rgba(0,0,0,.4)]">
+      <span className="h-2.5 w-2.5 bg-[#d8ff3e] shadow-[0_0_8px_rgba(216,255,62,.8)]" />
       {status?.currentPeople ?? 0}/{status?.capacity ?? 85} · {status?.occupancyPct ?? 0}%
     </span>
   );
@@ -1316,11 +1335,11 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-black uppercase tracking-[0.15em] text-white/40">
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">
         {label}
         {required ? " *" : ""}
       </span>
-      <div className="mt-1">{children}</div>
+      <div className="mt-1.5">{children}</div>
     </label>
   );
 }
@@ -1340,9 +1359,10 @@ function MemberPreview({
 
   if (!member) {
     return (
-      <div className="mt-4 flex items-center gap-2 border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
-        <XCircle className="h-4 w-4 shrink-0" />
-        {error}
+      <div className="mt-4">
+        <GameCallout tone="red" icon={XCircle}>
+          {error}
+        </GameCallout>
       </div>
     );
   }
@@ -1350,7 +1370,10 @@ function MemberPreview({
   const expired = member.membershipStatus === "expired";
 
   return (
-    <div className="mt-5 border border-white/10 bg-black/40 p-4">
+    <div className="mt-5 border-[3px] border-[#d8ff3e]/55 bg-black/50 p-4 shadow-[4px_4px_0_rgba(216,255,62,0.2)]">
+      <GameLabel tone="lime" className="mb-3">
+        Socio encontrado · confirmar
+      </GameLabel>
       <div className="flex items-center gap-4">
         <div className="relative">
           {member.photoUrl ? (
@@ -1358,21 +1381,34 @@ function MemberPreview({
             <img
               src={member.photoUrl}
               alt={member.memberName}
-              className="h-16 w-16 object-cover ring-2 ring-[#d8ff3e]/40"
+              className="h-16 w-16 border-[3px] border-[#d8ff3e]/50 object-cover"
             />
           ) : (
-            <span className="grid h-16 w-16 place-items-center bg-[#d8ff3e] text-xl font-black text-black">
+            <span className="grid h-16 w-16 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-xl font-black text-black">
               {initials(member.memberName)}
             </span>
           )}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-black uppercase tracking-tight">{member.memberName}</p>
-          <p className="text-sm font-bold text-white/45">
-            {STATUS_LABEL[member.membershipStatus]}
-            {member.daysRemaining >= 0 ? ` · ${member.daysRemaining}d` : ""} · {member.plan}
-          </p>
-          <p className="text-xs font-bold text-white/30">
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            <GameChip
+              tone={
+                member.membershipStatus === "expired"
+                  ? "red"
+                  : member.membershipStatus === "warning"
+                    ? "orange"
+                    : "lime"
+              }
+            >
+              {STATUS_LABEL[member.membershipStatus]}
+            </GameChip>
+            {member.daysRemaining >= 0 && (
+              <GameChip tone="cyan">{member.daysRemaining}d</GameChip>
+            )}
+            <GameChip>{member.plan}</GameChip>
+          </div>
+          <p className="mt-1 text-xs font-bold text-white/35">
             {member.cedula ? `Ced. ${member.cedula} · ` : ""}
             {member.accessCode}
           </p>
@@ -1380,32 +1416,29 @@ function MemberPreview({
       </div>
 
       {expired && (
-        <div className="mt-3 flex items-start gap-2 border border-orange-400/30 bg-orange-500/10 px-3 py-2 text-sm font-bold text-orange-200">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          Membresia vencida — puede ingresar, cobrar renovacion.
+        <div className="mt-3">
+          <GameCallout tone="orange" icon={ShieldAlert}>
+            Membresia vencida — puede ingresar, cobrar renovacion.
+          </GameCallout>
         </div>
       )}
 
       {error && (
-        <div className="mt-3 flex items-center gap-2 border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
-          <XCircle className="h-4 w-4 shrink-0" />
-          {error}
+        <div className="mt-3">
+          <GameCallout tone="red" icon={XCircle}>
+            {error}
+          </GameCallout>
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={onConfirm}
-        disabled={isCheckingIn}
-        className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-[#d8ff3e] py-4 text-base font-black uppercase tracking-wide text-black transition hover:bg-[#e8ff6a] disabled:opacity-50"
-      >
+      <GameButton full className="mt-4 !min-h-14 !text-base" disabled={isCheckingIn} onClick={onConfirm}>
         {isCheckingIn ? (
           <Loader2 className="h-5 w-5 animate-spin" />
         ) : (
           <CheckCircle2 className="h-5 w-5" />
         )}
         Confirmar ingreso
-      </button>
+      </GameButton>
     </div>
   );
 }

@@ -57,10 +57,24 @@ import {
 import { pickPhrase } from "@/lib/xtreme/phrases";
 import { STREAK_MILESTONES, WEEKLY_GOAL_MAX, WEEKLY_GOAL_MIN } from "@/lib/xtreme/gamification";
 import OnboardingTour, { type TourStep } from "./components/OnboardingTour";
+import {
+  GameButton,
+  GameCallout,
+  GameChip,
+  GameDockItem,
+  GameHudPill,
+  GameLabel,
+  GameModal,
+  GamePanel,
+  GameStat,
+} from "./components/GameOS";
 
 const STORAGE_KEY = "xtreme-gym-member-name";
+const CEDULA_KEY = "xtreme-gym-member-cedula";
 const SESSION_KEY = "xtreme-gym-session";
 const TOUR_KEY = "xtreme-gym-tour-done";
+/** Digitos minimos para buscar cedula (lector de barras o teclado). */
+const CEDULA_MIN_DIGITS = 6;
 
 const TOUR_STEPS: TourStep[] = [
   {
@@ -280,14 +294,25 @@ const TABS = [
 ] as const;
 
 const TAB_SUBTITLES: Record<(typeof TABS)[number]["id"], string> = {
-  resumen: "Vista general de tu actividad",
-  entrenar: "Tu plan, clases y entrenamientos",
-  maquinas: "Guías rápidas para entrenar mejor",
-  progreso: "Rendimiento, medidas y logros",
-  perfil: "Cuenta, preferencias y seguridad",
+  resumen: "Tu base de operaciones — toca los paneles",
+  entrenar: "Plan, clases y check-in del día",
+  maquinas: "Toca una máquina para abrir la guía",
+  progreso: "Logros, medidas y ranking",
+  perfil: "Carné, preferencias y seguridad",
 };
 
 type TabId = (typeof TABS)[number]["id"];
+type MachineGuide = (typeof MACHINE_GUIDE)[number];
+type OsModal =
+  | null
+  | { kind: "machine"; machine: MachineGuide }
+  | { kind: "membership" }
+  | { kind: "occupancy" }
+  | { kind: "streak" }
+  | { kind: "week" }
+  | { kind: "training"; trainingId: string }
+  | { kind: "badges" }
+  | { kind: "quick-train" };
 
 type Workout = {
   id: string;
@@ -342,6 +367,7 @@ type Member = {
   favoriteTraining: string;
   phone: string;
   email: string;
+  cedula?: string;
   photoUrl: string;
   workouts: Workout[];
   streak: number;
@@ -534,6 +560,15 @@ const DEFAULT_NOTIF_PREFS: NotificationPrefs = {
   weeklyRecap: true,
 };
 
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "").slice(0, 20);
+}
+
+function formatCedulaInput(value: string) {
+  // Conserva digitos y guiones (lector suele mandar solo digitos).
+  return value.replace(/[^\d-]/g, "").slice(0, 20);
+}
+
 function initialMember(name = ""): Member {
   return {
     memberName: name,
@@ -542,6 +577,7 @@ function initialMember(name = ""): Member {
     favoriteTraining: "",
     phone: "",
     email: "",
+    cedula: "",
     photoUrl: "",
     workouts: [],
     streak: 0,
@@ -603,30 +639,6 @@ async function readJson<T>(response: Response): Promise<T> {
   const data = (await response.json()) as T & { error?: string };
   if (!response.ok) throw new Error(data.error ?? "No se pudo conectar con Mongo.");
   return data;
-}
-
-function StatTile({
-  icon: Icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: typeof Flame;
-  label: string;
-  value: string;
-  accent: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 border border-white/10 bg-white/[0.05] p-4 shadow-[0_18px_60px_rgba(0,0,0,.18)] backdrop-blur-sm">
-      <div className={`grid h-10 w-10 shrink-0 place-items-center bg-gradient-to-br ${accent} text-black shadow-lg`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <div className="text-2xl font-black leading-none text-white">{value}</div>
-        <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-white/45">{label}</div>
-      </div>
-    </div>
-  );
 }
 
 function PinModal({
@@ -846,14 +858,14 @@ function PinModal({
           : "Entramos a su perfil Xtreme";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
-      <div className="w-full max-w-[320px] border border-white/12 bg-[#101010] p-6 text-center shadow-2xl">
-        <div className="mx-auto grid h-16 w-16 place-items-center bg-[#d8ff3e] text-black">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/90 p-0 backdrop-blur-md sm:items-center sm:p-4">
+      <div className="w-full max-w-[360px] border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-5 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-6">
+        <div className="mx-auto grid h-16 w-16 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
           {mode === "set" ? <ShieldCheck className="h-8 w-8" /> : <Lock className="h-8 w-8" />}
         </div>
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.26em] text-orange-300">{memberName}</p>
+        <p className="mt-5 text-[10px] font-black uppercase tracking-[0.28em] text-orange-300">{memberName}</p>
         <h2 className="mt-2 text-2xl font-black uppercase text-white">{title}</h2>
-        <p className="mt-2 text-sm font-semibold text-white/55">{subtitle}</p>
+        <p className="mt-2 text-sm font-bold text-white/55">{subtitle}</p>
 
         {mode === "recover" && (
           <div className="mt-4 space-y-2 text-left">
@@ -935,7 +947,7 @@ function PinModal({
                 key={digit}
                 type="button"
                 onClick={() => pressDigit(digit)}
-                className="grid h-14 place-items-center border border-white/10 bg-white/[0.04] text-xl font-black text-white transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black"
+                className="grid h-14 place-items-center border-[3px] border-white/20 bg-black/40 text-xl font-black text-white transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black active:translate-y-px"
               >
                 {digit}
               </button>
@@ -944,14 +956,14 @@ function PinModal({
             <button
               type="button"
               onClick={() => pressDigit("0")}
-              className="grid h-14 place-items-center border border-white/10 bg-white/[0.04] text-xl font-black text-white transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black"
+              className="grid h-14 place-items-center border-[3px] border-white/20 bg-black/40 text-xl font-black text-white transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black active:translate-y-px"
             >
               0
             </button>
             <button
               type="button"
               onClick={() => setDigits((value) => value.slice(0, -1))}
-              className="grid h-14 place-items-center border border-white/10 bg-white/[0.04] text-white transition hover:border-orange-300 hover:text-orange-200"
+              className="grid h-14 place-items-center border-[3px] border-white/20 bg-black/40 text-white transition hover:border-orange-300 hover:text-orange-200 active:translate-y-px"
             >
               <Delete className="h-5 w-5" />
             </button>
@@ -964,9 +976,13 @@ function PinModal({
 
 export default function ExtremeGymSite() {
   const [memberNameInput, setMemberNameInput] = useState("");
+  const [memberCedulaInput, setMemberCedulaInput] = useState("");
   const [memberPhoneInput, setMemberPhoneInput] = useState("");
   const [memberEmailInput, setMemberEmailInput] = useState("");
   const [memberName, setMemberName] = useState("");
+  /** Si la cedula no existe, pedimos nombre/telefono para alta. */
+  const [needsRegistration, setNeedsRegistration] = useState(false);
+  const cedulaInputRef = useRef<HTMLInputElement | null>(null);
   const [goal, setGoal] = useState(GOALS[0]);
   const [member, setMember] = useState<Member | null>(null);
   const [leaderboard, setLeaderboard] = useState<Member[]>([]);
@@ -990,6 +1006,8 @@ export default function ExtremeGymSite() {
   const [showLogin, setShowLogin] = useState(false);
   const [nextBestAction, setNextBestAction] = useState<NextBestAction | null>(null);
   const [showTour, setShowTour] = useState(false);
+  const [osModal, setOsModal] = useState<OsModal>(null);
+  const closeOsModal = useCallback(() => setOsModal(null), []);
 
   const unlocked = Boolean(memberName) && !showPin;
   const currentMember = member ?? initialMember(memberName);
@@ -1154,11 +1172,16 @@ export default function ExtremeGymSite() {
     }
   }
 
-  const storeSession = useCallback((name: string) => {
+  const storeSession = useCallback((name: string, cedula?: string) => {
     window.localStorage.setItem(STORAGE_KEY, name);
+    if (cedula) window.localStorage.setItem(CEDULA_KEY, onlyDigits(cedula));
     window.localStorage.setItem(
       SESSION_KEY,
-      JSON.stringify({ memberName: name, expiresAt: Date.now() + SESSION_TTL_MS }),
+      JSON.stringify({
+        memberName: name,
+        cedula: cedula ? onlyDigits(cedula) : undefined,
+        expiresAt: Date.now() + SESSION_TTL_MS,
+      }),
     );
   }, []);
 
@@ -1175,11 +1198,151 @@ export default function ExtremeGymSite() {
     setGymStatus(data);
   }, []);
 
+  const applyMemberPayload = useCallback(
+    (memberData: MembersResponse, fallbackName: string, phone = "", email = "", cedula = "") => {
+      const resolved = memberData.member ?? initialMember(fallbackName);
+      const name = resolved.memberName || fallbackName;
+      setMember(resolved);
+      setMemberName(name);
+      setMemberNameInput(name);
+      setGoal(resolved.goal || GOALS[0]);
+      setMemberPhoneInput(resolved.phone || phone);
+      setMemberEmailInput(resolved.email || email);
+      if (resolved.cedula || cedula) {
+        setMemberCedulaInput(formatCedulaInput(resolved.cedula || cedula));
+      }
+      setLeaderboard(memberData.leaderboard ?? []);
+      setNextBestAction(memberData.nextBestAction ?? null);
+      setWeightKg(resolved.latestBodyMetric?.weightKg ? String(resolved.latestBodyMetric.weightKg) : "");
+      setWaistCm(resolved.latestBodyMetric?.waistCm ? String(resolved.latestBodyMetric.waistCm) : "");
+      return name;
+    },
+    [],
+  );
+
+  /**
+   * Login principal por cedula (lector de barras o teclado).
+   * Si no existe, pide nombre+telefono para registrar y ligar la cedula.
+   */
+  const startMemberByCedula = useCallback(
+    async (
+      cedulaRaw: string,
+      allowSession = true,
+      contact: { name?: string; phone?: string; email?: string } = {},
+    ) => {
+      const digits = onlyDigits(cedulaRaw);
+      if (digits.length < CEDULA_MIN_DIGITS) {
+        setError(`Digite o escanee la cedula (minimo ${CEDULA_MIN_DIGITS} digitos).`);
+        return;
+      }
+
+      setError("");
+      setMessage("");
+      setIsLoading(true);
+      setMemberCedulaInput(formatCedulaInput(cedulaRaw));
+
+      try {
+        const lookupParams = new URLSearchParams({ cedula: digits });
+        const lookupResponse = await fetch(`/api/xtreme/user?${lookupParams}`, { cache: "no-store" });
+        const lookupData = await readJson<
+          MembersResponse & { exists?: boolean; lookup?: string; cedula?: string }
+        >(lookupResponse);
+
+        const phone = contact.phone?.trim() ?? "";
+        const email = contact.email?.trim() ?? "";
+        const regName = normalizeName(contact.name ?? "");
+
+        if (!lookupData.exists) {
+          // Socio nuevo: necesita nombre + telefono + cedula
+          if (!regName || !phone) {
+            setNeedsRegistration(true);
+            setShowPin(false);
+            setMemberName("");
+            setMember(null);
+            setError(
+              "Cedula no registrada. Escriba su nombre y telefono para crear el perfil, o pida alta en recepcion.",
+            );
+            setIsLoading(false);
+            return;
+          }
+
+          const createResponse = await fetch("/api/xtreme/user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              memberName: regName,
+              cedula: digits,
+              phone,
+              email,
+              goal: goal || GOALS[0],
+              favoriteTraining: "",
+            }),
+          });
+          const createData = await readJson<MembersResponse>(createResponse);
+          const name = applyMemberPayload(createData, regName, phone, email, digits);
+          setNeedsRegistration(false);
+          await Promise.all([loadReservations(name), loadGymStatus()]);
+          setPinMode("set");
+          setShowPin(true);
+          return;
+        }
+
+        // Socio existente
+        const name = applyMemberPayload(
+          lookupData,
+          lookupData.member?.memberName || "",
+          phone,
+          email,
+          digits,
+        );
+        if (!name) {
+          setError("No se pudo resolver el perfil de esa cedula.");
+          return;
+        }
+        setNeedsRegistration(false);
+        await Promise.all([loadReservations(name), loadGymStatus()]);
+
+        if (allowSession) {
+          try {
+            const raw = window.localStorage.getItem(SESSION_KEY);
+            const parsed = raw
+              ? (JSON.parse(raw) as { memberName?: string; cedula?: string; expiresAt?: number })
+              : null;
+            const sameUser =
+              parsed?.memberName?.toUpperCase() === name.toUpperCase() ||
+              (parsed?.cedula && onlyDigits(parsed.cedula) === digits);
+            if (sameUser && typeof parsed?.expiresAt === "number" && parsed.expiresAt > Date.now()) {
+              storeSession(name, digits);
+              setShowPin(false);
+              return;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
+        const pinResponse = await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(name)}`, {
+          cache: "no-store",
+        });
+        const pinData = (await pinResponse.json()) as { hasPinSet?: boolean };
+        setPinMode(pinData.hasPinSet ? "verify" : "set");
+        setShowPin(true);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No pude cargar Xtreme Gym.");
+        setMemberName("");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [applyMemberPayload, goal, loadGymStatus, loadReservations, storeSession],
+  );
+
+  /** @deprecated Preferir startMemberByCedula — se mantiene para rehidratacion por nombre en storage. */
   const startMember = useCallback(
     async (
       name: string,
       allowSession = true,
-      contact: { phone?: string; email?: string } = {},
+      contact: { phone?: string; email?: string; cedula?: string } = {},
     ) => {
       const trimmed = normalizeName(name);
       if (!trimmed) return;
@@ -1196,17 +1359,19 @@ export default function ExtremeGymSite() {
         const memberData = await readJson<MembersResponse>(memberResponse);
         const phone = contact.phone?.trim() ?? "";
         const email = contact.email?.trim() ?? "";
+        const cedula = onlyDigits(contact.cedula ?? memberData.member?.cedula ?? "");
 
         if (!memberData.exists && !phone) {
-          setError("Para crear un perfil nuevo, escriba al menos el telefono.");
+          setError("Perfil no encontrado. Inicie sesion con su cedula.");
           setMember(memberData.member ?? initialMember(trimmed));
           setLeaderboard(memberData.leaderboard ?? []);
           setNextBestAction(memberData.nextBestAction ?? null);
           setShowPin(false);
+          setMemberName("");
           return;
         }
 
-        if (phone || email || !memberData.exists) {
+        if (phone || email || cedula || !memberData.exists) {
           const createResponse = await fetch("/api/xtreme/user", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1216,26 +1381,13 @@ export default function ExtremeGymSite() {
               favoriteTraining: memberData.member?.favoriteTraining || "",
               phone,
               email,
+              ...(cedula ? { cedula } : {}),
             }),
           });
           const createData = await readJson<MembersResponse>(createResponse);
-          setMember(createData.member ?? initialMember(trimmed));
-          setGoal(createData.member?.goal || GOALS[0]);
-          setMemberPhoneInput(createData.member?.phone ?? phone);
-          setMemberEmailInput(createData.member?.email ?? email);
-          setLeaderboard(createData.leaderboard ?? []);
-          setNextBestAction(createData.nextBestAction ?? null);
-          setWeightKg(createData.member?.latestBodyMetric?.weightKg ? String(createData.member.latestBodyMetric.weightKg) : "");
-          setWaistCm(createData.member?.latestBodyMetric?.waistCm ? String(createData.member.latestBodyMetric.waistCm) : "");
+          applyMemberPayload(createData, trimmed, phone, email, cedula);
         } else {
-          setMember(memberData.member ?? initialMember(trimmed));
-          setGoal(memberData.member?.goal || GOALS[0]);
-          setMemberPhoneInput(memberData.member?.phone ?? "");
-          setMemberEmailInput(memberData.member?.email ?? "");
-          setLeaderboard(memberData.leaderboard ?? []);
-          setNextBestAction(memberData.nextBestAction ?? null);
-          setWeightKg(memberData.member?.latestBodyMetric?.weightKg ? String(memberData.member.latestBodyMetric.weightKg) : "");
-          setWaistCm(memberData.member?.latestBodyMetric?.waistCm ? String(memberData.member.latestBodyMetric.waistCm) : "");
+          applyMemberPayload(memberData, trimmed, "", "", cedula);
         }
 
         await Promise.all([loadReservations(trimmed), loadGymStatus()]);
@@ -1249,6 +1401,7 @@ export default function ExtremeGymSite() {
               typeof parsed.expiresAt === "number" &&
               parsed.expiresAt > Date.now()
             ) {
+              storeSession(trimmed, cedula || undefined);
               setShowPin(false);
               return;
             }
@@ -1267,19 +1420,32 @@ export default function ExtremeGymSite() {
         setIsLoading(false);
       }
     },
-    [goal, loadGymStatus, loadReservations],
+    [applyMemberPayload, goal, loadGymStatus, loadReservations, storeSession],
   );
 
-  // Solo al montar: si esto dependiera de startMember, cambiar la meta
-  // relanzaria el login y el modal de PIN.
+  // Solo al montar: rehidratar sesion por cedula (preferido) o nombre legacy.
   const bootedRef = useRef(false);
   useEffect(() => {
     if (bootedRef.current) return;
     bootedRef.current = true;
+    const storedCedula = onlyDigits(window.localStorage.getItem(CEDULA_KEY) ?? "");
     const storedName = normalizeName(window.localStorage.getItem(STORAGE_KEY) ?? "");
-    if (storedName) void startMember(storedName, true);
-    else setIsLoading(false);
-  }, [startMember]);
+    if (storedCedula.length >= CEDULA_MIN_DIGITS) {
+      void startMemberByCedula(storedCedula, true);
+    } else if (storedName) {
+      void startMember(storedName, true);
+    } else {
+      setIsLoading(false);
+    }
+  }, [startMember, startMemberByCedula]);
+
+  // Auto-focus en cedula cuando no hay sesion (listo para lector de barras).
+  useEffect(() => {
+    if (!memberName && !isLoading && !showPin) {
+      const id = window.setTimeout(() => cedulaInputRef.current?.focus(), 80);
+      return () => window.clearTimeout(id);
+    }
+  }, [memberName, isLoading, showPin]);
 
   async function saveProfile() {
     const trimmed = normalizeName(memberName);
@@ -1298,6 +1464,7 @@ export default function ExtremeGymSite() {
           favoriteTraining: currentMember.favoriteTraining,
           phone: memberPhoneInput,
           email: memberEmailInput,
+          cedula: memberCedulaInput,
           weeklyGoal,
           notificationPrefs: notifPrefs,
           pinnedBadges: pinnedBadgeIds,
@@ -1305,6 +1472,10 @@ export default function ExtremeGymSite() {
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
+      if (data.member?.cedula) {
+        setMemberCedulaInput(formatCedulaInput(data.member.cedula));
+        window.localStorage.setItem(CEDULA_KEY, onlyDigits(data.member.cedula));
+      }
       setLeaderboard(data.leaderboard ?? []);
       setMessage("Perfil actualizado. Ahora si, a meterle.");
     } catch (err) {
@@ -1325,6 +1496,10 @@ export default function ExtremeGymSite() {
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
+      if (data.member?.cedula) {
+        setMemberCedulaInput(formatCedulaInput(data.member.cedula));
+        window.localStorage.setItem(CEDULA_KEY, onlyDigits(data.member.cedula));
+      }
       setLeaderboard(data.leaderboard ?? []);
       setMessage(okMessage);
     } catch (err) {
@@ -1564,15 +1739,25 @@ export default function ExtremeGymSite() {
 
   function resetMember() {
     window.localStorage.removeItem(SESSION_KEY);
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(CEDULA_KEY);
     setShowPin(false);
     setMemberName("");
     setMemberNameInput("");
+    setMemberCedulaInput("");
     setMemberPhoneInput("");
     setMemberEmailInput("");
+    setNeedsRegistration(false);
     setMember(null);
     setMessage("");
     setError("");
+    window.setTimeout(() => cedulaInputRef.current?.focus(), 100);
   }
+
+  const selectedTraining =
+    osModal?.kind === "training"
+      ? TRAININGS.find((t) => t.id === osModal.trainingId) ?? null
+      : null;
 
   return (
     <main className="min-h-screen bg-[#050505] text-white selection:bg-[#d8ff3e] selection:text-black">
@@ -1591,11 +1776,113 @@ export default function ExtremeGymSite() {
           onChangeMember={resetMember}
           onDone={setMessage}
           onSuccess={() => {
-            storeSession(memberName);
+            storeSession(memberName, memberCedulaInput || currentMember.cedula);
             setShowPin(false);
             setMessage((current) => current || "Sesion protegida. Bienvenido a Xtreme.");
           }}
         />
+      )}
+
+      {/* Sin sesión: login por cedula (lector de barras / teclado). */}
+      {!memberName && !isLoading && !showPin && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/90 p-0 backdrop-blur-md sm:items-center sm:p-4">
+          <form
+            className="w-full max-w-[400px] border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-5 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-6"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void startMemberByCedula(memberCedulaInput, false, {
+                name: memberNameInput,
+                phone: memberPhoneInput,
+                email: memberEmailInput,
+              });
+            }}
+          >
+            <div className="mx-auto grid h-16 w-16 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
+              <CreditCard className="h-8 w-8" />
+            </div>
+            <GameLabel tone="lime" className="mt-4">
+              Member OS · Cedula
+            </GameLabel>
+            <h2 className="mt-2 text-2xl font-black uppercase text-white">Escanee su cédula</h2>
+            <p className="mt-2 text-sm font-bold text-white/55">
+              Pase el carnet por el lector o digite los números. Luego confirma con su PIN.
+            </p>
+
+            <div className="mt-6 grid gap-2 text-left">
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
+                  Cédula
+                </span>
+                <div className="relative mt-1.5">
+                  <CreditCard className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/35" />
+                  <input
+                    ref={cedulaInputRef}
+                    value={memberCedulaInput}
+                    onChange={(event) => {
+                      setMemberCedulaInput(formatCedulaInput(event.target.value));
+                      setNeedsRegistration(false);
+                      setError("");
+                    }}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    autoFocus
+                    placeholder="1-2345-6789"
+                    className="min-h-14 w-full border-[3px] border-white/20 bg-black/50 py-3 pl-11 pr-3 text-center text-xl font-black tracking-[0.18em] text-white outline-none transition placeholder:text-sm placeholder:tracking-normal placeholder:text-white/35 focus:border-[#d8ff3e]"
+                  />
+                </div>
+              </label>
+
+              {needsRegistration && (
+                <>
+                  <GameCallout tone="orange">
+                    Primera vez: complete nombre y teléfono para ligar esta cédula a su perfil.
+                  </GameCallout>
+                  <input
+                    value={memberNameInput}
+                    onChange={(event) => setMemberNameInput(event.target.value)}
+                    placeholder="Nombre completo"
+                    className="min-h-12 min-w-0 border-[3px] border-white/20 bg-black/50 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
+                  />
+                  <input
+                    value={memberPhoneInput}
+                    onChange={(event) => setMemberPhoneInput(event.target.value)}
+                    placeholder="Telefono"
+                    inputMode="tel"
+                    className="min-h-12 border-[3px] border-white/15 bg-black/40 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
+                  />
+                  <input
+                    value={memberEmailInput}
+                    onChange={(event) => setMemberEmailInput(event.target.value)}
+                    placeholder="Correo opcional"
+                    type="email"
+                    className="min-h-12 border-[3px] border-white/15 bg-black/40 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
+                  />
+                </>
+              )}
+            </div>
+
+            {error && (
+              <div className="mt-3 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-left text-sm font-bold text-red-200">
+                {error}
+              </div>
+            )}
+
+            <GameButton type="submit" full className="mt-4">
+              {needsRegistration ? "Crear perfil y entrar" : "Entrar"} <ArrowRight className="h-4 w-4" />
+            </GameButton>
+            <p className="mt-3 px-1 text-xs font-semibold text-white/38">
+              Lector USB tipo teclado: escanee y el sistema recibe la cédula + Enter. Si es socio
+              nuevo, se pedirá nombre y teléfono.
+            </p>
+            <Link
+              href="/"
+              className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45 transition hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Ir al sitio Xtreme Gym
+            </Link>
+          </form>
+        </div>
       )}
 
       <OnboardingTour
@@ -1605,41 +1892,132 @@ export default function ExtremeGymSite() {
         onGoToTab={(next) => setTab(next as TabId)}
       />
 
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-white/10 bg-[#050505]/90 px-3 backdrop-blur-md lg:pl-[84px]">
-        <button type="button" onClick={() => setNavOpen(true)} className="grid h-11 w-11 place-items-center border border-white/12 text-white" aria-label="Abrir navegación">
-          <Menu className="h-5 w-5" />
-        </button>
-        <span className="h-2.5 w-2.5 bg-[#d8ff3e] shadow-[0_0_16px_rgba(216,255,62,.75)]" />
-        <span className="text-sm font-black uppercase tracking-[.16em] text-white/75">Xtreme</span>
+      {/* ─── TOP HUD ─── */}
+      <header className="xg-safe-top sticky top-0 z-30 border-b-[3px] border-white/15 bg-[#050505]/95 backdrop-blur-md lg:pl-[84px]">
+        <div className="flex h-12 items-center gap-2 px-2 sm:h-14 sm:gap-3 sm:px-3">
+          <button
+            type="button"
+            onClick={() => setNavOpen(true)}
+            className="grid h-11 w-11 shrink-0 place-items-center border-[3px] border-white/20 bg-black/40 text-white lg:hidden"
+            aria-label="Abrir navegación"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <span className="hidden h-2.5 w-2.5 shrink-0 bg-[#d8ff3e] shadow-[0_0_16px_rgba(216,255,62,.75)] sm:block" />
+          <div className="min-w-0 shrink">
+            <p className="truncate text-[10px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
+              Xtreme · Member OS
+            </p>
+            <p className="truncate text-xs font-black uppercase text-white/80 sm:text-sm">
+              {TABS.find((item) => item.id === tab)?.label}
+            </p>
+          </div>
+
+          {unlocked && (
+            <div className="ml-auto flex max-w-[58%] items-center gap-1.5 overflow-x-auto sm:max-w-none sm:gap-2">
+              <GameHudPill
+                icon={Flame}
+                label="Racha"
+                value={effectiveStreak}
+                tone="orange"
+                onClick={() => setOsModal({ kind: "streak" })}
+              />
+              <GameHudPill
+                icon={Star}
+                label="Nv"
+                value={level}
+                tone="cyan"
+                onClick={() => setOsModal({ kind: "streak" })}
+              />
+              <GameHudPill
+                icon={Target}
+                label="Sem"
+                value={`${weekDoneCount}/${weeklyGoal}`}
+                tone="lime"
+                onClick={() => setOsModal({ kind: "week" })}
+              />
+            </div>
+          )}
+        </div>
       </header>
 
-      {navOpen && <button type="button" aria-label="Cerrar navegación" onClick={() => setNavOpen(false)} className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden" />}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[220px] flex-col border-r border-white/10 bg-[#090909] shadow-2xl transition-[width,transform] duration-300 ${navOpen ? "translate-x-0 lg:w-[220px]" : "-translate-x-full lg:w-[72px] lg:translate-x-0"}`}>
-        <div className="flex h-14 items-center justify-between border-b border-white/10 px-3">
-          <div className={navOpen ? "block" : "lg:hidden"}><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">Xtreme Gym</p><p className="text-sm font-black uppercase">Member OS</p></div>
-          <button type="button" onClick={() => setNavOpen(false)} className="grid h-10 w-10 place-items-center border border-white/10 text-white/60" aria-label="Cerrar navegación"><X className="h-5 w-5" /></button>
+      {navOpen && (
+        <button
+          type="button"
+          aria-label="Cerrar navegación"
+          onClick={() => setNavOpen(false)}
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r-[3px] border-white/15 bg-[#090909] shadow-[8px_0_0_rgba(0,0,0,.45)] transition-[width,transform] duration-300 ${
+          navOpen ? "translate-x-0 lg:w-[240px]" : "-translate-x-full lg:w-[72px] lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-14 items-center justify-between border-b-[3px] border-white/15 bg-[#d8ff3e]/10 px-3">
+          <div className={navOpen ? "block" : "lg:hidden"}>
+            <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">Xtreme Gym</p>
+            <p className="text-sm font-black uppercase">Member OS</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNavOpen(false)}
+            className="grid h-10 w-10 place-items-center border-[3px] border-white/15 text-white/60 lg:hidden"
+            aria-label="Cerrar navegación"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
           {TABS.map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
-            return <button key={item.id} type="button" data-tour={`tab-${item.id}`} title={item.label} onClick={() => { setTab(item.id); setNavOpen(false); }} className={`flex h-14 w-full items-center gap-3 border-l-2 px-4 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${active ? "border-l-[#d8ff3e] bg-[#d8ff3e]/10 text-[#d8ff3e]" : "border-l-transparent text-white/50 hover:bg-white/[.05] hover:text-white"}`}><Icon className="h-5 w-5 shrink-0" /><span className={navOpen ? "block" : "lg:hidden"}>{item.label}</span></button>;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                data-tour={`tab-${item.id}`}
+                title={item.label}
+                onClick={() => {
+                  setTab(item.id);
+                  setNavOpen(false);
+                  setOsModal(null);
+                }}
+                className={`flex h-14 w-full items-center gap-3 border-[3px] px-3 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${
+                  active
+                    ? "border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#d8ff3e]"
+                    : "border-transparent text-white/50 hover:border-white/15 hover:bg-white/[.05] hover:text-white"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className={navOpen ? "block" : "lg:hidden"}>{item.label}</span>
+              </button>
+            );
           })}
         </nav>
 
-        <div className="border-t border-white/10 p-2">
+        <div className="border-t-[3px] border-white/15 p-2">
           {memberName ? (
-            <button type="button" title="Ver perfil" onClick={() => { setTab("perfil"); setNavOpen(false); }} className="flex h-14 w-full items-center gap-3 px-2 text-left transition hover:bg-white/[.05]">
+            <button
+              type="button"
+              title="Ver perfil"
+              onClick={() => {
+                setTab("perfil");
+                setNavOpen(false);
+              }}
+              className="flex h-14 w-full items-center gap-3 border-[3px] border-white/10 px-2 text-left transition hover:border-[#d8ff3e]/40 hover:bg-white/[.05]"
+            >
               <Avatar name={memberName} photoUrl={currentMember.photoUrl} className="h-11 w-11" textClass="text-xs" />
-              <span className={`min-w-0 flex-1 ${navOpen ? "block" : "lg:hidden"}`}><span className="block truncate text-xs font-black uppercase">{memberName}</span><span className="text-[11px] font-bold text-[#d8ff3e]">Ver perfil</span></span>
+              <span className={`min-w-0 flex-1 ${navOpen ? "block" : "lg:hidden"}`}>
+                <span className="block truncate text-xs font-black uppercase">{memberName}</span>
+                <span className="text-[11px] font-bold text-[#d8ff3e]">Ver perfil</span>
+              </span>
             </button>
           ) : (
             <button
               type="button"
               onClick={() => {
-                // En el rail colapsado (desktop) primero se expande el nav; solo
-                // con el panel ancho tiene sentido desplegar el formulario.
                 if (!navOpen) {
                   setNavOpen(true);
                   setShowLogin(true);
@@ -1649,7 +2027,7 @@ export default function ExtremeGymSite() {
               }}
               aria-expanded={showLogin}
               title="Entrar a mi perfil"
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#d8ff3e] px-2 text-sm font-black uppercase text-black"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 border-[3px] border-black/30 bg-[#d8ff3e] px-2 text-sm font-black uppercase text-black"
             >
               <UserRound className="h-4 w-4 shrink-0" />
               <span className={navOpen ? "block" : "lg:hidden"}>Entrar a mi perfil</span>
@@ -1658,76 +2036,130 @@ export default function ExtremeGymSite() {
 
           {!memberName && showLogin && navOpen && (
             <form
-              className="mt-3 grid gap-2 border border-white/12 bg-black/40 p-3"
+              className="mt-3 grid gap-2 border-[3px] border-white/15 bg-black/40 p-3"
               onSubmit={(event) => {
                 event.preventDefault();
                 setShowLogin(false);
                 setNavOpen(false);
-                void startMember(memberNameInput, false, {
+                void startMemberByCedula(memberCedulaInput, false, {
+                  name: memberNameInput,
                   phone: memberPhoneInput,
                   email: memberEmailInput,
                 });
               }}
             >
               <input
-                value={memberNameInput}
-                onChange={(event) => setMemberNameInput(event.target.value)}
-                placeholder="Su nombre"
+                value={memberCedulaInput}
+                onChange={(event) => setMemberCedulaInput(formatCedulaInput(event.target.value))}
+                placeholder="Cedula (escanear o digitar)"
+                inputMode="numeric"
                 autoFocus
-                className="min-w-0 border border-white/12 bg-black/45 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
+                className="min-w-0 border-[3px] border-white/15 bg-black/45 px-4 py-3 text-center font-black tracking-widest text-white outline-none transition placeholder:tracking-normal placeholder:text-white/35 focus:border-[#d8ff3e]"
               />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <input
-                  value={memberPhoneInput}
-                  onChange={(event) => setMemberPhoneInput(event.target.value)}
-                  placeholder="Telefono si es nuevo"
-                  inputMode="tel"
-                  className="border border-white/12 bg-black/35 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
-                />
-                <input
-                  value={memberEmailInput}
-                  onChange={(event) => setMemberEmailInput(event.target.value)}
-                  placeholder="Correo opcional"
-                  type="email"
-                  className="border border-white/12 bg-black/35 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
-                />
-              </div>
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center gap-2 bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black transition hover:bg-white"
-              >
+              {needsRegistration && (
+                <>
+                  <input
+                    value={memberNameInput}
+                    onChange={(event) => setMemberNameInput(event.target.value)}
+                    placeholder="Nombre si es nuevo"
+                    className="min-w-0 border-[3px] border-white/15 bg-black/45 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
+                  />
+                  <input
+                    value={memberPhoneInput}
+                    onChange={(event) => setMemberPhoneInput(event.target.value)}
+                    placeholder="Telefono si es nuevo"
+                    inputMode="tel"
+                    className="border-[3px] border-white/15 bg-black/35 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
+                  />
+                </>
+              )}
+              <GameButton type="submit" full>
                 Entrar <ArrowRight className="h-4 w-4" />
-              </button>
-              <p className="px-1 text-xs font-semibold text-white/38">
-                Si ya tiene perfil, basta con el nombre. Si es nuevo, el telefono evita duplicados.
-              </p>
+              </GameButton>
             </form>
           )}
-          {memberName && <button type="button" onClick={resetMember} title="Cambiar de usuario" className={`mt-3 w-full py-2 text-xs font-black uppercase text-white/35 transition hover:text-white ${navOpen ? "block" : "lg:hidden"}`}>Cambiar de usuario</button>}
+          {memberName && (
+            <button
+              type="button"
+              onClick={resetMember}
+              title="Cambiar de usuario"
+              className={`mt-3 w-full border-[3px] border-white/10 py-2 text-xs font-black uppercase text-white/35 transition hover:border-white/30 hover:text-white ${
+                navOpen ? "block" : "lg:hidden"
+              }`}
+            >
+              Cambiar de usuario
+            </button>
+          )}
         </div>
       </aside>
 
-      <section className={`mx-auto max-w-[1600px] px-4 py-5 transition-[padding] sm:px-8 sm:py-6 ${navOpen ? "lg:pl-[252px] lg:pr-10" : "lg:pl-[104px] lg:pr-10"}`}>
+      {/* ─── BOTTOM DOCK (mobile) ─── */}
+      <nav
+        className="xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden"
+        aria-label="Navegación principal"
+      >
+        {TABS.map((item) => (
+          <GameDockItem
+            key={item.id}
+            label={item.label}
+            icon={item.icon}
+            active={tab === item.id}
+            tourId={`tab-${item.id}`}
+            onClick={() => {
+              setTab(item.id);
+              setOsModal(null);
+            }}
+          />
+        ))}
+      </nav>
+
+      <section
+        className={`xg-os-content mx-auto max-w-[1600px] px-3 py-4 transition-[padding] sm:px-6 sm:py-5 ${
+          navOpen ? "lg:pl-[268px] lg:pr-10" : "lg:pl-[104px] lg:pr-10"
+        }`}
+      >
         {isLoading ? (
-          <div className="grid min-h-[420px] place-items-center border border-white/10 bg-white/[0.03]">
-            <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
+          <div className="grid min-h-[420px] place-items-center border-[3px] border-white/15 bg-[#0c0c0c]">
+            <div className="text-center">
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#d8ff3e]" />
+              <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-white/45">
+                Cargando OS…
+              </p>
+            </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="border-b border-white/10 pb-3">
-              <h1 className="text-2xl font-black uppercase tracking-tight sm:text-3xl">{TABS.find((item) => item.id === tab)?.label}</h1>
-              <p className="mt-0.5 text-sm font-semibold text-white/45">{TAB_SUBTITLES[tab]}</p>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="border-[3px] border-white/15 bg-[#0c0c0c] px-3 py-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:px-4">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <GameLabel tone="lime">Zona activa</GameLabel>
+                  <h1 className="mt-1 text-xl font-black uppercase tracking-tight sm:text-3xl">
+                    {TABS.find((item) => item.id === tab)?.label}
+                  </h1>
+                  <p className="mt-0.5 text-xs font-bold text-white/45 sm:text-sm">{TAB_SUBTITLES[tab]}</p>
+                </div>
+                {unlocked && !trainedToday && (
+                  <GameButton
+                    variant="orange"
+                    className="min-h-11 !px-3"
+                    onClick={() => setOsModal({ kind: "quick-train" })}
+                  >
+                    <Flame className="h-4 w-4" />
+                    <span className="hidden xs:inline sm:inline">Entreno</span>
+                  </GameButton>
+                )}
+              </div>
             </div>
             {(message || error) && (
-              <div className={`border px-4 py-3 text-sm font-bold ${error ? "border-red-400/40 bg-red-500/10 text-red-200" : "border-[#d8ff3e]/40 bg-[#d8ff3e]/10 text-[#eaff93]"}`}>
+              <GameCallout tone={error ? "red" : "lime"}>
                 {error || message}
-              </div>
+              </GameCallout>
             )}
 
             {tab === "resumen" && (
               <div className="space-y-4">
 
-              <div id="entrenar-hoy" className="flex flex-col gap-3 border border-[#d8ff3e]/25 bg-gradient-to-r from-[#d8ff3e]/10 via-[#d8ff3e]/[0.04] to-transparent p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div id="entrenar-hoy" className="flex flex-col gap-3 border-[3px] border-[#d8ff3e] bg-gradient-to-r from-[#d8ff3e]/15 via-[#d8ff3e]/[0.06] to-transparent p-3.5 shadow-[4px_4px_0_rgba(216,255,62,0.25)] sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center bg-[#d8ff3e] text-black"><Flame className="h-5 w-5" /></span>
                   <div><p className="text-xs font-black uppercase tracking-[.18em] text-[#d8ff3e]">Acción principal · Entrenamiento de hoy</p><p className="mt-0.5 text-sm font-semibold text-white/45">Un toque para mantener tu progreso al día.</p></div>
@@ -1776,41 +2208,92 @@ export default function ExtremeGymSite() {
                 </div>
               )}
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <StatTile icon={Flame} label="Racha actual" value={`${effectiveStreak} días`} accent="from-orange-400 to-red-500" />
-                <StatTile icon={CalendarCheck} label="Entrenamientos del mes" value={`${currentMember.workouts.filter((workout) => workout.completedDate.startsWith(todayIso().slice(0, 7))).length}`} accent="from-[#d8ff3e] to-emerald-300" />
-                <div className="border border-white/10 bg-white/[0.04] p-4">
-                  <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[.16em] text-white/45">Próxima clase</p><CalendarClock className="h-5 w-5 text-cyan-300" /></div>
-                  <p className="mt-2 truncate text-xl font-black uppercase">{TRAININGS.find((training) => reservations[training.id]?.isMine)?.name ?? "Sin reserva"}</p>
-                  <button type="button" onClick={() => setTab("entrenar")} className="mt-1 text-xs font-black uppercase text-cyan-300 transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">Ver clases</button>
-                </div>
-                <div className="border border-yellow-300/20 bg-yellow-300/[0.04] p-4">
-                  <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[.16em] text-white/45">Leaderboard</p><Trophy className="h-5 w-5 text-yellow-300" /></div>
-                  <p className="mt-2 text-3xl font-black leading-none">#{Math.max(1, leaderboard.findIndex((entry) => entry.normalizedName === currentMember.normalizedName) + 1 || 1)}</p>
-                  <a href="/app/comunidad" className="mt-1 inline-block text-xs font-black uppercase text-yellow-300 transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300">Ver clasificación</a>
-                </div>
-                <div className="border border-white/10 bg-white/[0.04] p-4 xl:col-span-2">
-                  <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[.16em] text-white/45">Progreso semanal</p><Target className="h-5 w-5 text-[#d8ff3e]" /></div>
-                  <div className="mt-2 flex items-end justify-between gap-4"><p className="text-3xl font-black leading-none">{weekDoneCount}/{weeklyGoal}</p><p className="text-xs font-bold uppercase text-white/40">meta semanal</p></div>
-                  <div className="mt-2 h-2 bg-black/50"><div className="h-full bg-[#d8ff3e] transition-all" style={{ width: `${Math.min(100, (weekDoneCount / Math.max(1, weeklyGoal)) * 100)}%` }} /></div>
-                </div>
-                <div className="border border-cyan-300/20 bg-cyan-300/[0.04] p-4">
-                  <p className="text-xs font-black uppercase tracking-[.16em] text-cyan-300">Accesos rápidos</p>
-                  <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={() => setTab("entrenar")} className="min-h-11 bg-[#d8ff3e] px-3 text-xs font-black uppercase text-black transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e]">Entrenar</button><button type="button" onClick={() => setTab("progreso")} className="min-h-11 border border-white/15 px-3 text-xs font-black uppercase transition hover:border-cyan-300 hover:text-cyan-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">Progreso</button></div>
-                </div>
+              {/* Inventario de constantes — números super marcados */}
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+                <GameStat
+                  label="Racha"
+                  value={`${effectiveStreak}`}
+                  hint="días · toca"
+                  icon={Flame}
+                  tone="orange"
+                  onClick={() => setOsModal({ kind: "streak" })}
+                />
+                <GameStat
+                  label="Mes"
+                  value={`${currentMember.workouts.filter((workout) => workout.completedDate.startsWith(todayIso().slice(0, 7))).length}`}
+                  hint="entrenos"
+                  icon={CalendarCheck}
+                  tone="lime"
+                />
+                <GameStat
+                  label="Semana"
+                  value={`${weekDoneCount}/${weeklyGoal}`}
+                  hint="meta · toca"
+                  icon={Target}
+                  tone="lime"
+                  onClick={() => setOsModal({ kind: "week" })}
+                />
+                <GameStat
+                  label="Liga"
+                  value={`#${Math.max(1, leaderboard.findIndex((entry) => entry.normalizedName === currentMember.normalizedName) + 1 || 1)}`}
+                  hint="ranking"
+                  icon={Trophy}
+                  tone="yellow"
+                  onClick={() => {
+                    window.location.href = "/app/comunidad";
+                  }}
+                />
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                <GamePanel
+                  title="Próxima clase"
+                  icon={CalendarClock}
+                  tone="cyan"
+                  compact
+                  onClick={() => setTab("entrenar")}
+                >
+                  <p className="truncate text-lg font-black uppercase sm:text-xl">
+                    {TRAININGS.find((training) => reservations[training.id]?.isMine)?.name ?? "Sin reserva"}
+                  </p>
+                  <p className="mt-1 text-[11px] font-black uppercase tracking-[0.14em] text-cyan-300">
+                    Ver clases →
+                  </p>
+                </GamePanel>
+                <GamePanel title="Accesos rápidos" icon={Zap} tone="lime" compact>
+                  <div className="grid grid-cols-2 gap-2">
+                    <GameButton
+                      full
+                      className="!min-h-11 !text-[10px]"
+                      onClick={() => setOsModal({ kind: "quick-train" })}
+                    >
+                      Entreno
+                    </GameButton>
+                    <GameButton
+                      full
+                      variant="ghost"
+                      className="!min-h-11 !text-[10px]"
+                      onClick={() => setTab("progreso")}
+                    >
+                      Progreso
+                    </GameButton>
+                  </div>
+                </GamePanel>
               </div>
 
               {unlocked && nextBestAction && (
                 <div
                   id={nextBestAction.href.startsWith("#") ? nextBestAction.href.slice(1) : undefined}
-                  className="border border-cyan-300/30 bg-gradient-to-br from-cyan-400/[0.08] to-transparent p-5"
+                  className="border-[3px] border-cyan-300/55 bg-gradient-to-br from-cyan-400/[0.1] to-transparent p-4 shadow-[4px_4px_0_rgba(34,211,238,0.2)] sm:p-5"
                 >
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Siguiente paso</p>
-                  <h3 className="mt-2 text-xl font-black uppercase text-white">{nextBestAction.title}</h3>
-                  <p className="mt-2 text-sm font-semibold text-white/60">{nextBestAction.body}</p>
-                  <button
-                    type="button"
-                    className="mt-4 inline-flex items-center justify-center gap-2 bg-cyan-300 px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
+                  <GameLabel tone="cyan">Misión actual · siguiente paso</GameLabel>
+                  <h3 className="mt-2 text-lg font-black uppercase text-white sm:text-xl">
+                    {nextBestAction.title}
+                  </h3>
+                  <p className="mt-2 text-sm font-bold text-white/60">{nextBestAction.body}</p>
+                  <GameButton
+                    variant="cyan"
+                    className="mt-4"
                     onClick={() => {
                       void fetch("/api/xtreme/events/track", {
                         method: "POST",
@@ -1823,7 +2306,11 @@ export default function ExtremeGymSite() {
                         }),
                       }).catch(() => {});
                       if (nextBestAction.href.startsWith("#")) {
-                        if (nextBestAction.kind === "train_today" || nextBestAction.kind === "protect_streak" || nextBestAction.kind === "second_visit") {
+                        if (
+                          nextBestAction.kind === "train_today" ||
+                          nextBestAction.kind === "protect_streak" ||
+                          nextBestAction.kind === "second_visit"
+                        ) {
                           if (!trainedToday) void completeTraining(quickTraining);
                         } else if (nextBestAction.kind === "renew_plan") {
                           window.location.href = "/precios#inscripcion";
@@ -1838,15 +2325,21 @@ export default function ExtremeGymSite() {
                     }}
                   >
                     {nextBestAction.cta}
-                  </button>
+                  </GameButton>
                 </div>
               )}
 
               {gami ? (
                 <>
-                  {/* Hero: anillo de racha + accion rapida + semana + nivel */}
-                  <div className="grid gap-4 lg:grid-cols-[.95fr_1.05fr]">
-                    <div className="relative overflow-hidden border border-orange-400/25 bg-gradient-to-br from-orange-400/[0.08] to-transparent p-5">
+                  <div className="grid gap-3 sm:gap-4 lg:grid-cols-[.95fr_1.05fr]">
+                    <button
+                      type="button"
+                      onClick={() => setOsModal({ kind: "streak" })}
+                      className="relative w-full overflow-hidden border-[3px] border-orange-400/50 bg-gradient-to-br from-orange-400/[0.1] to-transparent p-4 text-left shadow-[4px_4px_0_rgba(251,146,60,0.25)] sm:p-5"
+                    >
+                      <GameLabel tone="orange" className="mb-2 text-center">
+                        Racha · toca para ampliar
+                      </GameLabel>
                       <StreakRing
                         streak={gami.streak}
                         freezes={gami.freezesAvailable}
@@ -1857,115 +2350,111 @@ export default function ExtremeGymSite() {
                         “{dayPhrase}”
                       </p>
                       {gami.freezesAvailable > 0 && (
-                        <p className="mt-3 text-center text-xs font-semibold text-cyan-200/70">
+                        <p className="mt-3 text-center text-xs font-bold text-cyan-200/70">
                           <Snowflake className="mr-1 inline h-3.5 w-3.5" />
                           {gami.freezesAvailable === 1
-                            ? "1 protector de racha disponible: cubre un dia libre."
-                            : `${gami.freezesAvailable} protectores de racha disponibles.`}
+                            ? "1 protector de racha disponible."
+                            : `${gami.freezesAvailable} protectores de racha.`}
                         </p>
                       )}
-                    </div>
+                    </button>
 
-                    <div className="grid gap-4">
-                      <div className="border border-white/10 bg-white/[0.04] p-5">
+                    <div className="grid gap-3 sm:gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setOsModal({ kind: "streak" })}
+                        className="border-[3px] border-cyan-300/40 bg-[#0c0c0c] p-4 text-left shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5"
+                      >
                         <XpBar xp={gami.xp} level={gami.level} />
-                        <p className="mt-3 text-xs font-semibold text-white/45">
+                        <p className="mt-3 text-xs font-bold text-white/45">
                           {milestoneLeft === 0
                             ? "Nivel maximo. Usted ES el gym."
-                            : `${milestoneLeft.toLocaleString()} XP para el nivel ${level + 1} (${levelName} → siguiente).`}
+                            : `${milestoneLeft.toLocaleString()} XP para el nivel ${level + 1}.`}
                         </p>
-                      </div>
+                      </button>
 
-                      {/* Semana + meta editable, en una sola tarjeta */}
-                      <div className="border border-white/10 bg-white/[0.04] p-5">
+                      <button
+                        type="button"
+                        onClick={() => setOsModal({ kind: "week" })}
+                        className="border-[3px] border-[#d8ff3e]/40 bg-[#0c0c0c] p-4 text-left shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5"
+                      >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">
+                          <GameLabel tone="lime">
                             Esta semana — {weekDoneCount}/{weeklyGoal}
-                          </p>
+                          </GameLabel>
                           {gami.weeksStreak > 0 && (
                             <span className="inline-flex items-center gap-1 text-xs font-black text-orange-200">
                               <Flame className="h-3.5 w-3.5" />
-                              {gami.weeksStreak} {gami.weeksStreak === 1 ? "semana" : "semanas"}
+                              {gami.weeksStreak}w
                             </span>
                           )}
                         </div>
-                        <div className="mt-4 grid grid-cols-7 gap-1.5">
+                        <div className="mt-3 grid grid-cols-7 gap-1">
                           {weekDates.map((date) => {
                             const done = workoutDates.has(date);
                             const isToday = date === todayIso();
                             return (
                               <div
                                 key={date}
-                                className={`grid aspect-square place-items-center border text-xs font-black transition ${
+                                className={`grid aspect-square place-items-center border-[3px] text-[10px] font-black sm:text-xs ${
                                   done
                                     ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
                                     : isToday
                                       ? "border-[#d8ff3e]/60 bg-black/40 text-[#eaff93]"
-                                      : "border-white/10 bg-black/25 text-white/35"
+                                      : "border-white/15 bg-black/25 text-white/35"
                                 }`}
                               >
-                                {done ? <Check className="h-4 w-4" /> : dayLabel(date)}
+                                {done ? <Check className="h-3.5 w-3.5" /> : dayLabel(date)}
                               </div>
                             );
                           })}
                         </div>
-                        <div className="mt-4 flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-black uppercase tracking-[0.14em] text-white/40">
-                            Meta / semana
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {Array.from(
-                              { length: WEEKLY_GOAL_MAX - WEEKLY_GOAL_MIN + 1 },
-                              (_, i) => WEEKLY_GOAL_MIN + i,
-                            ).map((n) => (
-                              <button
-                                key={n}
-                                type="button"
-                                onClick={() => void updateWeeklyGoal(n)}
-                                disabled={!unlocked}
-                                className={`h-8 w-8 border text-sm font-black transition ${
-                                  gami.weeklyGoal === n
-                                    ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
-                                    : "border-white/15 bg-black/25 text-white/55 hover:border-white/40"
-                                } disabled:opacity-40`}
-                              >
-                                {n}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                        <p className="mt-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">
+                          Toca para ajustar meta →
+                        </p>
+                      </button>
                     </div>
                   </div>
 
                   {nextBadge && (
                     <button
                       type="button"
-                      onClick={() => setTab("progreso")}
-                      className="group flex w-full items-center gap-4 border border-yellow-300/25 bg-yellow-300/[0.05] p-4 text-left transition hover:border-yellow-300/50 hover:bg-yellow-300/[0.09]"
+                      onClick={() => setOsModal({ kind: "badges" })}
+                      className="group flex w-full items-center gap-3 border-[3px] border-yellow-300/40 bg-yellow-300/[0.06] p-3 text-left shadow-[4px_4px_0_rgba(253,224,71,0.15)] transition sm:gap-4 sm:p-4"
                     >
-                      <span className={`grid h-12 w-12 shrink-0 place-items-center ${tierStyle(nextBadge.tier).icon}`}>
+                      <span
+                        className={`grid h-12 w-12 shrink-0 place-items-center border-2 border-black/20 ${tierStyle(nextBadge.tier).icon}`}
+                      >
                         {(() => {
                           const Icon = badgeIcon(nextBadge.icon);
                           return <Icon className="h-6 w-6" />;
                         })()}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-yellow-300">Proximo logro</p>
-                        <p className="truncate text-sm font-black uppercase text-white">{nextBadge.name}</p>
+                        <GameLabel tone="yellow">Próximo logro · toca</GameLabel>
+                        <p className="truncate text-sm font-black uppercase text-white">
+                          {nextBadge.name}
+                        </p>
                         {nextBadge.progress && (
-                          <div className="mt-2 h-1.5 border border-white/10 bg-black/40">
+                          <div className="mt-2 h-2 border-[2px] border-white/15 bg-black/40">
                             <div
                               className="h-full bg-yellow-300/80 transition-all"
                               style={{
-                                width: `${Math.min(100, Math.round((nextBadge.progress.current / Math.max(1, nextBadge.progress.target)) * 100))}%`,
+                                width: `${Math.min(
+                                  100,
+                                  Math.round(
+                                    (nextBadge.progress.current /
+                                      Math.max(1, nextBadge.progress.target)) *
+                                      100,
+                                  ),
+                                )}%`,
                               }}
                             />
                           </div>
                         )}
                       </div>
                       {nextBadge.progress && (
-                        <span className="shrink-0 text-sm font-black text-white/60">
+                        <span className="shrink-0 border-[3px] border-yellow-300/40 bg-black/40 px-2 py-1 text-sm font-black text-yellow-100">
                           {nextBadge.progress.current}/{nextBadge.progress.target}
                         </span>
                       )}
@@ -1975,64 +2464,89 @@ export default function ExtremeGymSite() {
                 </>
               ) : null}
 
-              {/* Membresia + ocupacion en vivo, compactas */}
-              <div className={`grid gap-5 ${currentMember.membership.daysRemaining > 5 ? "lg:grid-cols-[1fr_.85fr]" : ""}`}>
-                {currentMember.membership.daysRemaining > 5 && <div className={`border p-5 ${membershipTone}`}>
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] opacity-75">Membresia</p>
-                      <h2 className="mt-2 text-2xl font-black uppercase">{currentMember.membership.plan}</h2>
-                      <p className="mt-2 text-sm font-bold opacity-75">
-                        Proximo cobro: {currentMember.membership.nextBillingDate}
-                      </p>
+              {/* Membresia + ocupacion en vivo — paneles tocables → modal */}
+              <div className={`grid gap-3 sm:gap-4 ${currentMember.membership.daysRemaining > 5 ? "lg:grid-cols-[1fr_.85fr]" : ""}`}>
+                {currentMember.membership.daysRemaining > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setOsModal({ kind: "membership" })}
+                    className={`w-full border-[3px] p-4 text-left shadow-[4px_4px_0_rgba(0,0,0,.45)] transition active:translate-x-px active:translate-y-px ${membershipTone}`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-75">
+                          Membresia · toca
+                        </p>
+                        <h2 className="mt-2 text-2xl font-black uppercase">
+                          {currentMember.membership.plan}
+                        </h2>
+                        <p className="mt-2 text-sm font-bold opacity-75">
+                          Proximo cobro: {currentMember.membership.nextBillingDate}
+                        </p>
+                      </div>
+                      <CreditCard className="h-8 w-8" />
                     </div>
-                    <CreditCard className="h-8 w-8" />
-                  </div>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <div className="border border-white/10 bg-black/20 p-3">
-                      <p className="text-[11px] font-black uppercase tracking-[0.16em] opacity-60">Estado</p>
-                      <p className="mt-1 font-black uppercase">{currentMember.membership.status}</p>
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      <div className="border-[3px] border-white/15 bg-black/25 p-2">
+                        <p className="text-[9px] font-black uppercase tracking-[0.14em] opacity-60">Estado</p>
+                        <p className="mt-1 truncate text-sm font-black uppercase">
+                          {currentMember.membership.status}
+                        </p>
+                      </div>
+                      <div className="border-[3px] border-white/15 bg-black/25 p-2">
+                        <p className="text-[9px] font-black uppercase tracking-[0.14em] opacity-60">Dias</p>
+                        <p className="mt-1 text-sm font-black">
+                          {Math.max(0, currentMember.membership.daysRemaining)}
+                        </p>
+                      </div>
+                      <div className="border-[3px] border-white/15 bg-black/25 p-2">
+                        <p className="text-[9px] font-black uppercase tracking-[0.14em] opacity-60">Plan</p>
+                        <p className="mt-1 truncate text-sm font-black">Local</p>
+                      </div>
                     </div>
-                    <div className="border border-white/10 bg-black/20 p-3">
-                      <p className="text-[11px] font-black uppercase tracking-[0.16em] opacity-60">Dias restantes</p>
-                      <p className="mt-1 font-black">{Math.max(0, currentMember.membership.daysRemaining)}</p>
-                    </div>
-                    <div className="border border-white/10 bg-black/20 p-3">
-                      <p className="text-[11px] font-black uppercase tracking-[0.16em] opacity-60">Plan</p>
-                      <p className="mt-1 font-black">Socio local</p>
-                    </div>
-                  </div>
-                </div>}
+                  </button>
+                )}
 
-                <div className="border border-white/10 bg-white/[0.05] p-5">
+                <button
+                  type="button"
+                  onClick={() => setOsModal({ kind: "occupancy" })}
+                  className="w-full border-[3px] border-cyan-300/50 bg-[#0c0c0c] p-4 text-left shadow-[4px_4px_0_rgba(0,0,0,.45)] transition active:translate-x-px active:translate-y-px"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Ocupacion ahora</p>
-                      <h2 className="mt-2 text-4xl font-black uppercase">{gymStatus?.level ?? "Cargando"}</h2>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+                        Ocupacion ahora · toca
+                      </p>
+                      <h2 className="mt-2 text-3xl font-black uppercase sm:text-4xl">
+                        {gymStatus?.level ?? "Cargando"}
+                      </h2>
                     </div>
                     <span className="relative flex h-3 w-3">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300/60" />
                       <span className="relative inline-flex h-3 w-3 rounded-full bg-cyan-300" />
                     </span>
                   </div>
-                  <div className="mt-5 h-3 border border-white/10 bg-black/45">
-                    <div className="h-full bg-cyan-300 transition-all" style={{ width: `${gymStatus?.occupancyPct ?? 0}%` }} />
+                  <div className="mt-4 h-3 border-[3px] border-white/15 bg-black/45">
+                    <div
+                      className="h-full bg-cyan-300 transition-all"
+                      style={{ width: `${gymStatus?.occupancyPct ?? 0}%` }}
+                    />
                   </div>
-                  <p className="mt-3 text-sm font-semibold text-white/55">
+                  <p className="mt-3 text-sm font-bold text-white/55">
                     {gymStatus
-                      ? `${gymStatus.currentPeople}/${gymStatus.capacity} personas estimadas. Reservas hoy: ${gymStatus.reservationsToday}. Llegue fino.`
+                      ? `${gymStatus.currentPeople}/${gymStatus.capacity} personas · reservas hoy: ${gymStatus.reservationsToday}`
                       : "Leyendo el gym en vivo."}
                   </p>
-                </div>
+                </button>
               </div>
 
               </div>
             )}
 
             {tab === "entrenar" && (
-              <div className="space-y-8">
+              <div className="space-y-3 sm:space-y-4">
               {currentMember.trainingPlan ? (
-                <div className="border border-[#d8ff3e]/30 bg-[#d8ff3e]/[0.06] p-5">
+                <div className="border-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/[0.07] p-3 shadow-[4px_4px_0_rgba(216,255,62,0.2)] sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center bg-[#d8ff3e] text-black">
@@ -2186,7 +2700,7 @@ export default function ExtremeGymSite() {
                       };
                       const isFull = reservation.remaining <= 0 && !reservation.isMine;
                       return (
-                        <div key={training.id} className="grid gap-4 border border-white/10 bg-black/20 p-4 md:grid-cols-[1fr_auto] md:items-center">
+                        <div key={training.id} className="grid gap-3 border-[3px] border-white/20 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:gap-4 sm:p-4 md:grid-cols-[1fr_auto] md:items-center">
                           <div className="flex gap-4">
                             <span className={`grid h-14 w-14 shrink-0 place-items-center bg-gradient-to-br ${training.color} text-black`}>
                               <Icon className="h-7 w-7" />
@@ -2261,24 +2775,25 @@ export default function ExtremeGymSite() {
                 </div>
               </div>
 
-              <div className="border border-white/10 bg-white/[0.04] p-5">
-                <div className="flex items-center gap-3">
-                  <Video className="h-5 w-5 text-orange-300" />
-                  <h2 className="text-lg font-black uppercase">Rutinas guiadas</h2>
-                </div>
-                <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <GamePanel title="Rutinas guiadas" icon={Video} tone="orange">
+                <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 sm:gap-3">
                   {ROUTINES.map((routine) => (
-                    <div key={routine.name} className="border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">{routine.level}</p>
+                    <div
+                      key={routine.name}
+                      className="border-[3px] border-white/15 bg-black/30 p-3 shadow-[3px_3px_0_rgba(0,0,0,.4)]"
+                    >
+                      <GameLabel tone="orange">{routine.level}</GameLabel>
                       <h3 className="mt-2 font-black uppercase">{routine.name}</h3>
-                      <ul className="mt-3 space-y-2 text-sm font-semibold text-white/55">
+                      <ul className="mt-3 space-y-1.5 text-sm font-bold text-white/55">
                         {routine.exercises.map((exercise) => (
-                          <li key={exercise}>{exercise}</li>
+                          <li key={exercise} className="border-l-[3px] border-white/20 pl-2">
+                            {exercise}
+                          </li>
                         ))}
                       </ul>
                       <button
                         type="button"
-                        className="mt-4 inline-flex items-center gap-2 border border-white/10 px-3 py-2 text-xs font-black uppercase text-white/65 transition hover:border-orange-300 hover:text-orange-200"
+                        className="mt-3 inline-flex min-h-10 items-center gap-2 border-[3px] border-white/15 px-3 py-2 text-xs font-black uppercase text-white/65 transition hover:border-orange-300 hover:text-orange-200"
                       >
                         <Video className="h-4 w-4" />
                         {routine.video}
@@ -2286,178 +2801,134 @@ export default function ExtremeGymSite() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </GamePanel>
               </div>
             )}
 
             {tab === "maquinas" && (
-              <div className="space-y-8">
-                <div className="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
-                  <div className="border border-[#d8ff3e]/30 bg-[#d8ff3e]/[0.07] p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">
-                          Guia de maquinas
-                        </p>
-                        <h2 className="mt-2 text-3xl font-black uppercase leading-none">
-                          Use el equipo con mas confianza.
-                        </h2>
-                        <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-white/58">
-                          Ajuste primero, controle el peso y pregunte en recepcion si siente dolor articular.
-                          La meta es entrenar fuerte sin sacrificar tecnica.
-                        </p>
-                      </div>
-                      <ShieldCheck className="h-9 w-9 shrink-0 text-[#d8ff3e]" />
-                    </div>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                      {["Ajuste", "Control", "Progreso"].map((item) => (
-                        <div key={item} className="border border-white/10 bg-black/25 p-3">
-                          <p className="text-sm font-black uppercase text-white">{item}</p>
-                          <p className="mt-1 text-xs font-semibold text-white/45">
-                            Paso clave antes de subir peso.
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+              <div className="space-y-3 sm:space-y-4">
+                <GameCallout tone="lime" icon={ShieldCheck}>
+                  <span className="font-black uppercase">Guía de máquinas · </span>
+                  Tocá una tarjeta para abrir el modal con ajuste, tips y errores. Entrená fuerte sin
+                  perder técnica.
+                </GameCallout>
 
-                  <div className="border border-white/10 bg-white/[0.04] p-5">
-                    <div className="flex items-center gap-3">
-                      <Target className="h-5 w-5 text-orange-300" />
-                      <h2 className="text-lg font-black uppercase">Rutinas rapidas</h2>
+                <div className="grid grid-cols-3 gap-2">
+                  {["Ajuste", "Control", "Progreso"].map((item) => (
+                    <div
+                      key={item}
+                      className="border-[3px] border-white/20 bg-[#0c0c0c] p-2 text-center shadow-[3px_3px_0_rgba(0,0,0,.5)] sm:p-3"
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#d8ff3e] sm:text-xs">
+                        {item}
+                      </p>
+                      <p className="mt-1 hidden text-[10px] font-bold text-white/45 sm:block">
+                        Antes de subir peso
+                      </p>
                     </div>
-                    <div className="mt-5 space-y-3">
-                      {GUIDE_WORKOUTS.map((workout) => (
-                        <div key={workout.goal} className="border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">
-                            {workout.goal}
-                          </p>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {workout.steps.map((step) => (
-                              <span
-                                key={step}
-                                className="border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs font-bold text-white/65"
-                              >
-                                {step}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {MACHINE_GUIDE.map((machine) => (
-                    <article key={machine.id} className="overflow-hidden border border-white/10 bg-white/[0.04]">
-                      <div className={`h-2 bg-gradient-to-r ${machine.accent}`} />
-                      <div className="p-5">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
-                              {machine.zone} / {machine.level}
-                            </p>
-                            <h2 className="mt-2 text-2xl font-black uppercase leading-tight">
-                              {machine.name}
-                            </h2>
-                          </div>
-                          <span className={`grid h-12 w-12 place-items-center bg-gradient-to-br ${machine.accent} text-black`}>
-                            <Dumbbell className="h-6 w-6" />
-                          </span>
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {machine.muscles.map((muscle) => (
-                            <span
-                              key={muscle}
-                              className="border border-[#d8ff3e]/25 bg-[#d8ff3e]/10 px-2.5 py-1 text-[11px] font-black uppercase text-[#eaff93]"
-                            >
-                              {muscle}
-                            </span>
+                <GamePanel title="Rutinas rápidas" icon={Target} tone="orange" compact>
+                  <div className="space-y-2">
+                    {GUIDE_WORKOUTS.map((workout) => (
+                      <div
+                        key={workout.goal}
+                        className="border-[3px] border-white/15 bg-black/30 p-3"
+                      >
+                        <GameLabel tone="orange">{workout.goal}</GameLabel>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {workout.steps.map((step) => (
+                            <GameChip key={step}>{step}</GameChip>
                           ))}
                         </div>
-
-                        <div className="mt-5 border border-white/10 bg-black/25 p-4">
-                          <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Ajuste inicial</p>
-                          <p className="mt-2 text-sm font-semibold leading-6 text-white/62">{machine.setup}</p>
-                        </div>
-
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#d8ff3e]">Tips</p>
-                            <ul className="mt-3 space-y-2 text-sm font-semibold text-white/58">
-                              {machine.tips.map((tip) => (
-                                <li key={tip} className="flex gap-2">
-                                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#d8ff3e]" />
-                                  <span>{tip}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-[0.16em] text-red-300">Evite</p>
-                            <ul className="mt-3 space-y-2 text-sm font-semibold text-white/58">
-                              {machine.mistakes.map((mistake) => (
-                                <li key={mistake} className="flex gap-2">
-                                  <Lock className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
-                                  <span>{mistake}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-
-                        <div className="mt-5 flex items-center gap-3 border border-white/10 bg-white/[0.04] p-3">
-                          <Timer className="h-5 w-5 shrink-0 text-orange-300" />
-                          <p className="text-sm font-black uppercase text-white/70">{machine.starter}</p>
-                        </div>
                       </div>
-                    </article>
+                    ))}
+                  </div>
+                </GamePanel>
+
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
+                  {MACHINE_GUIDE.map((machine) => (
+                    <button
+                      key={machine.id}
+                      type="button"
+                      onClick={() => setOsModal({ kind: "machine", machine })}
+                      className="group overflow-hidden border-[3px] border-white/20 bg-[#0c0c0c] text-left shadow-[4px_4px_0_rgba(0,0,0,.55)] transition active:translate-x-px active:translate-y-px active:shadow-none"
+                    >
+                      <div className={`h-2 bg-gradient-to-r ${machine.accent}`} />
+                      <div className="p-3 sm:p-4">
+                        <GameLabel tone="white">{machine.zone} · {machine.level}</GameLabel>
+                        <h2 className="mt-1 text-sm font-black uppercase leading-tight sm:text-lg">
+                          {machine.name}
+                        </h2>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {machine.muscles.slice(0, 2).map((muscle) => (
+                            <GameChip key={muscle} tone="lime">
+                              {muscle}
+                            </GameChip>
+                          ))}
+                        </div>
+                        <p className="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-[#d8ff3e] group-hover:underline">
+                          Abrir guía →
+                        </p>
+                      </div>
+                    </button>
                   ))}
                 </div>
               </div>
             )}
 
             {tab === "progreso" && (
-              <div className="space-y-8">
-              <div className="border border-white/10 bg-white/[0.04] p-5">
-                <div className="flex items-center gap-3">
-                  <Award className="h-5 w-5 text-yellow-300" />
-                  <h2 className="text-lg font-black uppercase">Logros</h2>
-                  <span className="ml-auto text-sm font-black text-white/45">
-                    {unlockedCount}/{achievements.length}
-                  </span>
+              <div className="space-y-3 sm:space-y-4">
+              <button
+                type="button"
+                onClick={() => setOsModal({ kind: "badges" })}
+                className="flex w-full items-center gap-3 border-[3px] border-yellow-300/45 bg-yellow-300/[0.07] p-4 text-left shadow-[4px_4px_0_rgba(253,224,71,0.15)]"
+              >
+                <span className="grid h-12 w-12 place-items-center border-2 border-black/20 bg-yellow-300 text-black">
+                  <Award className="h-6 w-6" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <GameLabel tone="yellow">Inventario de logros</GameLabel>
+                  <p className="text-lg font-black uppercase">
+                    {unlockedCount}/{achievements.length} desbloqueados
+                  </p>
+                  <p className="text-[11px] font-bold text-white/45">Tocá para abrir el modal completo</p>
                 </div>
+                <ChevronRight className="h-5 w-5 text-yellow-300" />
+              </button>
+
+              <div className="border-[3px] border-white/15 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-4">
+                <GameLabel tone="white" className="mb-3">
+                  Vista rápida
+                </GameLabel>
                 {serverBadges.length ? (
-                  <BadgeGallery badges={serverBadges} />
+                  <div className="max-h-[280px] overflow-y-auto">
+                    <BadgeGallery badges={serverBadges.slice(0, 6)} />
+                  </div>
                 ) : (
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {achievements.map((a) => {
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {achievements.slice(0, 6).map((a) => {
                       const Icon = a.icon;
                       return (
                         <div
                           key={a.id}
-                          className={`flex items-center gap-3 border p-3 ${
-                            a.done ? "border-[#d8ff3e]/40 bg-[#d8ff3e]/10" : "border-white/10 bg-black/20"
+                          className={`flex items-center gap-3 border-[3px] p-3 ${
+                            a.done
+                              ? "border-[#d8ff3e]/50 bg-[#d8ff3e]/10"
+                              : "border-white/15 bg-black/30"
                           }`}
                         >
                           <span
-                            className={`grid h-11 w-11 shrink-0 place-items-center ${
+                            className={`grid h-10 w-10 shrink-0 place-items-center ${
                               a.done ? "bg-[#d8ff3e] text-black" : "bg-white/10 text-white/40"
                             }`}
                           >
                             {a.done ? <Icon className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
                           </span>
                           <div className="min-w-0">
-                            <p
-                              className={`truncate text-sm font-black uppercase ${
-                                a.done ? "text-white" : "text-white/55"
-                              }`}
-                            >
-                              {a.name}
-                            </p>
-                            <p className="text-xs font-semibold text-white/40">{a.desc}</p>
+                            <p className="truncate text-sm font-black uppercase">{a.name}</p>
+                            <p className="truncate text-xs font-bold text-white/40">{a.desc}</p>
                           </div>
                         </div>
                       );
@@ -2671,6 +3142,42 @@ export default function ExtremeGymSite() {
                     </p>
                   </div>
                 </div>
+              </div>
+
+              <div className="border-[3px] border-white/15 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-[#d8ff3e]" />
+                  <h2 className="text-lg font-black uppercase">Cédula de acceso</h2>
+                </div>
+                <p className="mt-2 text-sm font-bold text-white/50">
+                  Con esta cédula entra a la app y a recepción (lector de barras).
+                </p>
+                <label className="mt-4 block">
+                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+                    Número de cédula
+                  </span>
+                  <input
+                    value={memberCedulaInput}
+                    onChange={(event) => setMemberCedulaInput(formatCedulaInput(event.target.value))}
+                    inputMode="numeric"
+                    disabled={!unlocked}
+                    placeholder="1-2345-6789"
+                    className="mt-2 w-full border-[3px] border-white/20 bg-black/40 px-3 py-3 text-center font-black tracking-widest text-white outline-none focus:border-[#d8ff3e] disabled:opacity-45"
+                  />
+                </label>
+                <GameButton
+                  className="mt-3"
+                  full
+                  disabled={!unlocked}
+                  onClick={() =>
+                    void saveProfileField(
+                      { cedula: memberCedulaInput },
+                      "Cedula guardada. Ya puede usarla con el lector.",
+                    )
+                  }
+                >
+                  Guardar cédula
+                </GameButton>
               </div>
 
               <div className="border border-white/10 bg-white/[0.04] p-5">
@@ -3013,17 +3520,333 @@ export default function ExtremeGymSite() {
         )}
       </section>
 
-      <footer className="mt-4 border-t border-white/10 px-5 py-8 sm:px-8">
+      <footer className="xg-os-content mt-2 border-t-[3px] border-white/15 px-4 py-6 sm:px-8 lg:mt-4">
         <div className="mx-auto flex max-w-5xl items-center justify-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 border border-white/12 bg-white/[0.04] px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-[#d8ff3e]/50 hover:text-white"
+            className="inline-flex items-center gap-2 border-[3px] border-white/15 bg-[#0c0c0c] px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-white/60 shadow-[3px_3px_0_rgba(0,0,0,.5)] transition hover:border-[#d8ff3e]/50 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             Ir al sitio Xtreme Gym
           </Link>
         </div>
       </footer>
+
+      {/* ─── GAME OS MODALS ─── */}
+      <GameModal
+        open={osModal?.kind === "machine"}
+        onClose={closeOsModal}
+        title={osModal?.kind === "machine" ? osModal.machine.name : "Máquina"}
+        subtitle={
+          osModal?.kind === "machine"
+            ? `${osModal.machine.zone} · ${osModal.machine.level}`
+            : undefined
+        }
+        icon={Dumbbell}
+        tone="lime"
+        size="lg"
+        footer={
+          <GameButton full onClick={closeOsModal}>
+            Entendido
+          </GameButton>
+        }
+      >
+        {osModal?.kind === "machine" && (
+          <div className="space-y-4">
+            <div className={`h-3 border-2 border-black/20 bg-gradient-to-r ${osModal.machine.accent}`} />
+            <div className="flex flex-wrap gap-2">
+              {osModal.machine.muscles.map((m) => (
+                <GameChip key={m} tone="lime">
+                  {m}
+                </GameChip>
+              ))}
+            </div>
+            <GamePanel title="Ajuste inicial" tone="cyan" compact>
+              <p className="text-sm font-bold leading-6 text-white/70">{osModal.machine.setup}</p>
+            </GamePanel>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <GamePanel title="Tips" tone="lime" compact>
+                <ul className="space-y-2 text-sm font-bold text-white/65">
+                  {osModal.machine.tips.map((tip) => (
+                    <li key={tip} className="flex gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#d8ff3e]" />
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </GamePanel>
+              <GamePanel title="Evite" tone="orange" compact>
+                <ul className="space-y-2 text-sm font-bold text-white/65">
+                  {osModal.machine.mistakes.map((mistake) => (
+                    <li key={mistake} className="flex gap-2">
+                      <Lock className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+                      <span>{mistake}</span>
+                    </li>
+                  ))}
+                </ul>
+              </GamePanel>
+            </div>
+            <GameCallout tone="orange" icon={Timer}>
+              <span className="font-black uppercase">Starter · </span>
+              {osModal.machine.starter}
+            </GameCallout>
+          </div>
+        )}
+      </GameModal>
+
+      <GameModal
+        open={osModal?.kind === "streak"}
+        onClose={closeOsModal}
+        title="Tu racha y nivel"
+        subtitle="Constantes del juego"
+        icon={Flame}
+        tone="orange"
+        size="md"
+      >
+        {gami ? (
+          <div className="space-y-4">
+            <div className="border-[3px] border-orange-300/40 bg-orange-300/[0.08] p-4">
+              <StreakRing
+                streak={gami.streak}
+                freezes={gami.freezesAvailable}
+                weekCount={gami.weekCount}
+                weeklyGoal={gami.weeklyGoal}
+              />
+            </div>
+            <div className="border-[3px] border-cyan-300/40 bg-black/40 p-4">
+              <XpBar xp={gami.xp} level={gami.level} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <GameStat label="Racha" value={gami.streak} hint="días" tone="orange" icon={Flame} />
+              <GameStat label="Nivel" value={gami.level.index} hint={gami.level.name} tone="cyan" icon={Star} />
+              <GameStat label="XP" value={gami.xp.toLocaleString()} tone="lime" icon={Zap} />
+              <GameStat
+                label="Protectores"
+                value={gami.freezesAvailable}
+                hint="rachas"
+                tone="cyan"
+                icon={Snowflake}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm font-bold text-white/50">Inicia sesión para ver tu racha.</p>
+        )}
+      </GameModal>
+
+      <GameModal
+        open={osModal?.kind === "week"}
+        onClose={closeOsModal}
+        title="Progreso semanal"
+        subtitle={`Meta ${weekDoneCount}/${weeklyGoal}`}
+        icon={Target}
+        tone="lime"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-7 gap-1.5">
+            {weekDates.map((date) => {
+              const done = workoutDates.has(date);
+              const isToday = date === todayIso();
+              return (
+                <div
+                  key={date}
+                  className={`grid aspect-square place-items-center border-[3px] text-xs font-black ${
+                    done
+                      ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                      : isToday
+                        ? "border-[#d8ff3e]/60 bg-black/40 text-[#eaff93]"
+                        : "border-white/15 bg-black/25 text-white/35"
+                  }`}
+                >
+                  {done ? <Check className="h-4 w-4" /> : dayLabel(date)}
+                </div>
+              );
+            })}
+          </div>
+          <GameLabel>Ajustar meta / semana</GameLabel>
+          <div className="flex flex-wrap gap-2">
+            {Array.from(
+              { length: WEEKLY_GOAL_MAX - WEEKLY_GOAL_MIN + 1 },
+              (_, i) => WEEKLY_GOAL_MIN + i,
+            ).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => void updateWeeklyGoal(n)}
+                disabled={!unlocked}
+                className={`h-11 w-11 border-[3px] text-sm font-black transition ${
+                  weeklyGoal === n
+                    ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                    : "border-white/20 bg-black/30 text-white/55"
+                } disabled:opacity-40`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+      </GameModal>
+
+      <GameModal
+        open={osModal?.kind === "membership"}
+        onClose={closeOsModal}
+        title={currentMember.membership.plan}
+        subtitle="Membresía"
+        icon={CreditCard}
+        tone="lime"
+        size="md"
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          <GameStat label="Estado" value={currentMember.membership.status} tone="lime" />
+          <GameStat
+            label="Días"
+            value={Math.max(0, currentMember.membership.daysRemaining)}
+            hint="restantes"
+            tone="orange"
+          />
+          <GameStat label="Cobro" value={currentMember.membership.nextBillingDate} tone="cyan" />
+        </div>
+      </GameModal>
+
+      <GameModal
+        open={osModal?.kind === "occupancy"}
+        onClose={closeOsModal}
+        title={gymStatus?.level ?? "Cargando"}
+        subtitle="Ocupación del gym"
+        icon={Users}
+        tone="cyan"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="h-4 border-[3px] border-white/15 bg-black/45">
+            <div
+              className="h-full bg-cyan-300 transition-all"
+              style={{ width: `${gymStatus?.occupancyPct ?? 0}%` }}
+            />
+          </div>
+          <p className="text-sm font-bold text-white/60">
+            {gymStatus
+              ? `${gymStatus.currentPeople}/${gymStatus.capacity} personas · reservas hoy: ${gymStatus.reservationsToday}`
+              : "Leyendo el gym en vivo."}
+          </p>
+        </div>
+      </GameModal>
+
+      <GameModal
+        open={osModal?.kind === "badges"}
+        onClose={closeOsModal}
+        title="Logros"
+        subtitle={`${unlockedCount}/${achievements.length}`}
+        icon={Award}
+        tone="lime"
+        size="lg"
+      >
+        {serverBadges.length ? (
+          <BadgeGallery badges={serverBadges} />
+        ) : (
+          <div className="grid gap-2">
+            {achievements.map((a) => {
+              const Icon = a.icon;
+              return (
+                <div
+                  key={a.id}
+                  className={`flex items-center gap-3 border-[3px] p-3 ${
+                    a.done ? "border-[#d8ff3e]/50 bg-[#d8ff3e]/10" : "border-white/15 bg-black/30"
+                  }`}
+                >
+                  <span
+                    className={`grid h-11 w-11 place-items-center ${
+                      a.done ? "bg-[#d8ff3e] text-black" : "bg-white/10 text-white/40"
+                    }`}
+                  >
+                    {a.done ? <Icon className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black uppercase">{a.name}</p>
+                    <p className="text-xs font-bold text-white/45">{a.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </GameModal>
+
+      <GameModal
+        open={osModal?.kind === "quick-train" || osModal?.kind === "training"}
+        onClose={closeOsModal}
+        title={selectedTraining?.name ?? "Marcar entreno"}
+        subtitle="Check-in de hoy"
+        icon={Dumbbell}
+        tone="orange"
+        size="md"
+        footer={
+          <div className="grid gap-2 sm:grid-cols-2">
+            <GameButton variant="ghost" full onClick={closeOsModal}>
+              Cerrar
+            </GameButton>
+            <GameButton
+              full
+              variant="lime"
+              disabled={!unlocked || trainedToday || Boolean(savingTrainingId)}
+              onClick={() => {
+                const t = selectedTraining ?? quickTraining;
+                if (!trainedToday) void completeTraining(t);
+                closeOsModal();
+              }}
+            >
+              {savingTrainingId ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : trainedToday ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Flame className="h-4 w-4" />
+              )}
+              {trainedToday ? "Ya marcado" : "Marcar entreno"}
+            </GameButton>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <GameCallout tone="lime" icon={Flame}>
+            Un toque y sumás racha + XP. Elegí el entreno o usá el rápido del día.
+          </GameCallout>
+          <div className="grid gap-2">
+            {TRAININGS.map((training) => {
+              const Icon = training.icon;
+              const done = completedToday.has(training.id);
+              return (
+                <button
+                  key={training.id}
+                  type="button"
+                  onClick={() => setOsModal({ kind: "training", trainingId: training.id })}
+                  className={`flex items-center gap-3 border-[3px] p-3 text-left transition ${
+                    selectedTraining?.id === training.id ||
+                    (osModal?.kind === "quick-train" && training.id === quickTraining.id)
+                      ? "border-[#d8ff3e] bg-[#d8ff3e]/10"
+                      : "border-white/15 bg-black/30"
+                  }`}
+                >
+                  <span
+                    className={`grid h-11 w-11 place-items-center bg-gradient-to-br ${training.color} text-black`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black uppercase">{training.name}</p>
+                    <p className="text-[11px] font-bold text-white/45">
+                      {training.time} · {training.minutes} min · {training.intensity}
+                    </p>
+                  </div>
+                  {done && <Check className="h-5 w-5 text-[#d8ff3e]" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </GameModal>
+
     </main>
   );
 }

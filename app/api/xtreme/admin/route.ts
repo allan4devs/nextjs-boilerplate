@@ -349,6 +349,9 @@ export async function POST(req: NextRequest) {
               .slice(0, 80),
             phone: String(body.phone ?? existing?.phone ?? "").trim().slice(0, 40),
             email: String(body.email ?? existing?.email ?? "").trim().slice(0, 80),
+            cedula: String(body.cedula ?? existing?.cedula ?? "")
+              .replace(/[^\d-]/g, "")
+              .slice(0, 20),
             coach: String(body.coach ?? existing?.coach ?? "").trim().slice(0, 60),
             notes: String(body.notes ?? existing?.notes ?? "").trim().slice(0, 800),
             membership: {
