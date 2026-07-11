@@ -11,9 +11,24 @@ function getMongoUri() {
   return uri;
 }
 
+/**
+ * Conecta a Mongo. Si la promesa falla (DNS, red, cluster pausado),
+ * se limpia el cache para reintentar en el siguiente request.
+ */
 export async function getMongoClient() {
   if (!globalForMongo.mongoClientPromise) {
-    globalForMongo.mongoClientPromise = new MongoClient(getMongoUri()).connect();
+    const uri = getMongoUri();
+    globalForMongo.mongoClientPromise = new MongoClient(uri, {
+      // Fallos de red / DNS no deben dejar el pool muerto para siempre
+      serverSelectionTimeoutMS: 12_000,
+      connectTimeoutMS: 12_000,
+    })
+      .connect()
+      .catch((err) => {
+        globalForMongo.mongoClientPromise = undefined;
+        globalForMongo.mongoIndexesEnsured = false;
+        throw err;
+      });
   }
 
   return globalForMongo.mongoClientPromise;

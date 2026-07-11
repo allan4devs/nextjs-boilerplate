@@ -2123,7 +2123,7 @@ export default function ExtremeGymSite() {
             <div className="text-center">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#d8ff3e]" />
               <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-white/45">
-                Cargando OS…
+                Cargando tu perfil…
               </p>
             </div>
           </div>
@@ -2132,7 +2132,7 @@ export default function ExtremeGymSite() {
             <div className="border-[3px] border-white/15 bg-[#0c0c0c] px-3 py-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:px-4">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <GameLabel tone="lime">Zona activa</GameLabel>
+                  <GameLabel tone="lime">Estás en</GameLabel>
                   <h1 className="mt-1 text-xl font-black uppercase tracking-tight sm:text-3xl">
                     {TABS.find((item) => item.id === tab)?.label}
                   </h1>
@@ -2286,7 +2286,7 @@ export default function ExtremeGymSite() {
                   id={nextBestAction.href.startsWith("#") ? nextBestAction.href.slice(1) : undefined}
                   className="border-[3px] border-cyan-300/55 bg-gradient-to-br from-cyan-400/[0.1] to-transparent p-4 shadow-[4px_4px_0_rgba(34,211,238,0.2)] sm:p-5"
                 >
-                  <GameLabel tone="cyan">Misión actual · siguiente paso</GameLabel>
+                  <GameLabel tone="cyan">Tu siguiente paso</GameLabel>
                   <h3 className="mt-2 text-lg font-black uppercase text-white sm:text-xl">
                     {nextBestAction.title}
                   </h3>
@@ -2368,7 +2368,7 @@ export default function ExtremeGymSite() {
                         <XpBar xp={gami.xp} level={gami.level} />
                         <p className="mt-3 text-xs font-bold text-white/45">
                           {milestoneLeft === 0
-                            ? "Nivel maximo. Usted ES el gym."
+                            ? "Llegaste al nivel máximo. Seguí entrenando para mantener tu racha."
                             : `${milestoneLeft.toLocaleString()} XP para el nivel ${level + 1}.`}
                         </p>
                       </button>

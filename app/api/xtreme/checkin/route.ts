@@ -9,6 +9,7 @@ import {
   computeOccupancy,
   findMemberByCedula,
   formatAccessCode,
+  hammingHexDistance,
   hashPin,
   memberAccessCode,
   membershipStatus,
@@ -21,19 +22,76 @@ import { recordEvent } from "@/lib/xtreme/events";
 
 export const dynamic = "force-dynamic";
 
+/** Threshold Hamming dHash 64-bit (hex 16). Más bajo = más estricto. */
+const FACE_MATCH_MAX_DISTANCE = 12;
+const FACE_CANDIDATES_LIMIT = 5;
+
 function findByCedula(docs: MemberDoc[], raw: string): MemberDoc | undefined {
   return findMemberByCedula(docs, raw);
 }
 
-/** Lista estado del gym + busqueda de socio por nombre, codigo o cedula. */
+function isValidFaceHash(value: string) {
+  return /^[0-9a-f]{16}$/i.test(value);
+}
+
+async function withPinFlag(
+  db: Awaited<ReturnType<typeof getDb>>,
+  doc: MemberDoc,
+  extra?: Record<string, unknown>,
+) {
+  const adminMember = toAdminMember(doc);
+  return {
+    ...adminMember,
+    ...extra,
+    hasPin: Boolean(
+      await db.collection(PINS_COLLECTION).findOne({
+        normalizedName: adminMember.normalizedName,
+      }),
+    ),
+  };
+}
+
+/** Lista estado del gym + busqueda de socio por nombre, codigo, cedula o rostro. */
 export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const q = normalizeName(req.nextUrl.searchParams.get("q"));
     const codeDigits = String(req.nextUrl.searchParams.get("code") ?? "").replace(/\D/g, "");
     const cedula = String(req.nextUrl.searchParams.get("cedula") ?? "").trim();
+    const faceHash = String(req.nextUrl.searchParams.get("faceHash") ?? "")
+      .toLowerCase()
+      .replace(/[^0-9a-f]/g, "");
 
     const status = await computeOccupancy(db);
+
+    // Match facial (kiosk /ingreso) — sin auth de staff
+    if (faceHash && isValidFaceHash(faceHash)) {
+      const docs = await db
+        .collection<MemberDoc>(MEMBERS_COLLECTION)
+        .find({ faceHash: { $exists: true, $type: "string", $ne: "" } })
+        .toArray();
+
+      const ranked = docs
+        .map((doc) => ({
+          doc,
+          distance: hammingHexDistance(faceHash, String(doc.faceHash || "")),
+        }))
+        .filter((row) => row.distance <= FACE_MATCH_MAX_DISTANCE)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, FACE_CANDIDATES_LIMIT);
+
+      const matches = await Promise.all(
+        ranked.map((row) => withPinFlag(db, row.doc, { faceDistance: row.distance })),
+      );
+
+      return NextResponse.json({
+        status,
+        matches,
+        bestMatch: matches[0] ?? null,
+        member: matches[0] ?? null,
+        error: matches.length ? undefined : "Sin coincidencias de rostro.",
+      });
+    }
 
     if (!q && !codeDigits && !cedula) {
       return NextResponse.json({ status, member: null });
@@ -67,17 +125,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ status, member: null, error: "Socio no encontrado." }, { status: 404 });
     }
 
-    const adminMember = toAdminMember(match);
     return NextResponse.json({
       status,
-      member: {
-        ...adminMember,
-        hasPin: Boolean(
-          await db.collection(PINS_COLLECTION).findOne({
-            normalizedName: adminMember.normalizedName,
-          }),
-        ),
-      },
+      member: await withPinFlag(db, match),
     });
   } catch (err) {
     console.error("XTREME CHECKIN GET", err);

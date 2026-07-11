@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
+  Camera,
   CheckCircle2,
   Dumbbell,
   Flame,
   Heart,
   Loader2,
+  ScanFace,
   Search,
   Settings,
   ShieldAlert,
@@ -51,6 +53,8 @@ type MemberHit = {
   phone: string;
   photoUrl?: string;
   hasPin?: boolean;
+  hasFace?: boolean;
+  faceDistance?: number;
 };
 
 const STATUS_LABEL = {
@@ -62,8 +66,167 @@ const STATUS_LABEL = {
 const RECENT_KEY = "xtreme-ingreso-recientes";
 const LAST_KEY = "xtreme-gym-member-name";
 const MAX_RECENT = 4;
+/** Auto-checkin si hay un solo match muy claro. */
+const FACE_AUTO_DISTANCE = 6;
+/** Frames con rostro en el círculo antes de escanear (~0.7s a 100ms). */
+const FACE_HOLD_MS = 700;
+/** Pausa tras un escaneo para no re-disparar al mismo socio. */
+const FACE_COOLDOWN_MS = 3500;
+/** Intervalo del loop de detección. */
+const FACE_POLL_MS = 120;
 
 type RecentProfile = { memberName: string };
+type Mode = "profile" | "search" | "face";
+type FaceGuideStatus = "waiting" | "detected" | "locking" | "scanning" | "cooldown";
+
+type FaceDetectorLike = {
+  detect: (source: ImageBitmapSource) => Promise<Array<{ boundingBox: DOMRectReadOnly }>>;
+};
+
+let faceDetectorSingleton: FaceDetectorLike | null | undefined;
+
+function getFaceDetector(): FaceDetectorLike | null {
+  if (faceDetectorSingleton !== undefined) return faceDetectorSingleton;
+  try {
+    const Ctor = (
+      globalThis as unknown as {
+        FaceDetector?: new (o?: { fastMode?: boolean; maxDetectedFaces?: number }) => FaceDetectorLike;
+      }
+    ).FaceDetector;
+    faceDetectorSingleton = Ctor ? new Ctor({ fastMode: true, maxDetectedFaces: 2 }) : null;
+  } catch {
+    faceDetectorSingleton = null;
+  }
+  return faceDetectorSingleton;
+}
+
+/**
+ * ¿Hay un rostro centrado en el óvalo guía?
+ * Prefer FaceDetector (Chrome); fallback heurístico de piel + detalle en el centro.
+ */
+async function isFaceInCircle(video: HTMLVideoElement): Promise<boolean> {
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  if (!w || !h || video.readyState < 2) return false;
+
+  // Óvalo de la UI (aprox. centro y radios del frame nativo)
+  const ovalCx = w / 2;
+  const ovalCy = h * 0.42;
+  const ovalRx = w * 0.26;
+  const ovalRy = h * 0.3;
+
+  const detector = getFaceDetector();
+  if (detector) {
+    try {
+      const faces = await detector.detect(video);
+      for (const face of faces) {
+        const box = face.boundingBox;
+        // Requiere tamaño mínimo (no un punto lejano)
+        if (box.width < w * 0.12 || box.height < h * 0.12) continue;
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+        const dx = (cx - ovalCx) / ovalRx;
+        const dy = (cy - ovalCy) / ovalRy;
+        if (dx * dx + dy * dy <= 1.2) return true;
+      }
+      return false;
+    } catch {
+      // cae al heurístico
+    }
+  }
+
+  return detectFaceHeuristic(video, ovalCx, ovalCy, ovalRx, ovalRy);
+}
+
+/** Heurístico sin ML: piel + contraste/detalle en el óvalo. */
+function detectFaceHeuristic(
+  video: HTMLVideoElement,
+  ovalCx: number,
+  ovalCy: number,
+  ovalRx: number,
+  ovalRy: number,
+): boolean {
+  const sample = 48;
+  const canvas = document.createElement("canvas");
+  canvas.width = sample;
+  canvas.height = sample;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return false;
+
+  // Recorte del óvalo (bounding box)
+  const sx = Math.max(0, ovalCx - ovalRx);
+  const sy = Math.max(0, ovalCy - ovalRy);
+  const sw = Math.min(video.videoWidth - sx, ovalRx * 2);
+  const sh = Math.min(video.videoHeight - sy, ovalRy * 2);
+  if (sw < 8 || sh < 8) return false;
+
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sample, sample);
+  const { data } = ctx.getImageData(0, 0, sample, sample);
+
+  let skin = 0;
+  let total = 0;
+  let sum = 0;
+  let sumSq = 0;
+  let edge = 0;
+  const gray = new Float32Array(sample * sample);
+
+  for (let y = 0; y < sample; y += 1) {
+    for (let x = 0; x < sample; x += 1) {
+      // Solo pixeles dentro del óvalo unitario
+      const nx = (x + 0.5) / sample * 2 - 1;
+      const ny = (y + 0.5) / sample * 2 - 1;
+      if (nx * nx + ny * ny > 1) continue;
+
+      const i = (y * sample + x) * 4;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const yv = 0.299 * r + 0.587 * g + 0.114 * b;
+      gray[y * sample + x] = yv;
+      sum += yv;
+      sumSq += yv * yv;
+      total += 1;
+
+      // Skin-ish (aprox. RGB simple, luz de interior)
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      if (
+        r > 60 &&
+        g > 30 &&
+        b > 15 &&
+        r > g &&
+        r > b &&
+        max - min > 12 &&
+        Math.abs(r - g) > 8
+      ) {
+        skin += 1;
+      }
+    }
+  }
+
+  if (total < 40) return false;
+  const mean = sum / total;
+  const variance = sumSq / total - mean * mean;
+  const skinRatio = skin / total;
+
+  // Detalle/edges en el óvalo (cara tiene textura; pared no)
+  for (let y = 1; y < sample - 1; y += 1) {
+    for (let x = 1; x < sample - 1; x += 1) {
+      const nx = (x + 0.5) / sample * 2 - 1;
+      const ny = (y + 0.5) / sample * 2 - 1;
+      if (nx * nx + ny * ny > 0.85) continue;
+      const c = gray[y * sample + x];
+      if (!c) continue;
+      const gx = Math.abs(c - gray[y * sample + x + 1]);
+      const gy = Math.abs(c - gray[(y + 1) * sample + x]);
+      if (gx + gy > 18) edge += 1;
+    }
+  }
+  const edgeRatio = edge / total;
+
+  // Umbrales: algo de piel + textura + no escena plana
+  return skinRatio >= 0.12 && variance >= 180 && edgeRatio >= 0.08 && mean > 35 && mean < 230;
+}
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -96,11 +259,62 @@ function saveRecent(memberName: string) {
   }
 }
 
+/** dHash 64-bit (hex 16) — match rapido de rostro sin modelos ML. */
+async function computeFaceHash(source: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement) {
+  const size = 9;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size - 1;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return "";
+
+  let w = 0;
+  let h = 0;
+  if (source instanceof HTMLVideoElement) {
+    w = source.videoWidth;
+    h = source.videoHeight;
+  } else if (source instanceof HTMLImageElement) {
+    w = source.naturalWidth || source.width;
+    h = source.naturalHeight || source.height;
+  } else {
+    w = source.width;
+    h = source.height;
+  }
+  if (!w || !h) return "";
+
+  // Centro (zona de cara tipica en kiosk)
+  const side = Math.min(w, h) * 0.72;
+  const sx = (w - side) / 2;
+  const sy = (h - side) / 2.4;
+  ctx.drawImage(source, sx, sy, side, side, 0, 0, size, size - 1);
+
+  const { data } = ctx.getImageData(0, 0, size, size - 1);
+  const gray: number[] = [];
+  for (let i = 0; i < data.length; i += 4) {
+    gray.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+  }
+
+  let bits = "";
+  for (let y = 0; y < size - 1; y += 1) {
+    for (let x = 0; x < size - 1; x += 1) {
+      const left = gray[y * size + x];
+      const right = gray[y * size + x + 1];
+      bits += left < right ? "1" : "0";
+    }
+  }
+
+  let hex = "";
+  for (let i = 0; i < 64; i += 4) {
+    hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
+  }
+  return hex;
+}
+
 export default function IngresoPage() {
   const [recent, setRecent] = useState<RecentProfile[]>([]);
   const [profile, setProfile] = useState<MemberHit | null>(null);
   const [status, setStatus] = useState<GymStatus | null>(null);
-  const [mode, setMode] = useState<"profile" | "search">("profile");
+  const [mode, setMode] = useState<Mode>("profile");
   const [query, setQuery] = useState("");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -112,6 +326,52 @@ export default function IngresoPage() {
     subtitle: string;
   } | null>(null);
 
+  // Face recognition
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanLockRef = useRef(false);
+  const cooldownUntilRef = useRef(0);
+  const faceSeenSinceRef = useRef<number | null>(null);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [faceMatches, setFaceMatches] = useState<MemberHit[]>([]);
+  const [checkinMethod, setCheckinMethod] = useState<"name" | "face" | "code">("name");
+  const [faceGuide, setFaceGuide] = useState<FaceGuideStatus>("waiting");
+  const [holdProgress, setHoldProgress] = useState(0);
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCameraOn(false);
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setCameraError("");
+    try {
+      stopCamera();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 720 },
+          height: { ideal: 540 },
+        },
+        audio: false,
+      });
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+      }
+      setCameraOn(true);
+    } catch {
+      setCameraError("No se pudo abrir la camara. Permita el acceso o use busqueda por nombre.");
+      setCameraOn(false);
+    }
+  }, [stopCamera]);
+
   const loadStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/xtreme/checkin", { cache: "no-store" });
@@ -122,37 +382,40 @@ export default function IngresoPage() {
     }
   }, []);
 
-  const fetchMember = useCallback(async (opts: { q?: string; code?: string }) => {
+  const fetchMember = useCallback(async (opts: { q?: string; code?: string; faceHash?: string }) => {
     const params = new URLSearchParams();
-    if (opts.code) params.set("code", opts.code);
+    if (opts.faceHash) params.set("faceHash", opts.faceHash);
+    else if (opts.code) params.set("code", opts.code);
     else if (opts.q) params.set("q", opts.q);
     const res = await fetch(`/api/xtreme/checkin?${params}`, { cache: "no-store" });
     const json = (await res.json()) as {
       status?: GymStatus;
       member?: MemberHit | null;
+      bestMatch?: MemberHit | null;
+      matches?: MemberHit[];
       error?: string;
     };
     if (json.status) setStatus(json.status);
     return json;
   }, []);
 
-  // Cargar el perfil recordado (estilo "continuar como ...") al abrir.
+  // Cargar el perfil recordado al abrir.
   useEffect(() => {
     const list = readRecent();
     setRecent(list);
     void loadStatus();
     (async () => {
       if (!list.length) {
-        setMode("search");
+        setMode("face");
         setIsLoadingProfile(false);
         return;
       }
       try {
         const json = await fetchMember({ q: list[0].memberName });
         if (json.member) setProfile(json.member);
-        else setMode("search");
+        else setMode("face");
       } catch {
-        setMode("search");
+        setMode("face");
       } finally {
         setIsLoadingProfile(false);
       }
@@ -167,6 +430,23 @@ export default function IngresoPage() {
     return () => window.clearTimeout(id);
   }, [flash]);
 
+  // Camera lifecycle by mode
+  useEffect(() => {
+    if (mode === "face") {
+      void startCamera();
+    } else {
+      stopCamera();
+      setFaceMatches([]);
+    }
+    return () => {
+      if (mode !== "face") stopCamera();
+    };
+  }, [mode, startCamera, stopCamera]);
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, [stopCamera]);
+
   async function selectProfile(name: string) {
     setError("");
     setIsLoadingProfile(true);
@@ -175,6 +455,7 @@ export default function IngresoPage() {
       if (json.member) {
         setProfile(json.member);
         setRecent(saveRecent(json.member.memberName));
+        setCheckinMethod("name");
         setMode("profile");
       } else {
         setError(json.error || "Socio no encontrado.");
@@ -202,6 +483,7 @@ export default function IngresoPage() {
       }
       setProfile(json.member);
       setRecent(saveRecent(json.member.memberName));
+      setCheckinMethod(useCode ? "code" : "name");
       setMode("profile");
       setQuery("");
     } catch {
@@ -211,50 +493,199 @@ export default function IngresoPage() {
     }
   }
 
-  async function confirmCheckin() {
-    if (!profile) return;
-    setIsCheckingIn(true);
+  const armCooldown = useCallback(() => {
+    cooldownUntilRef.current = Date.now() + FACE_COOLDOWN_MS;
+    faceSeenSinceRef.current = null;
+    setHoldProgress(0);
+    setFaceGuide("cooldown");
+  }, []);
+
+  const confirmCheckin = useCallback(
+    async (target?: MemberHit, method: "name" | "face" | "code" = checkinMethod) => {
+      const member = target ?? profile;
+      if (!member) return;
+      setIsCheckingIn(true);
+      setError("");
+      try {
+        const res = await fetch("/api/xtreme/checkin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            memberName: member.memberName,
+            accessCode: member.accessCode,
+            method,
+            by: "kiosk",
+          }),
+        });
+        const json = (await res.json()) as {
+          ok?: boolean;
+          message?: string;
+          error?: string;
+          membershipStatus?: MemberHit["membershipStatus"];
+          status?: GymStatus;
+          duplicate?: boolean;
+        };
+        if (!res.ok) {
+          setError(json.error || "No se pudo registrar.");
+          setFlash({ type: "err", title: "Acceso denegado", subtitle: json.error || "Error" });
+          if (method === "face") armCooldown();
+          return;
+        }
+        if (json.status) setStatus(json.status);
+        setRecent(saveRecent(member.memberName));
+        setProfile(member);
+        const ms = json.membershipStatus || member.membershipStatus;
+        setFlash({
+          type: ms === "expired" ? "warn" : "ok",
+          title: json.duplicate
+            ? "Ya estabas adentro"
+            : `Bienvenido, ${member.memberName.split(" ")[0]}!`,
+          subtitle:
+            json.message ||
+            (method === "face" ? "Ingreso por reconocimiento facial" : "Ingreso registrado"),
+        });
+        // Tras ingreso por cara, volver a la camara para el siguiente socio
+        if (method === "face") {
+          setFaceMatches([]);
+          setMode("face");
+          setProfile(null);
+          armCooldown();
+        } else {
+          setMode("profile");
+        }
+      } catch {
+        setError("Error de conexion.");
+        setFlash({ type: "err", title: "Error", subtitle: "No se pudo registrar el ingreso." });
+        if (method === "face") armCooldown();
+      } finally {
+        setIsCheckingIn(false);
+      }
+    },
+    [armCooldown, checkinMethod, profile],
+  );
+
+  const scanFace = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || !cameraOn) {
+      setCameraError("Active la camara primero.");
+      return;
+    }
+    if (scanLockRef.current) return;
+    scanLockRef.current = true;
+    setIsScanning(true);
+    setFaceGuide("scanning");
     setError("");
+    setFaceMatches([]);
     try {
-      const res = await fetch("/api/xtreme/checkin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          memberName: profile.memberName,
-          accessCode: profile.accessCode,
-          method: "name",
-        }),
-      });
-      const json = (await res.json()) as {
-        ok?: boolean;
-        message?: string;
-        error?: string;
-        membershipStatus?: MemberHit["membershipStatus"];
-        status?: GymStatus;
-        duplicate?: boolean;
-      };
-      if (!res.ok) {
-        setError(json.error || "No se pudo registrar.");
-        setFlash({ type: "err", title: "Acceso denegado", subtitle: json.error || "Error" });
+      const faceHash = await computeFaceHash(video);
+      if (!faceHash) {
+        setError("No se pudo leer el rostro. Centra la cara en el círculo.");
+        armCooldown();
         return;
       }
-      if (json.status) setStatus(json.status);
-      setRecent(saveRecent(profile.memberName));
-      const ms = json.membershipStatus || profile.membershipStatus;
-      setFlash({
-        type: ms === "expired" ? "warn" : "ok",
-        title: json.duplicate
-          ? "Ya estabas adentro"
-          : `Bienvenido, ${profile.memberName.split(" ")[0]}!`,
-        subtitle: json.message || "",
-      });
+      const json = await fetchMember({ faceHash });
+      const matches = json.matches || [];
+      setFaceMatches(matches);
+      if (json.bestMatch || json.member) {
+        const best = json.bestMatch || json.member!;
+        setProfile(best);
+        setCheckinMethod("face");
+        // Auto-ingreso si el match es muy claro
+        if ((best.faceDistance ?? 99) <= FACE_AUTO_DISTANCE && matches.length <= 1) {
+          await confirmCheckin(best, "face");
+          return;
+        }
+        setMode("profile");
+        armCooldown();
+      } else {
+        setProfile(null);
+        setError(
+          json.error ||
+            "Sin coincidencias. Use búsqueda por nombre o enrole el rostro en recepción.",
+        );
+        armCooldown();
+      }
     } catch {
-      setError("Error de conexion.");
-      setFlash({ type: "err", title: "Error", subtitle: "No se pudo registrar el ingreso." });
+      setError("Error al escanear rostro.");
+      armCooldown();
     } finally {
-      setIsCheckingIn(false);
+      setIsScanning(false);
+      scanLockRef.current = false;
     }
-  }
+  }, [armCooldown, cameraOn, confirmCheckin, fetchMember]);
+
+  // Loop: detecta rostro en el círculo y dispara el escaneo solo
+  useEffect(() => {
+    if (mode !== "face" || !cameraOn) {
+      faceSeenSinceRef.current = null;
+      setHoldProgress(0);
+      if (mode !== "face") setFaceGuide("waiting");
+      return;
+    }
+
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const tick = async () => {
+      if (cancelled) return;
+      const now = Date.now();
+
+      if (scanLockRef.current || isScanning || isCheckingIn) {
+        setFaceGuide("scanning");
+        timer = window.setTimeout(() => void tick(), FACE_POLL_MS);
+        return;
+      }
+
+      if (now < cooldownUntilRef.current) {
+        setFaceGuide("cooldown");
+        setHoldProgress(0);
+        faceSeenSinceRef.current = null;
+        timer = window.setTimeout(() => void tick(), FACE_POLL_MS);
+        return;
+      }
+
+      const video = videoRef.current;
+      if (!video || video.readyState < 2) {
+        setFaceGuide("waiting");
+        timer = window.setTimeout(() => void tick(), FACE_POLL_MS);
+        return;
+      }
+
+      let present = false;
+      try {
+        present = await isFaceInCircle(video);
+      } catch {
+        present = false;
+      }
+      if (cancelled) return;
+
+      if (present) {
+        if (faceSeenSinceRef.current == null) faceSeenSinceRef.current = now;
+        const held = now - faceSeenSinceRef.current;
+        const pct = Math.min(1, held / FACE_HOLD_MS);
+        setHoldProgress(pct);
+        if (held >= FACE_HOLD_MS) {
+          setFaceGuide("locking");
+          setHoldProgress(1);
+          void scanFace();
+        } else {
+          setFaceGuide(pct > 0.15 ? "locking" : "detected");
+        }
+      } else {
+        faceSeenSinceRef.current = null;
+        setHoldProgress(0);
+        setFaceGuide("waiting");
+      }
+
+      timer = window.setTimeout(() => void tick(), FACE_POLL_MS);
+    };
+
+    timer = window.setTimeout(() => void tick(), 200);
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [mode, cameraOn, isScanning, isCheckingIn, scanFace]);
 
   return (
     <main className="min-h-screen bg-white text-[#0b0b0b] lg:grid lg:grid-cols-2">
@@ -273,7 +704,7 @@ export default function IngresoPage() {
         </div>
       )}
 
-      {/* Panel izquierdo — marca + collage del gym (reemplaza las fotos de Facebook) */}
+      {/* Panel izquierdo — marca + collage */}
       <section className="relative flex flex-col justify-center px-8 py-14 sm:px-14">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-10 lg:gap-14">
           <div className="grid h-14 w-14 place-items-center bg-[#0b0b0b] text-[#d8ff3e]">
@@ -292,8 +723,8 @@ export default function IngresoPage() {
         </div>
       </section>
 
-      {/* Panel derecho — selector de perfil (login sin PIN) */}
-      <section className="relative flex flex-col justify-center bg-white px-8 py-14 sm:px-14 lg:border-l lg:border-black/10">
+      {/* Panel derecho — ingreso (cara / buscar / perfil) */}
+      <section className="relative flex flex-col justify-center bg-white px-6 py-12 sm:px-14 lg:border-l lg:border-black/10">
         <Link
           href="/admin"
           aria-label="Admin"
@@ -303,18 +734,74 @@ export default function IngresoPage() {
         </Link>
 
         <div className="mx-auto w-full max-w-sm">
+          {/* Mode switcher */}
+          {!isLoadingProfile && (
+            <div className="mb-6 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("face");
+                  setError("");
+                  setFaceMatches([]);
+                }}
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full border-2 px-3 text-xs font-black uppercase tracking-wide transition ${
+                  mode === "face"
+                    ? "border-black bg-[#0b0b0b] text-[#d8ff3e]"
+                    : "border-black/15 text-black/60 hover:border-black/30"
+                }`}
+              >
+                <ScanFace className="h-4 w-4" /> Rostro
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("search");
+                  setError("");
+                  stopCamera();
+                }}
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full border-2 px-3 text-xs font-black uppercase tracking-wide transition ${
+                  mode === "search" || (mode === "profile" && !profile)
+                    ? "border-black bg-[#0b0b0b] text-[#d8ff3e]"
+                    : "border-black/15 text-black/60 hover:border-black/30"
+                }`}
+              >
+                <Search className="h-4 w-4" /> Buscar
+              </button>
+            </div>
+          )}
+
           {isLoadingProfile ? (
             <div className="grid place-items-center py-24">
               <Loader2 className="h-8 w-8 animate-spin text-black/40" />
             </div>
+          ) : mode === "face" ? (
+            <FaceCard
+              videoRef={videoRef}
+              cameraOn={cameraOn}
+              cameraError={cameraError}
+              isScanning={isScanning}
+              isCheckingIn={isCheckingIn}
+              faceGuide={faceGuide}
+              holdProgress={holdProgress}
+              error={error}
+              matches={faceMatches}
+              onStartCamera={() => void startCamera()}
+              onScan={() => void scanFace()}
+              onPickMatch={(m) => {
+                setProfile(m);
+                setCheckinMethod("face");
+                void confirmCheckin(m, "face");
+              }}
+            />
           ) : mode === "profile" && profile ? (
             <ProfileCard
               profile={profile}
               isCheckingIn={isCheckingIn}
               error={error}
+              method={checkinMethod}
               onContinue={() => void confirmCheckin()}
               onSwitch={() => {
-                setMode("search");
+                setMode("face");
                 setError("");
               }}
             />
@@ -332,15 +819,219 @@ export default function IngresoPage() {
                 setMode("profile");
                 setError("");
               }}
+              onFace={() => {
+                setMode("face");
+                setError("");
+              }}
             />
           )}
         </div>
 
         <p className="mx-auto mt-10 flex w-full max-w-sm items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.3em] text-black/35">
-          <Dumbbell className="h-4 w-4" /> Xtreme Gym
+          <Dumbbell className="h-4 w-4" /> Xtreme Gym · Ingreso
         </p>
       </section>
     </main>
+  );
+}
+
+function FaceCard({
+  videoRef,
+  cameraOn,
+  cameraError,
+  isScanning,
+  isCheckingIn,
+  faceGuide,
+  holdProgress,
+  error,
+  matches,
+  onStartCamera,
+  onScan,
+  onPickMatch,
+}: {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  cameraOn: boolean;
+  cameraError: string;
+  isScanning: boolean;
+  isCheckingIn: boolean;
+  faceGuide: FaceGuideStatus;
+  holdProgress: number;
+  error: string;
+  matches: MemberHit[];
+  onStartCamera: () => void;
+  onScan: () => void;
+  onPickMatch: (m: MemberHit) => void;
+}) {
+  const ringColor =
+    faceGuide === "waiting"
+      ? "border-[#d8ff3e]/55"
+      : faceGuide === "detected" || faceGuide === "locking"
+        ? "border-[#d8ff3e]"
+        : faceGuide === "scanning"
+          ? "border-cyan-300"
+          : "border-white/40";
+
+  const statusCopy: Record<FaceGuideStatus, string> = {
+    waiting: "Coloque su rostro en el círculo",
+    detected: "Rostro detectado — mantenga la posición",
+    locking: "Perfecto… identificando",
+    scanning: isCheckingIn ? "Registrando ingreso…" : "Analizando rostro…",
+    cooldown: "Listo para el siguiente socio",
+  };
+
+  return (
+    <div className="flex flex-col items-center text-center">
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-black/[0.04] text-black/70">
+        <ScanFace className="h-7 w-7" />
+      </div>
+      <h2 className="mt-3 text-2xl font-black uppercase tracking-tight">Reconocimiento facial</h2>
+      <p className="mt-1 text-sm font-bold text-black/45">
+        Ponga la cara en el círculo. Se detecta y registra solo.
+      </p>
+
+      <div className="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-2xl border-2 border-black/10 bg-black shadow-lg">
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          autoPlay
+          className="h-full w-full scale-x-[-1] object-cover"
+        />
+
+        {/* Face guide overlay + progress ring */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="relative flex h-[58%] w-[48%] items-center justify-center">
+            {/* Progress arc (CSS con conic-gradient) */}
+            {(faceGuide === "detected" || faceGuide === "locking") && (
+              <div
+                className="absolute -inset-2 rounded-full opacity-90 transition-all"
+                style={{
+                  background: `conic-gradient(#d8ff3e ${Math.round(holdProgress * 360)}deg, transparent 0deg)`,
+                  WebkitMask:
+                    "radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px))",
+                  mask: "radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px))",
+                }}
+              />
+            )}
+            <div
+              className={`h-full w-full rounded-full border-[3px] border-dashed shadow-[0_0_0_999px_rgba(0,0,0,0.32)] transition-colors duration-200 ${ringColor} ${
+                faceGuide === "detected" || faceGuide === "locking"
+                  ? "border-solid shadow-[0_0_0_999px_rgba(0,0,0,0.28),0_0_28px_rgba(216,255,62,0.45)]"
+                  : ""
+              } ${faceGuide === "scanning" ? "animate-pulse border-solid" : ""}`}
+            />
+          </div>
+        </div>
+
+        {/* Live status chip */}
+        {cameraOn && (
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-4 pt-10">
+            <p
+              className={`flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide ${
+                faceGuide === "waiting" || faceGuide === "cooldown"
+                  ? "text-white/80"
+                  : "text-[#d8ff3e]"
+              }`}
+            >
+              {(faceGuide === "scanning" || isScanning || isCheckingIn) && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              {(faceGuide === "detected" || faceGuide === "locking") && (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+              {statusCopy[faceGuide]}
+            </p>
+            {(faceGuide === "detected" || faceGuide === "locking") && (
+              <div className="mx-auto mt-2 h-1.5 w-2/3 overflow-hidden rounded-full bg-white/20">
+                <div
+                  className="h-full bg-[#d8ff3e] transition-[width] duration-100"
+                  style={{ width: `${Math.round(holdProgress * 100)}%` }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {!cameraOn && (
+          <div className="absolute inset-0 grid place-items-center bg-black/75 p-4">
+            <div className="text-center">
+              <Camera className="mx-auto h-8 w-8 text-white/50" />
+              <p className="mt-2 text-sm font-bold text-white/70">
+                {cameraError || "Camara apagada"}
+              </p>
+              <button
+                type="button"
+                onClick={onStartCamera}
+                className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#d8ff3e] px-4 py-2 text-xs font-black uppercase text-black"
+              >
+                Activar camara
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="mt-4 flex w-full items-start gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left text-sm font-bold text-red-600">
+          <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Manual fallback — la detección es automática */}
+      <button
+        type="button"
+        onClick={onScan}
+        disabled={!cameraOn || isScanning || isCheckingIn}
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-black/15 px-6 py-3 text-sm font-black uppercase tracking-wide text-black/55 transition hover:border-black/30 hover:text-black disabled:opacity-50"
+      >
+        {isScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanFace className="h-4 w-4" />}
+        Escanear ahora (manual)
+      </button>
+
+      {matches.length > 1 && (
+        <div className="mt-5 w-full text-left">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-black/40">
+            Varias coincidencias — elija la suya
+          </p>
+          <div className="mt-2 space-y-2">
+            {matches.map((m) => (
+              <button
+                key={m.normalizedName || m.memberName}
+                type="button"
+                onClick={() => onPickMatch(m)}
+                disabled={isCheckingIn}
+                className="flex w-full items-center gap-3 rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2.5 text-left transition hover:border-[#8fbf00]/50 hover:bg-[#d8ff3e]/10 disabled:opacity-50"
+              >
+                {m.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={m.photoUrl}
+                    alt={m.memberName}
+                    className="h-11 w-11 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#0b0b0b] text-sm font-black text-[#d8ff3e]">
+                    {initials(m.memberName)}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-black uppercase">{m.memberName}</span>
+                  <span className="text-[11px] font-bold text-black/40">
+                    Match {m.faceDistance ?? "—"} · {STATUS_LABEL[m.membershipStatus]}
+                  </span>
+                </span>
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#8fbf00]" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="mt-5 text-center text-[11px] font-bold text-black/35">
+        Detección automática al centrar la cara. Enrolar rostro en recepción si es la primera vez.
+      </p>
+    </div>
   );
 }
 
@@ -348,12 +1039,14 @@ function ProfileCard({
   profile,
   isCheckingIn,
   error,
+  method,
   onContinue,
   onSwitch,
 }: {
   profile: MemberHit;
   isCheckingIn: boolean;
   error: string;
+  method: string;
   onContinue: () => void;
   onSwitch: () => void;
 }) {
@@ -383,6 +1076,12 @@ function ProfileCard({
         {STATUS_LABEL[profile.membershipStatus]}
         {profile.daysRemaining >= 0 ? ` · ${profile.daysRemaining} dias` : " · vencida"} · {profile.plan}
       </p>
+      {method === "face" && (
+        <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wide text-[#6f9800]">
+          <ScanFace className="h-3.5 w-3.5" /> Detectado por rostro
+          {profile.faceDistance != null ? ` · dist ${profile.faceDistance}` : ""}
+        </p>
+      )}
 
       {expired && (
         <div className="mt-4 flex items-start gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-left text-sm font-bold text-orange-700">
@@ -417,14 +1116,14 @@ function ProfileCard({
         onClick={onSwitch}
         className="mt-3 w-full rounded-full border border-black/15 px-6 py-4 text-base font-black uppercase tracking-wide text-black/70 transition hover:border-black/30 hover:text-black"
       >
-        Usar otro perfil
+        Usar rostro / otro perfil
       </button>
 
       <Link
         href="/app"
         className="mt-6 w-full rounded-full border border-[#8fbf00]/40 px-6 py-3.5 text-sm font-black uppercase tracking-wide text-[#6f9800] transition hover:border-[#8fbf00] hover:text-[#5c7d00]"
       >
-        Registrar nuevo socio
+        App de socio
       </Link>
     </div>
   );
@@ -440,6 +1139,7 @@ function SearchCard({
   onSubmit,
   onPickRecent,
   onBack,
+  onFace,
 }: {
   query: string;
   setQuery: (v: string) => void;
@@ -450,6 +1150,7 @@ function SearchCard({
   onSubmit: (e?: React.FormEvent) => void;
   onPickRecent: (name: string) => void;
   onBack: () => void;
+  onFace: () => void;
 }) {
   return (
     <div>
@@ -459,7 +1160,7 @@ function SearchCard({
         </div>
         <h2 className="mt-4 text-2xl font-black uppercase tracking-tight">Inicia tu ingreso</h2>
         <p className="mt-1 text-sm font-bold text-black/45">
-          Escribe tu nombre, telefono o codigo de socio.
+          Escribe tu nombre, telefono, cedula o codigo de socio.
         </p>
       </div>
 
@@ -469,7 +1170,7 @@ function SearchCard({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ej. Kengie Araya o 4821 9033"
+            placeholder="Ej. Kengie Araya o 1-2345-6789"
             autoFocus
             className="w-full rounded-full border border-black/15 bg-white py-4 pl-12 pr-4 text-base font-bold text-black outline-none placeholder:text-black/30 focus:border-[#8fbf00]"
           />
@@ -490,6 +1191,14 @@ function SearchCard({
           {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : "Buscar mi perfil"}
         </button>
       </form>
+
+      <button
+        type="button"
+        onClick={onFace}
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-black/15 px-6 py-3.5 text-sm font-black uppercase tracking-wide text-black/70 transition hover:border-black/30 hover:text-black"
+      >
+        <ScanFace className="h-4 w-4" /> Preferir camara / rostro
+      </button>
 
       {recent.length > 0 && (
         <div className="mt-8">
@@ -529,11 +1238,10 @@ function SearchCard({
   );
 }
 
-/** Collage tipo Facebook, pero con escenas de gym en vez de fotos de personas. */
+/** Collage tipo Facebook, pero con escenas de gym. */
 function GymCollage({ occupancyPct, level }: { occupancyPct: number; level: string }) {
   return (
     <div className="relative mx-auto hidden aspect-[4/3] w-full max-w-md sm:block">
-      {/* Tarjeta principal — sesion en curso */}
       <div className="absolute right-4 top-0 h-64 w-44 -rotate-2 overflow-hidden rounded-2xl bg-gradient-to-br from-[#0b0b0b] via-[#1c1c1c] to-[#2b2b2b] shadow-2xl">
         <div className="flex h-full flex-col justify-between p-4">
           <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[#d8ff3e] px-2.5 py-1 text-xs font-black text-black">
@@ -546,39 +1254,32 @@ function GymCollage({ occupancyPct, level }: { occupancyPct: number; level: stri
         </div>
       </div>
 
-      {/* Tarjeta ocupacion */}
-      <div className="absolute left-0 top-10 h-40 w-40 rotate-3 overflow-hidden rounded-2xl bg-gradient-to-br from-[#d8ff3e] to-[#8fbf00] shadow-xl">
-        <div className="flex h-full flex-col justify-between p-4 text-black">
-          <Activity className="h-6 w-6" />
-          <div>
-            <p className="text-4xl font-black leading-none">{occupancyPct}%</p>
-            <p className="mt-1 text-xs font-black uppercase tracking-wide">{level}</p>
-          </div>
+      <div className="absolute bottom-2 left-0 h-40 w-40 rotate-3 overflow-hidden rounded-2xl bg-gradient-to-br from-[#8fbf00] to-[#d8ff3e] p-4 shadow-xl">
+        <Users className="h-7 w-7 text-black/70" />
+        <p className="mt-6 text-3xl font-black text-black">{occupancyPct}%</p>
+        <p className="text-xs font-black uppercase tracking-wide text-black/60">{level}</p>
+      </div>
+
+      <div className="absolute bottom-8 right-16 h-28 w-36 -rotate-6 overflow-hidden rounded-2xl border border-black/10 bg-white p-3 shadow-lg">
+        <div className="flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-[#8fbf00]" />
+          <span className="text-xs font-black uppercase">Racha</span>
+        </div>
+        <div className="mt-3 flex items-end gap-1">
+          <Flame className="h-6 w-6 text-orange-500" />
+          <span className="text-2xl font-black">7</span>
         </div>
       </div>
 
-      {/* Tarjeta ranking */}
-      <div className="absolute bottom-2 left-10 h-36 w-36 -rotate-3 overflow-hidden rounded-2xl bg-gradient-to-br from-[#2b2b2b] to-[#0b0b0b] shadow-xl">
-        <div className="flex h-full flex-col justify-between p-4">
-          <Trophy className="h-6 w-6 text-[#d8ff3e]" />
-          <p className="text-xs font-black uppercase tracking-widest text-white/70">
-            Ranking
-            <br />
-            semanal
-          </p>
-        </div>
+      <div className="absolute left-16 top-6 h-24 w-28 rotate-6 overflow-hidden rounded-2xl bg-[#0b0b0b] p-3 shadow-lg">
+        <Heart className="h-5 w-5 text-[#d8ff3e]" />
+        <p className="mt-3 text-[10px] font-black uppercase tracking-wide text-white/50">Zona</p>
+        <p className="text-sm font-black text-white">Fuerza</p>
       </div>
 
-      {/* Badges flotantes (reemplazan los emojis de reacciones de FB) */}
-      <span className="absolute left-2 top-2 grid h-12 w-12 place-items-center rounded-full bg-white shadow-lg">
-        <Flame className="h-6 w-6 text-orange-500" />
-      </span>
-      <span className="absolute bottom-16 right-2 grid h-12 w-12 place-items-center rounded-full bg-[#d8ff3e] shadow-lg">
-        <Heart className="h-6 w-6 text-black" />
-      </span>
-      <span className="absolute bottom-0 right-16 grid h-11 w-11 place-items-center rounded-full bg-white shadow-lg">
-        <Users className="h-5 w-5 text-[#0b0b0b]" />
-      </span>
+      <div className="absolute bottom-0 right-0 flex h-16 w-16 items-center justify-center rounded-full bg-black text-[#d8ff3e] shadow-lg">
+        <Activity className="h-7 w-7" />
+      </div>
     </div>
   );
 }
