@@ -2,27 +2,37 @@ import { NextResponse } from "next/server";
 import { PAYPAL_CURRENCY } from "@/lib/constants/paypal";
 
 function isLivePayPalMode() {
-  // Espeja la reserva: el server usa PAYPAL_MODE y el cliente NEXT_PUBLIC_PAYPAL_MODE.
-  // Tomamos cualquiera de los dos para funcionar en el mismo entorno que la reserva.
   const mode = (process.env.PAYPAL_MODE || process.env.NEXT_PUBLIC_PAYPAL_MODE)?.trim().toLowerCase();
   return mode === "live" || mode === "production" || mode === "prod";
 }
 
-function getClientId() {
-  if (isLivePayPalMode()) {
-    return process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID?.trim() || process.env.PAYPAL_CLIENT_ID?.trim();
-  }
+function isPlaceholder(value: string | undefined) {
+  if (!value) return true;
+  const v = value.toLowerCase();
+  return v.startsWith("your-") || v.includes("example") || v === "changeme";
+}
 
-  return process.env.NEXT_PUBLIC_PAYPAL_SANDBOX_CLIENT_ID?.trim() || process.env.PAYPAL_SANDBOX_CLIENT_ID?.trim();
+/** Public client id for the PayPal JS SDK (browser). */
+function getClientId() {
+  const live =
+    process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID?.trim() || process.env.PAYPAL_CLIENT_ID?.trim();
+  const sandbox =
+    process.env.NEXT_PUBLIC_PAYPAL_SANDBOX_CLIENT_ID?.trim() ||
+    process.env.PAYPAL_SANDBOX_CLIENT_ID?.trim();
+
+  // Prefer the mode-specific id, but fall back so one set of credentials still works.
+  const clientId = isLivePayPalMode() ? live || sandbox : sandbox || live;
+  return clientId && !isPlaceholder(clientId) ? clientId : undefined;
 }
 
 export async function GET() {
   const clientId = getClientId();
 
-  if (!clientId || clientId.toLowerCase().startsWith("your-")) {
+  if (!clientId) {
     return NextResponse.json({
       configured: false,
-      message: "PayPal no está configurado para Xtreme Gym.",
+      message:
+        "PayPal no está listo. Configure NEXT_PUBLIC_PAYPAL_CLIENT_ID (o SANDBOX) y el secret en el servidor.",
       currency: PAYPAL_CURRENCY,
     });
   }

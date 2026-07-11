@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CreditCard, Mail, MessageCircle, Send, ShieldCheck } from "lucide-react";
+import { CreditCard, Send, ShieldCheck } from "lucide-react";
 
 type CheckoutOption = {
   id: string;
@@ -30,15 +30,16 @@ declare global {
   }
 }
 
+/** Paid-only catalog — every option requires PayPal checkout. */
 const CHECKOUT_OPTIONS: CheckoutOption[] = [
   {
     id: "day-pass",
-    label: "Primer día gratis",
+    label: "Pase del día",
     category: "Clase",
-    priceCrc: 0,
-    priceLabel: "Gratis",
-    usdAmount: "0.00",
-    note: "Registrate en la app y entrená tu primer día gratis.",
+    priceCrc: 3000,
+    priceLabel: "CRC 3.000",
+    usdAmount: "6.00",
+    note: "Un día de entrenamiento. Pago en línea con PayPal.",
   },
   {
     id: "week",
@@ -56,7 +57,7 @@ const CHECKOUT_OPTIONS: CheckoutOption[] = [
     priceCrc: 13500,
     priceLabel: "CRC 13.500",
     usdAmount: "27.00",
-    note: "Buen ritmo para sostener el proceso.",
+    note: "Buen ritmo para sostener el progreso.",
   },
   {
     id: "month",
@@ -78,32 +79,13 @@ const CHECKOUT_OPTIONS: CheckoutOption[] = [
   },
 ];
 
-const BUSINESS_EMAIL = "xtremegymadm@gmail.com";
-const BUSINESS_WHATSAPP = "50688984000";
-
-function waLink(message: string) {
-  return `https://wa.me/${BUSINESS_WHATSAPP}?text=${encodeURIComponent(message)}`;
-}
-
-function mailtoLink(form: FormState, selected: CheckoutOption) {
-  const subject = `Formulario Xtreme Gym - ${selected.label}`;
-  const body = [
-    "Hola Xtreme Gym, quiero enviar mi formulario desde la landing.",
-    "",
-    `Nombre: ${form.name || "-"}`,
-    `Teléfono: ${form.phone || "-"}`,
-    `Correo: ${form.email || "-"}`,
-    `Opción: ${selected.label}`,
-    `Monto publicado: ${selected.priceLabel}`,
-    `Fecha deseada: ${form.date || "-"}`,
-    `Horario preferido: ${form.time || "-"}`,
-    `Objetivo: ${form.goal || "-"}`,
-    "",
-    "Por favor me confirman disponibilidad, condiciones y activación.",
-  ].join("\n");
-
-  return `mailto:${BUSINESS_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
+const OPTION_STYLES: Record<string, { card: string; eyebrow: string; price: string; accent: string }> = {
+  "day-pass": { card: "border-emerald-950/25 bg-[#eaffc8] hover:border-emerald-950", eyebrow: "text-emerald-800", price: "text-emerald-950", accent: "bg-emerald-700" },
+  week: { card: "border-sky-950/25 bg-[#dff5ff] hover:border-sky-950", eyebrow: "text-sky-800", price: "text-sky-950", accent: "bg-sky-600" },
+  fortnight: { card: "border-orange-950/25 bg-[#fff0d1] hover:border-orange-950", eyebrow: "text-orange-800", price: "text-orange-950", accent: "bg-orange-600" },
+  month: { card: "border-black bg-black text-white", eyebrow: "text-[#f6c400]", price: "text-[#f6c400]", accent: "bg-[#f6c400]" },
+  senior: { card: "border-violet-950/25 bg-[#eee7ff] hover:border-violet-950", eyebrow: "text-violet-800", price: "text-violet-950", accent: "bg-violet-600" },
+};
 
 type FormState = {
   name: string;
@@ -136,7 +118,6 @@ export default function ExtremeGymCheckout({
   const [paypalConfig, setPaypalConfig] = useState<PayPalConfig | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
-  const [registering, setRegistering] = useState(false);
   const paypalRef = useRef<HTMLDivElement>(null);
   const checkoutRef = useRef<{
     form: FormState;
@@ -149,18 +130,12 @@ export default function ExtremeGymCheckout({
     [selectedId],
   );
 
-  /** Free options (primer día gratis) are activated by app registration, not PayPal. */
-  const isFree = selected.priceCrc <= 0;
-
   const formReady = Boolean(form.name.trim() && form.phone.trim() && form.email.trim());
-  // El registro gratis ahora es double opt-in: solo hace falta el correo.
-  const emailReady = Boolean(form.email.trim());
 
   useEffect(() => {
     checkoutRef.current = { form, formReady, selected };
   }, [form, formReady, selected]);
 
-  // Landing funnel events
   useEffect(() => {
     const anon =
       typeof window !== "undefined"
@@ -183,20 +158,6 @@ export default function ExtremeGymCheckout({
     }).catch(() => {});
   }, [validInitialOption]);
 
-  const whatsappMessage = useMemo(
-    () =>
-      [
-        `Hola Xtreme Gym, quiero reservar/pagar: ${selected.label}.`,
-        `Nombre: ${form.name || "-"}`,
-        `Teléfono: ${form.phone || "-"}`,
-        `Correo: ${form.email || "-"}`,
-        `Fecha: ${form.date || "-"}`,
-        `Horario: ${form.time || "-"}`,
-        `Objetivo: ${form.goal || "-"}`,
-      ].join("\n"),
-    [form, selected.label],
-  );
-
   useEffect(() => {
     let cancelled = false;
 
@@ -206,7 +167,9 @@ export default function ExtremeGymCheckout({
         if (!response.ok) throw new Error(data.message || "No se pudo cargar PayPal.");
         if (!cancelled) {
           setPaypalConfig(data);
-          if (!data.configured) setError(data.message || "PayPal no está configurado.");
+          if (!data.configured) {
+            setError(data.message || "PayPal no está disponible en este momento.");
+          }
         }
       })
       .catch((err) => {
@@ -219,8 +182,7 @@ export default function ExtremeGymCheckout({
   }, []);
 
   useEffect(() => {
-    // Free options don't render the PayPal button — registration activates them.
-    if (isFree || !paypalConfig?.clientId || !paypalRef.current) return;
+    if (!paypalConfig?.clientId || !paypalRef.current) return;
 
     let cancelled = false;
     const container = paypalRef.current;
@@ -245,7 +207,9 @@ export default function ExtremeGymCheckout({
         } else if (existing && !window.paypal) {
           await new Promise<void>((resolve, reject) => {
             existing.addEventListener("load", () => resolve(), { once: true });
-            existing.addEventListener("error", () => reject(new Error("No se pudo cargar PayPal.")), { once: true });
+            existing.addEventListener("error", () => reject(new Error("No se pudo cargar PayPal.")), {
+              once: true,
+            });
           });
         }
 
@@ -278,13 +242,16 @@ export default function ExtremeGymCheckout({
               });
               const data = (await response.json()) as { orderID?: string; message?: string };
               if (!response.ok || !data.orderID) throw new Error(data.message || "No se pudo crear la orden.");
+              setStatus("Orden lista. Complete el pago en PayPal...");
               return data.orderID;
             },
             onApprove: async (data: { orderID?: string }) => {
               const currentCheckout = checkoutRef.current;
               if (!data.orderID) throw new Error("PayPal no devolvió número de orden.");
 
-              if (!currentCheckout?.formReady) throw new Error("Complete nombre, teléfono y correo antes de confirmar.");
+              if (!currentCheckout?.formReady) {
+                throw new Error("Complete nombre, teléfono y correo antes de confirmar.");
+              }
 
               setStatus("Confirmando pago...");
               const response = await fetch("/api/xtreme/checkout/capture-order", {
@@ -306,7 +273,7 @@ export default function ExtremeGymCheckout({
               setStatus(`Pago confirmado. Comprobante: ${result.captureID || data.orderID}`);
               setError("");
             },
-            onCancel: () => setStatus("Pago cancelado antes de confirmar."),
+            onCancel: () => setStatus("Pago cancelado. Puede intentar de nuevo cuando quiera."),
             onError: (err: unknown) => {
               setError(err instanceof Error ? err.message : "Hubo un error con PayPal.");
               setStatus("");
@@ -327,7 +294,7 @@ export default function ExtremeGymCheckout({
       cancelled = true;
       container.innerHTML = "";
     };
-  }, [paypalConfig, isFree]);
+  }, [paypalConfig]);
 
   function updateForm(field: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -335,97 +302,104 @@ export default function ExtremeGymCheckout({
     setError("");
   }
 
-  async function registerFreeDay() {
-    if (!emailReady) {
-      setError("Ingrese su correo para registrarse.");
-      return;
-    }
-    setError("");
-    setRegistering(true);
-    setStatus("Enviando el correo de confirmación...");
-    try {
-      const response = await fetch("/api/xtreme/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, source: "primer-dia" }),
-      });
-      const data = (await response.json()) as { error?: string; devToken?: string };
-      if (!response.ok) throw new Error(data.error || "No se pudo completar el registro.");
-      // En dev, sin correo configurado, la API devuelve el link para continuar.
-      if (data.devToken) {
-        setStatus("Correo no configurado (dev). Continúe aquí para completar su perfil.");
-        window.location.href = `/registro/confirmar?token=${encodeURIComponent(data.devToken)}`;
-        return;
-      }
-      setStatus("¡Revisá tu correo! Te enviamos un enlace para confirmar tu cuenta y completar tu perfil.");
-    } catch (err) {
-      setStatus("");
-      setError(err instanceof Error ? err.message : "No se pudo completar el registro.");
-    } finally {
-      setRegistering(false);
-    }
-  }
-
   return (
-    <section id="inscripcion" className="border-y border-white/10 bg-[#f6c400] px-5 py-20 text-black sm:px-8">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-start">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-black/55">Inscripción y pago</p>
-          <h2 className="mt-3 text-4xl font-black uppercase leading-none sm:text-6xl">
-            Envíe el formulario y pague desde aquí.
-          </h2>
-          <p className="mt-5 text-base font-bold leading-8 text-black/68">
-            Complete sus datos, elija plan o clase y pague por PayPal. El formulario también puede enviarse por correo o WhatsApp para que recepción confirme detalles.
+    <section
+      id="inscripcion"
+      className="scroll-mt-20 border-y border-white/10 bg-[#f6c400] px-5 py-14 text-black sm:px-8 lg:py-20"
+    >
+      <div className="mx-auto max-w-5xl">
+        <div className="text-center">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-black/55">
+            Inscripción y pago
           </p>
-
-          <div className="mt-7 grid gap-3">
-            {CHECKOUT_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => setSelectedId(option.id)}
-                className={`grid gap-2 border p-4 text-left transition sm:grid-cols-[1fr_auto] sm:items-center ${
-                  selected.id === option.id
-                    ? "border-black bg-black text-white"
-                    : "border-black/15 bg-white text-black hover:border-black/45"
-                }`}
-              >
-                <span>
-                  <span className="block text-xs font-black uppercase tracking-[0.16em] opacity-60">{option.category}</span>
-                  <span className="mt-1 block text-xl font-black uppercase">{option.label}</span>
-                  <span className="mt-1 block text-sm font-bold opacity-70">{option.note}</span>
-                </span>
-                <span className="text-2xl font-black uppercase">{option.priceLabel}</span>
-              </button>
-            ))}
-          </div>
+          <h2 className="mt-3 text-3xl font-black uppercase leading-none sm:text-5xl">
+            Elegí cómo querés entrenar
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm font-bold text-black/60 sm:text-base">
+            Seleccioná un plan y pagá en línea con PayPal. Sin reserva por correo ni WhatsApp.
+          </p>
         </div>
 
-        <div className="border border-black/15 bg-white p-5 text-black shadow-2xl">
+        <div
+          className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
+          role="radiogroup"
+          aria-label="Opciones de inscripción"
+        >
+          {CHECKOUT_OPTIONS.map((option) => {
+            const style = OPTION_STYLES[option.id];
+            const active = selected.id === option.id;
+            return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setSelectedId(option.id)}
+              role="radio"
+              aria-checked={active}
+              className={`relative flex min-h-52 overflow-hidden border-2 p-5 pt-7 text-left transition duration-200 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-black ${style.card} ${
+                active
+                  ? "-translate-y-1 shadow-[7px_7px_0_rgba(0,0,0,.24)]"
+                  : "hover:-translate-y-0.5 hover:shadow-[4px_4px_0_rgba(0,0,0,.14)]"
+              }`}
+            >
+              <span className={`absolute inset-x-0 top-0 h-2 ${style.accent}`} aria-hidden="true" />
+              <span className="flex w-full flex-col">
+                <span className={`block text-[11px] font-black uppercase tracking-[0.2em] ${style.eyebrow}`}>
+                  {option.category}
+                </span>
+                <span className="mt-3 block min-h-14 text-xl font-black uppercase leading-[1.05] tracking-[-0.02em]">
+                  {option.label}
+                </span>
+                <span className="mt-3 block text-xs font-bold leading-5 opacity-60">{option.note}</span>
+                <span className={`mt-5 block border-t border-current/15 pt-4 text-[1.65rem] font-black uppercase leading-none tracking-[-0.04em] ${active ? "text-[#f6c400]" : style.price}`}>
+                  {option.priceLabel}
+                </span>
+              </span>
+              {active && (
+                <span
+                  className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-[#f6c400] text-xs font-black text-black"
+                  aria-hidden="true"
+                >
+                  ✓
+                </span>
+              )}
+            </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 border border-black/15 bg-white p-5 text-black shadow-[0_24px_70px_-30px_rgba(0,0,0,.65)] sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-black/10 pb-5">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-black/50">Seleccionado</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-black/50">
+                Seleccionado
+              </p>
               <h3 className="mt-2 text-2xl font-black uppercase">{selected.label}</h3>
               <p className="mt-1 text-sm font-bold text-black/55">
-                {isFree ? `${selected.priceLabel} · registrate en la app` : `${selected.priceLabel} · PayPal cobra USD ${selected.usdAmount}`}
+                {selected.priceLabel} · PayPal cobra USD {selected.usdAmount}
               </p>
+              <p className="mt-1 text-sm font-semibold text-black/45">{selected.note}</p>
             </div>
             <ShieldCheck className="h-8 w-8 text-[#bd9300]" />
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Nombre</span>
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
+                Nombre
+              </span>
               <input
                 autoComplete="name"
                 value={form.name}
                 onChange={(event) => updateForm("name", event.target.value)}
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
                 placeholder="Nombre completo"
+                required
               />
             </label>
             <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Teléfono</span>
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
+                Teléfono
+              </span>
               <input
                 autoComplete="tel"
                 inputMode="tel"
@@ -433,10 +407,13 @@ export default function ExtremeGymCheckout({
                 onChange={(event) => updateForm("phone", event.target.value)}
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
                 placeholder="8898 4000"
+                required
               />
             </label>
             <label className="block sm:col-span-2">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Correo</span>
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
+                Correo
+              </span>
               <input
                 type="email"
                 autoComplete="email"
@@ -445,10 +422,13 @@ export default function ExtremeGymCheckout({
                 onChange={(event) => updateForm("email", event.target.value)}
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
                 placeholder="correo@ejemplo.com"
+                required
               />
             </label>
             <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Fecha deseada</span>
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
+                Fecha deseada
+              </span>
               <input
                 type="date"
                 value={form.date}
@@ -457,7 +437,9 @@ export default function ExtremeGymCheckout({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Horario preferido</span>
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
+                Horario preferido
+              </span>
               <input
                 value={form.time}
                 onChange={(event) => updateForm("time", event.target.value)}
@@ -466,7 +448,9 @@ export default function ExtremeGymCheckout({
               />
             </label>
             <label className="block sm:col-span-2">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Objetivo o nota</span>
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
+                Objetivo o nota
+              </span>
               <textarea
                 value={form.goal}
                 onChange={(event) => updateForm("goal", event.target.value)}
@@ -476,69 +460,41 @@ export default function ExtremeGymCheckout({
             </label>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <a
-              href={mailtoLink(form, selected)}
-              className="inline-flex min-h-12 items-center justify-center gap-2 bg-black px-4 text-sm font-black uppercase text-white transition hover:bg-[#f6c400] hover:text-black"
-            >
-              <Mail className="h-4 w-4" />
-              Enviar correo
-            </a>
-            <a
-              href={waLink(whatsappMessage)}
-              className="inline-flex min-h-12 items-center justify-center gap-2 border border-black/15 px-4 text-sm font-black uppercase text-black transition hover:bg-black hover:text-white"
-            >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp
-            </a>
-          </div>
+          <div className="mt-6 border-t border-black/10 pt-5">
+            <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
+              <CreditCard className="h-4 w-4" />
+              Pagar con PayPal
+            </div>
 
-          {isFree ? (
-            <div className="mt-6 border-t border-black/10 pt-5">
-              <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
-                <ShieldCheck className="h-4 w-4" />
-                Registrarme gratis
-              </div>
-              {!emailReady && (
-                <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
-                  Ingrese su correo. Le enviaremos un enlace para confirmar la cuenta y completar nombre, cédula y teléfono.
-                </p>
-              )}
-              {error && <p className="mb-3 border border-red-500/25 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</p>}
-              {status && <p className="mb-3 border border-emerald-500/25 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">{status}</p>}
-              <button
-                type="button"
-                disabled={!emailReady || registering}
-                onClick={registerFreeDay}
-                className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-black px-4 text-sm font-black uppercase text-white transition hover:bg-[#bd9300] disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                {registering ? "Enviando..." : "Registrarme con mi correo"}
-              </button>
-              <p className="mt-3 text-xs font-bold leading-5 text-black/52">
-                Sin tarjeta ni pago. Confirmás tu correo, completás tus datos y presentás tu nombre en recepción. Después elegís tu plan.
+            {!formReady && (
+              <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
+                Complete nombre, teléfono y correo para activar el botón de pago.
               </p>
-            </div>
-          ) : (
-            <div className="mt-6 border-t border-black/10 pt-5">
-              <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
-                <CreditCard className="h-4 w-4" />
-                Pagar con PayPal
-              </div>
-              {!formReady && (
-                <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
-                  Complete nombre, teléfono y correo para activar el pago.
-                </p>
-              )}
-              {error && <p className="mb-3 border border-red-500/25 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</p>}
-              {status && <p className="mb-3 border border-emerald-500/25 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">{status}</p>}
-              <div className={!formReady ? "pointer-events-none opacity-45" : ""}>
-                <div ref={paypalRef} className="min-h-[128px]" />
-              </div>
-              <p className="mt-3 text-xs font-bold leading-5 text-black/52">
-                Pagos procesados por PayPal. Recepción confirma activación, cupos y cualquier condición vigente.
+            )}
+            {error && (
+              <p className="mb-3 border border-red-500/25 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                {error}
               </p>
+            )}
+            {status && (
+              <p className="mb-3 border border-emerald-500/25 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
+                {status}
+              </p>
+            )}
+
+            <div className={!formReady || !paypalConfig?.clientId ? "pointer-events-none opacity-45" : ""}>
+              <div ref={paypalRef} className="min-h-[128px]" />
             </div>
-          )}
+
+            {!paypalConfig?.clientId && !error && (
+              <p className="mt-2 text-sm font-bold text-black/50">Cargando PayPal...</p>
+            )}
+
+            <p className="mt-3 text-xs font-bold leading-5 text-black/52">
+              El acceso se activa solo después del pago. PayPal procesa el cobro; recepción confirma cupo y
+              activación.
+            </p>
+          </div>
 
           <button
             type="button"

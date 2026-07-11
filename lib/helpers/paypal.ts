@@ -3,17 +3,39 @@ function isLivePayPalMode() {
   return mode === "live" || mode === "production" || mode === "prod";
 }
 
+function isPlaceholder(value: string | undefined) {
+  if (!value) return true;
+  const v = value.toLowerCase();
+  return v.startsWith("your-") || v.includes("example") || v === "changeme";
+}
+
+function pickCredential(...values: Array<string | undefined>) {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed && !isPlaceholder(trimmed)) return trimmed;
+  }
+  return undefined;
+}
+
 function getPayPalCredentials() {
+  const liveId = pickCredential(process.env.PAYPAL_CLIENT_ID, process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID);
+  const liveSecret = pickCredential(process.env.PAYPAL_CLIENT_SECRET);
+  const sandboxId = pickCredential(
+    process.env.PAYPAL_SANDBOX_CLIENT_ID,
+    process.env.NEXT_PUBLIC_PAYPAL_SANDBOX_CLIENT_ID,
+  );
+  const sandboxSecret = pickCredential(process.env.PAYPAL_SANDBOX_CLIENT_SECRET);
+
   if (isLivePayPalMode()) {
     return {
-      clientId: process.env.PAYPAL_CLIENT_ID?.trim(),
-      clientSecret: process.env.PAYPAL_CLIENT_SECRET?.trim(),
+      clientId: liveId || sandboxId,
+      clientSecret: liveSecret || sandboxSecret,
     };
   }
 
   return {
-    clientId: process.env.PAYPAL_SANDBOX_CLIENT_ID?.trim() || process.env.PAYPAL_CLIENT_ID?.trim(),
-    clientSecret: process.env.PAYPAL_SANDBOX_CLIENT_SECRET?.trim() || process.env.PAYPAL_CLIENT_SECRET?.trim(),
+    clientId: sandboxId || liveId,
+    clientSecret: sandboxSecret || liveSecret,
   };
 }
 
@@ -23,7 +45,7 @@ export function getPayPalApiBaseUrl() {
 
 export async function getPayPalAccessToken() {
   const { clientId, clientSecret } = getPayPalCredentials();
-  if (!clientId || !clientSecret || clientId.toLowerCase().startsWith("your-")) {
+  if (!clientId || !clientSecret) {
     throw new Error("PayPal credentials are not configured.");
   }
 

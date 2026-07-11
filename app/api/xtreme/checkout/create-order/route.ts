@@ -84,10 +84,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "Seleccione un plan o clase válido." }, { status: 400 });
     }
 
-    // El primer día es gratis: se activa registrándose en la app, no por PayPal.
+    // All catalog options are paid; reject zero-price ids if any slip through.
     if (isFreeOption(option)) {
       return NextResponse.json(
-        { success: false, message: "El primer día es gratis. Registrate en la app para activarlo." },
+        { success: false, message: "Esta opción no admite pago. Elija un plan o clase de pago." },
         { status: 400 },
       );
     }

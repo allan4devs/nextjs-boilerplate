@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import {
+  attachSessionCookie,
   clearSessionCookie,
+  renewMemberSession,
   resolveMemberSession,
   revokeSessionByToken,
   MEMBER_SESSION_COOKIE,
@@ -26,7 +28,7 @@ export async function GET(req: NextRequest) {
   if (member) await ensureLegacyEntitlement(db, member);
   const entitlements = await listActiveEntitlements(db, session.memberKey);
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     authenticated: true,
     member: {
       memberKey: session.memberKey,
@@ -45,6 +47,13 @@ export async function GET(req: NextRequest) {
       status: e.status,
     })),
   });
+
+  // Renovacion deslizante: mientras el socio siga entrando, la sesion no vence.
+  const token = req.cookies.get(MEMBER_SESSION_COOKIE)?.value?.trim() ?? "";
+  const renewedUntil = await renewMemberSession(db, session);
+  if (renewedUntil && token) attachSessionCookie(res, token, renewedUntil);
+
+  return res;
 }
 
 /** Explicit logout — revoke current session token. */

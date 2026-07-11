@@ -28,6 +28,7 @@ import {
   type Training,
 } from "./constants";
 import {
+  ApiError,
   formatCedulaInput,
   getWeekDates,
   initialMember,
@@ -89,7 +90,11 @@ export function useMemberOs() {
 
   const requirePinAgain = useCallback((err: unknown, fallback: string) => {
     const detail = err instanceof Error ? err.message : fallback;
-    if (/sesion requerida|session_required|ingrese su pin/i.test(detail)) {
+    // Preferido: status/code estructurados del server; el regex queda de fallback.
+    const sessionLost =
+      (err instanceof ApiError && (err.status === 401 || err.code === "session_required")) ||
+      /sesion requerida|session_required|ingrese su pin/i.test(detail);
+    if (sessionLost) {
       window.localStorage.removeItem(SESSION_KEY);
       setPinMode("verify");
       setShowPin(true);
@@ -108,11 +113,14 @@ export function useMemberOs() {
       if (!response.ok) return false;
       const data = (await response.json()) as {
         authenticated?: boolean;
-        member?: { memberName?: string } | null;
+        member?: { memberKey?: string; memberName?: string } | null;
       };
+      // memberKey es la identidad canonica (normalizedName); el nombre queda de fallback.
+      const expectedKey = normalizeName(expectedName).toUpperCase();
       return Boolean(
         data.authenticated &&
-          data.member?.memberName?.toUpperCase() === expectedName.toUpperCase(),
+          (data.member?.memberKey?.toUpperCase() === expectedKey ||
+            data.member?.memberName?.toUpperCase() === expectedKey),
       );
     } catch {
       return false;
@@ -278,7 +286,7 @@ export function useMemberOs() {
       if (data.leaderboard) setLeaderboard(data.leaderboard);
       setMessage(`Meta semanal: ${goalDays} dias. A cumplirla.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar la meta.");
+      requirePinAgain(err, "No se pudo guardar la meta.");
     }
   }
 
@@ -413,25 +421,15 @@ export function useMemberOs() {
         await Promise.all([loadReservations(name), loadGymStatus()]);
 
         if (allowSession) {
-          try {
-            const raw = window.localStorage.getItem(SESSION_KEY);
-            const parsed = raw
-              ? (JSON.parse(raw) as { memberName?: string; cedula?: string; expiresAt?: number })
-              : null;
-            const sameUser =
-              parsed?.memberName?.toUpperCase() === name.toUpperCase() ||
-              (parsed?.cedula && onlyDigits(parsed.cedula) === digits);
-            if (sameUser && typeof parsed?.expiresAt === "number" && parsed.expiresAt > Date.now()) {
-              if (await hasServerSession(name)) {
-                storeSession(name, digits);
-                setShowPin(false);
-                return;
-              }
-              window.localStorage.removeItem(SESSION_KEY);
-            }
-          } catch {
-            /* ignore */
+          // La cookie HttpOnly del server es la fuente de verdad: si sigue viva
+          // para este socio, no hay que pedir PIN de nuevo (aunque localStorage
+          // se haya borrado). Si no, se limpia el rastro local y va al PIN.
+          if (await hasServerSession(name)) {
+            storeSession(name, digits);
+            setShowPin(false);
+            return;
           }
+          window.localStorage.removeItem(SESSION_KEY);
         }
 
         const pinResponse = await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(name)}`, {
@@ -506,22 +504,13 @@ export function useMemberOs() {
         await Promise.all([loadReservations(trimmed), loadGymStatus()]);
 
         if (allowSession) {
-          try {
-            const raw = window.localStorage.getItem(SESSION_KEY);
-            const parsed = raw ? (JSON.parse(raw) as { memberName?: string; expiresAt?: number }) : null;
-            if (
-              parsed?.memberName?.toUpperCase() === trimmed.toUpperCase() &&
-              typeof parsed.expiresAt === "number" &&
-              parsed.expiresAt > Date.now()
-            ) {
-              if (await hasServerSession(trimmed)) {
-                storeSession(trimmed, cedula || undefined);
-                setShowPin(false);
-                return;
-              }
-              window.localStorage.removeItem(SESSION_KEY);
-            }
-          } catch {}
+          // Igual que en startMemberByCedula: la cookie del server manda.
+          if (await hasServerSession(trimmed)) {
+            storeSession(trimmed, cedula || undefined);
+            setShowPin(false);
+            return;
+          }
+          window.localStorage.removeItem(SESSION_KEY);
         }
 
         const pinResponse = await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(trimmed)}`, {
@@ -869,6 +858,13 @@ export function useMemberOs() {
     setMemberEmailInput("");
     setNeedsRegistration(false);
     setMember(null);
+    // Limpiar todo rastro del socio anterior (kioscos compartidos).
+    setLeaderboard([]);
+    setReservations({});
+    setNextBestAction(null);
+    setCelebration(null);
+    prevGamiRef.current = null;
+    setTab("resumen");
     setMessage("");
     setError("");
     window.setTimeout(() => cedulaInputRef.current?.focus(), 100);

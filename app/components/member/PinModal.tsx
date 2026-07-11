@@ -136,7 +136,11 @@ export default function PinModal({
             otp: otpCode.replace(/\D/g, "").slice(0, 6),
           }),
         });
-        const data = (await response.json()) as { valid?: boolean; error?: string };
+        const data = (await response.json()) as {
+          valid?: boolean;
+          hasPinSet?: boolean;
+          error?: string;
+        };
 
         if (response.status === 409) {
           setMode("verify");
@@ -147,6 +151,12 @@ export default function PinModal({
         }
 
         if (!response.ok) throw new Error(data.error ?? "No se pudo validar.");
+        if (mode === "verify" && data.hasPinSet === false) {
+          // El perfil no tiene PIN (nuevo o reseteado en recepcion): crear uno.
+          resetPinFlow("set");
+          setError("Este perfil no tiene PIN. Cree uno de 4 digitos.");
+          return;
+        }
         if (mode === "verify" && !data.valid) {
           setError("PIN incorrecto.");
           setDigits("");
@@ -168,7 +178,7 @@ export default function PinModal({
         setIsLoading(false);
       }
     },
-    [currentPin, firstPin, memberName, mode, onDone, onSuccess, otpCode, recoveryContact, step],
+    [currentPin, firstPin, memberName, mode, onDone, onSuccess, otpCode, recoveryContact, resetPinFlow, step],
   );
 
   const pressDigit = useCallback(

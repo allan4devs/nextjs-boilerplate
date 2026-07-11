@@ -26,6 +26,7 @@ export type MemberSession = {
   memberKey: string;
   memberName: string;
   tokenHash: string;
+  expiresAt: Date;
 };
 
 function hashToken(token: string) {
@@ -110,9 +111,10 @@ export async function resolveMemberSession(req: NextRequest): Promise<MemberSess
   });
   if (!doc) return null;
 
-  // Touch lastSeen occasionally (throttle to 10 min)
+  // Touch lastSeen occasionally (throttle to 10 min). Await: in serverless,
+  // floating promises can be frozen before they commit.
   if (!doc.lastSeenAt || now.getTime() - new Date(doc.lastSeenAt).getTime() > 10 * 60_000) {
-    void db.collection(SESSIONS_COLLECTION).updateOne(
+    await db.collection(SESSIONS_COLLECTION).updateOne(
       { tokenHash: doc.tokenHash },
       { $set: { lastSeenAt: now } },
     );
@@ -122,7 +124,28 @@ export async function resolveMemberSession(req: NextRequest): Promise<MemberSess
     memberKey: doc.memberKey,
     memberName: doc.memberName,
     tokenHash: doc.tokenHash,
+    expiresAt: new Date(doc.expiresAt),
   };
+}
+
+/**
+ * Renovacion deslizante ("refresh"): si la sesion sigue valida y ya paso mas
+ * de un dia desde la ultima renovacion, extiende expiresAt al TTL completo.
+ * Devuelve la nueva fecha de expiracion (para re-emitir la cookie) o null si
+ * no hacia falta renovar todavia.
+ */
+export async function renewMemberSession(db: Db, session: MemberSession): Promise<Date | null> {
+  const remainingMs = session.expiresAt.getTime() - Date.now();
+  if (remainingMs <= 0) return null;
+  // Throttle: renovar a lo sumo una vez al dia.
+  if (remainingMs > (SESSION_TTL_DAYS - 1) * 86_400_000) return null;
+
+  const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 86_400_000);
+  await db.collection<MemberSessionDoc>(SESSIONS_COLLECTION).updateOne(
+    { tokenHash: session.tokenHash, revokedAt: null },
+    { $set: { expiresAt } },
+  );
+  return expiresAt;
 }
 
 export function unauthorizedMember(message = "Sesion requerida. Ingrese su PIN.") {

@@ -7,14 +7,15 @@ export type XtremeCheckoutOption = {
   usdAmount: string;
 };
 
+/** All catalog options are paid — checkout always goes through PayPal. */
 export const XTREME_CHECKOUT_OPTIONS: XtremeCheckoutOption[] = [
   {
     id: "day-pass",
-    label: "Primer día gratis",
+    label: "Pase del día",
     category: "Clase",
-    priceCrc: 0,
-    priceLabel: "Gratis",
-    usdAmount: "0.00",
+    priceCrc: 3000,
+    priceLabel: "CRC 3.000",
+    usdAmount: "6.00",
   },
   {
     id: "week",
@@ -54,7 +55,7 @@ export function getXtremeCheckoutOption(optionId: unknown) {
   return XTREME_CHECKOUT_OPTIONS.find((option) => option.id === String(optionId ?? ""));
 }
 
-/** Free options are activated by app registration, not by PayPal. */
+/** @deprecated All options are paid. Kept for call-site compatibility. */
 export function isFreeOption(option: Pick<XtremeCheckoutOption, "priceCrc"> | undefined | null) {
   return Boolean(option) && Number(option?.priceCrc ?? 0) <= 0;
 }

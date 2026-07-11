@@ -108,8 +108,22 @@ export function memberCode(key: string) {
     .replace(/(\d{4})(\d{4})/, "$1 $2");
 }
 
+/** Error de API con el status HTTP y el `code` que devuelve el server (ej. "session_required"). */
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export async function readJson<T>(response: Response): Promise<T> {
-  const data = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(data.error ?? "No se pudo conectar con Mongo.");
+  const data = (await response.json().catch(() => ({}))) as T & { error?: string; code?: string };
+  if (!response.ok) {
+    throw new ApiError(data.error ?? "No se pudo conectar con Mongo.", response.status, data.code);
+  }
   return data;
 }
