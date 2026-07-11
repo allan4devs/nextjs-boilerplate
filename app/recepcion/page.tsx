@@ -25,6 +25,7 @@ import {
   GameHudPill,
   GameLabel,
 } from "../components/GameOS";
+import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/shared";
 
 const ADMIN_CODE_KEY = "xtreme-admin-code";
 const AUTO_LOOKUP_MS = 280;
@@ -599,7 +600,8 @@ export default function RecepcionPage() {
     await new Promise((r) => setTimeout(r, 200));
     const v = videoRef.current;
     if (!v) return;
-    const faceHash = await computeFaceHash(v);
+    // La foto sigue siendo util por si sola; el hash solo se calcula si la feature esta activa.
+    const faceHash = FACE_RECOGNITION_ENABLED ? await computeFaceHash(v) : "";
     const photoUrl = await capturePhotoDataUrl(v);
     setRegFaceHash(faceHash);
     setRegPhoto(photoUrl);
@@ -793,7 +795,9 @@ export default function RecepcionPage() {
             {(
               [
                 { id: "cedula" as const, label: "Cedula", icon: IdCard },
-                { id: "face" as const, label: "Rostro", icon: ScanFace },
+                ...(FACE_RECOGNITION_ENABLED
+                  ? [{ id: "face" as const, label: "Rostro", icon: ScanFace }]
+                  : []),
                 { id: "register" as const, label: "Registro", icon: UserPlus },
               ] as const
             ).map((t) => {

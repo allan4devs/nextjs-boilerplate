@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Oculta el indicador flotante de Next en dev (logo "N").
+  devIndicators: false,
   async headers() {
     return [
       {

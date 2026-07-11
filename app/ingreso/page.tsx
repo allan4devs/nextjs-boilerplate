@@ -20,6 +20,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/shared";
 
 type GymStatus = {
   date: string;
@@ -77,6 +78,12 @@ const FACE_POLL_MS = 120;
 
 type RecentProfile = { memberName: string };
 type Mode = "profile" | "search" | "face";
+
+/**
+ * Con el reconocimiento facial apagado, todo lo que antes llevaba al modo
+ * "face" cae a la busqueda manual (y la camara nunca se abre).
+ */
+const FACE_MODE: Mode = FACE_RECOGNITION_ENABLED ? "face" : "search";
 type FaceGuideStatus = "waiting" | "detected" | "locking" | "scanning" | "cooldown";
 
 type FaceDetectorLike = {
@@ -406,16 +413,16 @@ export default function IngresoPage() {
     void loadStatus();
     (async () => {
       if (!list.length) {
-        setMode("face");
+        setMode(FACE_MODE);
         setIsLoadingProfile(false);
         return;
       }
       try {
         const json = await fetchMember({ q: list[0].memberName });
         if (json.member) setProfile(json.member);
-        else setMode("face");
+        else setMode(FACE_MODE);
       } catch {
-        setMode("face");
+        setMode(FACE_MODE);
       } finally {
         setIsLoadingProfile(false);
       }
@@ -547,7 +554,7 @@ export default function IngresoPage() {
         // Tras ingreso por cara, volver a la camara para el siguiente socio
         if (method === "face") {
           setFaceMatches([]);
-          setMode("face");
+          setMode(FACE_MODE);
           setProfile(null);
           armCooldown();
         } else {
@@ -736,22 +743,26 @@ export default function IngresoPage() {
         <div className="mx-auto w-full max-w-sm">
           {/* Mode switcher */}
           {!isLoadingProfile && (
-            <div className="mb-6 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("face");
-                  setError("");
-                  setFaceMatches([]);
-                }}
-                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full border-2 px-3 text-xs font-black uppercase tracking-wide transition ${
-                  mode === "face"
-                    ? "border-black bg-[#0b0b0b] text-[#d8ff3e]"
-                    : "border-black/15 text-black/60 hover:border-black/30"
-                }`}
-              >
-                <ScanFace className="h-4 w-4" /> Rostro
-              </button>
+            <div
+              className={`mb-6 grid gap-2 ${FACE_RECOGNITION_ENABLED ? "grid-cols-2" : "grid-cols-1"}`}
+            >
+              {FACE_RECOGNITION_ENABLED && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode(FACE_MODE);
+                    setError("");
+                    setFaceMatches([]);
+                  }}
+                  className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full border-2 px-3 text-xs font-black uppercase tracking-wide transition ${
+                    mode === "face"
+                      ? "border-black bg-[#0b0b0b] text-[#d8ff3e]"
+                      : "border-black/15 text-black/60 hover:border-black/30"
+                  }`}
+                >
+                  <ScanFace className="h-4 w-4" /> Rostro
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -801,7 +812,7 @@ export default function IngresoPage() {
               method={checkinMethod}
               onContinue={() => void confirmCheckin()}
               onSwitch={() => {
-                setMode("face");
+                setMode(FACE_MODE);
                 setError("");
               }}
             />
@@ -820,7 +831,7 @@ export default function IngresoPage() {
                 setError("");
               }}
               onFace={() => {
-                setMode("face");
+                setMode(FACE_MODE);
                 setError("");
               }}
             />

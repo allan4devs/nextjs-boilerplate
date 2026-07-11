@@ -4,6 +4,7 @@ import { recordEvent } from "@/lib/xtreme/events";
 import { writeAudit } from "@/lib/xtreme/audit";
 import {
   CHECKINS_COLLECTION,
+  FACE_RECOGNITION_ENABLED,
   MEMBERS_COLLECTION,
   type CheckinDoc,
   type MemberDoc,
@@ -76,6 +77,13 @@ export async function GET(req: NextRequest) {
       .sort({ checkedInAt: -1 })
       .limit(20)
       .toArray();
+
+    if (faceHash && !FACE_RECOGNITION_ENABLED) {
+      return NextResponse.json(
+        { error: "Reconocimiento facial deshabilitado." },
+        { status: 503 },
+      );
+    }
 
     if (faceHash && isValidFaceHash(faceHash)) {
       const docs = await db
@@ -203,6 +211,12 @@ export async function POST(req: NextRequest) {
     const now = new Date();
 
     if (action === "enroll_face") {
+      if (!FACE_RECOGNITION_ENABLED) {
+        return NextResponse.json(
+          { error: "Reconocimiento facial deshabilitado." },
+          { status: 503 },
+        );
+      }
       const memberName = normalizeName(body.memberName);
       const faceHash = String(body.faceHash ?? "")
         .toLowerCase()
@@ -255,9 +269,12 @@ export async function POST(req: NextRequest) {
       const goal = String(body.goal ?? "").trim().slice(0, 80);
       const plan = String(body.plan ?? "Xtreme Mensual").trim().slice(0, 80) || "Xtreme Mensual";
       const photoUrl = String(body.photoUrl ?? "").trim();
-      const faceHash = String(body.faceHash ?? "")
-        .toLowerCase()
-        .replace(/[^0-9a-f]/g, "");
+      // Con la feature apagada el alta sigue funcionando: solo se ignora el rostro.
+      const faceHash = FACE_RECOGNITION_ENABLED
+        ? String(body.faceHash ?? "")
+            .toLowerCase()
+            .replace(/[^0-9a-f]/g, "")
+        : "";
       const checkInNow = body.checkInNow !== false;
 
       if (!memberName) {

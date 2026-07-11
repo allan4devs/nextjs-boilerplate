@@ -242,6 +242,14 @@ export function findMemberByCedula<T extends { cedula?: string }>(
   return docs.find((d) => matchCedula(d.cedula, raw));
 }
 
+/**
+ * Reconocimiento facial: apagado mientras se rehace la feature.
+ * Con `false` la API rechaza match/enroll de rostro y los kiosks ocultan la pestaña.
+ * Para reactivar: poner NEXT_PUBLIC_FACE_RECOGNITION=1 (o cambiar el default a true).
+ */
+export const FACE_RECOGNITION_ENABLED =
+  process.env.NEXT_PUBLIC_FACE_RECOGNITION === "1";
+
 /** Hamming distance entre dos hashes hex (face dHash). */
 export function hammingHexDistance(a: string, b: string) {
   const left = String(a || "").toLowerCase().replace(/[^0-9a-f]/g, "");

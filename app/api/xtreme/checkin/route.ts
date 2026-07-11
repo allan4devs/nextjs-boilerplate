@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import {
   CHECKINS_COLLECTION,
+  FACE_RECOGNITION_ENABLED,
   MEMBERS_COLLECTION,
   PINS_COLLECTION,
   type CheckinDoc,
@@ -63,6 +64,13 @@ export async function GET(req: NextRequest) {
       .replace(/[^0-9a-f]/g, "");
 
     const status = await computeOccupancy(db);
+
+    if (faceHash && !FACE_RECOGNITION_ENABLED) {
+      return NextResponse.json(
+        { status, member: null, error: "Reconocimiento facial deshabilitado." },
+        { status: 503 },
+      );
+    }
 
     // Match facial (kiosk /ingreso) — sin auth de staff
     if (faceHash && isValidFaceHash(faceHash)) {
@@ -148,14 +156,9 @@ export async function POST(req: NextRequest) {
     const methodRaw = String(
       body.method ?? (pin ? "pin" : cedula ? "cedula" : codeDigits ? "code" : "name"),
     );
-    const method = ([
-      "code",
-      "name",
-      "pin",
-      "admin",
-      "cedula",
-      "face",
-    ].includes(methodRaw)
+    const allowedMethods = ["code", "name", "pin", "admin", "cedula"];
+    if (FACE_RECOGNITION_ENABLED) allowedMethods.push("face");
+    const method = (allowedMethods.includes(methodRaw)
       ? methodRaw
       : "name") as CheckinDoc["method"];
 
