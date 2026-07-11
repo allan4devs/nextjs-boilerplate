@@ -104,7 +104,7 @@ export function canBook(
       return {
         allowed: false,
         reason: "payment_required",
-        message: "Necesita un plan activo o un pase del dia para reservar.",
+        message: "Necesita un plan activo o su primer dia gratis para reservar.",
       };
     }
     const limited = entitlements.some(

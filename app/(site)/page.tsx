@@ -95,7 +95,7 @@ export default function ExtremeGymLandingPage() {
                   href="/primer-dia"
                   className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black shadow-[0_0_40px_-16px_rgba(246,196,0,.95)] transition hover:bg-white"
                 >
-                  Reservá tu primer día — CRC 3.000
+                  Tu primer día gratis
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link

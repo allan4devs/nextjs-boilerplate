@@ -33,12 +33,12 @@ declare global {
 const CHECKOUT_OPTIONS: CheckoutOption[] = [
   {
     id: "day-pass",
-    label: "Pase del día / funcional",
+    label: "Primer día gratis",
     category: "Clase",
-    priceCrc: 3000,
-    priceLabel: "CRC 3.000",
-    usdAmount: "6.00",
-    note: "Ideal para probar el gym o una sesión funcional.",
+    priceCrc: 0,
+    priceLabel: "Gratis",
+    usdAmount: "0.00",
+    note: "Registrate en la app y entrená tu primer día gratis.",
   },
   {
     id: "week",
@@ -125,11 +125,8 @@ const initialForm: FormState = {
 
 export default function ExtremeGymCheckout({
   initialOption = "month",
-  enableDayPassCredit = true,
 }: {
   initialOption?: string;
-  /** Offer day-pass → plan credit when name matches a pending credit. */
-  enableDayPassCredit?: boolean;
 }) {
   const validInitialOption = CHECKOUT_OPTIONS.some((option) => option.id === initialOption)
     ? initialOption
@@ -139,19 +136,12 @@ export default function ExtremeGymCheckout({
   const [paypalConfig, setPaypalConfig] = useState<PayPalConfig | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
-  const [applyCredit, setApplyCredit] = useState(false);
-  const [upsell, setUpsell] = useState<{
-    message: string;
-    creditCrc: number;
-    expiresOn: string;
-    href: string;
-  } | null>(null);
+  const [registering, setRegistering] = useState(false);
   const paypalRef = useRef<HTMLDivElement>(null);
   const checkoutRef = useRef<{
     form: FormState;
     formReady: boolean;
     selected: CheckoutOption;
-    applyCredit: boolean;
   } | null>(null);
 
   const selected = useMemo(
@@ -159,11 +149,16 @@ export default function ExtremeGymCheckout({
     [selectedId],
   );
 
+  /** Free options (primer día gratis) are activated by app registration, not PayPal. */
+  const isFree = selected.priceCrc <= 0;
+
   const formReady = Boolean(form.name.trim() && form.phone.trim() && form.email.trim());
+  // El registro gratis ahora es double opt-in: solo hace falta el correo.
+  const emailReady = Boolean(form.email.trim());
 
   useEffect(() => {
-    checkoutRef.current = { form, formReady, selected, applyCredit };
-  }, [form, formReady, selected, applyCredit]);
+    checkoutRef.current = { form, formReady, selected };
+  }, [form, formReady, selected]);
 
   // Landing funnel events
   useEffect(() => {
@@ -224,7 +219,8 @@ export default function ExtremeGymCheckout({
   }, []);
 
   useEffect(() => {
-    if (!paypalConfig?.clientId || !paypalRef.current) return;
+    // Free options don't render the PayPal button — registration activates them.
+    if (isFree || !paypalConfig?.clientId || !paypalRef.current) return;
 
     let cancelled = false;
     const container = paypalRef.current;
@@ -272,16 +268,12 @@ export default function ExtremeGymCheckout({
                 throw new Error("Complete nombre, teléfono y correo antes de pagar.");
               }
 
-              const useCredit =
-                Boolean(currentCheckout?.applyCredit) &&
-                ["week", "fortnight", "month"].includes(currentCheckout.selected.id);
               const response = await fetch("/api/xtreme/checkout/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   optionId: currentCheckout.selected.id,
                   customer: currentCheckout.form,
-                  applyDayPassCredit: useCredit,
                 }),
               });
               const data = (await response.json()) as { orderID?: string; message?: string };
@@ -295,9 +287,6 @@ export default function ExtremeGymCheckout({
               if (!currentCheckout?.formReady) throw new Error("Complete nombre, teléfono y correo antes de confirmar.");
 
               setStatus("Confirmando pago...");
-              const useCredit =
-                Boolean(currentCheckout.applyCredit) &&
-                ["week", "fortnight", "month"].includes(currentCheckout.selected.id);
               const response = await fetch("/api/xtreme/checkout/capture-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -305,20 +294,17 @@ export default function ExtremeGymCheckout({
                   orderID: data.orderID,
                   optionId: currentCheckout.selected.id,
                   customer: currentCheckout.form,
-                  applyDayPassCredit: useCredit,
                 }),
               });
               const result = (await response.json()) as {
                 success?: boolean;
                 captureID?: string;
                 message?: string;
-                upsell?: { message: string; creditCrc: number; expiresOn: string; href: string } | null;
               };
               if (!response.ok || !result.success) throw new Error(result.message || "No se pudo confirmar el pago.");
 
               setStatus(`Pago confirmado. Comprobante: ${result.captureID || data.orderID}`);
               setError("");
-              if (result.upsell) setUpsell(result.upsell);
             },
             onCancel: () => setStatus("Pago cancelado antes de confirmar."),
             onError: (err: unknown) => {
@@ -341,12 +327,43 @@ export default function ExtremeGymCheckout({
       cancelled = true;
       container.innerHTML = "";
     };
-  }, [paypalConfig]);
+  }, [paypalConfig, isFree]);
 
   function updateForm(field: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
     setStatus("");
     setError("");
+  }
+
+  async function registerFreeDay() {
+    if (!emailReady) {
+      setError("Ingrese su correo para registrarse.");
+      return;
+    }
+    setError("");
+    setRegistering(true);
+    setStatus("Enviando el correo de confirmación...");
+    try {
+      const response = await fetch("/api/xtreme/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, source: "primer-dia" }),
+      });
+      const data = (await response.json()) as { error?: string; devToken?: string };
+      if (!response.ok) throw new Error(data.error || "No se pudo completar el registro.");
+      // En dev, sin correo configurado, la API devuelve el link para continuar.
+      if (data.devToken) {
+        setStatus("Correo no configurado (dev). Continúe aquí para completar su perfil.");
+        window.location.href = `/registro/confirmar?token=${encodeURIComponent(data.devToken)}`;
+        return;
+      }
+      setStatus("¡Revisá tu correo! Te enviamos un enlace para confirmar tu cuenta y completar tu perfil.");
+    } catch (err) {
+      setStatus("");
+      setError(err instanceof Error ? err.message : "No se pudo completar el registro.");
+    } finally {
+      setRegistering(false);
+    }
   }
 
   return (
@@ -389,7 +406,9 @@ export default function ExtremeGymCheckout({
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-black/50">Seleccionado</p>
               <h3 className="mt-2 text-2xl font-black uppercase">{selected.label}</h3>
-              <p className="mt-1 text-sm font-bold text-black/55">{selected.priceLabel} · PayPal cobra USD {selected.usdAmount}</p>
+              <p className="mt-1 text-sm font-bold text-black/55">
+                {isFree ? `${selected.priceLabel} · registrate en la app` : `${selected.priceLabel} · PayPal cobra USD ${selected.usdAmount}`}
+              </p>
             </div>
             <ShieldCheck className="h-8 w-8 text-[#bd9300]" />
           </div>
@@ -457,39 +476,6 @@ export default function ExtremeGymCheckout({
             </label>
           </div>
 
-          {enableDayPassCredit && ["week", "fortnight", "month"].includes(selected.id) && (
-            <label className="mt-4 flex cursor-pointer items-start gap-3 border border-black/10 bg-black/[0.04] p-3">
-              <input
-                type="checkbox"
-                className="mt-1 h-4 w-4"
-                checked={applyCredit}
-                onChange={(e) => setApplyCredit(e.target.checked)}
-              />
-              <span className="text-sm font-bold leading-5 text-black/75">
-                Aplicar crédito de pase del día (CRC 3.000). Usá el mismo nombre con el que compraste el pase. Válido 7 días.
-              </span>
-            </label>
-          )}
-
-          {upsell && (
-            <div className="mt-4 border border-black bg-[#f6c400]/25 p-4">
-              <p className="text-sm font-black uppercase text-black">Siguiente paso</p>
-              <p className="mt-2 text-sm font-bold text-black/80">{upsell.message}</p>
-              <button
-                type="button"
-                className="mt-3 inline-flex min-h-11 items-center justify-center bg-black px-4 text-sm font-black uppercase text-white"
-                onClick={() => {
-                  setSelectedId("week");
-                  setApplyCredit(true);
-                  setUpsell(null);
-                  setStatus("Elegí plan semanal o mensual y pagá con el crédito aplicado.");
-                }}
-              >
-                Aplicar crédito a un plan
-              </button>
-            </div>
-          )}
-
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <a
               href={mailtoLink(form, selected)}
@@ -507,25 +493,52 @@ export default function ExtremeGymCheckout({
             </a>
           </div>
 
-          <div className="mt-6 border-t border-black/10 pt-5">
-            <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
-              <CreditCard className="h-4 w-4" />
-              Pagar con PayPal
-            </div>
-            {!formReady && (
-              <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
-                Complete nombre, teléfono y correo para activar el pago.
+          {isFree ? (
+            <div className="mt-6 border-t border-black/10 pt-5">
+              <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
+                <ShieldCheck className="h-4 w-4" />
+                Registrarme gratis
+              </div>
+              {!emailReady && (
+                <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
+                  Ingrese su correo. Le enviaremos un enlace para confirmar la cuenta y completar nombre, cédula y teléfono.
+                </p>
+              )}
+              {error && <p className="mb-3 border border-red-500/25 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</p>}
+              {status && <p className="mb-3 border border-emerald-500/25 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">{status}</p>}
+              <button
+                type="button"
+                disabled={!emailReady || registering}
+                onClick={registerFreeDay}
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-black px-4 text-sm font-black uppercase text-white transition hover:bg-[#bd9300] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {registering ? "Enviando..." : "Registrarme con mi correo"}
+              </button>
+              <p className="mt-3 text-xs font-bold leading-5 text-black/52">
+                Sin tarjeta ni pago. Confirmás tu correo, completás tus datos y presentás tu nombre en recepción. Después elegís tu plan.
               </p>
-            )}
-            {error && <p className="mb-3 border border-red-500/25 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</p>}
-            {status && <p className="mb-3 border border-emerald-500/25 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">{status}</p>}
-            <div className={!formReady ? "pointer-events-none opacity-45" : ""}>
-              <div ref={paypalRef} className="min-h-[128px]" />
             </div>
-            <p className="mt-3 text-xs font-bold leading-5 text-black/52">
-              Pagos procesados por PayPal. Recepción confirma activación, cupos y cualquier condición vigente.
-            </p>
-          </div>
+          ) : (
+            <div className="mt-6 border-t border-black/10 pt-5">
+              <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
+                <CreditCard className="h-4 w-4" />
+                Pagar con PayPal
+              </div>
+              {!formReady && (
+                <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
+                  Complete nombre, teléfono y correo para activar el pago.
+                </p>
+              )}
+              {error && <p className="mb-3 border border-red-500/25 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</p>}
+              {status && <p className="mb-3 border border-emerald-500/25 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">{status}</p>}
+              <div className={!formReady ? "pointer-events-none opacity-45" : ""}>
+                <div ref={paypalRef} className="min-h-[128px]" />
+              </div>
+              <p className="mt-3 text-xs font-bold leading-5 text-black/52">
+                Pagos procesados por PayPal. Recepción confirma activación, cupos y cualquier condición vigente.
+              </p>
+            </div>
+          )}
 
           <button
             type="button"

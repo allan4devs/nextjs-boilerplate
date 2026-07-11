@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Activity,
+  ArrowLeft,
   ArrowRight,
   Award,
   Bell,
@@ -36,7 +38,9 @@ import {
   Video,
   Zap,
   Mail,
+  Menu,
   Pin,
+  X,
 } from "lucide-react";
 import { CHART_CYAN, CHART_LIME, LineTrendChart } from "./components/charts";
 import {
@@ -52,9 +56,49 @@ import {
 } from "./components/gamification";
 import { pickPhrase } from "@/lib/xtreme/phrases";
 import { STREAK_MILESTONES, WEEKLY_GOAL_MAX, WEEKLY_GOAL_MIN } from "@/lib/xtreme/gamification";
+import OnboardingTour, { type TourStep } from "./components/OnboardingTour";
 
 const STORAGE_KEY = "xtreme-gym-member-name";
 const SESSION_KEY = "xtreme-gym-session";
+const TOUR_KEY = "xtreme-gym-tour-done";
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    target: "tab-resumen",
+    tab: "resumen",
+    title: "Tu resumen",
+    body: "Aquí ves tu racha, tu nivel y tu próximo paso. Es tu punto de partida cada día que entrenás.",
+    icon: Activity,
+  },
+  {
+    target: "tab-entrenar",
+    tab: "entrenar",
+    title: "Marcá tu entreno",
+    body: "Cada vez que entrenes, marcalo aquí. Así sumás tu racha 🔥 y desbloqueás logros.",
+    icon: Dumbbell,
+  },
+  {
+    target: "tab-maquinas",
+    tab: "maquinas",
+    title: "Guía de máquinas",
+    body: "¿No sabés usar un equipo? Mirá la guía con videos y pasos para entrenar seguro.",
+    icon: ShieldCheck,
+  },
+  {
+    target: "tab-progreso",
+    tab: "progreso",
+    title: "Seguí tu progreso",
+    body: "Registrá tu peso y medidas para ver tu avance en el tiempo, sesión tras sesión.",
+    icon: TrendingUp,
+  },
+  {
+    target: "tab-perfil",
+    tab: "perfil",
+    title: "Tu carné digital",
+    body: "En tu perfil está tu carné con código de acceso. Mostralo en recepción para entrar. ¡Listo para arrancar!",
+    icon: QrCode,
+  },
+];
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const TRAININGS = [
@@ -235,6 +279,14 @@ const TABS = [
   { id: "perfil", label: "Perfil", icon: UserRound },
 ] as const;
 
+const TAB_SUBTITLES: Record<(typeof TABS)[number]["id"], string> = {
+  resumen: "Vista general de tu actividad",
+  entrenar: "Tu plan, clases y entrenamientos",
+  maquinas: "Guías rápidas para entrenar mejor",
+  progreso: "Rendimiento, medidas y logros",
+  perfil: "Cuenta, preferencias y seguridad",
+};
+
 type TabId = (typeof TABS)[number]["id"];
 
 type Workout = {
@@ -351,19 +403,11 @@ type NextBestAction = {
   priority: number;
 };
 
-type DayPassCreditInfo = {
-  creditId: string;
-  amountCrc: number;
-  expiresOn: string;
-  windowDays: number;
-};
-
 type MembersResponse = {
   member: Member | null;
   leaderboard: Member[];
   exists?: boolean;
   nextBestAction?: NextBestAction | null;
-  dayPassCredit?: DayPassCreditInfo | null;
   error?: string;
   duplicate?: {
     memberName: string;
@@ -573,12 +617,14 @@ function StatTile({
   accent: string;
 }) {
   return (
-    <div className="border border-white/10 bg-white/[0.05] p-4 shadow-[0_18px_60px_rgba(0,0,0,.18)] backdrop-blur-sm">
-      <div className={`mb-4 grid h-10 w-10 place-items-center bg-gradient-to-br ${accent} text-black shadow-lg`}>
+    <div className="flex items-center gap-3 border border-white/10 bg-white/[0.05] p-4 shadow-[0_18px_60px_rgba(0,0,0,.18)] backdrop-blur-sm">
+      <div className={`grid h-10 w-10 shrink-0 place-items-center bg-gradient-to-br ${accent} text-black shadow-lg`}>
         <Icon className="h-5 w-5" />
       </div>
-      <div className="text-2xl font-black text-white">{value}</div>
-      <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-white/45">{label}</div>
+      <div>
+        <div className="text-2xl font-black leading-none text-white">{value}</div>
+        <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-white/45">{label}</div>
+      </div>
     </div>
   );
 }
@@ -940,8 +986,10 @@ export default function ExtremeGymSite() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [tab, setTab] = useState<TabId>("resumen");
+  const [navOpen, setNavOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [nextBestAction, setNextBestAction] = useState<NextBestAction | null>(null);
-  const [dayPassCredit, setDayPassCredit] = useState<DayPassCreditInfo | null>(null);
+  const [showTour, setShowTour] = useState(false);
 
   const unlocked = Boolean(memberName) && !showPin;
   const currentMember = member ?? initialMember(memberName);
@@ -963,7 +1011,6 @@ export default function ExtremeGymSite() {
   const gami = currentMember.gamification;
   const weekDoneCount = gami?.weekCount ?? weekDates.filter((date) => workoutDates.has(date)).length;
   const weeklyGoal = gami?.weeklyGoal ?? 4;
-  const weeklyProgressPct = Math.min(100, Math.round((weekDoneCount / weeklyGoal) * 100));
   const level = gami?.level?.index ?? Math.floor(currentMember.totalWorkouts / 10) + 1;
   const levelName = gami?.level?.name ?? "Novato";
   const nextMilestone = gami?.level?.nextXp ?? level * 10;
@@ -1053,6 +1100,42 @@ export default function ExtremeGymSite() {
     }
   }, [gami, unlocked, memberName]);
 
+  // Tour de bienvenida: se muestra una vez por socio la primera vez que entra.
+  useEffect(() => {
+    if (!unlocked || showPin || isLoading || !memberName) return;
+    if (typeof window === "undefined") return;
+    const key = normalizeName(memberName).toUpperCase();
+    let seen: string[] = [];
+    try {
+      seen = JSON.parse(window.localStorage.getItem(TOUR_KEY) ?? "[]") as string[];
+    } catch {
+      seen = [];
+    }
+    if (!Array.isArray(seen) || !seen.includes(key)) {
+      setShowTour(true);
+    }
+  }, [unlocked, showPin, isLoading, memberName]);
+
+  const finishTour = useCallback(
+    () => {
+      setShowTour(false);
+      if (typeof window === "undefined" || !memberName) return;
+      const key = normalizeName(memberName).toUpperCase();
+      let seen: string[] = [];
+      try {
+        seen = JSON.parse(window.localStorage.getItem(TOUR_KEY) ?? "[]") as string[];
+      } catch {
+        seen = [];
+      }
+      if (!Array.isArray(seen)) seen = [];
+      if (!seen.includes(key)) {
+        seen.push(key);
+        window.localStorage.setItem(TOUR_KEY, JSON.stringify(seen.slice(-50)));
+      }
+    },
+    [memberName],
+  );
+
   async function updateWeeklyGoal(goalDays: number) {
     if (!unlocked) return;
     setError("");
@@ -1119,7 +1202,6 @@ export default function ExtremeGymSite() {
           setMember(memberData.member ?? initialMember(trimmed));
           setLeaderboard(memberData.leaderboard ?? []);
           setNextBestAction(memberData.nextBestAction ?? null);
-          setDayPassCredit(memberData.dayPassCredit ?? null);
           setShowPin(false);
           return;
         }
@@ -1143,7 +1225,6 @@ export default function ExtremeGymSite() {
           setMemberEmailInput(createData.member?.email ?? email);
           setLeaderboard(createData.leaderboard ?? []);
           setNextBestAction(createData.nextBestAction ?? null);
-          setDayPassCredit(createData.dayPassCredit ?? null);
           setWeightKg(createData.member?.latestBodyMetric?.weightKg ? String(createData.member.latestBodyMetric.weightKg) : "");
           setWaistCm(createData.member?.latestBodyMetric?.waistCm ? String(createData.member.latestBodyMetric.waistCm) : "");
         } else {
@@ -1153,7 +1234,6 @@ export default function ExtremeGymSite() {
           setMemberEmailInput(memberData.member?.email ?? "");
           setLeaderboard(memberData.leaderboard ?? []);
           setNextBestAction(memberData.nextBestAction ?? null);
-          setDayPassCredit(memberData.dayPassCredit ?? null);
           setWeightKg(memberData.member?.latestBodyMetric?.weightKg ? String(memberData.member.latestBodyMetric.weightKg) : "");
           setWaistCm(memberData.member?.latestBodyMetric?.waistCm ? String(memberData.member.latestBodyMetric.waistCm) : "");
         }
@@ -1336,7 +1416,7 @@ export default function ExtremeGymSite() {
         if (data.paymentRequired || response.status === 402) {
           setError(
             data.error ||
-              "Necesita un plan activo o un pase del dia. Vaya a Precios / Primer dia para pagar.",
+              "Necesita un plan activo o su primer dia gratis. Registrese en Primer dia o elija un plan en Precios.",
           );
           setMessage("");
           // Soft nudge: open first-day offer
@@ -1518,66 +1598,84 @@ export default function ExtremeGymSite() {
         />
       )}
 
-      <section className="relative overflow-hidden border-b border-white/10 px-5 py-6 sm:px-8">
-        <div className="absolute inset-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1800&q=80"
-            alt="Entrenamiento funcional Xtreme Gym"
-            className="h-full w-full object-cover opacity-24"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,#050505_0%,rgba(5,5,5,.88)_48%,rgba(5,5,5,.52)_100%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#050505] to-transparent" />
-        </div>
-        <div className="relative mx-auto flex max-w-7xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center bg-[#d8ff3e] text-black">
-                <Dumbbell className="h-7 w-7" />
-              </span>
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#d8ff3e]">Ciudad Quesada</p>
-                <h1 className="text-3xl font-black uppercase tracking-tight sm:text-5xl">
-                  Xtreme Gym <span className="text-[#d8ff3e]">OS</span>
-                </h1>
-              </div>
-            </div>
-            <p className="mt-4 max-w-2xl text-sm font-semibold text-white/58 sm:text-base">
-              App de socios para reservar cupo, cuidar la racha, ver membresia y medir progreso.
-              Sin cuento: si lo marca, queda guardado en Mongo con su PIN.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/55">
-              <span className="border border-white/10 bg-white/[0.06] px-3 py-2">Reservas reales</span>
-              <span className="border border-white/10 bg-white/[0.06] px-3 py-2">Ocupacion en vivo</span>
-              <span className="border border-white/10 bg-white/[0.06] px-3 py-2">Rachas ticas</span>
-            </div>
-          </div>
+      <OnboardingTour
+        steps={TOUR_STEPS}
+        open={showTour}
+        onClose={finishTour}
+        onGoToTab={(next) => setTab(next as TabId)}
+      />
 
-          {!memberName ? (
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-white/10 bg-[#050505]/90 px-3 backdrop-blur-md lg:pl-[84px]">
+        <button type="button" onClick={() => setNavOpen(true)} className="grid h-11 w-11 place-items-center border border-white/12 text-white" aria-label="Abrir navegación">
+          <Menu className="h-5 w-5" />
+        </button>
+        <span className="h-2.5 w-2.5 bg-[#d8ff3e] shadow-[0_0_16px_rgba(216,255,62,.75)]" />
+        <span className="text-sm font-black uppercase tracking-[.16em] text-white/75">Xtreme</span>
+      </header>
+
+      {navOpen && <button type="button" aria-label="Cerrar navegación" onClick={() => setNavOpen(false)} className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden" />}
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[220px] flex-col border-r border-white/10 bg-[#090909] shadow-2xl transition-[width,transform] duration-300 ${navOpen ? "translate-x-0 lg:w-[220px]" : "-translate-x-full lg:w-[72px] lg:translate-x-0"}`}>
+        <div className="flex h-14 items-center justify-between border-b border-white/10 px-3">
+          <div className={navOpen ? "block" : "lg:hidden"}><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">Xtreme Gym</p><p className="text-sm font-black uppercase">Member OS</p></div>
+          <button type="button" onClick={() => setNavOpen(false)} className="grid h-10 w-10 place-items-center border border-white/10 text-white/60" aria-label="Cerrar navegación"><X className="h-5 w-5" /></button>
+        </div>
+
+        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
+          {TABS.map((item) => {
+            const Icon = item.icon;
+            const active = tab === item.id;
+            return <button key={item.id} type="button" data-tour={`tab-${item.id}`} title={item.label} onClick={() => { setTab(item.id); setNavOpen(false); }} className={`flex h-14 w-full items-center gap-3 border-l-2 px-4 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${active ? "border-l-[#d8ff3e] bg-[#d8ff3e]/10 text-[#d8ff3e]" : "border-l-transparent text-white/50 hover:bg-white/[.05] hover:text-white"}`}><Icon className="h-5 w-5 shrink-0" /><span className={navOpen ? "block" : "lg:hidden"}>{item.label}</span></button>;
+          })}
+        </nav>
+
+        <div className="border-t border-white/10 p-2">
+          {memberName ? (
+            <button type="button" title="Ver perfil" onClick={() => { setTab("perfil"); setNavOpen(false); }} className="flex h-14 w-full items-center gap-3 px-2 text-left transition hover:bg-white/[.05]">
+              <Avatar name={memberName} photoUrl={currentMember.photoUrl} className="h-11 w-11" textClass="text-xs" />
+              <span className={`min-w-0 flex-1 ${navOpen ? "block" : "lg:hidden"}`}><span className="block truncate text-xs font-black uppercase">{memberName}</span><span className="text-[11px] font-bold text-[#d8ff3e]">Ver perfil</span></span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                // En el rail colapsado (desktop) primero se expande el nav; solo
+                // con el panel ancho tiene sentido desplegar el formulario.
+                if (!navOpen) {
+                  setNavOpen(true);
+                  setShowLogin(true);
+                } else {
+                  setShowLogin((value) => !value);
+                }
+              }}
+              aria-expanded={showLogin}
+              title="Entrar a mi perfil"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#d8ff3e] px-2 text-sm font-black uppercase text-black"
+            >
+              <UserRound className="h-4 w-4 shrink-0" />
+              <span className={navOpen ? "block" : "lg:hidden"}>Entrar a mi perfil</span>
+            </button>
+          )}
+
+          {!memberName && showLogin && navOpen && (
             <form
-              className="grid w-full max-w-md gap-2 border border-white/10 bg-black/40 p-2 backdrop-blur-sm"
+              className="mt-3 grid gap-2 border border-white/12 bg-black/40 p-3"
               onSubmit={(event) => {
                 event.preventDefault();
+                setShowLogin(false);
+                setNavOpen(false);
                 void startMember(memberNameInput, false, {
                   phone: memberPhoneInput,
                   email: memberEmailInput,
                 });
               }}
             >
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <input
-                  value={memberNameInput}
-                  onChange={(event) => setMemberNameInput(event.target.value)}
-                  placeholder="Su nombre"
-                  className="min-w-0 border border-white/12 bg-black/45 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black transition hover:bg-white"
-                >
-                  Entrar <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
+              <input
+                value={memberNameInput}
+                onChange={(event) => setMemberNameInput(event.target.value)}
+                placeholder="Su nombre"
+                autoFocus
+                className="min-w-0 border border-white/12 bg-black/45 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
+              />
               <div className="grid gap-2 sm:grid-cols-2">
                 <input
                   value={memberPhoneInput}
@@ -1594,50 +1692,32 @@ export default function ExtremeGymSite() {
                   className="border border-white/12 bg-black/35 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
                 />
               </div>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black transition hover:bg-white"
+              >
+                Entrar <ArrowRight className="h-4 w-4" />
+              </button>
               <p className="px-1 text-xs font-semibold text-white/38">
-                Si ya tiene perfil, puede entrar solo con nombre. Si es nuevo, el telefono evita duplicados.
+                Si ya tiene perfil, basta con el nombre. Si es nuevo, el telefono evita duplicados.
               </p>
             </form>
-          ) : (
-            <div className="flex items-center gap-3 border border-white/12 bg-black/45 px-4 py-3 backdrop-blur-sm">
-              <Avatar name={memberName} photoUrl={currentMember.photoUrl} className="h-9 w-9" textClass="text-xs" />
-              <span className="font-black uppercase">{memberName}</span>
-              <button type="button" onClick={resetMember} className="text-xs font-bold text-white/45 hover:text-white">
-                cambiar
-              </button>
-            </div>
           )}
+          {memberName && <button type="button" onClick={resetMember} title="Cambiar de usuario" className={`mt-3 w-full py-2 text-xs font-black uppercase text-white/35 transition hover:text-white ${navOpen ? "block" : "lg:hidden"}`}>Cambiar de usuario</button>}
         </div>
-      </section>
+      </aside>
 
-      <nav className="sticky top-[72px] z-30 border-b border-white/10 bg-[#050505]/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-3 sm:px-8">
-          {TABS.map((item) => {
-            const Icon = item.icon;
-            const active = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setTab(item.id)}
-                className={`relative flex items-center gap-2 whitespace-nowrap px-4 py-4 text-xs font-black uppercase tracking-[0.14em] transition ${active ? "text-[#d8ff3e]" : "text-white/45 hover:text-white/80"}`}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-                {active && <span className="absolute inset-x-3 bottom-0 h-0.5 bg-[#d8ff3e]" />}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
-      <section className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
+      <section className={`mx-auto max-w-[1600px] px-4 py-5 transition-[padding] sm:px-8 sm:py-6 ${navOpen ? "lg:pl-[252px] lg:pr-10" : "lg:pl-[104px] lg:pr-10"}`}>
         {isLoading ? (
           <div className="grid min-h-[420px] place-items-center border border-white/10 bg-white/[0.03]">
             <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
+            <div className="border-b border-white/10 pb-3">
+              <h1 className="text-2xl font-black uppercase tracking-tight sm:text-3xl">{TABS.find((item) => item.id === tab)?.label}</h1>
+              <p className="mt-0.5 text-sm font-semibold text-white/45">{TAB_SUBTITLES[tab]}</p>
+            </div>
             {(message || error) && (
               <div className={`border px-4 py-3 text-sm font-bold ${error ? "border-red-400/40 bg-red-500/10 text-red-200" : "border-[#d8ff3e]/40 bg-[#d8ff3e]/10 text-[#eaff93]"}`}>
                 {error || message}
@@ -1645,22 +1725,38 @@ export default function ExtremeGymSite() {
             )}
 
             {tab === "resumen" && (
-              <div className="space-y-6">
+              <div className="space-y-4">
+
+              <div id="entrenar-hoy" className="flex flex-col gap-3 border border-[#d8ff3e]/25 bg-gradient-to-r from-[#d8ff3e]/10 via-[#d8ff3e]/[0.04] to-transparent p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center bg-[#d8ff3e] text-black"><Flame className="h-5 w-5" /></span>
+                  <div><p className="text-xs font-black uppercase tracking-[.18em] text-[#d8ff3e]">Acción principal · Entrenamiento de hoy</p><p className="mt-0.5 text-sm font-semibold text-white/45">Un toque para mantener tu progreso al día.</p></div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !trainedToday && void completeTraining(quickTraining)}
+                  disabled={!unlocked || trainedToday || Boolean(savingTrainingId)}
+                  className={`inline-flex min-h-12 shrink-0 items-center justify-center gap-2 px-5 text-sm font-black uppercase transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${trainedToday ? "border border-[#d8ff3e]/40 bg-[#d8ff3e]/10 text-[#eaff93]" : "bg-[#d8ff3e] text-black hover:bg-white active:scale-[.98]"} disabled:cursor-not-allowed`}
+                >
+                  {savingTrainingId ? <Loader2 className="h-5 w-5 animate-spin" /> : trainedToday ? <Check className="h-5 w-5" /> : <Flame className="h-5 w-5" />}
+                  {trainedToday ? "Entreno marcado" : "Marcar entreno"}
+                </button>
+              </div>
 
               {/* Phase 3: one-tap renewal + day-pass credit + next-best action */}
               {unlocked && currentMember.membership.daysRemaining <= 5 && (
-                <div className="flex flex-col gap-3 border border-orange-300/40 bg-orange-300/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-200">Renovación</p>
-                    <p className="mt-1 text-sm font-bold text-orange-50">
-                      {currentMember.membership.daysRemaining <= 0
-                        ? "Tu plan venció. Renová en 1 toque y no pierdas la racha."
-                        : `Tu plan vence en ${currentMember.membership.daysRemaining} día${currentMember.membership.daysRemaining === 1 ? "" : "s"}.`}
-                    </p>
-                  </div>
+                <div className="flex flex-col gap-2 border-l-4 border-l-orange-300 bg-orange-300/[0.08] px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-bold text-orange-50">
+                    <span className="font-black uppercase tracking-[0.14em] text-orange-200">
+                      {currentMember.membership.daysRemaining <= 0 ? "Plan vencido · " : "Renovación próxima · "}
+                    </span>
+                    {currentMember.membership.daysRemaining <= 0
+                      ? "Renová en 1 toque y no pierdas la racha."
+                      : `Tu plan vence en ${currentMember.membership.daysRemaining} día${currentMember.membership.daysRemaining === 1 ? "" : "s"}.`}
+                  </p>
                   <a
                     href={`/precios#inscripcion`}
-                    className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#d8ff3e] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#d8ff3e] px-4 py-2 text-sm font-black uppercase text-black transition hover:bg-white"
                     onClick={() => {
                       void fetch("/api/xtreme/events/track", {
                         method: "POST",
@@ -1675,27 +1771,34 @@ export default function ExtremeGymSite() {
                     }}
                   >
                     <CreditCard className="h-4 w-4" />
-                    Renovar en 1 toque
+                    Renovar ahora
                   </a>
                 </div>
               )}
 
-              {unlocked && dayPassCredit && (
-                <div className="flex flex-col gap-3 border border-[#d8ff3e]/35 bg-[#d8ff3e]/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#eaff93]">Crédito pase del día</p>
-                    <p className="mt-1 text-sm font-bold text-white/85">
-                      Tenés CRC {dayPassCredit.amountCrc.toLocaleString("es-CR")} para un plan hasta {dayPassCredit.expiresOn}.
-                    </p>
-                  </div>
-                  <a
-                    href="/precios#inscripcion"
-                    className="inline-flex shrink-0 items-center justify-center gap-2 border border-[#d8ff3e]/50 bg-black/30 px-5 py-3 text-sm font-black uppercase text-[#eaff93] transition hover:bg-[#d8ff3e] hover:text-black"
-                  >
-                    Aplicar a un plan
-                  </a>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <StatTile icon={Flame} label="Racha actual" value={`${effectiveStreak} días`} accent="from-orange-400 to-red-500" />
+                <StatTile icon={CalendarCheck} label="Entrenamientos del mes" value={`${currentMember.workouts.filter((workout) => workout.completedDate.startsWith(todayIso().slice(0, 7))).length}`} accent="from-[#d8ff3e] to-emerald-300" />
+                <div className="border border-white/10 bg-white/[0.04] p-4">
+                  <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[.16em] text-white/45">Próxima clase</p><CalendarClock className="h-5 w-5 text-cyan-300" /></div>
+                  <p className="mt-2 truncate text-xl font-black uppercase">{TRAININGS.find((training) => reservations[training.id]?.isMine)?.name ?? "Sin reserva"}</p>
+                  <button type="button" onClick={() => setTab("entrenar")} className="mt-1 text-xs font-black uppercase text-cyan-300 transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">Ver clases</button>
                 </div>
-              )}
+                <div className="border border-yellow-300/20 bg-yellow-300/[0.04] p-4">
+                  <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[.16em] text-white/45">Leaderboard</p><Trophy className="h-5 w-5 text-yellow-300" /></div>
+                  <p className="mt-2 text-3xl font-black leading-none">#{Math.max(1, leaderboard.findIndex((entry) => entry.normalizedName === currentMember.normalizedName) + 1 || 1)}</p>
+                  <a href="/app/comunidad" className="mt-1 inline-block text-xs font-black uppercase text-yellow-300 transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300">Ver clasificación</a>
+                </div>
+                <div className="border border-white/10 bg-white/[0.04] p-4 xl:col-span-2">
+                  <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[.16em] text-white/45">Progreso semanal</p><Target className="h-5 w-5 text-[#d8ff3e]" /></div>
+                  <div className="mt-2 flex items-end justify-between gap-4"><p className="text-3xl font-black leading-none">{weekDoneCount}/{weeklyGoal}</p><p className="text-xs font-bold uppercase text-white/40">meta semanal</p></div>
+                  <div className="mt-2 h-2 bg-black/50"><div className="h-full bg-[#d8ff3e] transition-all" style={{ width: `${Math.min(100, (weekDoneCount / Math.max(1, weeklyGoal)) * 100)}%` }} /></div>
+                </div>
+                <div className="border border-cyan-300/20 bg-cyan-300/[0.04] p-4">
+                  <p className="text-xs font-black uppercase tracking-[.16em] text-cyan-300">Accesos rápidos</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={() => setTab("entrenar")} className="min-h-11 bg-[#d8ff3e] px-3 text-xs font-black uppercase text-black transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e]">Entrenar</button><button type="button" onClick={() => setTab("progreso")} className="min-h-11 border border-white/15 px-3 text-xs font-black uppercase transition hover:border-cyan-300 hover:text-cyan-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">Progreso</button></div>
+                </div>
+              </div>
 
               {unlocked && nextBestAction && (
                 <div
@@ -1739,139 +1842,142 @@ export default function ExtremeGymSite() {
                 </div>
               )}
 
-              {gami && (
-                <div className="grid gap-4 lg:grid-cols-[.95fr_1.05fr]">
-                  {/* Hero: anillo de racha + frase + accion rapida */}
-                  <div id="entrenar-hoy" className="relative overflow-hidden border border-orange-400/25 bg-gradient-to-br from-orange-400/[0.08] to-transparent p-5">
-                    <StreakRing
-                      streak={gami.streak}
-                      freezes={gami.freezesAvailable}
-                      weekCount={gami.weekCount}
-                      weeklyGoal={gami.weeklyGoal}
-                    />
-                    <p className="mt-3 text-center text-sm font-bold italic text-[#eaff93]">
-                      “{dayPhrase}”
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => !trainedToday && void completeTraining(quickTraining)}
-                      disabled={!unlocked || trainedToday || Boolean(savingTrainingId)}
-                      className={`mt-4 inline-flex w-full items-center justify-center gap-2 px-4 py-4 text-base font-black uppercase transition ${
-                        trainedToday
-                          ? "border border-[#d8ff3e]/50 bg-[#d8ff3e]/10 text-[#eaff93]"
-                          : "bg-[#d8ff3e] text-black hover:bg-white"
-                      } disabled:cursor-not-allowed`}
-                    >
-                      {savingTrainingId ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : trainedToday ? (
-                        <Check className="h-5 w-5" />
-                      ) : (
-                        <Flame className="h-5 w-5" />
-                      )}
-                      {trainedToday ? "Hoy ya quedo marcado" : "Marcar entreno de hoy"}
-                    </button>
-                    {gami.freezesAvailable > 0 && (
-                      <p className="mt-3 text-center text-xs font-semibold text-cyan-200/70">
-                        <Snowflake className="mr-1 inline h-3.5 w-3.5" />
-                        {gami.freezesAvailable === 1
-                          ? "1 protector de racha disponible: cubre un dia libre."
-                          : `${gami.freezesAvailable} protectores de racha disponibles.`}
+              {gami ? (
+                <>
+                  {/* Hero: anillo de racha + accion rapida + semana + nivel */}
+                  <div className="grid gap-4 lg:grid-cols-[.95fr_1.05fr]">
+                    <div className="relative overflow-hidden border border-orange-400/25 bg-gradient-to-br from-orange-400/[0.08] to-transparent p-5">
+                      <StreakRing
+                        streak={gami.streak}
+                        freezes={gami.freezesAvailable}
+                        weekCount={gami.weekCount}
+                        weeklyGoal={gami.weeklyGoal}
+                      />
+                      <p className="mt-3 text-center text-sm font-bold italic text-[#eaff93]">
+                        “{dayPhrase}”
                       </p>
-                    )}
-                  </div>
-
-                  {/* Nivel + meta semanal + proximo logro */}
-                  <div className="grid gap-4">
-                    <div className="border border-white/10 bg-white/[0.04] p-5">
-                      <XpBar xp={gami.xp} level={gami.level} />
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="border border-white/10 bg-white/[0.04] p-5">
-                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">
-                          Meta semanal
+                      {gami.freezesAvailable > 0 && (
+                        <p className="mt-3 text-center text-xs font-semibold text-cyan-200/70">
+                          <Snowflake className="mr-1 inline h-3.5 w-3.5" />
+                          {gami.freezesAvailable === 1
+                            ? "1 protector de racha disponible: cubre un dia libre."
+                            : `${gami.freezesAvailable} protectores de racha disponibles.`}
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {Array.from(
-                            { length: WEEKLY_GOAL_MAX - WEEKLY_GOAL_MIN + 1 },
-                            (_, i) => WEEKLY_GOAL_MIN + i,
-                          ).map((n) => (
-                            <button
-                              key={n}
-                              type="button"
-                              onClick={() => void updateWeeklyGoal(n)}
-                              disabled={!unlocked}
-                              className={`h-9 w-9 border text-sm font-black transition ${
-                                gami.weeklyGoal === n
-                                  ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
-                                  : "border-white/15 bg-black/25 text-white/55 hover:border-white/40"
-                              } disabled:opacity-40`}
-                            >
-                              {n}
-                            </button>
-                          ))}
-                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid gap-4">
+                      <div className="border border-white/10 bg-white/[0.04] p-5">
+                        <XpBar xp={gami.xp} level={gami.level} />
                         <p className="mt-3 text-xs font-semibold text-white/45">
-                          {gami.weeksStreak > 0
-                            ? `${gami.weeksStreak} ${gami.weeksStreak === 1 ? "semana" : "semanas"} seguidas cumpliendo.`
-                            : "Dias por semana que se compromete a entrenar."}
+                          {milestoneLeft === 0
+                            ? "Nivel maximo. Usted ES el gym."
+                            : `${milestoneLeft.toLocaleString()} XP para el nivel ${level + 1} (${levelName} → siguiente).`}
                         </p>
                       </div>
-                      {nextBadge ? (
-                        <div className="border border-white/10 bg-white/[0.04] p-5">
-                          <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-300">
-                            Proximo logro
+
+                      {/* Semana + meta editable, en una sola tarjeta */}
+                      <div className="border border-white/10 bg-white/[0.04] p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">
+                            Esta semana — {weekDoneCount}/{weeklyGoal}
                           </p>
-                          <div className="mt-3 flex items-center gap-3">
-                            <span className={`grid h-11 w-11 shrink-0 place-items-center ${tierStyle(nextBadge.tier).icon}`}>
-                              {(() => {
-                                const Icon = badgeIcon(nextBadge.icon);
-                                return <Icon className="h-5 w-5" />;
-                              })()}
+                          {gami.weeksStreak > 0 && (
+                            <span className="inline-flex items-center gap-1 text-xs font-black text-orange-200">
+                              <Flame className="h-3.5 w-3.5" />
+                              {gami.weeksStreak} {gami.weeksStreak === 1 ? "semana" : "semanas"}
                             </span>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-black uppercase text-white">{nextBadge.name}</p>
-                              <p className="truncate text-xs font-semibold text-white/45">{nextBadge.desc}</p>
-                            </div>
-                          </div>
-                          {nextBadge.progress && (
-                            <>
-                              <div className="mt-3 h-2 border border-white/10 bg-black/40">
-                                <div
-                                  className="h-full bg-yellow-300/80 transition-all"
-                                  style={{
-                                    width: `${Math.min(100, Math.round((nextBadge.progress.current / Math.max(1, nextBadge.progress.target)) * 100))}%`,
-                                  }}
-                                />
-                              </div>
-                              <p className="mt-2 text-xs font-black text-white/50">
-                                {nextBadge.progress.current}/{nextBadge.progress.target} — le falta poco.
-                              </p>
-                            </>
                           )}
                         </div>
-                      ) : (
-                        <div className="border border-white/10 bg-white/[0.04] p-5">
-                          <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-300">Logros</p>
-                          <p className="mt-3 text-sm font-semibold text-white/50">
-                            {gami.earnedBadgeCount} badges ganados. Vea la galeria en Progreso.
-                          </p>
+                        <div className="mt-4 grid grid-cols-7 gap-1.5">
+                          {weekDates.map((date) => {
+                            const done = workoutDates.has(date);
+                            const isToday = date === todayIso();
+                            return (
+                              <div
+                                key={date}
+                                className={`grid aspect-square place-items-center border text-xs font-black transition ${
+                                  done
+                                    ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                                    : isToday
+                                      ? "border-[#d8ff3e]/60 bg-black/40 text-[#eaff93]"
+                                      : "border-white/10 bg-black/25 text-white/35"
+                                }`}
+                              >
+                                {done ? <Check className="h-4 w-4" /> : dayLabel(date)}
+                              </div>
+                            );
+                          })}
                         </div>
-                      )}
+                        <div className="mt-4 flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-black uppercase tracking-[0.14em] text-white/40">
+                            Meta / semana
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {Array.from(
+                              { length: WEEKLY_GOAL_MAX - WEEKLY_GOAL_MIN + 1 },
+                              (_, i) => WEEKLY_GOAL_MIN + i,
+                            ).map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                onClick={() => void updateWeeklyGoal(n)}
+                                disabled={!unlocked}
+                                className={`h-8 w-8 border text-sm font-black transition ${
+                                  gami.weeklyGoal === n
+                                    ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                                    : "border-white/15 bg-black/25 text-white/55 hover:border-white/40"
+                                } disabled:opacity-40`}
+                              >
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              <div className="grid gap-4 sm:grid-cols-4">
-                <StatTile icon={Flame} label="Racha" value={`${currentMember.streak} dias`} accent="from-orange-400 to-red-500" />
-                <StatTile icon={CalendarCheck} label="Entrenos" value={`${currentMember.totalWorkouts}`} accent="from-[#d8ff3e] to-emerald-300" />
-                <StatTile icon={Timer} label="Minutos" value={`${currentMember.totalMinutes}`} accent="from-cyan-300 to-sky-500" />
-                <StatTile icon={Trophy} label="Ranking" value={`#${Math.max(1, leaderboard.findIndex((p) => p.normalizedName === currentMember.normalizedName) + 1 || 1)}`} accent="from-yellow-300 to-orange-400" />
-              </div>
+                  {nextBadge && (
+                    <button
+                      type="button"
+                      onClick={() => setTab("progreso")}
+                      className="group flex w-full items-center gap-4 border border-yellow-300/25 bg-yellow-300/[0.05] p-4 text-left transition hover:border-yellow-300/50 hover:bg-yellow-300/[0.09]"
+                    >
+                      <span className={`grid h-12 w-12 shrink-0 place-items-center ${tierStyle(nextBadge.tier).icon}`}>
+                        {(() => {
+                          const Icon = badgeIcon(nextBadge.icon);
+                          return <Icon className="h-6 w-6" />;
+                        })()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-yellow-300">Proximo logro</p>
+                        <p className="truncate text-sm font-black uppercase text-white">{nextBadge.name}</p>
+                        {nextBadge.progress && (
+                          <div className="mt-2 h-1.5 border border-white/10 bg-black/40">
+                            <div
+                              className="h-full bg-yellow-300/80 transition-all"
+                              style={{
+                                width: `${Math.min(100, Math.round((nextBadge.progress.current / Math.max(1, nextBadge.progress.target)) * 100))}%`,
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      {nextBadge.progress && (
+                        <span className="shrink-0 text-sm font-black text-white/60">
+                          {nextBadge.progress.current}/{nextBadge.progress.target}
+                        </span>
+                      )}
+                      <ChevronRight className="h-5 w-5 shrink-0 text-white/30 transition group-hover:translate-x-0.5 group-hover:text-yellow-300" />
+                    </button>
+                  )}
+                </>
+              ) : null}
 
-              <div className="grid gap-4 lg:grid-cols-[1fr_.85fr]">
-                <div className={`border p-5 ${membershipTone}`}>
+              {/* Membresia + ocupacion en vivo, compactas */}
+              <div className={`grid gap-5 ${currentMember.membership.daysRemaining > 5 ? "lg:grid-cols-[1fr_.85fr]" : ""}`}>
+                {currentMember.membership.daysRemaining > 5 && <div className={`border p-5 ${membershipTone}`}>
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[0.18em] opacity-75">Membresia</p>
@@ -1896,7 +2002,7 @@ export default function ExtremeGymSite() {
                       <p className="mt-1 font-black">Socio local</p>
                     </div>
                   </div>
-                </div>
+                </div>}
 
                 <div className="border border-white/10 bg-white/[0.05] p-5">
                   <div className="flex items-start justify-between gap-4">
@@ -1904,7 +2010,10 @@ export default function ExtremeGymSite() {
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Ocupacion ahora</p>
                       <h2 className="mt-2 text-4xl font-black uppercase">{gymStatus?.level ?? "Cargando"}</h2>
                     </div>
-                    <Users className="h-8 w-8 text-cyan-300" />
+                    <span className="relative flex h-3 w-3">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300/60" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-cyan-300" />
+                    </span>
                   </div>
                   <div className="mt-5 h-3 border border-white/10 bg-black/45">
                     <div className="h-full bg-cyan-300 transition-all" style={{ width: `${gymStatus?.occupancyPct ?? 0}%` }} />
@@ -1917,73 +2026,11 @@ export default function ExtremeGymSite() {
                 </div>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[1fr_.85fr_.85fr]">
-                <div className="border border-[#d8ff3e]/25 bg-[#d8ff3e]/10 p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">
-                        Mision semanal
-                      </p>
-                      <h2 className="mt-2 text-2xl font-black uppercase">
-                        {weekDoneCount}/{weeklyGoal} entrenos
-                      </h2>
-                    </div>
-                    <Flame className="h-8 w-8 text-orange-300" />
-                  </div>
-                  <div className="mt-5 h-3 border border-white/10 bg-black/45">
-                    <div className="h-full bg-[#d8ff3e] transition-all" style={{ width: `${weeklyProgressPct}%` }} />
-                  </div>
-                  <p className="mt-3 text-sm font-semibold text-white/55">
-                    {weekDoneCount >= weeklyGoal
-                      ? "Semana cumplida. Ahora va por modo bestia."
-                      : `Faltan ${weeklyGoal - weekDoneCount} para cerrar la semana fuerte.`}
-                  </p>
-                </div>
-
-                <div className="border border-white/10 bg-white/[0.04] p-5">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-300">Semana</p>
-                  <div className="mt-4 grid grid-cols-7 gap-2">
-                    {weekDates.map((date) => {
-                      const done = workoutDates.has(date);
-                      return (
-                        <div key={date} className="text-center">
-                          <div
-                            className={`grid aspect-square place-items-center border text-xs font-black ${
-                              done
-                                ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
-                                : "border-white/10 bg-black/25 text-white/35"
-                            }`}
-                          >
-                            {done ? <Check className="h-4 w-4" /> : dayLabel(date)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-3 text-sm font-semibold text-white/45">Vista rapida de constancia.</p>
-                </div>
-
-                <div className="border border-white/10 bg-white/[0.04] p-5">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Nivel</p>
-                  <div className="mt-3 flex items-end gap-3">
-                    <span className="text-5xl font-black text-white">{level}</span>
-                    <span className="pb-2 text-sm font-bold uppercase text-white/45">{levelName}</span>
-                  </div>
-                  <p className="mt-3 text-sm font-semibold text-white/55">
-                    {gami
-                      ? milestoneLeft === 0
-                        ? "Nivel maximo. Usted ES el gym."
-                        : `${milestoneLeft.toLocaleString()} XP para el nivel ${level + 1}.`
-                      : `${milestoneLeft} entrenos para el nivel ${level + 1}.`}
-                  </p>
-                </div>
-              </div>
-
               </div>
             )}
 
             {tab === "entrenar" && (
-              <div className="space-y-6">
+              <div className="space-y-8">
               {currentMember.trainingPlan ? (
                 <div className="border border-[#d8ff3e]/30 bg-[#d8ff3e]/[0.06] p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2244,7 +2291,7 @@ export default function ExtremeGymSite() {
             )}
 
             {tab === "maquinas" && (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
                   <div className="border border-[#d8ff3e]/30 bg-[#d8ff3e]/[0.07] p-5">
                     <div className="flex items-start justify-between gap-4">
@@ -2373,7 +2420,7 @@ export default function ExtremeGymSite() {
             )}
 
             {tab === "progreso" && (
-              <div className="space-y-6">
+              <div className="space-y-8">
               <div className="border border-white/10 bg-white/[0.04] p-5">
                 <div className="flex items-center gap-3">
                   <Award className="h-5 w-5 text-yellow-300" />
@@ -2559,7 +2606,21 @@ export default function ExtremeGymSite() {
             )}
 
             {tab === "perfil" && (
-              <div className="space-y-6">
+              <div className="space-y-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setTab("resumen");
+                  setShowTour(true);
+                }}
+                className="flex w-full items-center justify-between border border-[#d8ff3e]/30 bg-[#d8ff3e]/10 p-5 text-left transition hover:bg-[#d8ff3e]/15"
+              >
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[.18em] text-[#d8ff3e]">Tutorial</p>
+                  <p className="mt-1 font-black uppercase">Ver el tour de bienvenida otra vez</p>
+                </div>
+                <Sparkles className="h-6 w-6 text-[#d8ff3e]" />
+              </button>
               <a href="/app/comunidad" className="flex items-center justify-between border border-cyan-300/30 bg-cyan-300/10 p-5 transition hover:bg-cyan-300/15">
                 <div><p className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Comunidad Xtreme</p><p className="mt-1 font-black uppercase">Liga mensual, referidos y compas</p></div>
                 <Users className="h-6 w-6 text-cyan-300" />
@@ -2951,6 +3012,18 @@ export default function ExtremeGymSite() {
           </div>
         )}
       </section>
+
+      <footer className="mt-4 border-t border-white/10 px-5 py-8 sm:px-8">
+        <div className="mx-auto flex max-w-5xl items-center justify-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 border border-white/12 bg-white/[0.04] px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-[#d8ff3e]/50 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Ir al sitio Xtreme Gym
+          </Link>
+        </div>
+      </footer>
     </main>
   );
 }

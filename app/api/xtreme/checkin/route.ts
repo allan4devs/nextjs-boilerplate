@@ -6,11 +6,13 @@ import {
   PINS_COLLECTION,
   type CheckinDoc,
   type MemberDoc,
+  cedulaDigits,
   computeOccupancy,
   formatAccessCode,
   hashPin,
   memberAccessCode,
   membershipStatus,
+  normalizeCedula,
   normalizeKey,
   normalizeName,
   todayIso,
@@ -20,23 +22,43 @@ import { recordEvent } from "@/lib/xtreme/events";
 
 export const dynamic = "force-dynamic";
 
-/** Lista estado del gym + busqueda de socio por nombre o codigo. */
+function findByCedula(docs: MemberDoc[], raw: string): MemberDoc | undefined {
+  const digits = cedulaDigits(raw);
+  const formatted = normalizeCedula(raw);
+  if (!digits && !formatted) return undefined;
+  return docs.find((d) => {
+    const docDigits = cedulaDigits(d.cedula);
+    const docFormatted = normalizeCedula(d.cedula);
+    if (!docDigits && !docFormatted) return false;
+    if (digits && docDigits && (docDigits === digits || docDigits.endsWith(digits) || digits.endsWith(docDigits))) {
+      return true;
+    }
+    return Boolean(formatted && docFormatted && docFormatted === formatted);
+  });
+}
+
+/** Lista estado del gym + busqueda de socio por nombre, codigo o cedula. */
 export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const q = normalizeName(req.nextUrl.searchParams.get("q"));
     const codeDigits = String(req.nextUrl.searchParams.get("code") ?? "").replace(/\D/g, "");
+    const cedula = String(req.nextUrl.searchParams.get("cedula") ?? "").trim();
 
     const status = await computeOccupancy(db);
 
-    if (!q && !codeDigits) {
+    if (!q && !codeDigits && !cedula) {
       return NextResponse.json({ status, member: null });
     }
 
     const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
     let match: MemberDoc | undefined;
 
-    if (codeDigits.length >= 4) {
+    if (cedula) {
+      match = findByCedula(docs, cedula);
+    }
+
+    if (!match && codeDigits.length >= 4) {
       match = docs.find((d) => {
         const key = d.normalizedName || normalizeKey(d.memberName || "");
         const code = memberAccessCode(key);
@@ -49,7 +71,8 @@ export async function GET(req: NextRequest) {
       match =
         docs.find((d) => (d.normalizedName || "") === key) ||
         docs.find((d) => (d.memberName || "").toUpperCase().includes(key)) ||
-        docs.find((d) => (d.phone || "").includes(q));
+        docs.find((d) => (d.phone || "").includes(q)) ||
+        findByCedula(docs, q);
     }
 
     if (!match) {
@@ -81,8 +104,20 @@ export async function POST(req: NextRequest) {
     const memberName = normalizeName(body.memberName);
     const codeDigits = String(body.accessCode ?? body.code ?? "").replace(/\D/g, "");
     const pin = String(body.pin ?? "").trim();
-    const methodRaw = String(body.method ?? (pin ? "pin" : codeDigits ? "code" : "name"));
-    const method = (["code", "name", "pin", "admin"].includes(methodRaw)
+    const cedula = String(body.cedula ?? "").trim();
+    const byRaw = String(body.by ?? "kiosk");
+    const by = (["kiosk", "admin", "reception"].includes(byRaw) ? byRaw : "kiosk") as CheckinDoc["by"];
+    const methodRaw = String(
+      body.method ?? (pin ? "pin" : cedula ? "cedula" : codeDigits ? "code" : "name"),
+    );
+    const method = ([
+      "code",
+      "name",
+      "pin",
+      "admin",
+      "cedula",
+      "face",
+    ].includes(methodRaw)
       ? methodRaw
       : "name") as CheckinDoc["method"];
 
@@ -93,6 +128,9 @@ export async function POST(req: NextRequest) {
     if (memberName) {
       const key = normalizeKey(memberName);
       member = docs.find((d) => (d.normalizedName || "") === key);
+    }
+    if (!member && cedula) {
+      member = findByCedula(docs, cedula);
     }
     if (!member && codeDigits.length >= 4) {
       member = docs.find((d) => {
@@ -155,7 +193,7 @@ export async function POST(req: NextRequest) {
       membershipStatus: ms.status,
       date,
       checkedInAt: now,
-      by: "kiosk",
+      by,
       note: String(body.note ?? "").trim().slice(0, 120),
     };
 
@@ -167,10 +205,12 @@ export async function POST(req: NextRequest) {
     });
     const isFirstCheckin = priorCheckins === 0;
 
+    const eventSource = by === "reception" ? "reception" : by === "admin" ? "admin" : "kiosk";
+
     await recordEvent(db, {
       type: "checkin_completed",
       memberId: normalizedName,
-      source: "kiosk",
+      source: eventSource,
       entity: { type: "checkin", id: checkin.id },
       properties: { method, membershipStatus: ms.status, date, first: isFirstCheckin },
     });
@@ -178,7 +218,7 @@ export async function POST(req: NextRequest) {
       await recordEvent(db, {
         type: "first_checkin",
         memberId: normalizedName,
-        source: "kiosk",
+        source: eventSource,
         entity: { type: "checkin", id: checkin.id },
         properties: { method, membershipStatus: ms.status, date },
       });

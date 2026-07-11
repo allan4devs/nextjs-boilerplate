@@ -9,7 +9,7 @@ import { ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
 export const metadata: Metadata = {
   title: "Precios y planes",
   description:
-    "Costos de Xtreme Gym en Ciudad Quesada: pase del día, semana, quincena y mensualidad. Inscripción y pago en línea.",
+    "Costos de Xtreme Gym en Ciudad Quesada: primer día gratis, semana, quincena y mensualidad. Inscripción y pago en línea.",
 };
 
 const COMPARISON = [
@@ -91,7 +91,7 @@ export default function PreciosPage() {
                       featured ? "bg-black text-white hover:bg-white hover:text-black" : "bg-white text-black hover:bg-[#f6c400]"
                     }`}
                   >
-                    Elegir y pagar
+                    {item.price === "Gratis" ? "Registrarme gratis" : "Elegir y pagar"}
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 </article>
@@ -120,7 +120,7 @@ export default function PreciosPage() {
               <thead>
                 <tr className="bg-white/[0.05] text-xs font-black uppercase tracking-[0.14em] text-white/55">
                   <th className="p-4">Beneficio</th>
-                  <th className="p-4 text-center">Día</th>
+                  <th className="p-4 text-center">Primer día</th>
                   <th className="p-4 text-center">Semana</th>
                   <th className="p-4 text-center">Quincena</th>
                   <th className="p-4 text-center text-[#f6c400]">Mes</th>

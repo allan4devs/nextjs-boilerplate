@@ -3,7 +3,7 @@ import type { Db } from "mongodb";
 
 export const EVENTS_COLLECTION = "xtreme_gym_events";
 
-export type EventSource = "site" | "member_app" | "admin" | "kiosk" | "job" | "paypal";
+export type EventSource = "site" | "member_app" | "admin" | "kiosk" | "job" | "paypal" | "reception";
 
 export type ProductEvent = {
   id: string;

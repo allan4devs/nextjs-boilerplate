@@ -29,7 +29,7 @@ export const waLink = (message: string) =>
 
 export const NAV_LINKS = [
   { href: "/zonas", label: "Zonas", icon: Dumbbell, description: "Fuerza, funcional, cardio y lower lab" },
-  { href: "/precios", label: "Precios", icon: Tag, description: "Planes desde CRC 3.000 y pago en línea" },
+  { href: "/precios", label: "Precios", icon: Tag, description: "Primer día gratis y planes con pago en línea" },
   { href: "/adultos-mayores", label: "Adultos", icon: HeartPulse, description: "Tres clases por semana con acompañamiento" },
   { href: "/app", label: "App", icon: Smartphone, description: "Reservas, rachas y carné digital" },
   { href: "/preguntas", label: "Preguntas", icon: HelpCircle, description: "Dudas frecuentes antes de empezar" },
@@ -112,7 +112,7 @@ export const APP_FEATURES: [typeof CalendarCheck, string][] = [
 ];
 
 export const COSTS = [
-  { period: "Día", price: "CRC 3.000", note: "Primer paso" },
+  { period: "Primer día", price: "Gratis", note: "Registrate en la app" },
   { period: "Semana", price: "CRC 8.000", note: "Activa el hábito" },
   { period: "Quincena", price: "CRC 13.500", note: "Mantiene el ritmo" },
   { period: "Mes", price: "CRC 23.000", note: "Compromiso completo" },
@@ -120,7 +120,7 @@ export const COSTS = [
 
 export const QUICK_INFO = [
   { label: "Mensualidad", value: "CRC 23.000", detail: "confirme vigencia", href: "/precios" },
-  { label: "Día", value: "CRC 3.000", detail: "entrada rápida", href: "/precios" },
+  { label: "Primer día", value: "Gratis", detail: "registrate en la app", href: "/primer-dia" },
   { label: "Horario", value: "5 AM - 10 PM", detail: "lunes a viernes", href: "/contacto" },
 ];
 
@@ -212,7 +212,7 @@ export const FAQS = [
   {
     question: "¿Puedo ir solo un día para probar?",
     answer:
-      "Sí. El pase del día permite conocer el ambiente, entrenar y confirmar si quiere continuar con semana, quincena o mensualidad.",
+      "Sí. Tu primer día es gratis: solo registrate en la app para conocer el ambiente, entrenar y confirmar si querés continuar con semana, quincena o mensualidad.",
   },
   {
     question: "¿Los precios pueden cambiar?",

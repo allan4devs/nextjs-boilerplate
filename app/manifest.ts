@@ -44,8 +44,15 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "Ingreso al gym",
         short_name: "Ingreso",
-        description: "Abrir check-in de recepción.",
+        description: "Check-in de socios (self-service).",
         url: "/ingreso",
+        icons: [{ src: "/pwa-icon-192.png", sizes: "192x192" }],
+      },
+      {
+        name: "Recepción",
+        short_name: "Recepción",
+        description: "Check-in y altas del mostrador.",
+        url: "/recepcion",
         icons: [{ src: "/pwa-icon-192.png", sizes: "192x192" }],
       },
     ],

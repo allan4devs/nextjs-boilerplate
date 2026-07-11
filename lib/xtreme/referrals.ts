@@ -9,9 +9,9 @@ import {
   MEMBERS_COLLECTION,
   PAYMENTS_COLLECTION,
   REFERRALS_COLLECTION,
+  todayIso,
   type MemberDoc,
   type PaymentDoc,
-  todayIso,
 } from "./shared";
 import { grantEntitlement, newEntitlementId, addDaysIso } from "./entitlements";
 import { recordEvent } from "./events";
@@ -84,8 +84,6 @@ export async function tryQualifyReferralOnCheckin(
 
   const now = new Date();
   const start = args.date || todayIso();
-  const endsOn = addDaysIso(start, referral.rewardDays || REFERRAL_REWARD_DAYS);
-
   // Atomic claim
   const claimed = await db.collection<ReferralDoc>(REFERRALS_COLLECTION).findOneAndUpdate(
     { referred: memberKey, status: "pending" },

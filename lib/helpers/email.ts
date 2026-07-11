@@ -91,6 +91,31 @@ function row(label: string, value: string) {
   </tr>`;
 }
 
+function appOrigin() {
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "").trim();
+  return baseUrl ? (baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`) : "";
+}
+
+/** Correo con link magico para confirmar la cuenta antes de completar el perfil. */
+export async function sendRegistrationConfirmEmail(args: {
+  to: string;
+  token: string;
+  expiresMinutes: number;
+}) {
+  const href = `${appOrigin()}/registro/confirmar?token=${encodeURIComponent(args.token)}`;
+  return sendEmail({
+    to: args.to,
+    subject: "Confirma tu cuenta — Xtreme Gym",
+    html: layout(
+      "Confirma tu correo",
+      `<p style="font-size:14px;line-height:1.6;">Gracias por registrarte en Xtreme Gym. Confirma tu correo para continuar y completar tu perfil (nombre, cedula y telefono):</p>
+      <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Confirmar mi cuenta</a>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Si el boton no funciona, copia este enlace:<br><span style="word-break:break-all;">${escapeHtml(href)}</span></p>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El enlace vence en ${args.expiresMinutes} minutos. Si no fuiste vos, ignora este correo.</p>`,
+    ),
+  });
+}
+
 export async function sendWelcomeEmail(args: {
   to: string;
   memberName: string;
@@ -283,7 +308,7 @@ export async function sendWinBackEmail(args: {
     html: layout(
       "Tu próximo entreno cuenta",
       `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Han pasado ${args.inactiveDays} días desde tu último entreno. Eso no borra lo que ya avanzaste.</p>
-      <p style="font-size:14px;line-height:1.6;">Volvé con una sesión sencilla. El pase del día cuesta CRC 3.000 y podés reservarlo en línea.</p>
+      <p style="font-size:14px;line-height:1.6;">Volvé con una sesión sencilla. Tu regreso arranca gratis: registrate en la app y entrená.</p>
       ${appButton("Reservar mi regreso", "/primer-dia#reservar")}`,
     ),
   });

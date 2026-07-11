@@ -6,14 +6,14 @@ import LandingTrack from "../../components/LandingTrack";
 import { BUSINESS, SCHEDULE } from "../../lib/site";
 
 export const metadata: Metadata = {
-  title: "Tu primer día | Xtreme Gym",
-  description: "Reservá tu primer entrenamiento en Xtreme Gym por CRC 3.000 y pagá en línea.",
+  title: "Tu primer día gratis | Xtreme Gym",
+  description: "Registrate en la app y entrená tu primer día gratis en Xtreme Gym. Después elegís tu plan.",
 };
 
 const INCLUDED = [
   "Acceso a fuerza, funcional, cardio y Lower Lab",
   "Orientación inicial para empezar con seguridad",
-  "Un día completo para conocer el ambiente y el equipo",
+  "Un día completo gratis para conocer el ambiente y el equipo",
 ];
 
 export default function PrimerDiaPage() {
@@ -26,14 +26,14 @@ export default function PrimerDiaPage() {
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Tu primera visita</p>
             <h1 className="mt-4 max-w-4xl text-5xl font-black uppercase leading-[.9] sm:text-7xl">
-              Probalo por <span className="text-[#f6c400]">CRC 3.000.</span>
+              Tu primer día es <span className="text-[#f6c400]">gratis.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-white/70">
-              Reservá tu día, pagá en línea y llegá listo para entrenar. Sin contratos ni vueltas: una visita completa para saber si Xtreme es para vos.
+              Registrate en la app y llegá listo para entrenar. Sin contratos ni tarjeta: una visita completa y gratis para saber si Xtreme es para vos. Después elegís tu plan.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="#reservar" className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black transition hover:bg-white">
-                Asegurá tu visita <ArrowRight className="h-5 w-5" />
+                Registrarme gratis <ArrowRight className="h-5 w-5" />
               </a>
               <Link href="/zonas" className="inline-flex min-h-14 items-center border border-white/20 px-6 font-black uppercase text-white transition hover:border-[#f6c400]">
                 Conocé las zonas
@@ -41,8 +41,8 @@ export default function PrimerDiaPage() {
             </div>
           </div>
           <aside className="border border-[#f6c400]/45 bg-[#f6c400] p-6 text-black sm:p-8">
-            <p className="text-xs font-black uppercase tracking-[.2em] text-black/55">Pase del día</p>
-            <p className="mt-2 text-5xl font-black">CRC 3.000</p>
+            <p className="text-xs font-black uppercase tracking-[.2em] text-black/55">Primer día</p>
+            <p className="mt-2 text-5xl font-black">Gratis</p>
             <div className="mt-7 space-y-4">
               {INCLUDED.map((item) => (
                 <div key={item} className="flex gap-3 font-bold leading-6">
@@ -53,7 +53,7 @@ export default function PrimerDiaPage() {
             <div className="mt-7 grid gap-3 border-t border-black/20 pt-6 text-sm font-black uppercase">
               <span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" />{BUSINESS.location}</span>
               <span className="inline-flex items-center gap-2"><Clock3 className="h-4 w-4" />Horario amplio, todos los días</span>
-              <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Pago seguro con PayPal</span>
+              <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Sin tarjeta, solo registrate en la app</span>
             </div>
           </aside>
         </div>

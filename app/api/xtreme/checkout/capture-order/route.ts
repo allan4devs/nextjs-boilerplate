@@ -22,15 +22,6 @@ import {
   type EntitlementDoc,
 } from "@/lib/xtreme/entitlements";
 import { bookSession } from "@/lib/xtreme/inventory";
-import {
-  DAY_PASS_CREDIT_CRC,
-  DAY_PASS_CREDIT_WINDOW_DAYS,
-  findPendingDayPassCredit,
-  grantDayPassCredit,
-  markDayPassCreditApplied,
-  planOptionsEligibleForCredit,
-  type DayPassCreditDoc,
-} from "@/lib/xtreme/offers";
 
 type CaptureBody = {
   orderID?: string;
@@ -39,8 +30,6 @@ type CaptureBody = {
   trainingId?: string;
   trainingName?: string;
   trainingDate?: string;
-  /** Apply pending day-pass credit when capturing a plan payment. */
-  applyDayPassCredit?: boolean;
   customer?: {
     name?: string;
     phone?: string;
@@ -149,8 +138,6 @@ export async function POST(req: Request) {
     let membershipUntil: string | undefined;
     let entitlement: EntitlementDoc | null = null;
     let bookingId: string | null = null;
-    let dayPassCredit: DayPassCreditDoc | null = null;
-    let creditApplied: { creditId: string; amountCrc: number } | null = null;
     try {
       const db = await getDb();
       // Idempotent payment insert (retry-safe on paypalCaptureId when present)
@@ -159,7 +146,6 @@ export async function POST(req: Request) {
           paypalCaptureId: payment.paypalCaptureId,
         });
         if (existingPay) {
-          const pendingCredit = await findPendingDayPassCredit(db, normalizedName);
           return NextResponse.json({
             success: true,
             id: data.id,
@@ -167,14 +153,6 @@ export async function POST(req: Request) {
             captureID: payment.paypalCaptureId,
             paymentId: existingPay.id,
             idempotent: true,
-            dayPassCredit: pendingCredit
-              ? {
-                  creditId: pendingCredit.id,
-                  amountCrc: pendingCredit.amountCrc,
-                  expiresOn: pendingCredit.expiresOn,
-                  windowDays: DAY_PASS_CREDIT_WINDOW_DAYS,
-                }
-              : null,
           });
         }
       }
@@ -245,57 +223,6 @@ export async function POST(req: Request) {
         entitlement = await grantEntitlement(db, entShape);
         membershipUntil = entitlement.endsOn;
 
-        // Phase 3: day-pass creates a plan credit offer
-        if (option?.id === "day-pass") {
-          dayPassCredit = await grantDayPassCredit(db, {
-            memberKey: normalizedName,
-            memberName: customerName,
-            paymentId: payment.id,
-          });
-          await recordEvent(db, {
-            type: "day_pass_credit_granted",
-            memberId: normalizedName,
-            source: "paypal",
-            entity: { type: "day_pass_credit", id: dayPassCredit.id },
-            properties: {
-              amountCrc: DAY_PASS_CREDIT_CRC,
-              expiresOn: dayPassCredit.expiresOn,
-              paymentId: payment.id,
-            },
-          });
-        }
-
-        // Phase 3: apply day-pass credit when converting to a plan
-        if (body.applyDayPassCredit && planOptionsEligibleForCredit(option?.id ?? "")) {
-          const pending = await findPendingDayPassCredit(db, normalizedName);
-          if (pending) {
-            const applied = await markDayPassCreditApplied(db, {
-              creditId: pending.id,
-              paymentId: payment.id,
-              optionId: option?.id ?? payment.optionId,
-            });
-            if (applied) {
-              creditApplied = { creditId: applied.id, amountCrc: applied.amountCrc };
-              payment.note = [payment.note, `Crédito pase −CRC ${applied.amountCrc}`].filter(Boolean).join(" · ");
-              await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).updateOne(
-                { id: payment.id },
-                { $set: { note: payment.note } },
-              );
-              await recordEvent(db, {
-                type: "day_pass_credit_applied",
-                memberId: normalizedName,
-                source: "paypal",
-                entity: { type: "day_pass_credit", id: applied.id },
-                properties: {
-                  amountCrc: applied.amountCrc,
-                  optionId: option?.id ?? payment.optionId,
-                  paymentId: payment.id,
-                },
-              });
-            }
-          }
-        }
-
         const lifecycleType =
           option?.id === "day-pass"
             ? existing
@@ -315,7 +242,6 @@ export async function POST(req: Request) {
               optionId: payment.optionId,
               nextBillingDate: entitlement.endsOn,
               entitlementId: entitlement.id,
-              creditAppliedCrc: creditApplied?.amountCrc ?? 0,
             },
           });
         }
@@ -376,24 +302,6 @@ export async function POST(req: Request) {
       entitlementId: entitlement?.id ?? null,
       bookingId,
       membershipUntil: membershipUntil ?? null,
-      dayPassCredit: dayPassCredit
-        ? {
-            creditId: dayPassCredit.id,
-            amountCrc: dayPassCredit.amountCrc,
-            expiresOn: dayPassCredit.expiresOn,
-            windowDays: DAY_PASS_CREDIT_WINDOW_DAYS,
-          }
-        : null,
-      creditApplied,
-      upsell:
-        option?.id === "day-pass" && dayPassCredit
-          ? {
-              message: `¿Te gustó? Aplicá CRC ${DAY_PASS_CREDIT_CRC.toLocaleString("es-CR")} a un plan semanal o mensual en los próximos ${DAY_PASS_CREDIT_WINDOW_DAYS} días.`,
-              creditCrc: DAY_PASS_CREDIT_CRC,
-              expiresOn: dayPassCredit.expiresOn,
-              href: "/precios#inscripcion",
-            }
-          : null,
     });
   } catch (error) {
     console.error("Xtreme checkout capture-order error:", error);

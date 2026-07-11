@@ -925,10 +925,16 @@ export default function XtremeAdminPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
+              href="/recepcion"
+              className="inline-flex items-center gap-2 border border-lime-300/40 bg-lime-300/10 px-4 py-2.5 text-sm font-black uppercase text-lime-100 transition hover:bg-lime-300/20"
+            >
+              <DoorOpen className="h-4 w-4" /> Recepcion
+            </Link>
+            <Link
               href="/ingreso"
               className="inline-flex items-center gap-2 border border-cyan-300/40 bg-cyan-300/10 px-4 py-2.5 text-sm font-black uppercase text-cyan-100 transition hover:bg-cyan-300/20"
             >
-              <DoorOpen className="h-4 w-4" /> Pantalla ingreso
+              <DoorOpen className="h-4 w-4" /> Ingreso socios
             </Link>
             <button
               type="button"

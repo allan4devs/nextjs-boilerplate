@@ -10,11 +10,11 @@ export type XtremeCheckoutOption = {
 export const XTREME_CHECKOUT_OPTIONS: XtremeCheckoutOption[] = [
   {
     id: "day-pass",
-    label: "Pase del día / funcional",
+    label: "Primer día gratis",
     category: "Clase",
-    priceCrc: 3000,
-    priceLabel: "CRC 3.000",
-    usdAmount: "6.00",
+    priceCrc: 0,
+    priceLabel: "Gratis",
+    usdAmount: "0.00",
   },
   {
     id: "week",
@@ -52,4 +52,9 @@ export const XTREME_CHECKOUT_OPTIONS: XtremeCheckoutOption[] = [
 
 export function getXtremeCheckoutOption(optionId: unknown) {
   return XTREME_CHECKOUT_OPTIONS.find((option) => option.id === String(optionId ?? ""));
+}
+
+/** Free options are activated by app registration, not by PayPal. */
+export function isFreeOption(option: Pick<XtremeCheckoutOption, "priceCrc"> | undefined | null) {
+  return Boolean(option) && Number(option?.priceCrc ?? 0) <= 0;
 }

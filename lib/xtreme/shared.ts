@@ -15,6 +15,7 @@ export const PINS_COLLECTION = "xtreme_gym_pins";
 export const PAYMENTS_COLLECTION = "xtreme_gym_payments";
 export const CHECKINS_COLLECTION = "xtreme_gym_checkins";
 export const OTPS_COLLECTION = "xtreme_gym_otps";
+export const PENDING_REGISTRATIONS_COLLECTION = "xtreme_gym_pending_registrations";
 export const AUDIT_COLLECTION = "xtreme_gym_audit";
 export const BADGES_COLLECTION = "xtreme_gym_badges";
 export const REFERRALS_COLLECTION = "xtreme_gym_referrals";
@@ -136,9 +137,17 @@ export type MemberDoc = {
   favoriteTraining?: string;
   phone?: string;
   email?: string;
+  cedula?: string;
+  /** Correo confirmado via link magico (registro double opt-in). */
+  emailVerified?: boolean;
   coach?: string;
   notes?: string;
   photoUrl?: string;
+  /**
+   * Hash perceptual (dHash) del rostro para match rapido en recepcion.
+   * Se genera en el cliente al enrolar foto de cara; no es un embedding ML.
+   */
+  faceHash?: string;
   workouts?: WorkoutEntry[];
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
@@ -171,6 +180,59 @@ export type OtpDoc = {
   expiresAt: Date;
   createdAt: Date;
 };
+
+/**
+ * Registro pendiente de confirmacion (double opt-in). El usuario da su correo,
+ * recibe un link magico con este token; al confirmarlo completa el perfil.
+ */
+export type PendingRegistrationDoc = {
+  email: string;
+  tokenHash: string;
+  expiresAt: Date;
+  confirmedAt?: Date | null;
+  /** Perfil ya creado tras confirmar (para no duplicar). */
+  memberNormalizedName?: string | null;
+  createdAt: Date;
+  source: "primer-dia" | "app";
+};
+
+export function normalizeEmail(value: unknown) {
+  return String(value ?? "").trim().toLowerCase().slice(0, 80);
+}
+
+export function normalizePhone(value: unknown) {
+  return String(value ?? "").replace(/[^\d+]/g, "").slice(0, 24);
+}
+
+/** Cedula CR: solo digitos y guiones, longitud razonable. */
+export function normalizeCedula(value: unknown) {
+  return String(value ?? "").replace(/[^\d-]/g, "").slice(0, 20);
+}
+
+/** Solo digitos de cedula (para busqueda flexible 1-0111-0222 vs 101110222). */
+export function cedulaDigits(value: unknown) {
+  return String(value ?? "").replace(/\D/g, "").slice(0, 20);
+}
+
+/** Hamming distance entre dos hashes hex (face dHash). */
+export function hammingHexDistance(a: string, b: string) {
+  const left = String(a || "").toLowerCase().replace(/[^0-9a-f]/g, "");
+  const right = String(b || "").toLowerCase().replace(/[^0-9a-f]/g, "");
+  if (!left || !right || left.length !== right.length) return 64;
+  let dist = 0;
+  for (let i = 0; i < left.length; i += 1) {
+    let x = parseInt(left[i], 16) ^ parseInt(right[i], 16);
+    while (x) {
+      dist += x & 1;
+      x >>= 1;
+    }
+  }
+  return dist;
+}
+
+export function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 export type AuditDoc = {
   id: string;
@@ -227,11 +289,11 @@ export type CheckinDoc = {
   memberName: string;
   normalizedName: string;
   accessCode: string;
-  method: "code" | "name" | "pin" | "admin";
+  method: "code" | "name" | "pin" | "admin" | "cedula" | "face";
   membershipStatus: "active" | "warning" | "expired" | "unknown";
   date: string;
   checkedInAt: Date;
-  by: "kiosk" | "admin";
+  by: "kiosk" | "admin" | "reception";
   note?: string;
 };
 
@@ -491,9 +553,12 @@ export function toAdminMember(doc: MemberDoc) {
     favoriteTraining: doc.favoriteTraining || workouts.at(-1)?.trainingName || "",
     phone: doc.phone ?? "",
     email: doc.email ?? "",
+    cedula: doc.cedula ?? "",
+    emailVerified: Boolean(doc.emailVerified),
     coach: doc.coach ?? "",
     notes: doc.notes ?? "",
     photoUrl: doc.photoUrl ?? "",
+    hasFace: Boolean(doc.faceHash || doc.photoUrl),
     accessCode: formatAccessCode(memberAccessCode(key)),
     streak: view.streak || computeStreak(workouts),
     weeksStreak: view.weeksStreak,

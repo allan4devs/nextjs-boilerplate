@@ -27,7 +27,6 @@ import {
 } from "@/lib/xtreme/gamification";
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 import { pickNextBestAction } from "@/lib/xtreme/next-best-action";
-import { findPendingDayPassCredit, DAY_PASS_CREDIT_WINDOW_DAYS } from "@/lib/xtreme/offers";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +86,8 @@ type XtremeMemberDoc = {
   favoriteTraining: string;
   phone?: string;
   email?: string;
+  cedula?: string;
+  emailVerified?: boolean;
   photoUrl?: string;
   workouts: WorkoutEntry[];
   membership?: Membership;
@@ -318,6 +319,8 @@ function publicMember(doc: XtremeMemberDoc | null, entitlements: unknown[] = [])
     favoriteTraining,
     phone: doc?.phone ?? "",
     email: doc?.email ?? "",
+    cedula: doc?.cedula ?? "",
+    emailVerified: Boolean(doc?.emailVerified),
     photoUrl: doc?.photoUrl ?? "",
     accessCode: formatAccessCode(memberAccessCode(doc?.normalizedName ?? "")),
     workouts,
@@ -400,22 +403,12 @@ export async function GET(req: NextRequest) {
       buddyInviteAvailable: (doc?.buddies?.length ?? 0) < 3 && member.totalWorkouts >= 3,
     });
 
-    const dayPassCredit = await findPendingDayPassCredit(db, normalizedName);
-
     return NextResponse.json({
       member,
       exists: Boolean(doc),
       newBadges,
       leaderboard: await leaderboard(),
       nextBestAction,
-      dayPassCredit: dayPassCredit
-        ? {
-            creditId: dayPassCredit.id,
-            amountCrc: dayPassCredit.amountCrc,
-            expiresOn: dayPassCredit.expiresOn,
-            windowDays: DAY_PASS_CREDIT_WINDOW_DAYS,
-          }
-        : null,
     });
   } catch (err) {
     console.error("XTREME USER GET", err);

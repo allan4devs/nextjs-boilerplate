@@ -1,0 +1,1411 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Camera,
+  CheckCircle2,
+  CreditCard,
+  DoorOpen,
+  IdCard,
+  Loader2,
+  Lock,
+  LogOut,
+  ScanFace,
+  Search,
+  ShieldAlert,
+  UserPlus,
+  Users,
+  XCircle,
+} from "lucide-react";
+
+const ADMIN_CODE_KEY = "xtreme-admin-code";
+const AUTO_LOOKUP_MS = 280;
+
+type GymStatus = {
+  date: string;
+  capacity: number;
+  currentPeople: number;
+  occupancyPct: number;
+  level: string;
+  checkinsToday: number;
+  uniqueCheckins: number;
+  recent: {
+    id: string;
+    memberName: string;
+    accessCode: string;
+    membershipStatus: string;
+    checkedInAt: string;
+    method: string;
+  }[];
+};
+
+type MemberHit = {
+  memberName: string;
+  normalizedName: string;
+  goal: string;
+  accessCode: string;
+  plan: string;
+  membershipStatus: "active" | "warning" | "expired";
+  daysRemaining: number;
+  streak: number;
+  totalWorkouts: number;
+  coach: string;
+  phone: string;
+  email?: string;
+  cedula?: string;
+  photoUrl?: string;
+  hasFace?: boolean;
+  faceDistance?: number;
+};
+
+type RecentCheckin = {
+  id: string;
+  memberName: string;
+  accessCode: string;
+  method: string;
+  membershipStatus: string;
+  checkedInAt: string;
+  by: string;
+};
+
+type Tab = "cedula" | "face" | "register";
+
+const STATUS_LABEL = {
+  active: "Activa",
+  warning: "Por vencer",
+  expired: "Vencida",
+} as const;
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
+function formatTime(value: string | Date) {
+  try {
+    return new Date(value).toLocaleTimeString("es-CR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+/** dHash 64-bit (hex 16) — match rapido de rostro sin modelos ML. */
+async function computeFaceHash(source: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement) {
+  const size = 9;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size - 1;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return "";
+
+  let w = 0;
+  let h = 0;
+  if (source instanceof HTMLVideoElement) {
+    w = source.videoWidth;
+    h = source.videoHeight;
+  } else if (source instanceof HTMLImageElement) {
+    w = source.naturalWidth || source.width;
+    h = source.naturalHeight || source.height;
+  } else {
+    w = source.width;
+    h = source.height;
+  }
+  if (!w || !h) return "";
+
+  // Centro (zona de cara tipica en kiosk)
+  const side = Math.min(w, h) * 0.72;
+  const sx = (w - side) / 2;
+  const sy = (h - side) / 2.4;
+  ctx.drawImage(source, sx, sy, side, side, 0, 0, size, size - 1);
+
+  const { data } = ctx.getImageData(0, 0, size, size - 1);
+  const gray: number[] = [];
+  for (let i = 0; i < data.length; i += 4) {
+    gray.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+  }
+
+  let bits = "";
+  for (let y = 0; y < size - 1; y += 1) {
+    for (let x = 0; x < size - 1; x += 1) {
+      const left = gray[y * size + x];
+      const right = gray[y * size + x + 1];
+      bits += left < right ? "1" : "0";
+    }
+  }
+
+  let hex = "";
+  for (let i = 0; i < 64; i += 4) {
+    hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
+  }
+  return hex;
+}
+
+async function capturePhotoDataUrl(video: HTMLVideoElement, maxSide = 480) {
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  if (!w || !h) return "";
+  const scale = Math.min(1, maxSide / Math.max(w, h));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+export default function RecepcionPage() {
+  const [adminCode, setAdminCode] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+  const [unlockError, setUnlockError] = useState("");
+  const [isUnlocking, setIsUnlocking] = useState(false);
+
+  const [tab, setTab] = useState<Tab>("cedula");
+  const [status, setStatus] = useState<GymStatus | null>(null);
+  const [recent, setRecent] = useState<RecentCheckin[]>([]);
+  const [roster, setRoster] = useState<MemberHit[]>([]);
+
+  const [cedula, setCedula] = useState("");
+  const [query, setQuery] = useState("");
+  const [member, setMember] = useState<MemberHit | null>(null);
+  const [faceMatches, setFaceMatches] = useState<MemberHit[]>([]);
+  const [isLooking, setIsLooking] = useState(false);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [error, setError] = useState("");
+  const [flash, setFlash] = useState<{
+    type: "ok" | "warn" | "err";
+    title: string;
+    subtitle: string;
+  } | null>(null);
+
+  // Registro
+  const [regName, setRegName] = useState("");
+  const [regCedula, setRegCedula] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPlan, setRegPlan] = useState("Xtreme Mensual");
+  const [regPhoto, setRegPhoto] = useState("");
+  const [regFaceHash, setRegFaceHash] = useState("");
+  const [regCheckIn, setRegCheckIn] = useState(true);
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  // Camara
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
+
+  const cedulaInputRef = useRef<HTMLInputElement | null>(null);
+  const lookupTimer = useRef<number | null>(null);
+
+  const headers = useCallback(
+    (json = false): HeadersInit => {
+      const h: Record<string, string> = { "x-xtreme-admin": adminCode };
+      if (json) h["Content-Type"] = "application/json";
+      return h;
+    },
+    [adminCode],
+  );
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCameraOn(false);
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setCameraError("");
+    try {
+      stopCamera();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraOn(true);
+    } catch {
+      setCameraError("No se pudo abrir la camara. Revise permisos del navegador.");
+      setCameraOn(false);
+    }
+  }, [stopCamera]);
+
+  const loadPanel = useCallback(
+    async (withRoster = false) => {
+      if (!adminCode) return;
+      try {
+        const params = withRoster ? "?roster=1" : "";
+        const res = await fetch(`/api/xtreme/reception${params}`, {
+          cache: "no-store",
+          headers: headers(),
+        });
+        const json = (await res.json()) as {
+          status?: GymStatus;
+          recent?: RecentCheckin[];
+          members?: MemberHit[];
+          error?: string;
+        };
+        if (!res.ok) throw new Error(json.error || "Error");
+        if (json.status) setStatus(json.status);
+        if (json.recent) setRecent(json.recent);
+        if (json.members) setRoster(json.members);
+      } catch {
+        /* poll soft-fail */
+      }
+    },
+    [adminCode, headers],
+  );
+
+  async function unlock(e?: React.FormEvent) {
+    e?.preventDefault();
+    const code = adminCode.trim();
+    if (!code) return;
+    setIsUnlocking(true);
+    setUnlockError("");
+    try {
+      const res = await fetch("/api/xtreme/reception", {
+        cache: "no-store",
+        headers: { "x-xtreme-admin": code },
+      });
+      const json = (await res.json()) as {
+        status?: GymStatus;
+        recent?: RecentCheckin[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setUnlockError(json.error || "Codigo incorrecto.");
+        return;
+      }
+      window.localStorage.setItem(ADMIN_CODE_KEY, code);
+      setAdminCode(code);
+      setUnlocked(true);
+      if (json.status) setStatus(json.status);
+      if (json.recent) setRecent(json.recent);
+    } catch {
+      setUnlockError("Error de conexion.");
+    } finally {
+      setIsUnlocking(false);
+    }
+  }
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(ADMIN_CODE_KEY);
+    if (stored) {
+      setAdminCode(stored);
+      void (async () => {
+        setIsUnlocking(true);
+        try {
+          const res = await fetch("/api/xtreme/reception", {
+            cache: "no-store",
+            headers: { "x-xtreme-admin": stored },
+          });
+          const json = (await res.json()) as {
+            status?: GymStatus;
+            recent?: RecentCheckin[];
+          };
+          if (!res.ok) {
+            window.localStorage.removeItem(ADMIN_CODE_KEY);
+            setAdminCode("");
+            return;
+          }
+          setUnlocked(true);
+          if (json.status) setStatus(json.status);
+          if (json.recent) setRecent(json.recent);
+        } finally {
+          setIsUnlocking(false);
+        }
+      })();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    void loadPanel(tab === "face");
+    const id = window.setInterval(() => void loadPanel(tab === "face"), 12_000);
+    return () => window.clearInterval(id);
+  }, [unlocked, tab, loadPanel]);
+
+  useEffect(() => {
+    if (tab === "face" && unlocked) {
+      void startCamera();
+      void loadPanel(true);
+    } else {
+      stopCamera();
+    }
+    return () => {
+      if (tab !== "face") stopCamera();
+    };
+  }, [tab, unlocked, startCamera, stopCamera, loadPanel]);
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, [stopCamera]);
+
+  useEffect(() => {
+    if (!flash) return;
+    const id = window.setTimeout(() => setFlash(null), 4200);
+    return () => window.clearTimeout(id);
+  }, [flash]);
+
+  useEffect(() => {
+    if (unlocked && tab === "cedula") {
+      cedulaInputRef.current?.focus();
+    }
+  }, [unlocked, tab, flash]);
+
+  const lookupMember = useCallback(
+    async (opts: { cedula?: string; q?: string; code?: string }) => {
+      setIsLooking(true);
+      setError("");
+      try {
+        const params = new URLSearchParams();
+        if (opts.cedula) params.set("cedula", opts.cedula);
+        else if (opts.code) params.set("code", opts.code);
+        else if (opts.q) params.set("q", opts.q);
+        const res = await fetch(`/api/xtreme/checkin?${params}`, { cache: "no-store" });
+        const json = (await res.json()) as {
+          status?: GymStatus;
+          member?: MemberHit | null;
+          error?: string;
+        };
+        if (json.status) setStatus(json.status);
+        if (!json.member) {
+          setMember(null);
+          setError(json.error || "Socio no encontrado.");
+          return null;
+        }
+        setMember(json.member);
+        return json.member;
+      } catch {
+        setError("Error de conexion.");
+        setMember(null);
+        return null;
+      } finally {
+        setIsLooking(false);
+      }
+    },
+    [],
+  );
+
+  // Auto-busqueda por cedula al digitar (lector de barras / teclado)
+  useEffect(() => {
+    if (!unlocked || tab !== "cedula") return;
+    const digits = cedula.replace(/\D/g, "");
+    if (digits.length < 6) {
+      if (!digits) {
+        setMember(null);
+        setError("");
+      }
+      return;
+    }
+    if (lookupTimer.current) window.clearTimeout(lookupTimer.current);
+    lookupTimer.current = window.setTimeout(() => {
+      void lookupMember({ cedula: digits });
+    }, AUTO_LOOKUP_MS);
+    return () => {
+      if (lookupTimer.current) window.clearTimeout(lookupTimer.current);
+    };
+  }, [cedula, unlocked, tab, lookupMember]);
+
+  async function confirmCheckin(target?: MemberHit, method: "cedula" | "face" | "name" | "code" = "cedula") {
+    const m = target || member;
+    if (!m) return;
+    setIsCheckingIn(true);
+    setError("");
+    try {
+      const res = await fetch("/api/xtreme/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberName: m.memberName,
+          accessCode: m.accessCode,
+          cedula: m.cedula || cedula,
+          method,
+          by: "reception",
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        message?: string;
+        error?: string;
+        membershipStatus?: MemberHit["membershipStatus"];
+        status?: GymStatus;
+        duplicate?: boolean;
+      };
+      if (!res.ok) {
+        setError(json.error || "No se pudo registrar.");
+        setFlash({ type: "err", title: "Acceso denegado", subtitle: json.error || "Error" });
+        return;
+      }
+      if (json.status) setStatus(json.status);
+      const ms = json.membershipStatus || m.membershipStatus;
+      setFlash({
+        type: ms === "expired" ? "warn" : "ok",
+        title: json.duplicate
+          ? "Ya esta adentro"
+          : `Listo · ${m.memberName.split(" ")[0]}`,
+        subtitle: json.message || "Ingreso registrado en recepcion.",
+      });
+      setCedula("");
+      setQuery("");
+      setMember(null);
+      setFaceMatches([]);
+      void loadPanel(tab === "face");
+      window.setTimeout(() => cedulaInputRef.current?.focus(), 100);
+    } catch {
+      setError("Error de conexion.");
+      setFlash({ type: "err", title: "Error", subtitle: "No se pudo registrar el ingreso." });
+    } finally {
+      setIsCheckingIn(false);
+    }
+  }
+
+  async function searchFallback(e?: React.FormEvent) {
+    e?.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    const digits = q.replace(/\D/g, "");
+    const useCode = digits.length >= 4 && digits.length === q.replace(/\s/g, "").length;
+    const hit = await lookupMember(useCode ? { code: digits } : { q });
+    if (hit) setMember(hit);
+  }
+
+  async function scanFace() {
+    const video = videoRef.current;
+    if (!video || !cameraOn) {
+      setCameraError("Active la camara primero.");
+      return;
+    }
+    setIsScanning(true);
+    setError("");
+    setFaceMatches([]);
+    try {
+      const faceHash = await computeFaceHash(video);
+      if (!faceHash) {
+        setError("No se pudo leer el rostro. Centra la cara y reintenta.");
+        return;
+      }
+      const res = await fetch(`/api/xtreme/reception?faceHash=${faceHash}`, {
+        cache: "no-store",
+        headers: headers(),
+      });
+      const json = (await res.json()) as {
+        matches?: MemberHit[];
+        bestMatch?: MemberHit | null;
+        status?: GymStatus;
+        recent?: RecentCheckin[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setError(json.error || "No se pudo buscar rostro.");
+        return;
+      }
+      if (json.status) setStatus(json.status);
+      if (json.recent) setRecent(json.recent);
+      const matches = json.matches || [];
+      setFaceMatches(matches);
+      if (json.bestMatch) {
+        setMember(json.bestMatch);
+        // Auto-ingreso si el match es muy claro (distancia baja)
+        if ((json.bestMatch.faceDistance ?? 99) <= 6 && matches.length === 1) {
+          await confirmCheckin(json.bestMatch, "face");
+          return;
+        }
+      } else {
+        setMember(null);
+        setError("Sin coincidencias. Use cedula o registre al socio.");
+      }
+    } catch {
+      setError("Error al escanear rostro.");
+    } finally {
+      setIsScanning(false);
+    }
+  }
+
+  async function enrollCurrentFace() {
+    if (!member) {
+      setError("Busque al socio primero (cedula) para enrolar su rostro.");
+      return;
+    }
+    const video = videoRef.current;
+    if (!video || !cameraOn) {
+      setCameraError("Active la camara primero.");
+      return;
+    }
+    setIsEnrolling(true);
+    setError("");
+    try {
+      const faceHash = await computeFaceHash(video);
+      const photoUrl = await capturePhotoDataUrl(video);
+      if (!faceHash) {
+        setError("No se pudo capturar el rostro.");
+        return;
+      }
+      const res = await fetch("/api/xtreme/reception", {
+        method: "POST",
+        headers: headers(true),
+        body: JSON.stringify({
+          action: "enroll_face",
+          memberName: member.memberName,
+          faceHash,
+          photoUrl,
+        }),
+      });
+      const json = (await res.json()) as { ok?: boolean; member?: MemberHit; error?: string };
+      if (!res.ok) {
+        setError(json.error || "No se pudo enrolar.");
+        return;
+      }
+      if (json.member) setMember(json.member);
+      setFlash({
+        type: "ok",
+        title: "Rostro guardado",
+        subtitle: `${member.memberName} ya puede ingresar por cara.`,
+      });
+      void loadPanel(true);
+    } catch {
+      setError("Error de conexion al enrolar.");
+    } finally {
+      setIsEnrolling(false);
+    }
+  }
+
+  async function captureForRegister() {
+    const video = videoRef.current;
+    if (!video) {
+      await startCamera();
+      return;
+    }
+    if (!cameraOn) await startCamera();
+    // small wait for stream
+    await new Promise((r) => setTimeout(r, 200));
+    const v = videoRef.current;
+    if (!v) return;
+    const faceHash = await computeFaceHash(v);
+    const photoUrl = await capturePhotoDataUrl(v);
+    setRegFaceHash(faceHash);
+    setRegPhoto(photoUrl);
+  }
+
+  async function registerWalkin(e?: React.FormEvent) {
+    e?.preventDefault();
+    setIsRegistering(true);
+    setError("");
+    try {
+      const res = await fetch("/api/xtreme/reception", {
+        method: "POST",
+        headers: headers(true),
+        body: JSON.stringify({
+          action: "register",
+          memberName: regName,
+          cedula: regCedula,
+          phone: regPhone,
+          email: regEmail,
+          plan: regPlan,
+          photoUrl: regPhoto || undefined,
+          faceHash: regFaceHash || undefined,
+          checkInNow: regCheckIn,
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        message?: string;
+        error?: string;
+        member?: MemberHit;
+        membershipStatus?: MemberHit["membershipStatus"];
+        status?: GymStatus;
+        created?: boolean;
+      };
+      if (!res.ok) {
+        setError(json.error || "No se pudo registrar.");
+        if (json.member) setMember(json.member);
+        setFlash({ type: "err", title: "No se pudo registrar", subtitle: json.error || "" });
+        return;
+      }
+      if (json.status) setStatus(json.status);
+      setFlash({
+        type: json.membershipStatus === "expired" ? "warn" : "ok",
+        title: json.created ? "Socio nuevo" : "Actualizado",
+        subtitle: json.message || regName,
+      });
+      setRegName("");
+      setRegCedula("");
+      setRegPhone("");
+      setRegEmail("");
+      setRegPhoto("");
+      setRegFaceHash("");
+      setMember(null);
+      void loadPanel(true);
+      setTab("cedula");
+    } catch {
+      setError("Error de conexion.");
+    } finally {
+      setIsRegistering(false);
+    }
+  }
+
+  function logout() {
+    stopCamera();
+    window.localStorage.removeItem(ADMIN_CODE_KEY);
+    setUnlocked(false);
+    setAdminCode("");
+    setMember(null);
+    setRoster([]);
+    setRecent([]);
+  }
+
+  if (!unlocked) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#070707] px-4 text-white">
+        <form
+          onSubmit={(e) => void unlock(e)}
+          className="w-full max-w-md border border-white/10 bg-[#101010] p-8 shadow-2xl"
+        >
+          <div className="grid h-14 w-14 place-items-center bg-[#d8ff3e] text-black">
+            <DoorOpen className="h-7 w-7" />
+          </div>
+          <h1 className="mt-5 text-3xl font-black uppercase tracking-tight">Recepcion</h1>
+          <p className="mt-2 text-sm font-bold text-white/50">
+            Panel del mostrador — distinto del ingreso de socios (<Link href="/ingreso" className="text-[#d8ff3e] underline">/ingreso</Link>).
+          </p>
+          <label className="mt-6 block text-xs font-black uppercase tracking-[0.2em] text-white/40">
+            Codigo de staff
+          </label>
+          <div className="relative mt-2">
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+            <input
+              type="password"
+              value={adminCode}
+              onChange={(e) => setAdminCode(e.target.value)}
+              autoFocus
+              placeholder="Codigo admin"
+              className="w-full border border-white/15 bg-black/40 py-3.5 pl-10 pr-4 text-base font-bold outline-none focus:border-[#d8ff3e]"
+            />
+          </div>
+          {unlockError && (
+            <p className="mt-3 flex items-center gap-2 text-sm font-bold text-red-400">
+              <XCircle className="h-4 w-4" /> {unlockError}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={isUnlocking || !adminCode.trim()}
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 bg-[#d8ff3e] py-3.5 text-sm font-black uppercase tracking-wide text-black transition hover:bg-[#e8ff6a] disabled:opacity-50"
+          >
+            {isUnlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar a recepcion"}
+          </button>
+          <p className="mt-4 text-center text-xs text-white/35">
+            <Link href="/admin" className="hover:text-white/70">
+              Panel admin
+            </Link>
+            {" · "}
+            <Link href="/ingreso" className="hover:text-white/70">
+              Ingreso socios
+            </Link>
+          </p>
+        </form>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#070707] text-white">
+      {flash && (
+        <div
+          className={`fixed inset-x-0 top-0 z-50 border-b px-5 py-5 text-center ${
+            flash.type === "ok"
+              ? "border-lime-300/40 bg-[#d8ff3e] text-black"
+              : flash.type === "warn"
+                ? "border-orange-300/50 bg-orange-400 text-black"
+                : "border-red-400/50 bg-red-500 text-white"
+          }`}
+        >
+          <p className="text-2xl font-black uppercase tracking-tight sm:text-4xl">{flash.title}</p>
+          <p className="mt-1 text-sm font-bold opacity-80 sm:text-base">{flash.subtitle}</p>
+        </div>
+      )}
+
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center bg-[#d8ff3e] text-black">
+            <DoorOpen className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-lg font-black uppercase tracking-tight">Recepcion Xtreme</p>
+            <p className="text-xs font-bold text-white/40">Ingreso rapido · alta walk-in</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <OccupancyPill status={status} />
+          <Link
+            href="/admin"
+            className="border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-white/30 hover:text-white"
+          >
+            Admin
+          </Link>
+          <button
+            type="button"
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-red-400/40 hover:text-red-300"
+          >
+            <LogOut className="h-3.5 w-3.5" /> Salir
+          </button>
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-[1fr_320px] lg:p-6">
+        <section className="border border-white/10 bg-[#0f0f0f]">
+          <div className="flex border-b border-white/10">
+            {(
+              [
+                { id: "cedula" as const, label: "Cedula", icon: IdCard },
+                { id: "face" as const, label: "Rostro", icon: ScanFace },
+                { id: "register" as const, label: "Registro", icon: UserPlus },
+              ] as const
+            ).map((t) => {
+              const Icon = t.icon;
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    setTab(t.id);
+                    setError("");
+                    setFaceMatches([]);
+                  }}
+                  className={`flex flex-1 items-center justify-center gap-2 px-3 py-3.5 text-xs font-black uppercase tracking-wide transition sm:text-sm ${
+                    active
+                      ? "bg-[#d8ff3e] text-black"
+                      : "text-white/50 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="p-4 sm:p-6">
+            {tab === "cedula" && (
+              <div className="mx-auto max-w-xl">
+                <div className="text-center">
+                  <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d8ff3e]/80">
+                    Via mas rapida
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black uppercase tracking-tight sm:text-3xl">
+                    Digite o escanee la cedula
+                  </h2>
+                  <p className="mt-2 text-sm font-bold text-white/45">
+                    El lector de barras o el teclado buscan solo. Enter confirma el ingreso.
+                  </p>
+                </div>
+
+                <form
+                  className="mt-6"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (member) void confirmCheckin(member, "cedula");
+                    else if (cedula.replace(/\D/g, "").length >= 6) {
+                      void lookupMember({ cedula: cedula.replace(/\D/g, "") }).then((m) => {
+                        if (m) void confirmCheckin(m, "cedula");
+                      });
+                    }
+                  }}
+                >
+                  <div className="relative">
+                    <CreditCard className="pointer-events-none absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-white/35" />
+                    <input
+                      ref={cedulaInputRef}
+                      value={cedula}
+                      onChange={(e) => setCedula(e.target.value)}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      autoFocus
+                      placeholder="1-2345-6789"
+                      className="w-full border border-white/15 bg-black/50 py-5 pl-14 pr-14 text-center text-3xl font-black tracking-widest outline-none placeholder:text-white/20 focus:border-[#d8ff3e] sm:text-4xl"
+                    />
+                    {isLooking && (
+                      <Loader2 className="absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 animate-spin text-[#d8ff3e]" />
+                    )}
+                  </div>
+
+                  {/* Teclado numerico rapido (tablet) */}
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"].map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          if (key === "clear") setCedula("");
+                          else if (key === "back") setCedula((v) => v.slice(0, -1));
+                          else setCedula((v) => (v + key).slice(0, 20));
+                        }}
+                        className="border border-white/10 bg-white/[0.03] py-3.5 text-lg font-black text-white/80 transition hover:border-[#d8ff3e]/40 hover:bg-[#d8ff3e]/10 active:scale-[0.98]"
+                      >
+                        {key === "clear" ? "C" : key === "back" ? "⌫" : key}
+                      </button>
+                    ))}
+                  </div>
+
+                  <MemberPreview
+                    member={member}
+                    error={error}
+                    isCheckingIn={isCheckingIn}
+                    onConfirm={() => void confirmCheckin(member || undefined, "cedula")}
+                  />
+                </form>
+
+                <div className="mt-8 border-t border-white/10 pt-6">
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/35">
+                    Alternativa · nombre o codigo
+                  </p>
+                  <form onSubmit={(e) => void searchFallback(e)} className="mt-3 flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                      <input
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Nombre, telefono o codigo"
+                        className="w-full border border-white/15 bg-black/40 py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-[#d8ff3e]/60"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLooking || !query.trim()}
+                      className="border border-white/15 px-4 text-xs font-black uppercase tracking-wide text-white/70 hover:border-white/30 disabled:opacity-40"
+                    >
+                      Buscar
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {tab === "face" && (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div>
+                  <div className="text-center lg:text-left">
+                    <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d8ff3e]/80">
+                      Reconocimiento facial
+                    </p>
+                    <h2 className="mt-1 text-2xl font-black uppercase tracking-tight">
+                      Apunte la camara al socio
+                    </h2>
+                    <p className="mt-2 text-sm font-bold text-white/45">
+                      Match automatico si el rostro esta enrolado. Si no, use cedula (mas rapido) o enrole la cara.
+                    </p>
+                  </div>
+
+                  <div className="relative mt-4 aspect-[4/3] overflow-hidden border border-white/15 bg-black">
+                    <video
+                      ref={videoRef}
+                      playsInline
+                      muted
+                      className="h-full w-full scale-x-[-1] object-cover"
+                    />
+                    {!cameraOn && (
+                      <div className="absolute inset-0 grid place-items-center bg-black/70 p-6 text-center">
+                        <div>
+                          <Camera className="mx-auto h-10 w-10 text-white/40" />
+                          <p className="mt-3 text-sm font-bold text-white/50">
+                            {cameraError || "Camara apagada"}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => void startCamera()}
+                            className="mt-4 bg-[#d8ff3e] px-4 py-2 text-xs font-black uppercase text-black"
+                          >
+                            Activar camara
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="pointer-events-none absolute inset-8 rounded-full border-2 border-[#d8ff3e]/40" />
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void scanFace()}
+                      disabled={isScanning || !cameraOn}
+                      className="inline-flex items-center justify-center gap-2 bg-[#d8ff3e] py-3.5 text-sm font-black uppercase text-black disabled:opacity-50"
+                    >
+                      {isScanning ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ScanFace className="h-4 w-4" />
+                      )}
+                      Escanear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void enrollCurrentFace()}
+                      disabled={isEnrolling || !cameraOn || !member}
+                      className="inline-flex items-center justify-center gap-2 border border-white/15 py-3.5 text-sm font-black uppercase text-white/80 hover:border-white/30 disabled:opacity-40"
+                    >
+                      {isEnrolling ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                      Enrolar
+                    </button>
+                  </div>
+                  {error && tab === "face" && (
+                    <p className="mt-3 flex items-center gap-2 text-sm font-bold text-red-400">
+                      <XCircle className="h-4 w-4 shrink-0" /> {error}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <MemberPreview
+                    member={member}
+                    error=""
+                    isCheckingIn={isCheckingIn}
+                    onConfirm={() => void confirmCheckin(member || undefined, "face")}
+                  />
+
+                  {faceMatches.length > 1 && (
+                    <div className="mt-4">
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
+                        Candidatos
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {faceMatches.map((m) => (
+                          <button
+                            key={m.normalizedName}
+                            type="button"
+                            onClick={() => setMember(m)}
+                            className={`flex w-full items-center gap-3 border px-3 py-2 text-left transition ${
+                              member?.normalizedName === m.normalizedName
+                                ? "border-[#d8ff3e]/60 bg-[#d8ff3e]/10"
+                                : "border-white/10 hover:border-white/25"
+                            }`}
+                          >
+                            <Avatar name={m.memberName} photoUrl={m.photoUrl} />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-black uppercase">{m.memberName}</p>
+                              <p className="text-xs font-bold text-white/40">
+                                Dist. {m.faceDistance ?? "—"} · {STATUS_LABEL[m.membershipStatus]}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-6">
+                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
+                      Galeria con foto ({roster.filter((m) => m.photoUrl || m.hasFace).length})
+                    </p>
+                    <div className="mt-2 grid max-h-72 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
+                      {roster
+                        .filter((m) => m.photoUrl || m.hasFace)
+                        .slice(0, 48)
+                        .map((m) => (
+                          <button
+                            key={m.normalizedName}
+                            type="button"
+                            onClick={() => {
+                              setMember(m);
+                              setError("");
+                            }}
+                            className="border border-white/10 p-1.5 text-center transition hover:border-[#d8ff3e]/50"
+                          >
+                            <Avatar name={m.memberName} photoUrl={m.photoUrl} large />
+                            <p className="mt-1 truncate text-[10px] font-black uppercase text-white/60">
+                              {m.memberName.split(" ")[0]}
+                            </p>
+                          </button>
+                        ))}
+                      {!roster.filter((m) => m.photoUrl || m.hasFace).length && (
+                        <p className="col-span-full py-6 text-center text-sm font-bold text-white/35">
+                          Nadie con foto enrolada aun. Use Enrolar o Registro.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tab === "register" && (
+              <div className="mx-auto grid max-w-3xl gap-6 lg:grid-cols-2">
+                <form onSubmit={(e) => void registerWalkin(e)} className="space-y-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d8ff3e]/80">
+                      Alta en mostrador
+                    </p>
+                    <h2 className="mt-1 text-2xl font-black uppercase tracking-tight">
+                      Nuevo socio
+                    </h2>
+                    <p className="mt-2 text-sm font-bold text-white/45">
+                      Sin correo magico. Ideal para walk-in. Opcional: foto + rostro en el acto.
+                    </p>
+                  </div>
+
+                  <Field label="Nombre completo" required>
+                    <input
+                      value={regName}
+                      onChange={(e) => setRegName(e.target.value)}
+                      required
+                      className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                      placeholder="Nombre y apellidos"
+                    />
+                  </Field>
+                  <Field label="Cedula" required>
+                    <input
+                      value={regCedula}
+                      onChange={(e) => setRegCedula(e.target.value)}
+                      required
+                      inputMode="numeric"
+                      className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                      placeholder="1-2345-6789"
+                    />
+                  </Field>
+                  <Field label="Telefono" required>
+                    <input
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      required
+                      inputMode="tel"
+                      className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                      placeholder="8888-8888"
+                    />
+                  </Field>
+                  <Field label="Correo (opcional)">
+                    <input
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      type="email"
+                      className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                      placeholder="correo@ejemplo.com"
+                    />
+                  </Field>
+                  <Field label="Plan">
+                    <select
+                      value={regPlan}
+                      onChange={(e) => setRegPlan(e.target.value)}
+                      className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                    >
+                      <option className="text-black">Xtreme Mensual</option>
+                      <option className="text-black">Pase dia</option>
+                      <option className="text-black">Semanal</option>
+                      <option className="text-black">Quincenal</option>
+                      <option className="text-black">Trimestral</option>
+                    </select>
+                  </Field>
+
+                  <label className="flex items-center gap-2 text-sm font-bold text-white/70">
+                    <input
+                      type="checkbox"
+                      checked={regCheckIn}
+                      onChange={(e) => setRegCheckIn(e.target.checked)}
+                      className="h-4 w-4 accent-[#d8ff3e]"
+                    />
+                    Registrar ingreso ahora
+                  </label>
+
+                  {error && tab === "register" && (
+                    <p className="flex items-center gap-2 text-sm font-bold text-red-400">
+                      <XCircle className="h-4 w-4 shrink-0" /> {error}
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isRegistering || !regName.trim() || !regCedula.trim() || !regPhone.trim()}
+                    className="inline-flex w-full items-center justify-center gap-2 bg-[#d8ff3e] py-4 text-sm font-black uppercase tracking-wide text-black disabled:opacity-50"
+                  >
+                    {isRegistering ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-5 w-5" />
+                    )}
+                    {regCheckIn ? "Registrar e ingresar" : "Solo registrar"}
+                  </button>
+                </form>
+
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
+                    Foto / rostro (opcional)
+                  </p>
+                  <div className="relative mt-2 aspect-[4/3] overflow-hidden border border-white/15 bg-black">
+                    {regPhoto ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={regPhoto} alt="Captura" className="h-full w-full scale-x-[-1] object-cover" />
+                    ) : (
+                      <video
+                        ref={videoRef}
+                        playsInline
+                        muted
+                        className="h-full w-full scale-x-[-1] object-cover"
+                      />
+                    )}
+                    {!cameraOn && !regPhoto && (
+                      <div className="absolute inset-0 grid place-items-center bg-black/70 p-4 text-center">
+                        <p className="text-sm font-bold text-white/45">
+                          {cameraError || "Sin captura"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRegPhoto("");
+                        setRegFaceHash("");
+                        void startCamera();
+                      }}
+                      className="border border-white/15 py-2.5 text-xs font-black uppercase text-white/70 hover:border-white/30"
+                    >
+                      Camara
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void captureForRegister()}
+                      className="bg-white/10 py-2.5 text-xs font-black uppercase text-white hover:bg-white/15"
+                    >
+                      Capturar
+                    </button>
+                  </div>
+                  {regFaceHash && (
+                    <p className="mt-2 text-xs font-bold text-[#d8ff3e]/80">
+                      Rostro listo para match futuro
+                    </p>
+                  )}
+                  <p className="mt-4 text-xs font-bold leading-relaxed text-white/35">
+                    Recomendacion: en el dia a dia la cedula es la via mas rapida y confiable.
+                    El rostro sirve cuando el socio ya esta enrolado y no trae documento a mano.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <aside className="space-y-4">
+          <div className="border border-white/10 bg-[#0f0f0f] p-4">
+            <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
+              <Users className="h-3.5 w-3.5" /> Ahora en el gym
+            </p>
+            <p className="mt-2 text-4xl font-black text-[#d8ff3e]">
+              {status?.currentPeople ?? 0}
+              <span className="text-lg text-white/40"> / {status?.capacity ?? 85}</span>
+            </p>
+            <p className="mt-1 text-sm font-bold text-white/50">
+              {status?.occupancyPct ?? 0}% · {status?.level ?? "—"} · hoy {status?.checkinsToday ?? 0} ingresos
+            </p>
+            <div className="mt-3 h-2 overflow-hidden bg-white/10">
+              <div
+                className="h-full bg-[#d8ff3e] transition-all"
+                style={{ width: `${Math.min(100, status?.occupancyPct ?? 0)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="border border-white/10 bg-[#0f0f0f] p-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
+              Ultimos ingresos
+            </p>
+            <ul className="mt-3 max-h-[28rem] space-y-2 overflow-y-auto">
+              {recent.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-center justify-between gap-2 border border-white/5 bg-black/30 px-2.5 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black uppercase">{c.memberName}</p>
+                    <p className="text-[11px] font-bold text-white/35">
+                      {c.method} · {c.by} · {formatTime(c.checkedInAt)}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 text-[10px] font-black uppercase ${
+                      c.membershipStatus === "expired"
+                        ? "text-orange-400"
+                        : c.membershipStatus === "warning"
+                          ? "text-amber-300"
+                          : "text-[#d8ff3e]/80"
+                    }`}
+                  >
+                    {c.membershipStatus === "expired"
+                      ? "Vencida"
+                      : c.membershipStatus === "warning"
+                        ? "Pronto"
+                        : "OK"}
+                  </span>
+                </li>
+              ))}
+              {!recent.length && (
+                <li className="py-6 text-center text-sm font-bold text-white/30">
+                  Sin ingresos hoy
+                </li>
+              )}
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+    </main>
+  );
+}
+
+function OccupancyPill({ status }: { status: GymStatus | null }) {
+  return (
+    <span className="inline-flex items-center gap-2 border border-white/15 bg-black/40 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/70">
+      <span className="h-2 w-2 rounded-full bg-[#d8ff3e]" />
+      {status?.currentPeople ?? 0}/{status?.capacity ?? 85} · {status?.occupancyPct ?? 0}%
+    </span>
+  );
+}
+
+function Avatar({
+  name,
+  photoUrl,
+  large,
+}: {
+  name: string;
+  photoUrl?: string;
+  large?: boolean;
+}) {
+  const size = large ? "h-14 w-14" : "h-10 w-10";
+  if (photoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt={name}
+        className={`${size} shrink-0 object-cover ${large ? "" : "rounded-none"}`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`grid ${size} shrink-0 place-items-center bg-[#d8ff3e]/15 text-xs font-black text-[#d8ff3e]`}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-black uppercase tracking-[0.15em] text-white/40">
+        {label}
+        {required ? " *" : ""}
+      </span>
+      <div className="mt-1">{children}</div>
+    </label>
+  );
+}
+
+function MemberPreview({
+  member,
+  error,
+  isCheckingIn,
+  onConfirm,
+}: {
+  member: MemberHit | null;
+  error: string;
+  isCheckingIn: boolean;
+  onConfirm: () => void;
+}) {
+  if (!member && !error) return null;
+
+  if (!member) {
+    return (
+      <div className="mt-4 flex items-center gap-2 border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
+        <XCircle className="h-4 w-4 shrink-0" />
+        {error}
+      </div>
+    );
+  }
+
+  const expired = member.membershipStatus === "expired";
+
+  return (
+    <div className="mt-5 border border-white/10 bg-black/40 p-4">
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          {member.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={member.photoUrl}
+              alt={member.memberName}
+              className="h-16 w-16 object-cover ring-2 ring-[#d8ff3e]/40"
+            />
+          ) : (
+            <span className="grid h-16 w-16 place-items-center bg-[#d8ff3e] text-xl font-black text-black">
+              {initials(member.memberName)}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-lg font-black uppercase tracking-tight">{member.memberName}</p>
+          <p className="text-sm font-bold text-white/45">
+            {STATUS_LABEL[member.membershipStatus]}
+            {member.daysRemaining >= 0 ? ` · ${member.daysRemaining}d` : ""} · {member.plan}
+          </p>
+          <p className="text-xs font-bold text-white/30">
+            {member.cedula ? `Ced. ${member.cedula} · ` : ""}
+            {member.accessCode}
+          </p>
+        </div>
+      </div>
+
+      {expired && (
+        <div className="mt-3 flex items-start gap-2 border border-orange-400/30 bg-orange-500/10 px-3 py-2 text-sm font-bold text-orange-200">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          Membresia vencida — puede ingresar, cobrar renovacion.
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-3 flex items-center gap-2 border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
+          <XCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={isCheckingIn}
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-[#d8ff3e] py-4 text-base font-black uppercase tracking-wide text-black transition hover:bg-[#e8ff6a] disabled:opacity-50"
+      >
+        {isCheckingIn ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <CheckCircle2 className="h-5 w-5" />
+        )}
+        Confirmar ingreso
+      </button>
+    </div>
+  );
+}
