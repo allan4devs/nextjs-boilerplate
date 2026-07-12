@@ -20,6 +20,12 @@ export const BUSINESS = {
   email: "xtremegymadm@gmail.com",
   location: "Ciudad Quesada, Barrio San Pablo",
   maps: "https://maps.app.goo.gl/RxUmrxqqchH5men99",
+  social: {
+    facebook: "https://www.facebook.com/xtremegym.cr",
+    instagram: "https://www.instagram.com/xtremegym_tan",
+    youtube: "https://www.youtube.com/@xtremegymcr",
+    tiktok: "https://www.tiktok.com/@xtremegymcr",
+  },
 };
 
 export const telLink = `tel:${BUSINESS.phone.replace(/\s/g, "")}`;

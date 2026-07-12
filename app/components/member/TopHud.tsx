@@ -1,14 +1,13 @@
 "use client";
 
-/** HUD superior fijo: tab activo + pills de racha, nivel y meta semanal. */
+/** HUD superior fijo: acciones rapidas del OS (todas abren su modal). */
 
-import { Flame, Menu, Star, Target } from "lucide-react";
-import { GameHudPill } from "../GameOS";
-import { TABS } from "./constants";
+import { Flame, Menu, Star, Target, Zap } from "lucide-react";
+import { GameButton, GameHudPill } from "../GameOS";
 import type { MemberOs } from "./useMemberOs";
 
 export default function TopHud({ os }: { os: MemberOs }) {
-  const { tab, setNavOpen, unlocked, effectiveStreak, level, weekDoneCount, weeklyGoal, setOsModal } = os;
+  const { setNavOpen, unlocked, trainedToday, effectiveStreak, level, weekDoneCount, weeklyGoal, setOsModal } = os;
 
   return (
     <header className="xg-safe-top sticky top-0 z-30 border-b-[3px] border-white/15 bg-[#050505]/95 backdrop-blur-md lg:pl-[84px]">
@@ -21,18 +20,18 @@ export default function TopHud({ os }: { os: MemberOs }) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <span className="hidden h-2.5 w-2.5 shrink-0 bg-[#d8ff3e] shadow-[0_0_16px_rgba(216,255,62,.75)] sm:block" />
-        <div className="min-w-0 shrink">
-          <p className="truncate text-[10px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
-            Xtreme · Member OS
-          </p>
-          <p className="truncate text-xs font-black uppercase text-white/80 sm:text-sm">
-            {TABS.find((item) => item.id === tab)?.label}
-          </p>
-        </div>
-
         {unlocked && (
-          <div className="ml-auto flex max-w-[58%] items-center gap-1.5 overflow-x-auto sm:max-w-none sm:gap-2">
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto sm:gap-2">
+            {!trainedToday && (
+              <GameButton
+                variant="orange"
+                className="min-h-9 shrink-0 !px-3 text-xs"
+                onClick={() => setOsModal({ kind: "quick-train" })}
+              >
+                <Zap className="h-4 w-4" />
+                <span className="hidden sm:inline">Entreno</span>
+              </GameButton>
+            )}
             <GameHudPill
               icon={Flame}
               label="Racha"

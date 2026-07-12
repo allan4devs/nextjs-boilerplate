@@ -7,11 +7,11 @@
  */
 
 import Link from "next/link";
-import { ArrowLeft, Flame, Loader2 } from "lucide-react";
-import { GameButton, GameCallout, GameLabel } from "./components/GameOS";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { GameCallout } from "./components/GameOS";
 import { CelebrationOverlay } from "./components/gamification";
 import OnboardingTour from "./components/OnboardingTour";
-import { TABS, TAB_SUBTITLES, TOUR_STEPS, type TabId } from "./components/member/constants";
+import { TOUR_STEPS, type TabId } from "./components/member/constants";
 import { useMemberOs } from "./components/member/useMemberOs";
 import PinModal from "./components/member/PinModal";
 import CedulaLoginGate from "./components/member/CedulaLoginGate";
@@ -45,9 +45,6 @@ export default function ExtremeGymSite() {
     setTab,
     tab,
     navOpen,
-    unlocked,
-    trainedToday,
-    setOsModal,
     message,
     error,
     setMessage,
@@ -107,27 +104,6 @@ export default function ExtremeGymSite() {
           </div>
         ) : (
           <div className="space-y-3 sm:space-y-4">
-            <div className="border-[3px] border-white/15 bg-[#0c0c0c] px-3 py-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:px-4">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <GameLabel tone="lime">Estás en</GameLabel>
-                  <h1 className="mt-1 text-xl font-black uppercase tracking-tight sm:text-3xl">
-                    {TABS.find((item) => item.id === tab)?.label}
-                  </h1>
-                  <p className="mt-0.5 text-xs font-bold text-white/45 sm:text-sm">{TAB_SUBTITLES[tab]}</p>
-                </div>
-                {unlocked && !trainedToday && (
-                  <GameButton
-                    variant="orange"
-                    className="min-h-11 !px-3"
-                    onClick={() => setOsModal({ kind: "quick-train" })}
-                  >
-                    <Flame className="h-4 w-4" />
-                    <span className="hidden xs:inline sm:inline">Entreno</span>
-                  </GameButton>
-                )}
-              </div>
-            </div>
             {(message || error) && (
               <GameCallout tone={error ? "red" : "lime"}>
                 {error || message}

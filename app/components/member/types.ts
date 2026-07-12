@@ -87,6 +87,7 @@ export type Member = {
   latestBodyMetric: BodyMetric | null;
   trainingPlan: MemberPlan | null;
   notificationPrefs?: NotificationPrefs;
+  tourDone?: boolean;
   pinnedBadges?: string[];
   gamification?: Gamification;
 };

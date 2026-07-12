@@ -24,6 +24,9 @@ export type GrowthSnapshot = {
   renewalsCompleted: number;
   referralsRedeemed: number;
   referralsRewarded: number;
+  appOpens: number;
+  appOpenMembers: number;
+  appOpenSeries: Array<{ date: string; opens: number; unique: number }>;
   dayPassToVisit: {
     dayPasses: number;
     visited: number;
@@ -67,6 +70,21 @@ export async function computeGrowthSnapshot(db: Db, windowDays = 30): Promise<Gr
     .toArray();
 
   const countType = (type: string) => events.filter((e) => e.type === type).length;
+
+  // Entradas al app de socios (evento app_opened del Member OS)
+  const appOpenEvents = events.filter((e) => e.type === "app_opened");
+  const eventDay = (e: ProductEvent) =>
+    (e.occurredAt instanceof Date ? e.occurredAt.toISOString() : String(e.occurredAt)).slice(0, 10);
+  const appOpenSeries: Array<{ date: string; opens: number; unique: number }> = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    const day = daysAgo(i, toDate);
+    const dayEvents = appOpenEvents.filter((e) => eventDay(e) === day);
+    appOpenSeries.push({
+      date: day,
+      opens: dayEvents.length,
+      unique: new Set(dayEvents.map((e) => e.memberId).filter(Boolean)).size,
+    });
+  }
 
   const payments = await db
     .collection<PaymentDoc>(PAYMENTS_COLLECTION)
@@ -145,6 +163,9 @@ export async function computeGrowthSnapshot(db: Db, windowDays = 30): Promise<Gr
     renewalsCompleted: countType("renewal_completed"),
     referralsRedeemed: countType("referral_redeemed"),
     referralsRewarded: countType("referral_rewarded"),
+    appOpens: appOpenEvents.length,
+    appOpenMembers: new Set(appOpenEvents.map((e) => e.memberId).filter(Boolean)).size,
+    appOpenSeries,
     dayPassToVisit: {
       dayPasses: dayPassPayments.length,
       visited: dayPassVisited,

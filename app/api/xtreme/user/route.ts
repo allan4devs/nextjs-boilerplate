@@ -4,6 +4,7 @@ import { sendWelcomeEmail } from "@/lib/helpers/email";
 import { recordEvent } from "@/lib/xtreme/events";
 import {
   cedulaDigits,
+  CHECKINS_COLLECTION,
   clampPinnedBadges,
   computeStreak as sharedComputeStreak,
   findMemberByCedula,
@@ -12,6 +13,7 @@ import {
   memberAccessCode,
   mergeNotificationPrefs,
   normalizeCedula,
+  type CheckinDoc,
   type NotificationPrefs,
 } from "@/lib/xtreme/shared";
 import {
@@ -107,6 +109,7 @@ type XtremeMemberDoc = {
   buddies?: string[];
   referredBy?: string;
   referralCount?: number;
+  tourDoneAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -337,6 +340,7 @@ function publicMember(doc: XtremeMemberDoc | null, entitlements: unknown[] = [])
     latestBodyMetric: bodyMetrics.at(-1) ?? null,
     trainingPlan: publicPlan(doc?.trainingPlan),
     notificationPrefs: mergeNotificationPrefs(doc?.notificationPrefs),
+    tourDone: Boolean(doc?.tourDoneAt),
     pinnedBadges: gamification.pinnedBadges,
     gamification,
     entitlements,
@@ -631,6 +635,26 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ member: publicMember(doc) });
     }
 
+    if (action === "tourDone") {
+      const db = await getDb();
+      const normalizedName = sessionOrErr.memberKey;
+      const now = new Date();
+      const result = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName, tourDoneAt: { $exists: false } },
+        { $set: { tourDoneAt: now, updatedAt: now } },
+      );
+      if (result.modifiedCount) {
+        await recordEvent(db, {
+          type: "tour_completed",
+          memberId: normalizedName,
+          source: "member_app",
+          properties: {},
+        });
+      }
+      const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      return NextResponse.json({ member: publicMember(doc) });
+    }
+
     // Perfil self-service (Fase 3): prefs, showcase, meta/contacto
     if (action === "profile") {
       const db = await getDb();
@@ -799,6 +823,16 @@ export async function PATCH(req: NextRequest) {
 
     const db = await getDb();
     const normalizedName = sessionOrErr.memberKey;
+    const checkin = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).findOne({
+      normalizedName,
+      date: completedDate,
+    });
+    if (!checkin) {
+      return NextResponse.json(
+        { error: "Primero registrá tu ingreso al gym para completar el entreno de hoy." },
+        { status: 403 },
+      );
+    }
     const now = new Date();
     const entry: WorkoutEntry = {
       id: `${trainingId}-${completedDate}-${now.getTime()}`,

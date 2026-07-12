@@ -24,6 +24,7 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Smartphone,
   Timer,
   Trash2,
   TrendingUp,
@@ -191,6 +192,9 @@ type AdminData = {
     renewalsCompleted: number;
     referralsRedeemed: number;
     referralsRewarded: number;
+    appOpens: number;
+    appOpenMembers: number;
+    appOpenSeries: Array<{ date: string; opens: number; unique: number }>;
     dayPassToVisit: { dayPasses: number; visited: number; ratePct: number };
     dayPassToPlan: {
       dayPasses: number;
@@ -1088,7 +1092,7 @@ export default function XtremeAdminPage() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                       <div className="border border-white/10 bg-black/25 p-4">
                         <p className="text-[11px] font-black uppercase tracking-wider text-white/45">Pase → visita ≤48h</p>
                         <p className="mt-2 text-2xl font-black text-lime-200">{data.growth.dayPassToVisit.ratePct}%</p>
@@ -1118,6 +1122,14 @@ export default function XtremeAdminPage() {
                           <span className="text-base text-white/40"> / {data.growth.referralsRedeemed}</span>
                         </p>
                         <p className="mt-1 text-xs font-bold text-white/40">recompensados / canjeados</p>
+                      </div>
+                      <div className="border border-white/10 bg-black/25 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-white/45">App abierta</p>
+                        <p className="mt-2 text-2xl font-black text-sky-200">
+                          {data.growth.appOpens ?? 0}
+                          <span className="text-base text-white/40"> / {data.growth.appOpenMembers ?? 0}</span>
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-white/40">entradas / socios distintos</p>
                       </div>
                     </div>
                     <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6 text-center text-xs font-bold text-white/55">
@@ -1222,22 +1234,42 @@ export default function XtremeAdminPage() {
                   </div>
                 </div>
 
-                <div className="border border-white/10 bg-white/[0.04] p-5">
-                  <div className="flex items-center gap-3">
-                    <DoorOpen className="h-5 w-5 text-cyan-300" />
-                    <h2 className="text-lg font-black uppercase">Ingresos al gym — ultimos 7 dias</h2>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="border border-white/10 bg-white/[0.04] p-5">
+                    <div className="flex items-center gap-3">
+                      <DoorOpen className="h-5 w-5 text-cyan-300" />
+                      <h2 className="text-lg font-black uppercase">Ingresos al gym — ultimos 7 dias</h2>
+                    </div>
+                    <div className="mt-4 border border-white/10 bg-black/25 p-3">
+                      <BarTrendChart
+                        data={(data.checkinSeries ?? []).map((d) => ({ date: d.date, value: d.checkins }))}
+                        unit="ingresos"
+                        color={CHART_CYAN}
+                        height={160}
+                      />
+                    </div>
+                    <p className="mt-3 text-xs font-semibold text-white/45">
+                      Check-ins registrados por dia (kiosk + panel). Pase el cursor para el detalle.
+                    </p>
                   </div>
-                  <div className="mt-4 border border-white/10 bg-black/25 p-3">
-                    <BarTrendChart
-                      data={(data.checkinSeries ?? []).map((d) => ({ date: d.date, value: d.checkins }))}
-                      unit="ingresos"
-                      color={CHART_CYAN}
-                      height={160}
-                    />
+
+                  <div className="border border-white/10 bg-white/[0.04] p-5">
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="h-5 w-5 text-lime-300" />
+                      <h2 className="text-lg font-black uppercase">Entradas al app — ultimos 7 dias</h2>
+                    </div>
+                    <div className="mt-4 border border-white/10 bg-black/25 p-3">
+                      <BarTrendChart
+                        data={(data.growth?.appOpenSeries ?? []).map((d) => ({ date: d.date, value: d.opens }))}
+                        unit="entradas"
+                        color={CHART_LIME}
+                        height={160}
+                      />
+                    </div>
+                    <p className="mt-3 text-xs font-semibold text-white/45">
+                      Veces que los socios abrieron el Member OS por dia (evento app_opened).
+                    </p>
                   </div>
-                  <p className="mt-3 text-xs font-semibold text-white/45">
-                    Check-ins registrados por dia (kiosk + panel). Pase el cursor para el detalle.
-                  </p>
                 </div>
 
                 <div className="border border-white/10 bg-white/[0.04] p-5">

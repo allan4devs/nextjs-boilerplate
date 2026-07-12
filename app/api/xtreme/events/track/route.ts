@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 /** Allowlisted client-side funnel events (never trust client for money). */
 const ALLOWED = new Set([
+  "app_opened",
   "landing_viewed",
   "cta_clicked",
   "checkout_option_selected",

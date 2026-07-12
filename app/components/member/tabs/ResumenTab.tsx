@@ -55,16 +55,36 @@ export default function ResumenTab({ os }: { os: MemberOs }) {
 
   return (
     <div className="space-y-4">
-      <div id="entrenar-hoy" className="flex flex-col gap-3 border-[3px] border-[#d8ff3e] bg-gradient-to-r from-[#d8ff3e]/15 via-[#d8ff3e]/[0.06] to-transparent p-3.5 shadow-[4px_4px_0_rgba(216,255,62,0.25)] sm:flex-row sm:items-center sm:justify-between">
+      {gami && (
+        <button
+          type="button"
+          onClick={() => setOsModal({ kind: "streak" })}
+          className="relative flex w-full items-center gap-4 overflow-hidden border-[3px] border-orange-400/60 bg-gradient-to-r from-orange-400/[0.18] to-transparent p-4 text-left shadow-[4px_4px_0_rgba(251,146,60,0.25)] lg:hidden"
+        >
+          <span className="grid h-16 w-16 shrink-0 place-items-center border-[3px] border-orange-300 bg-orange-400/15 text-orange-200">
+            <Flame className="h-8 w-8" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <GameLabel tone="orange">Tu racha</GameLabel>
+            <span className="mt-1 block text-4xl font-black leading-none text-white">
+              {gami.streak} <span className="text-sm uppercase tracking-[.12em] text-orange-200">días</span>
+            </span>
+            <span className="mt-2 block truncate text-xs font-bold text-[#eaff93]">{dayPhrase}</span>
+          </span>
+          <ChevronRight className="h-6 w-6 shrink-0 text-orange-200" />
+        </button>
+      )}
+
+      <div id="entrenar-hoy" className="flex flex-col gap-4 border-[3px] border-[#d8ff3e] bg-gradient-to-r from-[#d8ff3e]/15 via-[#d8ff3e]/[0.06] to-transparent p-4 shadow-[4px_4px_0_rgba(216,255,62,0.25)] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center bg-[#d8ff3e] text-black"><Flame className="h-5 w-5" /></span>
-          <div><p className="text-xs font-black uppercase tracking-[.18em] text-[#d8ff3e]">Acción principal · Entrenamiento de hoy</p><p className="mt-0.5 text-sm font-semibold text-white/45">Un toque para mantener tu progreso al día.</p></div>
+          <div><p className="text-xs font-black uppercase tracking-[.18em] text-[#d8ff3e]">Entrenamiento de hoy</p><p className="mt-0.5 hidden text-sm font-semibold text-white/45 sm:block">Un toque para mantener tu progreso al día.</p></div>
         </div>
         <button
           type="button"
           onClick={() => !trainedToday && void completeTraining(quickTraining)}
           disabled={!unlocked || trainedToday || Boolean(savingTrainingId)}
-          className={`inline-flex min-h-12 shrink-0 items-center justify-center gap-2 px-5 text-sm font-black uppercase transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${trainedToday ? "border border-[#d8ff3e]/40 bg-[#d8ff3e]/10 text-[#eaff93]" : "bg-[#d8ff3e] text-black hover:bg-white active:scale-[.98]"} disabled:cursor-not-allowed`}
+          className={`inline-flex min-h-14 w-full shrink-0 items-center justify-center gap-2 px-5 text-sm font-black uppercase transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] sm:min-h-12 sm:w-auto ${trainedToday ? "border border-[#d8ff3e]/40 bg-[#d8ff3e]/10 text-[#eaff93]" : "bg-[#d8ff3e] text-black hover:bg-white active:scale-[.98]"} disabled:cursor-not-allowed`}
         >
           {savingTrainingId ? <Loader2 className="h-5 w-5 animate-spin" /> : trainedToday ? <Check className="h-5 w-5" /> : <Flame className="h-5 w-5" />}
           {trainedToday ? "Entreno marcado" : "Marcar entreno"}
@@ -160,7 +180,7 @@ export default function ResumenTab({ os }: { os: MemberOs }) {
           <div className="grid grid-cols-2 gap-2">
             <GameButton
               full
-              className="!min-h-11 !text-[10px]"
+              className="!min-h-14 !text-xs sm:!min-h-11 sm:!text-[10px]"
               onClick={() => setOsModal({ kind: "quick-train" })}
             >
               Entreno
@@ -168,7 +188,7 @@ export default function ResumenTab({ os }: { os: MemberOs }) {
             <GameButton
               full
               variant="ghost"
-              className="!min-h-11 !text-[10px]"
+              className="!min-h-14 !text-xs sm:!min-h-11 sm:!text-[10px]"
               onClick={() => setTab("progreso")}
             >
               Progreso
@@ -231,7 +251,7 @@ export default function ResumenTab({ os }: { os: MemberOs }) {
             <button
               type="button"
               onClick={() => setOsModal({ kind: "streak" })}
-              className="relative w-full overflow-hidden border-[3px] border-orange-400/50 bg-gradient-to-br from-orange-400/[0.1] to-transparent p-4 text-left shadow-[4px_4px_0_rgba(251,146,60,0.25)] sm:p-5"
+              className="relative hidden w-full overflow-hidden border-[3px] border-orange-400/50 bg-gradient-to-br from-orange-400/[0.1] to-transparent p-4 text-left shadow-[4px_4px_0_rgba(251,146,60,0.25)] sm:p-5 lg:block"
             >
               <GameLabel tone="orange" className="mb-2 text-center">
                 Racha · toca para ampliar

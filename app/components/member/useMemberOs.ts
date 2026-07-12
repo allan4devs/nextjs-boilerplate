@@ -237,8 +237,10 @@ export function useMemberOs() {
   }, [gami, unlocked, memberName]);
 
   // Tour de bienvenida: se muestra una vez por socio la primera vez que entra.
+  // Se espera al perfil del server: si ya lo hizo (en cualquier dispositivo), no se repite.
   useEffect(() => {
     if (!unlocked || showPin || isLoading || !memberName) return;
+    if (!member || member.tourDone) return;
     if (typeof window === "undefined") return;
     const key = normalizeName(memberName).toUpperCase();
     let seen: string[] = [];
@@ -250,7 +252,7 @@ export function useMemberOs() {
     if (!Array.isArray(seen) || !seen.includes(key)) {
       setShowTour(true);
     }
-  }, [unlocked, showPin, isLoading, memberName]);
+  }, [unlocked, showPin, isLoading, memberName, member]);
 
   const finishTour = useCallback(
     () => {
@@ -268,9 +270,28 @@ export function useMemberOs() {
         seen.push(key);
         window.localStorage.setItem(TOUR_KEY, JSON.stringify(seen.slice(-50)));
       }
+      // Persistir en el perfil para no repetirlo en otros dispositivos.
+      setMember((prev) => (prev ? { ...prev, tourDone: true } : prev));
+      void fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberName, action: "tourDone" }),
+      }).catch(() => {});
     },
     [memberName],
   );
+
+  // Analytics: registrar la entrada al app (una vez por carga, al quedar desbloqueado).
+  const appOpenTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!unlocked || !memberName || appOpenTrackedRef.current) return;
+    appOpenTrackedRef.current = true;
+    void fetch("/api/xtreme/events/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "app_opened", memberName, source: "member_app" }),
+    }).catch(() => {});
+  }, [unlocked, memberName]);
 
   async function updateWeeklyGoal(goalDays: number) {
     if (!unlocked) return;

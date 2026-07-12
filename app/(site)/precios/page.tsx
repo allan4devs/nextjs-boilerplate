@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ExtremeGymCheckout from "../../ExtremeGymCheckout";
-import PageHero from "../../components/PageHero";
 import CtaBand from "../../components/CtaBand";
 import { BUSINESS, COSTS, PLAN_DETAILS, waLink } from "../../lib/site";
 import { ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
@@ -24,38 +23,26 @@ const COMPARISON = [
 export default function PreciosPage() {
   return (
     <>
-      <PageHero
-        eyebrow="Precios"
-        title="Elija el ritmo"
-        highlight="que puede sostener."
-        text="Día, semana, quincena o mes. Recepción confirma costos vigentes, promociones y requisitos antes de matricular."
-        image="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=2000&q=86"
-        imageAlt="Costos Xtreme Gym"
-      >
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="#inscripcion"
-            className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
-          >
-            Inscribirme
-            <ArrowRight className="h-4 w-4" />
-          </a>
-          <a
-            href={waLink("Hola Xtreme Gym, quiero confirmar costos vigentes: día, semana, quincena o mes.")}
-            className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/[0.07] px-5 font-black uppercase text-white transition hover:border-white/45"
-          >
-            Confirmar costo
-            <MessageCircle className="h-4 w-4" />
-          </a>
-        </div>
-      </PageHero>
-
-      <section className="px-5 py-16 sm:px-8 lg:py-20">
+      <section className="px-5 py-10 sm:px-8 lg:py-14">
         <div className="mx-auto max-w-7xl">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Membresías</p>
-          <h2 className="mt-3 text-4xl font-black uppercase leading-none sm:text-5xl">Costos vigentes.</h2>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Precios</p>
+              <h1 className="mt-2 text-3xl font-black uppercase leading-none sm:text-4xl">Costos vigentes.</h1>
+              <p className="mt-2 max-w-2xl text-sm font-semibold text-white/58">
+                Día, semana, quincena o mes. Recepción confirma costos vigentes, promociones y requisitos.
+              </p>
+            </div>
+            <a
+              href={waLink("Hola Xtreme Gym, quiero confirmar costos vigentes: día, semana, quincena o mes.")}
+              className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/[0.07] px-5 font-black uppercase text-white transition hover:border-white/45"
+            >
+              Confirmar costo
+              <MessageCircle className="h-4 w-4" />
+            </a>
+          </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {COSTS.map((item) => {
               const featured = item.period === "Mes";
               return (
