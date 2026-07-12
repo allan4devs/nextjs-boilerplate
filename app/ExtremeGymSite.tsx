@@ -6,9 +6,9 @@
  * aqui solo se compone el shell (HUD, nav, dock), los tabs y los modales.
  */
 
+import { useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { GameCallout } from "./components/GameOS";
 import { CelebrationOverlay } from "./components/gamification";
 import OnboardingTour from "./components/OnboardingTour";
 import { TOUR_STEPS, type TabId } from "./components/member/constants";
@@ -19,6 +19,7 @@ import TopHud from "./components/member/TopHud";
 import SideNav from "./components/member/SideNav";
 import BottomDock from "./components/member/BottomDock";
 import OsModals from "./components/member/OsModals";
+import ToastHost from "./components/member/Toasts";
 import ResumenTab from "./components/member/tabs/ResumenTab";
 import EntrenarTab from "./components/member/tabs/EntrenarTab";
 import MaquinasTab from "./components/member/tabs/MaquinasTab";
@@ -39,6 +40,8 @@ export default function ExtremeGymSite() {
     pinMode,
     setShowPin,
     storeSession,
+    reloadFullMember,
+    loadReservations,
     resetMember,
     isLoading,
     showTour,
@@ -49,8 +52,14 @@ export default function ExtremeGymSite() {
     message,
     error,
     setMessage,
+    setError,
   } = os;
   const resumen = useResumenViewModel(os);
+
+  const dismissToast = useCallback(() => {
+    setMessage("");
+    setError("");
+  }, [setMessage, setError]);
 
   return (
     <main className="relative min-h-screen bg-[#050505] text-white selection:bg-[#d8ff3e] selection:text-black">
@@ -69,11 +78,18 @@ export default function ExtremeGymSite() {
           memberName={memberName}
           mode={pinMode}
           onChangeMember={resetMember}
+          onCancel={() => {
+            setShowPin(false);
+            setMessage("");
+          }}
           onDone={setMessage}
           onSuccess={() => {
-            storeSession(memberName, memberCedulaInput || currentMember.cedula);
+            const cedula = memberCedulaInput || currentMember.cedula;
+            storeSession(memberName, cedula);
             setShowPin(false);
             setMessage((current) => current || "Sesion protegida. Bienvenido a Xtreme.");
+            // Cookie set by /api/xtreme/pin — load full profile now.
+            void reloadFullMember(memberName, cedula).then(() => loadReservations(memberName));
           }}
         />
       )}
@@ -108,12 +124,6 @@ export default function ExtremeGymSite() {
           </div>
         ) : (
           <div key={tab} className="space-y-3 sm:space-y-4">
-            {(message || error) && (
-              <GameCallout tone={error ? "red" : "lime"}>
-                {error || message}
-              </GameCallout>
-            )}
-
             {tab === "resumen" && <ResumenTab model={resumen.model} actions={resumen.actions} />}
             {tab === "entrenar" && <EntrenarTab os={os} />}
             {tab === "maquinas" && <MaquinasTab os={os} />}
@@ -134,6 +144,12 @@ export default function ExtremeGymSite() {
           </Link>
         </div>
       </footer>
+
+      {/* Feedback flotante: se desvanece solo o se cierra con click.
+          Con el login abierto el error ya se muestra dentro del gate. */}
+      {memberName && (
+        <ToastHost message={message} error={error} onDismiss={dismissToast} />
+      )}
 
       {/* ─── GAME OS MODALS ─── */}
       <OsModals os={os} />

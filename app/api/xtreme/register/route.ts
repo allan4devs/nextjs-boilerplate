@@ -6,6 +6,9 @@ import {
   sendRegistrationConfirmEmail,
   sendWelcomeEmail,
 } from "@/lib/helpers/email";
+import { grantFreeFirstDayIfEligible } from "@/lib/xtreme/entitlements";
+import { createFreeFirstDayMembership } from "@/lib/xtreme/members/membership";
+import { businessDate } from "@/lib/xtreme/business-date";
 import {
   MEMBERS_COLLECTION,
   PENDING_REGISTRATIONS_COLLECTION,
@@ -27,12 +30,6 @@ const TOKEN_TTL_MIN = 60;
 
 function hashToken(token: string) {
   return createHash("sha256").update(`registro|${token}`).digest("hex");
-}
-
-function addMonths(date: Date, months: number) {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + months);
-  return next;
 }
 
 /**
@@ -188,6 +185,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
     .collection<MemberDoc>(MEMBERS_COLLECTION)
     .findOne({ normalizedName });
 
+  const today = businessDate(now);
   const set: Partial<MemberDoc> = {
     normalizedName,
     memberName,
@@ -199,12 +197,8 @@ async function confirmRegistration(body: Record<string, unknown>) {
   };
   if (goal) set.goal = goal;
   if (!existing) {
-    set.membership = {
-      plan: "Xtreme Mensual",
-      nextBillingDate: addMonths(now, 1).toISOString().slice(0, 10),
-      startedAt: now.toISOString().slice(0, 10),
-      status: "active",
-    };
+    // Self-serve: free first day only — never open a paid monthly plan.
+    set.membership = createFreeFirstDayMembership(today);
   }
 
   await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
@@ -212,6 +206,10 @@ async function confirmRegistration(body: Record<string, unknown>) {
     { $set: set, $setOnInsert: { workouts: [], bodyMetrics: [], createdAt: now } },
     { upsert: true },
   );
+
+  if (!existing) {
+    await grantFreeFirstDayIfEligible(db, normalizedName, today);
+  }
 
   // Consumir el registro pendiente (token de un solo uso).
   await db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION).updateOne(
@@ -227,11 +225,17 @@ async function confirmRegistration(body: Record<string, unknown>) {
       memberId: normalizedName,
       source: "member_app",
       entity: { type: "member", id: normalizedName },
-      properties: { hasEmail: true, hasPhone: true, verified: true, source: pending.source },
+      properties: {
+        hasEmail: true,
+        hasPhone: true,
+        verified: true,
+        source: pending.source,
+        freeFirstDay: true,
+      },
     }).catch(() => {});
   }
 
-  return NextResponse.json({ ok: true, memberName, accessCode });
+  return NextResponse.json({ ok: true, memberName, accessCode, freeFirstDay: !existing });
 }
 
 export async function POST(req: NextRequest) {

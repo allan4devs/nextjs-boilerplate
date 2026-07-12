@@ -14,6 +14,7 @@ import {
   CEDULA_KEY,
   CEDULA_MIN_DIGITS,
   GOALS,
+  MSG,
   REMINDERS,
   SESSION_KEY,
   SESSION_TTL_MS,
@@ -24,6 +25,7 @@ import {
 } from "./constants";
 import {
   ApiError,
+  errorText,
   formatCedulaInput,
   initialMember,
   normalizeName,
@@ -84,7 +86,7 @@ export function useMemberOs() {
   const closeOsModal = useCallback(() => setOsModal(null), []);
 
   const requirePinAgain = useCallback((err: unknown, fallback: string) => {
-    const detail = err instanceof Error ? err.message : fallback;
+    const detail = errorText(err, fallback);
     // Preferido: status/code estructurados del server; el regex queda de fallback.
     const sessionLost =
       (err instanceof ApiError && (err.status === 401 || err.code === "session_required")) ||
@@ -93,7 +95,7 @@ export function useMemberOs() {
       window.localStorage.removeItem(SESSION_KEY);
       setPinMode("verify");
       setShowPin(true);
-      setError("Su sesion vencio. Ingrese el PIN para continuar.");
+      setError(MSG.errors.sessionExpired);
       return;
     }
     setError(detail);
@@ -174,6 +176,7 @@ export function useMemberOs() {
       void fetch("/api/xtreme/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ memberName, action: "badgesSeen" }),
       }).catch(() => {});
       return;
@@ -197,50 +200,99 @@ export function useMemberOs() {
     }
   }, [gami, unlocked, memberName]);
 
-  // Tour de bienvenida: se muestra una vez por socio la primera vez que entra.
-  // Se espera al perfil del server: si ya lo hizo (en cualquier dispositivo), no se repite.
-  useEffect(() => {
-    if (!unlocked || showPin || isLoading || !memberName) return;
-    if (!member || member.tourDone) return;
-    if (typeof window === "undefined") return;
-    const key = normalizeName(memberName).toUpperCase();
+  // Tour de bienvenida: se muestra una sola vez por socio, la primera vez que entra.
+  // Fuente de verdad: `tourDoneAt` del perfil (sirve en cualquier dispositivo);
+  // el localStorage es solo un espejo para no mostrarlo mientras el PATCH viaja.
+  const tourSeenLocally = useCallback((name: string) => {
+    if (typeof window === "undefined" || !name) return false;
+    const key = normalizeName(name).toUpperCase();
+    try {
+      const seen = JSON.parse(window.localStorage.getItem(TOUR_KEY) ?? "[]") as string[];
+      return Array.isArray(seen) && seen.includes(key);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const markTourSeenLocally = useCallback((name: string) => {
+    if (typeof window === "undefined" || !name) return;
+    const key = normalizeName(name).toUpperCase();
     let seen: string[] = [];
     try {
       seen = JSON.parse(window.localStorage.getItem(TOUR_KEY) ?? "[]") as string[];
     } catch {
       seen = [];
     }
-    if (!Array.isArray(seen) || !seen.includes(key)) {
-      setShowTour(true);
-    }
-  }, [unlocked, showPin, isLoading, memberName, member]);
+    if (!Array.isArray(seen)) seen = [];
+    if (seen.includes(key)) return;
+    seen.push(key);
+    window.localStorage.setItem(TOUR_KEY, JSON.stringify(seen.slice(-50)));
+  }, []);
 
-  const finishTour = useCallback(
-    () => {
-      setShowTour(false);
-      if (typeof window === "undefined" || !memberName) return;
-      const key = normalizeName(memberName).toUpperCase();
-      let seen: string[] = [];
+  /** PATCH idempotente con reintentos: si no persiste, el tour volveria a salir. */
+  const persistTourDone = useCallback(async (name: string) => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        seen = JSON.parse(window.localStorage.getItem(TOUR_KEY) ?? "[]") as string[];
+        const response = await fetch("/api/xtreme/user", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ memberName: name, action: "tourDone" }),
+        });
+        if (response.ok) return true;
+        // 401/403: la sesion no da para persistir; reintentar no ayuda.
+        if (response.status === 401 || response.status === 403) return false;
       } catch {
-        seen = [];
+        // red caida: reintentar
       }
-      if (!Array.isArray(seen)) seen = [];
-      if (!seen.includes(key)) {
-        seen.push(key);
-        window.localStorage.setItem(TOUR_KEY, JSON.stringify(seen.slice(-50)));
-      }
-      // Persistir en el perfil para no repetirlo en otros dispositivos.
-      setMember((prev) => (prev ? { ...prev, tourDone: true } : prev));
-      void fetch("/api/xtreme/user", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberName, action: "tourDone" }),
-      }).catch(() => {});
-    },
-    [memberName],
-  );
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+    return false;
+  }, []);
+
+  /** Socio para el que ya se decidio mostrar (o no) el tour en esta carga. */
+  const tourResolvedForRef = useRef("");
+
+  useEffect(() => {
+    if (!unlocked || showPin || isLoading || !memberName) return;
+    if (!member) return;
+    if (member.tourDone) {
+      // Ya quedo en el perfil: nunca mas, y dejamos el espejo local al dia.
+      markTourSeenLocally(memberName);
+      tourResolvedForRef.current = memberName;
+      return;
+    }
+    if (tourResolvedForRef.current === memberName) return;
+    tourResolvedForRef.current = memberName;
+    if (tourSeenLocally(memberName)) {
+      // Ya lo vio en este dispositivo pero el server no se entero (PATCH fallido):
+      // backfill silencioso, sin volver a mostrarlo.
+      void persistTourDone(memberName).then((ok) => {
+        if (ok) setMember((prev) => (prev ? { ...prev, tourDone: true } : prev));
+      });
+      return;
+    }
+    setShowTour(true);
+  }, [
+    unlocked,
+    showPin,
+    isLoading,
+    memberName,
+    member,
+    tourSeenLocally,
+    markTourSeenLocally,
+    persistTourDone,
+  ]);
+
+  const finishTour = useCallback(() => {
+    setShowTour(false);
+    if (!memberName) return;
+    tourResolvedForRef.current = memberName;
+    markTourSeenLocally(memberName);
+    // Optimista: aunque el PATCH tarde, no reaparece en esta sesion.
+    setMember((prev) => (prev ? { ...prev, tourDone: true } : prev));
+    void persistTourDone(memberName);
+  }, [memberName, markTourSeenLocally, persistTourDone]);
 
   // Analytics: registrar la entrada al app (una vez por carga, al quedar desbloqueado).
   const appOpenTrackedRef = useRef(false);
@@ -261,14 +313,15 @@ export function useMemberOs() {
       const response = await fetch("/api/xtreme/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ memberName, action: "weeklyGoal", weeklyGoal: goalDays }),
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
       if (data.leaderboard) setLeaderboard(data.leaderboard);
-      setMessage(`Meta semanal: ${goalDays} dias. A cumplirla.`);
+      setMessage(MSG.ok.weeklyGoal(goalDays));
     } catch (err) {
-      requirePinAgain(err, "No se pudo guardar la meta.");
+      requirePinAgain(err, MSG.errors.saveGoal);
     }
   }
 
@@ -320,6 +373,21 @@ export function useMemberOs() {
     [],
   );
 
+  /** After PIN/session cookie is valid, load full profile (unauth GET is bootstrap-only). */
+  const reloadFullMember = useCallback(
+    async (name: string, cedulaDigits?: string) => {
+      const params = new URLSearchParams({ memberName: name });
+      if (cedulaDigits) params.set("cedula", cedulaDigits);
+      const response = await fetch(`/api/xtreme/user?${params}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const data = await readJson<MembersResponse>(response);
+      return applyMemberPayload(data, name, "", "", cedulaDigits ?? "");
+    },
+    [applyMemberPayload],
+  );
+
   /**
    * Login principal por cedula (lector de barras o teclado).
    * Si no existe, pide nombre+telefono para registrar y ligar la cedula.
@@ -332,7 +400,7 @@ export function useMemberOs() {
     ) => {
       const digits = onlyDigits(cedulaRaw);
       if (digits.length < CEDULA_MIN_DIGITS) {
-        setError(`Digite o escanee la cedula (minimo ${CEDULA_MIN_DIGITS} digitos).`);
+        setError(MSG.errors.cedulaTooShort(CEDULA_MIN_DIGITS));
         return;
       }
 
@@ -343,9 +411,12 @@ export function useMemberOs() {
 
       try {
         const lookupParams = new URLSearchParams({ cedula: digits });
-        const lookupResponse = await fetch(`/api/xtreme/user?${lookupParams}`, { cache: "no-store" });
+        const lookupResponse = await fetch(`/api/xtreme/user?${lookupParams}`, {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
         const lookupData = await readJson<
-          MembersResponse & { exists?: boolean; lookup?: string; cedula?: string }
+          MembersResponse & { exists?: boolean; lookup?: string; cedula?: string; hasPinSet?: boolean }
         >(lookupResponse);
 
         const phone = contact.phone?.trim() ?? "";
@@ -359,9 +430,7 @@ export function useMemberOs() {
             setShowPin(false);
             setMemberName("");
             setMember(null);
-            setError(
-              "Cedula no registrada. Escriba su nombre y telefono para crear el perfil, o pida alta en recepcion.",
-            );
+            setError(MSG.errors.cedulaNotRegistered);
             setIsLoading(false);
             return;
           }
@@ -369,6 +438,7 @@ export function useMemberOs() {
           const createResponse = await fetch("/api/xtreme/user", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
             body: JSON.stringify({
               memberName: regName,
               cedula: digits,
@@ -387,20 +457,17 @@ export function useMemberOs() {
           return;
         }
 
-        // Socio existente
-        const name = applyMemberPayload(
-          lookupData,
-          lookupData.member?.memberName || "",
-          phone,
-          email,
-          digits,
-        );
+        // Socio existente — bootstrap only until PIN/session (unauth GET hides PII).
+        const name = lookupData.member?.memberName || "";
         if (!name) {
-          setError("No se pudo resolver el perfil de esa cedula.");
+          setError(MSG.errors.cedulaNoProfile);
           return;
         }
+        setMemberName(name);
+        setMemberNameInput(name);
+        setMember(initialMember(name));
         setNeedsRegistration(false);
-        await Promise.all([loadReservations(name), loadGymStatus()]);
+        await loadGymStatus();
 
         if (allowSession) {
           // La cookie HttpOnly del server es la fuente de verdad: si sigue viva
@@ -408,26 +475,41 @@ export function useMemberOs() {
           // se haya borrado). Si no, se limpia el rastro local y va al PIN.
           if (await hasServerSession(name)) {
             storeSession(name, digits);
+            await reloadFullMember(name, digits);
+            await loadReservations(name);
             setShowPin(false);
             return;
           }
           window.localStorage.removeItem(SESSION_KEY);
         }
 
-        const pinResponse = await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(name)}`, {
-          cache: "no-store",
-        });
-        const pinData = (await pinResponse.json()) as { hasPinSet?: boolean };
-        setPinMode(pinData.hasPinSet ? "verify" : "set");
+        const hasPin =
+          lookupData.hasPinSet ??
+          (
+            (await (
+              await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(name)}`, {
+                cache: "no-store",
+              })
+            ).json()) as { hasPinSet?: boolean }
+          ).hasPinSet;
+        setPinMode(hasPin ? "verify" : "set");
         setShowPin(true);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No pude cargar Xtreme Gym.");
+        setError(errorText(err, MSG.errors.loadApp));
         setMemberName("");
       } finally {
         setIsLoading(false);
       }
     },
-    [applyMemberPayload, goal, hasServerSession, loadGymStatus, loadReservations, storeSession],
+    [
+      applyMemberPayload,
+      goal,
+      hasServerSession,
+      loadGymStatus,
+      loadReservations,
+      reloadFullMember,
+      storeSession,
+    ],
   );
 
   /** @deprecated Preferir startMemberByCedula — se mantiene para rehidratacion por nombre en storage. */
@@ -448,66 +530,92 @@ export function useMemberOs() {
 
       try {
         const params = new URLSearchParams({ memberName: trimmed });
-        const memberResponse = await fetch(`/api/xtreme/user?${params}`, { cache: "no-store" });
-        const memberData = await readJson<MembersResponse>(memberResponse);
+        const memberResponse = await fetch(`/api/xtreme/user?${params}`, {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const memberData = await readJson<
+          MembersResponse & { exists?: boolean; hasPinSet?: boolean }
+        >(memberResponse);
         const phone = contact.phone?.trim() ?? "";
         const email = contact.email?.trim() ?? "";
-        const cedula = onlyDigits(contact.cedula ?? memberData.member?.cedula ?? "");
+        const cedula = onlyDigits(contact.cedula ?? "");
 
         if (!memberData.exists && !phone) {
-          setError("Perfil no encontrado. Inicie sesion con su cedula.");
-          setMember(memberData.member ?? initialMember(trimmed));
-          setLeaderboard(memberData.leaderboard ?? []);
-          setNextBestAction(memberData.nextBestAction ?? null);
+          setError(MSG.errors.profileNotFound);
+          setMember(null);
+          setLeaderboard([]);
+          setNextBestAction(null);
           setShowPin(false);
           setMemberName("");
           return;
         }
 
-        if (phone || email || cedula || !memberData.exists) {
+        if (!memberData.exists && phone) {
+          if (!cedula || cedula.length < CEDULA_MIN_DIGITS) {
+            setError(MSG.errors.cedulaTooShort(CEDULA_MIN_DIGITS));
+            return;
+          }
           const createResponse = await fetch("/api/xtreme/user", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
             body: JSON.stringify({
               memberName: trimmed,
-              goal: memberData.member?.goal || goal,
-              favoriteTraining: memberData.member?.favoriteTraining || "",
+              goal: goal || GOALS[0],
+              favoriteTraining: "",
               phone,
               email,
-              ...(cedula ? { cedula } : {}),
+              cedula,
             }),
           });
           const createData = await readJson<MembersResponse>(createResponse);
           applyMemberPayload(createData, trimmed, phone, email, cedula);
         } else {
-          applyMemberPayload(memberData, trimmed, "", "", cedula);
+          setMemberName(trimmed);
+          setMember(initialMember(trimmed));
         }
 
-        await Promise.all([loadReservations(trimmed), loadGymStatus()]);
+        await loadGymStatus();
 
         if (allowSession) {
           // Igual que en startMemberByCedula: la cookie del server manda.
           if (await hasServerSession(trimmed)) {
             storeSession(trimmed, cedula || undefined);
+            await reloadFullMember(trimmed, cedula || undefined);
+            await loadReservations(trimmed);
             setShowPin(false);
             return;
           }
           window.localStorage.removeItem(SESSION_KEY);
         }
 
-        const pinResponse = await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(trimmed)}`, {
-          cache: "no-store",
-        });
-        const pinData = (await pinResponse.json()) as { hasPinSet?: boolean };
-        setPinMode(pinData.hasPinSet ? "verify" : "set");
+        const hasPin =
+          memberData.hasPinSet ??
+          (
+            (await (
+              await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(trimmed)}`, {
+                cache: "no-store",
+              })
+            ).json()) as { hasPinSet?: boolean }
+          ).hasPinSet;
+        setPinMode(hasPin ? "verify" : "set");
         setShowPin(true);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No pude cargar Xtreme Gym.");
+        setError(errorText(err, MSG.errors.loadApp));
       } finally {
         setIsLoading(false);
       }
     },
-    [applyMemberPayload, goal, hasServerSession, loadGymStatus, loadReservations, storeSession],
+    [
+      applyMemberPayload,
+      goal,
+      hasServerSession,
+      loadGymStatus,
+      loadReservations,
+      reloadFullMember,
+      storeSession,
+    ],
   );
 
   // Solo al montar: rehidratar sesion por cedula (preferido) o nombre legacy.
@@ -534,9 +642,21 @@ export function useMemberOs() {
     }
   }, [memberName, isLoading, showPin]);
 
+  function applyProfileResponse(data: MembersResponse) {
+    setMember(data.member);
+    if (data.member?.phone !== undefined) setMemberPhoneInput(data.member.phone || "");
+    if (data.member?.email !== undefined) setMemberEmailInput(data.member.email || "");
+    if (data.member?.cedula) {
+      setMemberCedulaInput(formatCedulaInput(data.member.cedula));
+      window.localStorage.setItem(CEDULA_KEY, onlyDigits(data.member.cedula));
+    }
+    if (data.leaderboard) setLeaderboard(data.leaderboard);
+  }
+
+  /** @returns true si el guardado paso (la UI usa esto para cerrar el panel). */
   async function saveProfile() {
     const trimmed = normalizeName(memberName);
-    if (!trimmed) return;
+    if (!trimmed || !unlocked) return false;
     setError("");
     setMessage("");
 
@@ -544,6 +664,7 @@ export function useMemberOs() {
       const response = await fetch("/api/xtreme/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           action: "profile",
           memberName: trimmed,
@@ -558,39 +679,35 @@ export function useMemberOs() {
         }),
       });
       const data = await readJson<MembersResponse>(response);
-      setMember(data.member);
-      if (data.member?.cedula) {
-        setMemberCedulaInput(formatCedulaInput(data.member.cedula));
-        window.localStorage.setItem(CEDULA_KEY, onlyDigits(data.member.cedula));
-      }
-      setLeaderboard(data.leaderboard ?? []);
-      setMessage("Perfil actualizado. Ahora si, a meterle.");
+      applyProfileResponse(data);
+      setMessage(MSG.ok.profileSaved);
+      return true;
     } catch (err) {
-      requirePinAgain(err, "No se pudo guardar.");
+      requirePinAgain(err, MSG.errors.saveProfile);
+      return false;
     }
   }
 
+  /** @returns true si el guardado paso (la UI usa esto para cerrar el panel). */
   async function saveProfileField(patch: MemberProfilePatch, okMessage: string) {
     const trimmed = normalizeName(memberName);
-    if (!trimmed || !unlocked) return;
+    if (!trimmed || !unlocked) return false;
     setError("");
     setMessage("");
     try {
       const response = await fetch("/api/xtreme/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ action: "profile", memberName: trimmed, ...patch }),
       });
       const data = await readJson<MembersResponse>(response);
-      setMember(data.member);
-      if (data.member?.cedula) {
-        setMemberCedulaInput(formatCedulaInput(data.member.cedula));
-        window.localStorage.setItem(CEDULA_KEY, onlyDigits(data.member.cedula));
-      }
-      setLeaderboard(data.leaderboard ?? []);
+      applyProfileResponse(data);
       setMessage(okMessage);
+      return true;
     } catch (err) {
-      requirePinAgain(err, "No se pudo guardar.");
+      requirePinAgain(err, MSG.errors.saveProfile);
+      return false;
     }
   }
 
@@ -598,7 +715,7 @@ export function useMemberOs() {
     if (!unlocked) return;
     const earned = serverBadges.find((b) => b.id === badgeId)?.earned;
     if (!earned) {
-      setError("Solo puede fijar badges que ya gano.");
+      setError(MSG.errors.badgeNotEarned);
       return;
     }
     const next = pinnedBadgeIds.includes(badgeId)
@@ -607,16 +724,16 @@ export function useMemberOs() {
         ? pinnedBadgeIds
         : [...pinnedBadgeIds, badgeId];
     if (!pinnedBadgeIds.includes(badgeId) && pinnedBadgeIds.length >= 3) {
-      setError("Maximo 3 badges en el showcase.");
+      setError(MSG.errors.badgeShowcaseFull);
       return;
     }
-    void saveProfileField({ pinnedBadges: next }, "Showcase de badges actualizado.");
+    void saveProfileField({ pinnedBadges: next }, MSG.ok.badgeShowcaseSaved);
   }
 
   function toggleNotifPref(key: keyof NotificationPrefs) {
     if (!unlocked) return;
     const next = { ...notifPrefs, [key]: !notifPrefs[key] };
-    void saveProfileField({ notificationPrefs: next }, "Preferencias de correo guardadas.");
+    void saveProfileField({ notificationPrefs: next }, MSG.ok.emailPrefsSaved);
   }
 
   async function completeTraining(training: Training) {
@@ -629,6 +746,7 @@ export function useMemberOs() {
       const response = await fetch("/api/xtreme/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           memberName,
           trainingId: training.id,
@@ -642,9 +760,9 @@ export function useMemberOs() {
       setMember(data.member);
       setLeaderboard(data.leaderboard ?? []);
       await loadGymStatus();
-      setMessage(`Registrado: ${training.name}. Racha viva, mae.`);
+      setMessage(MSG.ok.trainingLogged(training.name));
     } catch (err) {
-      requirePinAgain(err, "No se pudo registrar el entreno.");
+      requirePinAgain(err, MSG.errors.logTraining);
     } finally {
       setSavingTrainingId("");
     }
@@ -676,26 +794,23 @@ export function useMemberOs() {
       };
       if (!response.ok) {
         if (data.paymentRequired || response.status === 402) {
-          setError(
-            data.error ||
-              "Necesita un plan activo o su primer dia gratis. Registrese en Primer dia o elija un plan en Precios.",
-          );
+          setError(data.error || MSG.errors.planRequired);
           setMessage("");
           // Soft nudge: open first-day offer
           if (typeof window !== "undefined") {
             // Keep user in app; show clear next step
           }
         } else {
-          throw new Error(data.error ?? "No se pudo reservar.");
+          throw new Error(data.error ?? MSG.errors.reserve);
         }
         if (data.reservations) setReservations(data.reservations);
         return;
       }
       setReservations(data.reservations ?? {});
       await loadGymStatus();
-      setMessage(`Reservado: ${training.name}. Llegue 5 minutos antes, pura vida.`);
+      setMessage(MSG.ok.reserved(training.name));
     } catch (err) {
-      requirePinAgain(err, "No se pudo reservar.");
+      requirePinAgain(err, MSG.errors.reserve);
     } finally {
       setReservingTrainingId("");
     }
@@ -720,9 +835,9 @@ export function useMemberOs() {
       const data = await readJson<ReservationsResponse>(response);
       setReservations(data.reservations ?? {});
       await loadGymStatus();
-      setMessage(`Reserva cancelada: ${training.name}.`);
+      setMessage(MSG.ok.reservationCanceled(training.name));
     } catch (err) {
-      requirePinAgain(err, "No se pudo cancelar.");
+      requirePinAgain(err, MSG.errors.cancelReservation);
     } finally {
       setReservingTrainingId("");
     }
@@ -737,6 +852,7 @@ export function useMemberOs() {
       const response = await fetch("/api/xtreme/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           action: "bodyMetric",
           memberName,
@@ -750,9 +866,9 @@ export function useMemberOs() {
       setMember(data.member);
       setLeaderboard(data.leaderboard ?? []);
       setMetricNote("");
-      setMessage("Medidas guardadas. Progreso visible, sin cuentos.");
+      setMessage(MSG.ok.metricsSaved);
     } catch (err) {
-      requirePinAgain(err, "No se pudieron guardar las medidas.");
+      requirePinAgain(err, MSG.errors.saveMetrics);
     }
   }
 
@@ -765,6 +881,7 @@ export function useMemberOs() {
       const response = await fetch("/api/xtreme/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           action: "planItem",
           memberName,
@@ -775,9 +892,9 @@ export function useMemberOs() {
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
-      setMessage(nextDone ? "Sesion del plan completada. Sigalo asi." : "Sesion marcada como pendiente.");
+      setMessage(nextDone ? MSG.ok.planItemDone : MSG.ok.planItemPending);
     } catch (err) {
-      requirePinAgain(err, "No se pudo actualizar el plan.");
+      requirePinAgain(err, MSG.errors.updatePlan);
     }
   }
 
@@ -791,14 +908,15 @@ export function useMemberOs() {
       const response = await fetch("/api/xtreme/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ memberName, photo }),
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
       setLeaderboard(data.leaderboard ?? []);
-      setMessage("Foto de perfil actualizada.");
+      setMessage(MSG.ok.photoSaved);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo subir la foto.");
+      requirePinAgain(err, MSG.errors.uploadPhoto);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -813,12 +931,13 @@ export function useMemberOs() {
       const response = await fetch("/api/xtreme/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ memberName, message: selectedReminder }),
       });
       const data = await readJson<{ ok?: boolean; sentTo?: string }>(response);
-      setMessage(`Aviso enviado a ${data.sentTo}. Revise su correo.`);
+      setMessage(MSG.ok.reminderSent(data.sentTo ?? "su correo"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo enviar el aviso.");
+      requirePinAgain(err, MSG.errors.sendReminder);
     } finally {
       setIsSendingReminder(false);
     }
@@ -941,6 +1060,8 @@ export function useMemberOs() {
     finishTour,
     updateWeeklyGoal,
     storeSession,
+    reloadFullMember,
+    loadReservations,
     startMemberByCedula,
     saveProfile,
     saveProfileField,

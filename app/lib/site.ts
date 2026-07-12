@@ -221,9 +221,9 @@ export const FAQS = [
       "Sí. Tu primer día es gratis: solo registrate en la app para conocer el ambiente, entrenar y confirmar si querés continuar con semana, quincena o mensualidad.",
   },
   {
-    question: "¿Los precios pueden cambiar?",
+    question: "¿Cómo pago mi plan?",
     answer:
-      "Los montos publicados son referencia de la landing. Recepción confirma vigencia, promociones y requisitos antes de matricular o pagar.",
+      "En línea con PayPal desde la página de precios: elegís día, semana, quincena o mes, pagás con tarjeta o tu cuenta PayPal y el acceso se activa apenas se confirma el cobro.",
   },
   {
     question: "¿La clase de adultos mayores es para principiantes?",

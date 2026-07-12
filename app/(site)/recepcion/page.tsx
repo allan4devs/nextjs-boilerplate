@@ -11,6 +11,7 @@ import {
   Loader2,
   Lock,
   LogOut,
+  MessageCircle,
   ScanFace,
   Search,
   ShieldAlert,
@@ -25,6 +26,8 @@ import {
   GameHudPill,
   GameLabel,
 } from "../../components/GameOS";
+import IngresoKiosk from "../../components/ingreso/IngresoKiosk";
+import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
@@ -44,7 +47,7 @@ type RecentCheckin = {
   by: string;
 };
 
-type Tab = "cedula" | "face" | "register";
+type Tab = "cedula" | "face" | "register" | "chat";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -111,6 +114,9 @@ export default function RecepcionPage() {
   const [regFaceHash, setRegFaceHash] = useState("");
   const [regCheckIn, setRegCheckIn] = useState(true);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
+  /** Kiosco de ingreso por defecto; staff abre el form de código. */
+  const [showStaffGate, setShowStaffGate] = useState(false);
 
   // Camara
   const {
@@ -235,6 +241,30 @@ export default function RecepcionPage() {
     return () => window.clearInterval(id);
   }, [unlocked, tab, loadPanel]);
 
+  // Badge de chats no leídos (poll liviano aunque no estés en el tab)
+  useEffect(() => {
+    if (!unlocked || !adminCode) return;
+    let cancelled = false;
+    async function pollChatBadge() {
+      try {
+        const res = await fetch("/api/xtreme/chat/inbox?status=open", {
+          cache: "no-store",
+          headers: { "x-xtreme-admin": adminCode },
+        });
+        const json = (await res.json()) as { unreadTotal?: number };
+        if (!cancelled && res.ok) setChatUnread(json.unreadTotal ?? 0);
+      } catch {
+        /* soft */
+      }
+    }
+    void pollChatBadge();
+    const id = window.setInterval(() => void pollChatBadge(), tab === "chat" ? 4000 : 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [unlocked, adminCode, tab]);
+
   useEffect(() => {
     if (tab === "face" && unlocked) {
       void startCamera();
@@ -268,7 +298,10 @@ export default function RecepcionPage() {
         if (opts.cedula) params.set("cedula", opts.cedula);
         else if (opts.code) params.set("code", opts.code);
         else if (opts.q) params.set("q", opts.q);
-        const res = await fetch(`/api/xtreme/checkin?${params}`, { cache: "no-store" });
+        const res = await fetch(`/api/xtreme/checkin?${params}`, {
+          cache: "no-store",
+          headers: adminCode ? { "x-xtreme-admin": adminCode } : {},
+        });
         const json = (await res.json()) as {
           status?: GymStatus;
           member?: MemberHit | null;
@@ -290,7 +323,7 @@ export default function RecepcionPage() {
         setIsLooking(false);
       }
     },
-    [],
+    [adminCode],
   );
 
   // Auto-busqueda por cedula al digitar (lector de barras / teclado)
@@ -321,7 +354,10 @@ export default function RecepcionPage() {
     try {
       const res = await fetch("/api/xtreme/checkin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminCode ? { "x-xtreme-admin": adminCode } : {}),
+        },
         body: JSON.stringify({
           memberName: m.memberName,
           accessCode: m.accessCode,
@@ -559,67 +595,77 @@ export default function RecepcionPage() {
     setMember(null);
     setRoster([]);
     setRecent([]);
+    setShowStaffGate(false);
+    setTab("cedula");
   }
 
   if (!unlocked) {
     return (
-      <main className="grid min-h-screen place-items-end bg-[#050505] px-0 text-white sm:place-items-center sm:px-4">
-        <form
-          onSubmit={(e) => void unlock(e)}
-          className="w-full max-w-md border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-8"
-        >
-          <div className="grid h-14 w-14 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
-            <DoorOpen className="h-7 w-7" />
+      <>
+        <IngresoKiosk onStaffRequest={() => setShowStaffGate(true)} />
+        {showStaffGate && (
+          <div className="fixed inset-0 z-[80] grid place-items-end bg-black/70 p-0 backdrop-blur-sm sm:place-items-center sm:p-4">
+            <form
+              onSubmit={(e) => void unlock(e)}
+              className="w-full max-w-md border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 text-white shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-8"
+            >
+              <div className="grid h-14 w-14 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
+                <DoorOpen className="h-7 w-7" />
+              </div>
+              <GameLabel tone="lime" className="mt-4">
+                Reception OS
+              </GameLabel>
+              <h1 className="mt-2 text-3xl font-black uppercase tracking-tight">Mostrador</h1>
+              <p className="mt-2 text-sm font-bold text-white/50">
+                Cedula, registro, chat y herramientas de staff. El ingreso de socios queda en la
+                pantalla de atras (PIN / rostro).
+              </p>
+              <label className="mt-6 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
+                Codigo de staff
+              </label>
+              <div className="relative mt-2">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                <input
+                  type="password"
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value)}
+                  autoFocus
+                  placeholder="Codigo admin"
+                  className="min-h-12 w-full border-[3px] border-white/20 bg-black/40 py-3.5 pl-10 pr-4 text-base font-bold outline-none focus:border-[#d8ff3e]"
+                />
+              </div>
+              {unlockError && (
+                <div className="mt-3 flex items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
+                  <XCircle className="h-4 w-4" /> {unlockError}
+                </div>
+              )}
+              <GameButton
+                type="submit"
+                full
+                className="mt-5"
+                disabled={isUnlocking || !adminCode.trim()}
+              >
+                {isUnlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar al mostrador"}
+              </GameButton>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStaffGate(false);
+                  setUnlockError("");
+                }}
+                className="mt-3 w-full py-2 text-center text-xs font-black uppercase tracking-wide text-white/45 hover:text-white/70"
+              >
+                Volver al ingreso
+              </button>
+              <p className="mt-3 text-center text-xs font-bold text-white/35">
+                <Link href="/admin" className="hover:text-white/70">
+                  Panel admin
+                </Link>
+              </p>
+            </form>
           </div>
-          <GameLabel tone="lime" className="mt-4">
-            Reception OS
-          </GameLabel>
-          <h1 className="mt-2 text-3xl font-black uppercase tracking-tight">Recepcion</h1>
-          <p className="mt-2 text-sm font-bold text-white/50">
-            Panel del mostrador — distinto del ingreso de socios (
-            <Link href="/ingreso" className="text-[#d8ff3e] underline">
-              /ingreso
-            </Link>
-            ).
-          </p>
-          <label className="mt-6 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
-            Codigo de staff
-          </label>
-          <div className="relative mt-2">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-            <input
-              type="password"
-              value={adminCode}
-              onChange={(e) => setAdminCode(e.target.value)}
-              autoFocus
-              placeholder="Codigo admin"
-              className="min-h-12 w-full border-[3px] border-white/20 bg-black/40 py-3.5 pl-10 pr-4 text-base font-bold outline-none focus:border-[#d8ff3e]"
-            />
-          </div>
-          {unlockError && (
-            <div className="mt-3 flex items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
-              <XCircle className="h-4 w-4" /> {unlockError}
-            </div>
-          )}
-          <GameButton
-            type="submit"
-            full
-            className="mt-5"
-            disabled={isUnlocking || !adminCode.trim()}
-          >
-            {isUnlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar a recepcion"}
-          </GameButton>
-          <p className="mt-4 text-center text-xs font-bold text-white/35">
-            <Link href="/admin" className="hover:text-white/70">
-              Panel admin
-            </Link>
-            {" · "}
-            <Link href="/ingreso" className="hover:text-white/70">
-              Ingreso socios
-            </Link>
-          </p>
-        </form>
-      </main>
+        )}
+      </>
     );
   }
 
@@ -669,9 +715,9 @@ export default function RecepcionPage() {
           <button
             type="button"
             onClick={logout}
-            className="inline-flex min-h-11 items-center gap-1.5 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-red-400/50 hover:text-red-300"
+            className="inline-flex min-h-11 items-center gap-1.5 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-[#d8ff3e]/50 hover:text-[#d8ff3e]"
           >
-            <LogOut className="h-3.5 w-3.5" /> Salir
+            <LogOut className="h-3.5 w-3.5" /> Modo ingreso
           </button>
         </div>
       </header>
@@ -686,10 +732,12 @@ export default function RecepcionPage() {
                   ? [{ id: "face" as const, label: "Rostro", icon: ScanFace }]
                   : []),
                 { id: "register" as const, label: "Registro", icon: UserPlus },
+                { id: "chat" as const, label: "Chat", icon: MessageCircle },
               ] as const
             ).map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
+              const showBadge = t.id === "chat" && chatUnread > 0 && !active;
               return (
                 <button
                   key={t.id}
@@ -699,13 +747,20 @@ export default function RecepcionPage() {
                     setError("");
                     setFaceMatches([]);
                   }}
-                  className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 border-t-[3px] px-2 py-2 text-[10px] font-black uppercase tracking-wide transition sm:flex-row sm:gap-2 sm:text-sm ${
+                  className={`relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 border-t-[3px] px-2 py-2 text-[10px] font-black uppercase tracking-wide transition sm:flex-row sm:gap-2 sm:text-sm ${
                     active
                       ? "border-t-[#d8ff3e] bg-[#d8ff3e] text-black"
                       : "border-t-transparent text-white/50 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <Icon className="h-5 w-5 sm:h-4 sm:w-4" />
+                  <span className="relative">
+                    <Icon className="h-5 w-5 sm:h-4 sm:w-4" />
+                    {showBadge && (
+                      <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center bg-red-500 px-0.5 text-[9px] font-black text-white">
+                        {chatUnread > 9 ? "9+" : chatUnread}
+                      </span>
+                    )}
+                  </span>
                   {t.label}
                 </button>
               );
@@ -713,6 +768,8 @@ export default function RecepcionPage() {
           </div>
 
           <div className="p-4 sm:p-6">
+            {tab === "chat" && <ReceptionChatInbox adminCode={adminCode} />}
+
             {tab === "cedula" && (
               <div className="mx-auto max-w-xl">
                 <div className="text-center">

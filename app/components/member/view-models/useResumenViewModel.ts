@@ -59,6 +59,7 @@ export type ResumenViewModel = {
 
 export type ResumenActions = {
   openStreak: () => void;
+  openLevel: () => void;
   markTodayTraining: () => void;
   openWeek: () => void;
   openLeague: () => void;
@@ -247,6 +248,7 @@ export function useResumenViewModel(os: MemberOs): {
     () => setOsModal({ kind: "streak" }),
     [setOsModal],
   );
+  const openLevel = useCallback(() => setOsModal({ kind: "level" }), [setOsModal]);
   const markTodayTraining = useCallback(() => {
     if (!trainedToday) void completeTraining(quickTraining);
   }, [completeTraining, quickTraining, trainedToday]);
@@ -310,6 +312,7 @@ export function useResumenViewModel(os: MemberOs): {
     model,
     actions: {
       openStreak,
+      openLevel,
       markTodayTraining,
       openWeek,
       openLeague,

@@ -974,13 +974,7 @@ export default function XtremeAdminPage() {
               href="/recepcion"
               className="inline-flex min-h-11 items-center gap-2 border-[3px] border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-3 py-2 text-xs font-black uppercase text-[#eaff93] sm:text-sm"
             >
-              <DoorOpen className="h-4 w-4" /> Recepcion
-            </Link>
-            <Link
-              href="/ingreso"
-              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-cyan-300/10 px-3 py-2 text-xs font-black uppercase text-cyan-100 sm:text-sm"
-            >
-              <DoorOpen className="h-4 w-4" /> Ingreso
+              <DoorOpen className="h-4 w-4" /> Reception OS
             </Link>
             <button
               type="button"
@@ -991,24 +985,28 @@ export default function XtremeAdminPage() {
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Refrescar</span>
             </button>
-            <button
-              type="button"
-              onClick={() => void seed(false)}
-              disabled={Boolean(busy)}
-              className="hidden min-h-11 items-center gap-2 border-[3px] border-black/30 bg-[#d8ff3e] px-3 py-2 text-xs font-black uppercase text-black disabled:opacity-50 sm:inline-flex sm:text-sm"
-            >
-              {busy === "seed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              Seed
-            </button>
-            <button
-              type="button"
-              onClick={() => void seed(true)}
-              disabled={Boolean(busy)}
-              className="hidden min-h-11 items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-black uppercase text-red-200 disabled:opacity-50 md:inline-flex md:text-sm"
-            >
-              {busy === "reset" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
-              Reset
-            </button>
+            {process.env.NODE_ENV !== "production" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void seed(false)}
+                  disabled={Boolean(busy)}
+                  className="hidden min-h-11 items-center gap-2 border-[3px] border-black/30 bg-[#d8ff3e] px-3 py-2 text-xs font-black uppercase text-black disabled:opacity-50 sm:inline-flex sm:text-sm"
+                >
+                  {busy === "seed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+                  Seed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void seed(true)}
+                  disabled={Boolean(busy)}
+                  className="hidden min-h-11 items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-black uppercase text-red-200 disabled:opacity-50 md:inline-flex md:text-sm"
+                >
+                  {busy === "reset" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                  Reset
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={logout}
@@ -1503,8 +1501,8 @@ export default function XtremeAdminPage() {
                       Ingresos de hoy ({data.checkins.length})
                     </h2>
                   </div>
-                  <Link href="/ingreso" className="text-xs font-black uppercase text-cyan-300 hover:underline">
-                    Abrir kiosk →
+                  <Link href="/recepcion" className="text-xs font-black uppercase text-cyan-300 hover:underline">
+                    Reception OS →
                   </Link>
                 </div>
                 <div className="overflow-x-auto">
@@ -1545,7 +1543,7 @@ export default function XtremeAdminPage() {
                       {!data.checkins.length && (
                         <tr>
                           <td colSpan={6} className="px-5 py-10 text-center text-sm font-semibold text-white/45">
-                            Nadie ha ingresado hoy. Usa la pantalla /ingreso o el boton de puerta en socios.
+                            Nadie ha ingresado hoy. Usa Reception OS (/recepcion) o el boton de puerta en socios.
                           </td>
                         </tr>
                       )}

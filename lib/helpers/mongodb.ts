@@ -85,6 +85,15 @@ async function ensureIndexes(db: Db) {
     db.collection("xtreme_gym_bookings").createIndex({ memberKey: 1, trainingDate: -1 }),
     db.collection("xtreme_gym_bookings").createIndex({ sessionId: 1, status: 1 }),
     db.collection("xtreme_gym_waitlist").createIndex({ sessionId: 1, position: 1 }),
+    // Chat live visita ↔ recepción
+    db.collection("xtreme_gym_chat_sessions").createIndex({ id: 1 }, { unique: true }),
+    db.collection("xtreme_gym_chat_sessions").createIndex({ status: 1, lastMessageAt: -1 }),
+    db.collection("xtreme_gym_chat_sessions").createIndex({ guestTokenHash: 1 }),
+    db.collection("xtreme_gym_chat_messages").createIndex({ id: 1 }, { unique: true }),
+    db
+      .collection("xtreme_gym_chat_messages")
+      .createIndex({ sessionId: 1, seq: 1 }, { unique: true }),
+    db.collection("xtreme_gym_chat_messages").createIndex({ sessionId: 1, createdAt: 1 }),
   ]);
   for (const r of results) {
     if (r.status === "rejected") console.error("MONGO INDEX", r.reason);

@@ -15,6 +15,7 @@ export type { Achievement } from "./catalog";
 export {
   DEFAULT_NOTIF_PREFS,
   GOALS,
+  MSG,
   REMINDERS,
   TABS,
   TAB_SUBTITLES,

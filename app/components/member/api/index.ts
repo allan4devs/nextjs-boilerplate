@@ -1,4 +1,4 @@
-export { ApiError, readJson } from "./http";
+export { ApiError, errorText, isNetworkError, readJson } from "./http";
 export type { GymStatus } from "./gymStatus.contracts";
 export type {
   MemberLookupResponse,

@@ -16,6 +16,7 @@ import {
   membershipStatus,
   normalizeKey,
   normalizeName,
+  resolveAdminRole,
   todayIso,
   toAdminMember,
 } from "@/lib/xtreme/shared";
@@ -35,27 +36,57 @@ function isValidFaceHash(value: string) {
   return /^[0-9a-f]{16}$/i.test(value);
 }
 
-async function withPinFlag(
-  db: Awaited<ReturnType<typeof getDb>>,
+/** Public kiosk view — no phone/email/cédula/access code leakage. */
+function toKioskMember(
   doc: MemberDoc,
-  extra?: Record<string, unknown>,
+  extra?: { hasPin?: boolean; faceDistance?: number },
 ) {
-  const adminMember = toAdminMember(doc);
+  const admin = toAdminMember(doc);
   return {
-    ...adminMember,
-    ...extra,
-    hasPin: Boolean(
-      await db.collection(PINS_COLLECTION).findOne({
-        normalizedName: adminMember.normalizedName,
-      }),
-    ),
+    memberName: admin.memberName,
+    normalizedName: admin.normalizedName,
+    photoUrl: admin.photoUrl,
+    hasFace: admin.hasFace,
+    membershipStatus: admin.membershipStatus,
+    daysRemaining: admin.daysRemaining,
+    plan: admin.plan,
+    streak: admin.streak,
+    levelName: admin.levelName,
+    hasPin: Boolean(extra?.hasPin),
+    faceDistance: extra?.faceDistance,
   };
 }
 
-/** Lista estado del gym + busqueda de socio por nombre, codigo, cedula o rostro. */
+async function withKioskFlag(
+  db: Awaited<ReturnType<typeof getDb>>,
+  doc: MemberDoc,
+  extra?: Record<string, unknown>,
+  staff = false,
+) {
+  const hasPin = Boolean(
+    await db.collection(PINS_COLLECTION).findOne({
+      normalizedName: doc.normalizedName || normalizeKey(doc.memberName || ""),
+      pinHash: { $exists: true, $ne: "" },
+    }),
+  );
+  if (staff) {
+    return { ...toAdminMember(doc), ...extra, hasPin };
+  }
+  return {
+    ...toKioskMember(doc, {
+      hasPin,
+      faceDistance: typeof extra?.faceDistance === "number" ? extra.faceDistance : undefined,
+    }),
+    ...extra,
+    hasPin,
+  };
+}
+
+/** Lista estado de gym + busqueda de socio (PII solo con admin). */
 export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
+    const staff = Boolean(resolveAdminRole(req.headers.get("x-xtreme-admin") ?? ""));
     const q = normalizeName(req.nextUrl.searchParams.get("q"));
     const codeDigits = String(req.nextUrl.searchParams.get("code") ?? "").replace(/\D/g, "");
     const cedula = String(req.nextUrl.searchParams.get("cedula") ?? "").trim();
@@ -72,7 +103,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Match facial (kiosk /ingreso) — sin auth de staff
     if (faceHash && isValidFaceHash(faceHash)) {
       const docs = await db
         .collection<MemberDoc>(MEMBERS_COLLECTION)
@@ -89,7 +119,7 @@ export async function GET(req: NextRequest) {
         .slice(0, FACE_CANDIDATES_LIMIT);
 
       const matches = await Promise.all(
-        ranked.map((row) => withPinFlag(db, row.doc, { faceDistance: row.distance })),
+        ranked.map((row) => withKioskFlag(db, row.doc, { faceDistance: row.distance }, staff)),
       );
 
       return NextResponse.json({
@@ -135,7 +165,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       status,
-      member: await withPinFlag(db, match),
+      member: await withKioskFlag(db, match, undefined, staff),
     });
   } catch (err) {
     console.error("XTREME CHECKIN GET", err);
@@ -143,7 +173,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** Registrar ingreso al gym. */
+/** Registrar ingreso: PIN del socio o codigo de staff (recepcion/admin). */
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -151,10 +181,11 @@ export async function POST(req: NextRequest) {
     const codeDigits = String(body.accessCode ?? body.code ?? "").replace(/\D/g, "");
     const pin = String(body.pin ?? "").trim();
     const cedula = String(body.cedula ?? "").trim();
-    const byRaw = String(body.by ?? "kiosk");
+    const staffRole = resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+    const byRaw = String(body.by ?? (staffRole ? "reception" : "kiosk"));
     const by = (["kiosk", "admin", "reception"].includes(byRaw) ? byRaw : "kiosk") as CheckinDoc["by"];
     const methodRaw = String(
-      body.method ?? (pin ? "pin" : cedula ? "cedula" : codeDigits ? "code" : "name"),
+      body.method ?? (pin ? "pin" : cedula ? "cedula" : codeDigits ? "code" : staffRole ? "admin" : "name"),
     );
     const allowedMethods = ["code", "name", "pin", "admin", "cedula"];
     if (FACE_RECOGNITION_ENABLED) allowedMethods.push("face");
@@ -188,15 +219,25 @@ export async function POST(req: NextRequest) {
     const normalizedName = member.normalizedName || normalizeKey(member.memberName);
     const accessCode = formatAccessCode(memberAccessCode(normalizedName));
 
-    if (pin) {
+    // Auth: staff header OR valid member PIN (required for self-service kiosk).
+    if (!staffRole) {
       if (!/^\d{4}$/.test(pin)) {
-        return NextResponse.json({ error: "PIN invalido." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Ingrese su PIN de 4 digitos para registrar el ingreso." },
+          { status: 401 },
+        );
       }
       const pinDoc = await db
         .collection<{ pinHash?: string }>(PINS_COLLECTION)
         .findOne({ normalizedName });
       if (!pinDoc?.pinHash) {
-        return NextResponse.json({ error: "Este socio no tiene PIN configurado." }, { status: 400 });
+        return NextResponse.json(
+          {
+            error:
+              "Este socio no tiene PIN. Configurelo en la app o registre el ingreso en recepcion.",
+          },
+          { status: 400 },
+        );
       }
       if (pinDoc.pinHash !== hashPin(pin, normalizedName)) {
         return NextResponse.json({ error: "PIN incorrecto." }, { status: 401 });
@@ -218,7 +259,7 @@ export async function POST(req: NextRequest) {
         ok: true,
         duplicate: true,
         message: "Ya ingreso hace poco. Bienvenido de nuevo.",
-        member: toAdminMember(member),
+        member: staffRole ? toAdminMember(member) : toKioskMember(member, { hasPin: true }),
         membershipStatus: ms.status,
         checkin: recent,
         status,
@@ -230,11 +271,11 @@ export async function POST(req: NextRequest) {
       memberName: member.memberName,
       normalizedName,
       accessCode,
-      method,
+      method: staffRole ? (method === "name" ? "admin" : method) : pin ? "pin" : method,
       membershipStatus: ms.status,
       date,
       checkedInAt: now,
-      by,
+      by: staffRole ? (by === "kiosk" ? "reception" : by) : "kiosk",
       note: String(body.note ?? "").trim().slice(0, 120),
     };
 
@@ -246,14 +287,14 @@ export async function POST(req: NextRequest) {
     });
     const isFirstCheckin = priorCheckins === 0;
 
-    const eventSource = by === "reception" ? "reception" : by === "admin" ? "admin" : "kiosk";
+    const eventSource = checkin.by === "reception" ? "reception" : checkin.by === "admin" ? "admin" : "kiosk";
 
     await recordEvent(db, {
       type: "checkin_completed",
       memberId: normalizedName,
       source: eventSource,
       entity: { type: "checkin", id: checkin.id },
-      properties: { method, membershipStatus: ms.status, date, first: isFirstCheckin },
+      properties: { method: checkin.method, membershipStatus: ms.status, date, first: isFirstCheckin },
     });
     if (isFirstCheckin) {
       await recordEvent(db, {
@@ -261,11 +302,10 @@ export async function POST(req: NextRequest) {
         memberId: normalizedName,
         source: eventSource,
         entity: { type: "checkin", id: checkin.id },
-        properties: { method, membershipStatus: ms.status, date },
+        properties: { method: checkin.method, membershipStatus: ms.status, date },
       });
     }
 
-    // Phase 3: qualify referral after first paid verified visit
     let referralReward: { rewarded: boolean; referrer?: string } = { rewarded: false };
     try {
       const { tryQualifyReferralOnCheckin } = await import("@/lib/xtreme/referrals");
@@ -291,7 +331,7 @@ export async function POST(req: NextRequest) {
             : referralReward.rewarded
               ? "Bienvenido. Referido calificado: +7 dias para vos y tu amigo."
               : "Bienvenido a Xtreme Gym.",
-      member: toAdminMember(member),
+      member: staffRole ? toAdminMember(member) : toKioskMember(member, { hasPin: true }),
       membershipStatus: ms.status,
       checkin,
       status,

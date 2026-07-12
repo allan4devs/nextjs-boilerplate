@@ -3,7 +3,7 @@
  * HTTP vive en api/http y los helpers puros/browser en helpers/.
  */
 
-export { ApiError, readJson } from "./api/http";
+export { ApiError, errorText, isNetworkError, readJson } from "./api/http";
 export {
   dayLabel,
   formatCedulaInput,

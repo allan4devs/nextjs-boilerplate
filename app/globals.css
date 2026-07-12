@@ -323,6 +323,61 @@ body {
   animation-delay: 0.25s;
 }
 
+/* Toast del OS: entra desde abajo, se desvanece solo (barra = tiempo restante) */
+@keyframes xg-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes xg-toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes xg-toast-bar {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.xg-toast-in {
+  animation: xg-toast-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.xg-toast-out {
+  animation: xg-toast-out 0.22s ease-in both;
+}
+
+.xg-toast-bar {
+  transform-origin: left;
+  animation-name: xg-toast-bar;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xg-toast-in,
+  .xg-toast-out,
+  .xg-toast-bar {
+    animation: none;
+  }
+}
+
 /* Barras de progreso con rayas animadas */
 @keyframes xg-stripes-move {
   from {

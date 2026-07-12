@@ -43,6 +43,7 @@ export default function ResumenTab({ model, actions }: ResumenTabProps) {
         gamification={model.gamification}
         nextBadge={model.nextBadge}
         onOpenStreak={actions.openStreak}
+        onOpenLevel={actions.openLevel}
         onOpenWeek={actions.openWeek}
         onOpenBadges={actions.openBadges}
       />

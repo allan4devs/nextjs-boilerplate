@@ -1,11 +1,33 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight, MapPin, MessageCircle, Phone, Star } from "lucide-react";
 import { BUSINESS, NAV_LINKS, telLink, waLink } from "../lib/site";
 
+/** Rutas de app / operación: sin footer de marketing ni CTA sticky. */
+function isOsSurface(pathname: string) {
+  if (pathname === "/app" || pathname.startsWith("/app/")) return true;
+  if (pathname === "/recepcion" || pathname.startsWith("/recepcion/")) return true;
+  if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) return true;
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return true;
+  return false;
+}
+
 export default function SiteFooter() {
+  const pathname = usePathname() || "";
+  if (isOsSurface(pathname)) return null;
+
+  // Barra sticky de conversión solo en el landing (no en /precios, /app, etc.)
+  const showMobileCta = pathname === "/";
+
   return (
     <>
-      <footer className="border-t border-white/10 bg-[#070707] px-5 pb-24 pt-12 sm:px-8 md:pb-12">
+      <footer
+        className={`border-t border-white/10 bg-[#070707] px-5 pt-12 sm:px-8 md:pb-12 ${
+          showMobileCta ? "pb-24" : "pb-12"
+        }`}
+      >
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr]">
           <div>
             <p className="text-2xl font-black uppercase">
@@ -60,23 +82,25 @@ export default function SiteFooter() {
         </div>
       </footer>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/92 px-3 py-3 backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
-          <Link
-            href="/primer-dia#reservar"
-            className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-3 text-xs font-black uppercase text-black"
-          >
-            Reservar día
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
-            href="/precios"
-            className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 bg-white/[0.06] px-3 text-xs font-black uppercase text-white"
-          >
-            Ver planes
-          </Link>
+      {showMobileCta && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/92 px-3 py-3 backdrop-blur md:hidden">
+          <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
+            <Link
+              href="/primer-dia#registro"
+              className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-3 text-xs font-black uppercase text-black"
+            >
+              Reservar día
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/precios"
+              className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 bg-white/[0.06] px-3 text-xs font-black uppercase text-white"
+            >
+              Ver planes
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

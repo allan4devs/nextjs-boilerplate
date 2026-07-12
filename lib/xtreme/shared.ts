@@ -28,6 +28,15 @@ export const CLASS_TEMPLATES_COLLECTION = "xtreme_gym_class_templates";
 export const CLASS_SESSIONS_COLLECTION = "xtreme_gym_class_sessions";
 export const BOOKINGS_COLLECTION = "xtreme_gym_bookings";
 export const WAITLIST_COLLECTION = "xtreme_gym_waitlist";
+/** Pending PayPal orders — bind capture optionId/amount server-side. */
+export const PAYPAL_ORDERS_COLLECTION = "xtreme_gym_paypal_orders";
+/** Live chat visita ↔ recepción */
+export const CHAT_SESSIONS_COLLECTION = "xtreme_gym_chat_sessions";
+export const CHAT_MESSAGES_COLLECTION = "xtreme_gym_chat_messages";
+
+/** Catalog / entitlement id for the one-time free first day. */
+export const FREE_FIRST_DAY_OFFER_ID = "free-first-day";
+export const FREE_FIRST_DAY_PLAN_LABEL = "Primer día gratis";
 
 export const GYM_CAPACITY = 85;
 export const PIN_PEPPER = "xtreme-gym-member-pin-v1";

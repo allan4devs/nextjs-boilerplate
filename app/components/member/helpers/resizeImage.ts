@@ -1,3 +1,5 @@
+import { MSG } from "../config/messages";
+
 /** Reduce una foto a un cuadrado JPEG de 256 px para guardarla en el perfil. */
 export async function resizePhoto(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
@@ -8,7 +10,7 @@ export async function resizePhoto(file: File): Promise<string> {
     canvas.width = size;
     canvas.height = size;
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("No se pudo procesar la imagen.");
+    if (!context) throw new Error(MSG.errors.processImage);
 
     const side = Math.min(bitmap.width, bitmap.height);
     const sourceX = (bitmap.width - side) / 2;

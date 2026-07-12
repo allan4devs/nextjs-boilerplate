@@ -6,6 +6,7 @@ export type OsModal =
   | { kind: "membership" }
   | { kind: "occupancy" }
   | { kind: "streak" }
+  | { kind: "level" }
   | { kind: "week" }
   | { kind: "training"; trainingId: Training["id"] }
   | { kind: "badges" }

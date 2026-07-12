@@ -3,8 +3,32 @@ import { PAYPAL_CURRENCY } from "@/lib/constants/paypal";
 import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal";
 import { getDb } from "@/lib/helpers/mongodb";
 import { recordEvent } from "@/lib/xtreme/events";
-import { normalizeKey, normalizeName } from "@/lib/xtreme/shared";
+import {
+  PAYPAL_ORDERS_COLLECTION,
+  normalizeKey,
+  normalizeName,
+} from "@/lib/xtreme/shared";
 import { getXtremeCheckoutOption, isFreeOption } from "../catalog";
+
+export type PendingPayPalOrder = {
+  orderId: string;
+  optionId: string;
+  amountUsd: string;
+  currency: string;
+  memberKey: string;
+  customer: {
+    name: string;
+    phone: string;
+    email: string;
+    date?: string;
+    time?: string;
+    goal?: string;
+  };
+  status: "created" | "captured" | "failed";
+  createdAt: Date;
+  capturedAt?: Date;
+  paypalCaptureId?: string | null;
+};
 
 type Customer = {
   name?: string;
@@ -139,6 +163,30 @@ export async function POST(req: Request) {
       );
     }
 
+    const pending: PendingPayPalOrder = {
+      orderId: data.id,
+      optionId: option.id,
+      amountUsd: String(usdAmount),
+      currency: PAYPAL_CURRENCY,
+      memberKey,
+      customer: {
+        name: clean(customer.name),
+        phone: clean(customer.phone),
+        email: clean(customer.email),
+        date: clean(customer.date) || undefined,
+        time: clean(customer.time) || undefined,
+        goal: clean(customer.goal) || undefined,
+      },
+      status: "created",
+      createdAt: new Date(),
+    };
+
+    await db.collection<PendingPayPalOrder>(PAYPAL_ORDERS_COLLECTION).updateOne(
+      { orderId: data.id },
+      { $set: pending },
+      { upsert: true },
+    );
+
     await recordEvent(db, {
       type: "checkout_started",
       memberId: memberKey,
@@ -161,7 +209,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Xtreme checkout create-order error:", error);
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Error interno creando el pago." },
+      { success: false, message: "Error interno creando el pago." },
       { status: 500 },
     );
   }

@@ -3,6 +3,7 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { sendWelcomeEmail } from "@/lib/helpers/email";
 import { businessDate } from "@/lib/xtreme/business-date";
 import { recordEvent } from "@/lib/xtreme/events";
+import { grantFreeFirstDayIfEligible } from "@/lib/xtreme/entitlements";
 import {
   cedulaDigits,
   clampPinnedBadges,
@@ -13,13 +14,14 @@ import {
   MEMBERS_COLLECTION,
   mergeNotificationPrefs,
   normalizeCedula,
+  PINS_COLLECTION,
 } from "@/lib/xtreme/shared";
 import {
   WEEKLY_GOAL_DEFAULT,
   WEEKLY_GOAL_MAX,
   WEEKLY_GOAL_MIN,
 } from "@/lib/xtreme/gamification";
-import { isSession, requireMemberSession } from "@/lib/xtreme/session";
+import { isSession, requireMemberSession, resolveMemberSession } from "@/lib/xtreme/session";
 import { pickNextBestAction } from "@/lib/xtreme/next-best-action";
 import {
   normalizeIsoDate,
@@ -29,7 +31,7 @@ import {
   normalizeMemberPhone,
   normalizeMemberPhoto,
 } from "@/lib/xtreme/members/normalizers";
-import { createDefaultMembership } from "@/lib/xtreme/members/membership";
+import { createFreeFirstDayMembership } from "@/lib/xtreme/members/membership";
 import { MemberWorkoutError } from "@/lib/xtreme/members/errors";
 import { syncMemberGamification } from "@/lib/xtreme/members/gamification-service";
 import { getMemberLeaderboard } from "@/lib/xtreme/members/leaderboard";
@@ -40,6 +42,96 @@ import { completeTodayWorkout } from "@/lib/xtreme/members/complete-today-workou
 
 export const dynamic = "force-dynamic";
 
+async function buildAuthenticatedMemberPayload(
+  db: Awaited<ReturnType<typeof getDb>>,
+  normalizedName: string,
+  today: string,
+  extra: Record<string, unknown> = {},
+) {
+  const memberRepository = createMongoMemberRepository(db);
+  const newBadges = await syncMemberGamification(memberRepository, normalizedName, { today });
+  const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+  const member = toPublicMember(doc, today);
+  const gami = member.gamification;
+  const trainedToday = member.lastWorkoutDate === today;
+  const nextBadge = (gami?.badges ?? []).find(
+    (b: { earned: boolean; progress: { current: number; target: number } | null }) =>
+      !b.earned && b.progress && b.progress.current < b.progress.target,
+  ) as { name: string; progress: { current: number; target: number } } | undefined;
+
+  const nextBestAction = pickNextBestAction({
+    trainedToday,
+    weekCount: gami?.weekCount ?? 0,
+    weeklyGoal: gami?.weeklyGoal ?? WEEKLY_GOAL_DEFAULT,
+    streak: gami?.streak ?? member.streak,
+    freezesAvailable: gami?.freezesAvailable ?? 0,
+    daysRemaining: member.membership.daysRemaining,
+    membershipStatus: member.membership.status,
+    totalWorkouts: member.totalWorkouts,
+    lastWorkoutDate: member.lastWorkoutDate,
+    today,
+    hasUnseenCoachNote: Boolean(
+      doc?.trainingPlan?.coachNote &&
+        String(doc.trainingPlan.coachNote).trim() &&
+        (doc.trainingPlan.items?.some((item) => !item.done) ?? true),
+    ),
+    nextBadgeName: nextBadge?.name ?? null,
+    nextBadgeRemaining: nextBadge
+      ? Math.max(0, nextBadge.progress.target - nextBadge.progress.current)
+      : null,
+    buddyInviteAvailable: (doc?.buddies?.length ?? 0) < 3 && member.totalWorkouts >= 3,
+  });
+
+  return {
+    member,
+    exists: Boolean(doc),
+    newBadges,
+    leaderboard: await getMemberLeaderboard(memberRepository, today),
+    nextBestAction,
+    ...extra,
+  };
+}
+
+/** Minimal bootstrap for login — no phone/email/metrics/access code. */
+async function bootstrapLookup(
+  db: Awaited<ReturnType<typeof getDb>>,
+  normalizedName: string,
+  resolvedBy: "name" | "cedula",
+  digits: string,
+) {
+  const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne(
+    { normalizedName },
+    { projection: { memberName: 1, normalizedName: 1, cedula: 1 } },
+  );
+  if (!doc) {
+    return {
+      member: null,
+      exists: false,
+      lookup: resolvedBy,
+      cedula: digits,
+      hasPinSet: false,
+      leaderboard: [],
+      nextBestAction: null,
+    };
+  }
+  const pinDoc = await db
+    .collection(PINS_COLLECTION)
+    .findOne({ normalizedName }, { projection: { pinHash: 1 } });
+  return {
+    member: {
+      memberName: doc.memberName ?? "",
+      normalizedName: doc.normalizedName ?? normalizedName,
+      // Only last digits hint for UI confirmation — not full cédula
+      cedula: "",
+    },
+    exists: true,
+    lookup: resolvedBy,
+    cedula: digits || "",
+    hasPinSet: Boolean(pinDoc?.pinHash),
+    leaderboard: [],
+    nextBestAction: null,
+  };
+}
 
 export async function GET(req: NextRequest) {
   const memberNameParam = normalizeMemberName(req.nextUrl.searchParams.get("memberName"));
@@ -48,32 +140,65 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = await getDb();
-    const memberRepository = createMongoMemberRepository(db);
     const today = businessDate();
+    const session = await resolveMemberSession(req);
 
+    // Authenticated: full profile for the session member (optional lookup must match).
+    if (session) {
+      let normalizedName = session.memberKey;
+      let resolvedBy: "name" | "cedula" | "session" = "session";
+
+      if (digits.length >= 6) {
+        const candidates = await db
+          .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
+          .find(
+            { cedula: { $exists: true, $type: "string", $ne: "" } },
+            { projection: { memberName: 1, normalizedName: 1, cedula: 1 } },
+          )
+          .toArray();
+        const hit = findMemberByCedula(candidates, digits);
+        if (hit?.normalizedName && hit.normalizedName !== session.memberKey) {
+          // Different cédula than session → bootstrap only (switch account flow)
+          return NextResponse.json(await bootstrapLookup(db, hit.normalizedName, "cedula", digits));
+        }
+        if (hit?.normalizedName) {
+          normalizedName = hit.normalizedName;
+          resolvedBy = "cedula";
+        }
+      } else if (memberNameParam) {
+        const key = normalizeMemberKey(memberNameParam);
+        if (key !== session.memberKey) {
+          return NextResponse.json(await bootstrapLookup(db, key, "name", digits));
+        }
+        resolvedBy = "name";
+      }
+
+      const payload = await buildAuthenticatedMemberPayload(db, normalizedName, today, {
+        lookup: resolvedBy,
+        cedula: digits || undefined,
+      });
+      return NextResponse.json(payload);
+    }
+
+    // Unauthenticated without lookup keys
     if (!memberNameParam && digits.length < 6) {
       return NextResponse.json({
         member: null,
-        leaderboard: await getMemberLeaderboard(memberRepository, today),
+        exists: false,
+        leaderboard: [],
+        nextBestAction: null,
       });
     }
 
     let normalizedName = memberNameParam ? normalizeMemberKey(memberNameParam) : "";
     let resolvedBy: "name" | "cedula" = "name";
 
-    // Login por cedula (lector de barras / teclado): resuelve el socio y sigue por nombre.
     if (!normalizedName && digits.length >= 6) {
       const candidates = await db
         .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
         .find(
           { cedula: { $exists: true, $type: "string", $ne: "" } },
-          {
-            projection: {
-              memberName: 1,
-              normalizedName: 1,
-              cedula: 1,
-            },
-          },
+          { projection: { memberName: 1, normalizedName: 1, cedula: 1 } },
         )
         .toArray();
       const hit = findMemberByCedula(candidates, digits);
@@ -81,9 +206,10 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
           member: null,
           exists: false,
-          lookup: "cedula",
+          lookup: "cedula" as const,
           cedula: digits,
-          leaderboard: await getMemberLeaderboard(memberRepository, today),
+          hasPinSet: false,
+          leaderboard: [],
           nextBestAction: null,
         });
       }
@@ -91,52 +217,7 @@ export async function GET(req: NextRequest) {
       resolvedBy = "cedula";
     }
 
-    // Consumir protectores / otorgar badges pendientes antes de responder.
-    const newBadges = await syncMemberGamification(memberRepository, normalizedName, {
-      today,
-    });
-    const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-    const member = toPublicMember(doc, today);
-    const gami = member.gamification;
-    const trainedToday = member.lastWorkoutDate === today;
-    const nextBadge = (gami?.badges ?? []).find(
-      (b: { earned: boolean; progress: { current: number; target: number } | null }) =>
-        !b.earned && b.progress && b.progress.current < b.progress.target,
-    ) as { name: string; progress: { current: number; target: number } } | undefined;
-
-    const nextBestAction = pickNextBestAction({
-      trainedToday,
-      weekCount: gami?.weekCount ?? 0,
-      weeklyGoal: gami?.weeklyGoal ?? WEEKLY_GOAL_DEFAULT,
-      streak: gami?.streak ?? member.streak,
-      freezesAvailable: gami?.freezesAvailable ?? 0,
-      daysRemaining: member.membership.daysRemaining,
-      membershipStatus: member.membership.status,
-      totalWorkouts: member.totalWorkouts,
-      lastWorkoutDate: member.lastWorkoutDate,
-      today,
-      hasUnseenCoachNote: Boolean(
-        doc?.trainingPlan?.coachNote &&
-          String(doc.trainingPlan.coachNote).trim() &&
-          // surface coach note when plan exists and not fully done
-          (doc.trainingPlan.items?.some((item) => !item.done) ?? true),
-      ),
-      nextBadgeName: nextBadge?.name ?? null,
-      nextBadgeRemaining: nextBadge
-        ? Math.max(0, nextBadge.progress.target - nextBadge.progress.current)
-        : null,
-      buddyInviteAvailable: (doc?.buddies?.length ?? 0) < 3 && member.totalWorkouts >= 3,
-    });
-
-    return NextResponse.json({
-      member,
-      exists: Boolean(doc),
-      lookup: resolvedBy,
-      cedula: member.cedula || digits || "",
-      newBadges,
-      leaderboard: await getMemberLeaderboard(memberRepository, today),
-      nextBestAction,
-    });
+    return NextResponse.json(await bootstrapLookup(db, normalizedName, resolvedBy, digits));
   } catch (err) {
     console.error("XTREME USER GET", err);
     return NextResponse.json({ error: "No se pudo cargar Xtreme Gym." }, { status: 500 });
@@ -149,8 +230,6 @@ export async function POST(req: NextRequest) {
     const memberName = normalizeMemberName(body.memberName);
     const goal = String(body.goal ?? "").trim().slice(0, 80);
     const favoriteTraining = String(body.favoriteTraining ?? "").trim().slice(0, 80);
-    const plan = String(body.plan ?? "Xtreme Mensual").trim().slice(0, 80);
-    const nextBillingDate = normalizeIsoDate(body.nextBillingDate);
     const phone = normalizeMemberPhone(body.phone);
     const email = normalizeMemberEmail(body.email);
     const photo = normalizeMemberPhoto(body.photo);
@@ -170,6 +249,28 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const today = businessDate(now);
     const existing = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+
+    // Updates to an existing profile require a matching session (photo, contacts, etc.).
+    if (existing) {
+      const sessionOrErr = await requireMemberSession(req, normalizedName);
+      if (!isSession(sessionOrErr)) return sessionOrErr;
+    }
+
+    // Create path: cédula required for self-serve alta (anti-orphan profiles).
+    if (!existing) {
+      if (!cedulaKey || cedulaKey.length < 6) {
+        return NextResponse.json(
+          { error: "Para crear perfil se requiere cedula (minimo 6 digitos)." },
+          { status: 400 },
+        );
+      }
+      if (!phone) {
+        return NextResponse.json(
+          { error: "Para crear perfil se requiere telefono." },
+          { status: 400 },
+        );
+      }
+    }
 
     if (phone || email || cedulaKey) {
       const orFilters: Record<string, unknown>[] = [];
@@ -202,9 +303,6 @@ export async function POST(req: NextRequest) {
             error: `Ese contacto/cedula ya esta ligado a ${duplicate.memberName}. Use ese perfil o hable con recepcion.`,
             duplicate: {
               memberName: duplicate.memberName,
-              phone: duplicate.phone ?? "",
-              email: duplicate.email ?? "",
-              cedula: duplicate.cedula ?? "",
             },
           },
           { status: 409 },
@@ -218,7 +316,6 @@ export async function POST(req: NextRequest) {
       updatedAt: now,
     };
 
-    // Solo tocar campos que el cliente mando, para no borrar datos existentes
     if (body.goal !== undefined) set.goal = goal;
     if (body.favoriteTraining !== undefined) set.favoriteTraining = favoriteTraining;
     if (phone) set.phone = phone;
@@ -227,12 +324,8 @@ export async function POST(req: NextRequest) {
     if (body.cedula !== undefined && cedulaRaw) set.cedula = cedulaRaw;
 
     if (!existing) {
-      set.membership = {
-        plan,
-        nextBillingDate,
-        startedAt: today,
-        status: "active",
-      };
+      // Ignore client plan/dates — self-serve always starts as free first day.
+      set.membership = createFreeFirstDayMembership(today);
     }
 
     await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
@@ -248,28 +341,35 @@ export async function POST(req: NextRequest) {
       { upsert: true },
     );
 
-    // Correo de bienvenida con el codigo de acceso al crear el perfil
-    if (!existing && email) {
-      await sendWelcomeEmail({
-        to: email,
-        memberName,
-        accessCode: formatAccessCode(memberAccessCode(normalizedName)),
-      });
-    }
-
-    const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
     if (!existing) {
+      await grantFreeFirstDayIfEligible(db, normalizedName, today);
+      if (email) {
+        await sendWelcomeEmail({
+          to: email,
+          memberName,
+          accessCode: formatAccessCode(memberAccessCode(normalizedName)),
+        });
+      }
       await recordEvent(db, {
         type: "profile_created",
         memberId: normalizedName,
         source: "member_app",
         entity: { type: "member", id: normalizedName },
-        properties: { hasEmail: Boolean(email), hasPhone: Boolean(phone), plan },
+        properties: {
+          hasEmail: Boolean(email),
+          hasPhone: Boolean(phone),
+          freeFirstDay: true,
+        },
       });
     }
+
+    const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
     return NextResponse.json({
       member: toPublicMember(doc, today),
-      leaderboard: await getMemberLeaderboard(memberRepository, today),
+      leaderboard: existing
+        ? await getMemberLeaderboard(memberRepository, today)
+        : [],
+      freeFirstDay: !existing,
     });
   } catch (err) {
     console.error("XTREME USER POST", err);
@@ -357,11 +457,22 @@ export async function PATCH(req: NextRequest) {
       }
       if (body.phone !== undefined) {
         const phone = normalizeMemberPhone(body.phone);
+        // Permitir guardar telefono nuevo; string vacio no borra el existente.
         if (phone) set.phone = phone;
       }
       if (body.email !== undefined) {
-        const email = normalizeMemberEmail(body.email);
-        if (email) set.email = email;
+        const rawEmail = String(body.email ?? "").trim();
+        if (rawEmail) {
+          const email = normalizeMemberEmail(rawEmail);
+          // Validacion basica: debe parecer un correo real.
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return NextResponse.json(
+              { error: "Correo invalido. Ejemplo: nombre@gmail.com" },
+              { status: 400 },
+            );
+          }
+          set.email = email;
+        }
       }
       if (body.cedula !== undefined) {
         const cedulaRaw = normalizeCedula(body.cedula);
@@ -480,7 +591,7 @@ export async function PATCH(req: NextRequest) {
             goal: "",
             favoriteTraining: "",
             workouts: [],
-            membership: createDefaultMembership(today),
+            membership: createFreeFirstDayMembership(today),
             createdAt: now,
           },
           $push: { bodyMetrics: metric },

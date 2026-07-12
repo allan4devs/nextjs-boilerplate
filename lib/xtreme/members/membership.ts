@@ -18,12 +18,18 @@ function toUtcDate(date: string) {
   return new Date(`${date}T00:00:00.000Z`);
 }
 
+/** @deprecated Prefer createFreeFirstDayMembership for self-serve alta. */
 export function createDefaultMembership(today: string): Membership {
+  return createFreeFirstDayMembership(today);
+}
+
+/** Self-serve first visit: one calendar day of access (not a paid monthly plan). */
+export function createFreeFirstDayMembership(today: string): Membership {
   return {
-    plan: "Xtreme Mensual",
+    plan: "Primer día gratis",
     status: "active",
     startedAt: today,
-    nextBillingDate: addMonths(today, 1),
+    nextBillingDate: today,
   };
 }
 

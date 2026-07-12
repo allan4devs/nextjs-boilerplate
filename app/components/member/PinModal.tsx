@@ -7,18 +7,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Delete, Loader2, Lock, Mail, ShieldCheck } from "lucide-react";
+import { MSG } from "./constants";
+import { errorText } from "./utils";
 
 export default function PinModal({
   memberName,
   mode: initialMode,
   onSuccess,
   onChangeMember,
+  onCancel,
   onDone,
 }: {
   memberName: string;
   mode: "set" | "verify" | "change";
   onSuccess: () => void;
+  /** Cierra sesion y vuelve al login por cedula. */
   onChangeMember: () => void;
+  /** Solo en cambio de PIN: cierra el modal sin cerrar sesion. */
+  onCancel?: () => void;
   onDone?: (message: string) => void;
 }) {
   const [mode, setMode] = useState<"set" | "verify" | "change" | "recover">(initialMode);
@@ -55,6 +61,7 @@ export default function PinModal({
       const response = await fetch("/api/xtreme/pin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           memberName,
           action: "requestOtp",
@@ -66,13 +73,11 @@ export default function PinModal({
         maskedEmail?: string;
         expiresInMin?: number;
       };
-      if (!response.ok) throw new Error(data.error ?? "No se pudo enviar el codigo.");
+      if (!response.ok) throw new Error(data.error ?? MSG.errors.pinSendOtp);
       setOtpSentTo(data.maskedEmail ?? "su correo");
-      onDone?.(
-        `Codigo enviado a ${data.maskedEmail ?? "su correo"} (vence en ${data.expiresInMin ?? 15} min).`,
-      );
+      onDone?.(MSG.ok.otpSent(data.maskedEmail ?? "su correo", data.expiresInMin ?? 15));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo enviar el codigo.");
+      setError(errorText(err, MSG.errors.pinSendOtp));
     } finally {
       setOtpSending(false);
     }
@@ -103,7 +108,7 @@ export default function PinModal({
 
       if (mode === "recover" && step === "enter") {
         if (!otpCode.trim() && !recoveryContact.trim()) {
-          setError("Pida el codigo al correo, o escriba su telefono/correo registrado.");
+          setError(MSG.errors.pinOtpMissing);
           setDigits("");
           return;
         }
@@ -114,7 +119,7 @@ export default function PinModal({
       }
 
       if ((mode === "set" || mode === "change" || mode === "recover") && pin !== firstPin) {
-        setError("Los PIN no coinciden.");
+        setError(MSG.errors.pinMismatch);
         setDigits("");
         setFirstPin("");
         setStep(mode === "change" ? "new" : "enter");
@@ -127,6 +132,7 @@ export default function PinModal({
         const response = await fetch("/api/xtreme/pin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
           body: JSON.stringify({
             memberName,
             pin,
@@ -146,33 +152,33 @@ export default function PinModal({
           setMode("verify");
           setStep("enter");
           setDigits("");
-          setError("Ya existe PIN. Ingreselo para entrar.");
+          setError(MSG.errors.pinAlreadySet);
           return;
         }
 
-        if (!response.ok) throw new Error(data.error ?? "No se pudo validar.");
+        if (!response.ok) throw new Error(data.error ?? MSG.errors.pinValidate);
         if (mode === "verify" && data.hasPinSet === false) {
           // El perfil no tiene PIN (nuevo o reseteado en recepcion): crear uno.
           resetPinFlow("set");
-          setError("Este perfil no tiene PIN. Cree uno de 4 digitos.");
+          setError(MSG.errors.pinNotSet);
           return;
         }
         if (mode === "verify" && !data.valid) {
-          setError("PIN incorrecto.");
+          setError(MSG.errors.pinWrong);
           setDigits("");
           return;
         }
 
         if (mode === "change") {
-          onDone?.("PIN actualizado. Sesion protegida.");
+          onDone?.(MSG.ok.pinChanged);
         }
         if (mode === "recover") {
-          onDone?.("PIN recuperado. Guardelo bien para la proxima.");
+          onDone?.(MSG.ok.pinRecovered);
         }
 
         onSuccess();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error de conexion.");
+        setError(errorText(err, MSG.errors.pinValidate));
         setDigits("");
       } finally {
         setIsLoading(false);
@@ -276,33 +282,45 @@ export default function PinModal({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={onChangeMember}
-          className="mt-4 border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/70 transition hover:border-[#d8ff3e] hover:text-[#eaff93]"
-        >
-          Cambiar usuario
-        </button>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {initialMode === "change" ? (
+            <button
+              type="button"
+              onClick={() => onCancel?.()}
+              className="border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/70 transition hover:border-[#d8ff3e] hover:text-[#eaff93]"
+            >
+              Cancelar
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onChangeMember}
+              className="border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/70 transition hover:border-red-400/50 hover:text-red-300"
+            >
+              Cerrar sesion
+            </button>
+          )}
 
-        {initialMode === "verify" && mode !== "recover" && (
-          <button
-            type="button"
-            onClick={() => resetPinFlow("recover")}
-            className="ml-2 mt-4 border border-orange-300/30 px-3 py-2 text-xs font-black uppercase tracking-wide text-orange-200 transition hover:border-orange-300 hover:text-white"
-          >
-            Olvide mi PIN
-          </button>
-        )}
+          {initialMode === "verify" && mode !== "recover" && (
+            <button
+              type="button"
+              onClick={() => resetPinFlow("recover")}
+              className="border border-orange-300/30 px-3 py-2 text-xs font-black uppercase tracking-wide text-orange-200 transition hover:border-orange-300 hover:text-white"
+            >
+              Olvide mi PIN
+            </button>
+          )}
 
-        {mode === "recover" && (
-          <button
-            type="button"
-            onClick={() => resetPinFlow("verify")}
-            className="ml-2 mt-4 border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 transition hover:text-white"
-          >
-            Volver al PIN
-          </button>
-        )}
+          {mode === "recover" && (
+            <button
+              type="button"
+              onClick={() => resetPinFlow("verify")}
+              className="border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 transition hover:text-white"
+            >
+              Volver al PIN
+            </button>
+          )}
+        </div>
 
         <div className="mt-7 flex justify-center gap-4">
           {[0, 1, 2, 3].map((index) => (

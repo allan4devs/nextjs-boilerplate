@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ExtremeGymCheckout from "../../ExtremeGymCheckout";
 import CtaBand from "../../components/CtaBand";
-import { BUSINESS, COSTS, PLAN_DETAILS, waLink } from "../../lib/site";
-import { ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
+import { BUSINESS, COSTS, PLAN_DETAILS } from "../../lib/site";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Precios y planes",
@@ -30,15 +30,16 @@ export default function PreciosPage() {
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Precios</p>
               <h1 className="mt-2 text-3xl font-black uppercase leading-none sm:text-4xl">Costos vigentes.</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold text-white/58">
-                Día, semana, quincena o mes. Recepción confirma costos vigentes, promociones y requisitos.
+                Día, semana, quincena o mes. Estos son los precios vigentes: elegí tu plan y pagalo en línea con
+                tarjeta, sin filas ni trámites en recepción.
               </p>
             </div>
             <a
-              href={waLink("Hola Xtreme Gym, quiero confirmar costos vigentes: día, semana, quincena o mes.")}
-              className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/[0.07] px-5 font-black uppercase text-white transition hover:border-white/45"
+              href="#inscripcion"
+              className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
             >
-              Confirmar costo
-              <MessageCircle className="h-4 w-4" />
+              Pagar en línea
+              <ArrowRight className="h-4 w-4" />
             </a>
           </div>
 

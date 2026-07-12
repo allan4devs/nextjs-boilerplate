@@ -91,18 +91,12 @@ type FormState = {
   name: string;
   phone: string;
   email: string;
-  date: string;
-  time: string;
-  goal: string;
 };
 
 const initialForm: FormState = {
   name: "",
   phone: "",
   email: "",
-  date: "",
-  time: "",
-  goal: "",
 };
 
 export default function ExtremeGymCheckout({
@@ -423,39 +417,6 @@ export default function ExtremeGymCheckout({
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
                 placeholder="correo@ejemplo.com"
                 required
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
-                Fecha deseada
-              </span>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(event) => updateForm("date", event.target.value)}
-                className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
-                Horario preferido
-              </span>
-              <input
-                value={form.time}
-                onChange={(event) => updateForm("time", event.target.value)}
-                className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
-                placeholder="Mañana / tarde / noche"
-              />
-            </label>
-            <label className="block sm:col-span-2">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
-                Objetivo o nota
-              </span>
-              <textarea
-                value={form.goal}
-                onChange={(event) => updateForm("goal", event.target.value)}
-                className="mt-2 min-h-24 w-full border border-black/15 px-3 py-3 font-bold outline-none focus:border-black"
-                placeholder="Quiero ganar fuerza, bajar grasa, empezar funcional..."
               />
             </label>
           </div>

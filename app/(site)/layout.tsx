@@ -1,5 +1,6 @@
 import SiteFooter from "../components/SiteFooter";
 import SiteHeader from "../components/SiteHeader";
+import ReceptionChatWidget from "../components/ReceptionChatWidget";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <SiteHeader />
       <main>{children}</main>
       <SiteFooter />
+      <ReceptionChatWidget />
     </div>
   );
 }

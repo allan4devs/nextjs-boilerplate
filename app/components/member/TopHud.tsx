@@ -48,7 +48,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
               label="Nv"
               value={level}
               tone="cyan"
-              onClick={() => setOsModal({ kind: "streak" })}
+              onClick={() => setOsModal({ kind: "level" })}
             />
             <GameHudPill
               icon={Target}

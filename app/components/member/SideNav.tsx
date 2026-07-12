@@ -178,12 +178,12 @@ export default function SideNav({ os }: { os: MemberOs }) {
             <button
               type="button"
               onClick={resetMember}
-              title="Cambiar de usuario"
-              className={`mt-3 w-full border-[3px] border-white/10 py-2 text-xs font-black uppercase text-white/35 transition hover:border-white/30 hover:text-white ${
+              title="Cerrar sesion"
+              className={`mt-3 w-full border-[3px] border-red-400/25 py-2 text-xs font-black uppercase text-red-200/70 transition hover:border-red-400/50 hover:text-red-200 ${
                 navOpen ? "block" : "lg:hidden"
               }`}
             >
-              Cambiar de usuario
+              Cerrar sesion
             </button>
           )}
         </div>

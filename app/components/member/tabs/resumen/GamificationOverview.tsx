@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Check, ChevronRight, Flame, Snowflake } from "lucide-react";
 import { GameLabel } from "../../../GameOS";
 import { StreakRing, XpBar, badgeIcon, tierStyle } from "../../../gamification";
+import { todayIso } from "../../utils";
 import type {
   ResumenActions,
   ResumenViewModel,
@@ -14,6 +15,7 @@ type GamificationOverviewProps = {
   gamification: ResumenViewModel["gamification"];
   nextBadge: ResumenViewModel["nextBadge"];
   onOpenStreak: ResumenActions["openStreak"];
+  onOpenLevel: ResumenActions["openLevel"];
   onOpenWeek: ResumenActions["openWeek"];
   onOpenBadges: ResumenActions["openBadges"];
 };
@@ -23,10 +25,13 @@ function GamificationOverviewComponent({
   gamification,
   nextBadge,
   onOpenStreak,
+  onOpenLevel,
   onOpenWeek,
   onOpenBadges,
 }: GamificationOverviewProps) {
   if (!streak || !gamification) return null;
+
+  const today = todayIso();
 
   return (
     <>
@@ -59,7 +64,7 @@ function GamificationOverviewComponent({
         <div className="grid gap-3 sm:gap-4">
           <button
             type="button"
-            onClick={onOpenStreak}
+            onClick={onOpenLevel}
             className="border-[3px] border-cyan-300/40 bg-[#0c0c0c] p-4 text-left shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5"
           >
             <XpBar xp={gamification.xp} level={gamification.level} />
@@ -83,23 +88,29 @@ function GamificationOverviewComponent({
               )}
             </div>
             <div className="mt-3 grid grid-cols-7 gap-1">
-              {gamification.days.map((day) => (
-                <div
-                  key={day.date}
-                  className={`grid aspect-square place-items-center border-[3px] text-[10px] font-black sm:text-xs ${
-                    day.done
-                      ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
-                      : day.isToday
-                        ? "border-[#d8ff3e]/60 bg-black/40 text-[#eaff93]"
-                        : "border-white/15 bg-black/25 text-white/35"
-                  }`}
-                >
-                  {day.done ? <Check className="h-3.5 w-3.5" /> : day.label}
-                </div>
-              ))}
+              {gamification.days.map((day) => {
+                // Un día pasado sin entreno se ve "perdido"; el futuro queda en espera.
+                const missed = !day.done && day.date < today;
+                return (
+                  <div
+                    key={day.date}
+                    className={`grid aspect-square place-items-center border-[3px] text-[10px] font-black sm:text-xs ${
+                      day.done
+                        ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                        : day.isToday
+                          ? "animate-pulse border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#eaff93]"
+                          : missed
+                            ? "border-dashed border-white/10 bg-transparent text-white/25"
+                            : "border-white/15 bg-black/25 text-white/35"
+                    }`}
+                  >
+                    {day.done ? <Check className="h-3.5 w-3.5" /> : day.label}
+                  </div>
+                );
+              })}
             </div>
             <p className="mt-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">
-              Toca para ajustar meta →
+              Toca para ver la semana →
             </p>
           </button>
         </div>

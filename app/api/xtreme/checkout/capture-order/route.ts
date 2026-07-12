@@ -4,9 +4,11 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { sendPaymentReceiptEmail } from "@/lib/helpers/email";
 import { recordEvent } from "@/lib/xtreme/events";
 import { getXtremeCheckoutOption } from "../catalog";
+import type { PendingPayPalOrder } from "../create-order/route";
 import {
   MEMBERS_COLLECTION,
   PAYMENTS_COLLECTION,
+  PAYPAL_ORDERS_COLLECTION,
   type MemberDoc,
   type PaymentDoc,
   addDays,
@@ -25,6 +27,7 @@ import { bookSession } from "@/lib/xtreme/inventory";
 
 type CaptureBody = {
   orderID?: string;
+  /** Ignored for grants — option comes from pending order created at checkout. */
   optionId?: string;
   /** Optional class hold — capture creates booking after entitlement grant. */
   trainingId?: string;
@@ -39,6 +42,13 @@ type CaptureBody = {
     goal?: string;
   };
 };
+
+function amountsMatch(captured: string | undefined, expected: string) {
+  const a = Number(captured);
+  const b = Number(expected);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+  return Math.abs(a - b) < 0.02;
+}
 
 type PayPalCaptureResponse = {
   id?: string;
@@ -83,6 +93,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "Falta el número de orden PayPal." }, { status: 400 });
     }
 
+    const db = await getDb();
+    const pending = await db.collection<PendingPayPalOrder>(PAYPAL_ORDERS_COLLECTION).findOne({
+      orderId: orderID.trim(),
+    });
+    if (!pending) {
+      return NextResponse.json(
+        { success: false, message: "Orden no encontrada. Vuelva a iniciar el pago." },
+        { status: 400 },
+      );
+    }
+
+    // Resolve catalog option only from the server-side pending order (not client body).
+    const option = getXtremeCheckoutOption(pending.optionId);
+    if (!option) {
+      return NextResponse.json(
+        { success: false, message: "Plan de la orden invalido. Contacte recepcion." },
+        { status: 400 },
+      );
+    }
+
+    if (pending.status === "captured" && pending.paypalCaptureId) {
+      const existingPay = await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).findOne({
+        paypalCaptureId: pending.paypalCaptureId,
+      });
+      if (existingPay) {
+        return NextResponse.json({
+          success: true,
+          id: orderID,
+          captureID: pending.paypalCaptureId,
+          paymentId: existingPay.id,
+          idempotent: true,
+        });
+      }
+    }
+
     const accessToken = await getPayPalAccessToken();
     const response = await fetch(`${getPayPalApiBaseUrl()}/v2/checkout/orders/${orderID}/capture`, {
       method: "POST",
@@ -97,19 +142,40 @@ export async function POST(req: Request) {
     if (!response.ok) {
       console.error("Xtreme PayPal capture error:", { status: response.status, data, orderID });
       return NextResponse.json(
-        { success: false, message: data.message || "No se pudo confirmar el pago." },
+        { success: false, message: "No se pudo confirmar el pago." },
         { status: response.status || 500 },
       );
     }
 
     const capture = data.purchase_units?.[0]?.payments?.captures?.[0];
-    const option = getXtremeCheckoutOption(body.optionId);
-    const customerName = normalizeName(body.customer?.name) ||
+    const captureStatus = (capture?.status || data.status || "").toUpperCase();
+    if (captureStatus && captureStatus !== "COMPLETED" && data.status !== "COMPLETED") {
+      return NextResponse.json(
+        { success: false, message: "El pago no se completo en PayPal." },
+        { status: 402 },
+      );
+    }
+
+    const capturedAmount = capture?.amount?.value || data.purchase_units?.[0]?.amount?.value;
+    if (!amountsMatch(capturedAmount, pending.amountUsd)) {
+      console.error("Xtreme PayPal amount mismatch", {
+        orderID,
+        captured: capturedAmount,
+        expected: pending.amountUsd,
+      });
+      return NextResponse.json(
+        { success: false, message: "Monto del pago no coincide. Contacte recepcion." },
+        { status: 400 },
+      );
+    }
+
+    const customerName =
+      normalizeName(pending.customer.name || body.customer?.name) ||
       [data.payer?.name?.given_name, data.payer?.name?.surname].filter(Boolean).join(" ") ||
       "Cliente PayPal";
-    const normalizedName = normalizeKey(customerName);
-    const amountUsd = Number(capture?.amount?.value || data.purchase_units?.[0]?.amount?.value || option?.usdAmount || 0);
-    const amountCrc = option?.priceCrc ?? Math.round(amountUsd * 500);
+    const normalizedName = normalizeKey(customerName) || pending.memberKey;
+    const amountUsd = Number(pending.amountUsd);
+    const amountCrc = option.priceCrc;
     const now = new Date();
 
     const payment: PaymentDoc = {
@@ -117,19 +183,26 @@ export async function POST(req: Request) {
       memberName: customerName,
       normalizedName,
       customerName,
-      phone: String(body.customer?.phone ?? "").trim().slice(0, 40),
-      email: String(body.customer?.email || data.payer?.email_address || "").trim().slice(0, 80),
-      optionId: option?.id ?? String(body.optionId ?? "paypal"),
-      optionLabel: option?.label ?? "Pago PayPal",
-      category: option?.category ?? "Plan",
+      phone: String(pending.customer.phone || body.customer?.phone || "").trim().slice(0, 40),
+      email: String(
+        pending.customer.email || body.customer?.email || data.payer?.email_address || "",
+      )
+        .trim()
+        .slice(0, 80),
+      optionId: option.id,
+      optionLabel: option.label,
+      category: option.category,
       amountCrc,
       amountUsd,
-      currency: capture?.amount?.currency_code || "USD",
+      currency: capture?.amount?.currency_code || pending.currency || "USD",
       method: "paypal",
       status: "completed",
       paypalOrderId: data.id ?? orderID,
       paypalCaptureId: capture?.id ?? null,
-      note: body.customer?.goal ? `Objetivo: ${String(body.customer.goal).slice(0, 120)}` : "",
+      note:
+        pending.customer.goal || body.customer?.goal
+          ? `Objetivo: ${String(pending.customer.goal || body.customer?.goal).slice(0, 120)}`
+          : "",
       date: todayIso(),
       createdAt: now,
       recordedBy: "paypal",
@@ -139,13 +212,22 @@ export async function POST(req: Request) {
     let entitlement: EntitlementDoc | null = null;
     let bookingId: string | null = null;
     try {
-      const db = await getDb();
       // Idempotent payment insert (retry-safe on paypalCaptureId when present)
       if (payment.paypalCaptureId) {
         const existingPay = await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).findOne({
           paypalCaptureId: payment.paypalCaptureId,
         });
         if (existingPay) {
+          await db.collection(PAYPAL_ORDERS_COLLECTION).updateOne(
+            { orderId: orderID.trim() },
+            {
+              $set: {
+                status: "captured",
+                capturedAt: now,
+                paypalCaptureId: payment.paypalCaptureId,
+              },
+            },
+          );
           return NextResponse.json({
             success: true,
             id: data.id,
@@ -158,6 +240,16 @@ export async function POST(req: Request) {
       }
 
       await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).insertOne(payment);
+      await db.collection(PAYPAL_ORDERS_COLLECTION).updateOne(
+        { orderId: orderID.trim() },
+        {
+          $set: {
+            status: "captured",
+            capturedAt: now,
+            paypalCaptureId: payment.paypalCaptureId,
+          },
+        },
+      );
       await recordEvent(db, {
         type: "payment_completed",
         memberId: normalizedName,
@@ -167,8 +259,8 @@ export async function POST(req: Request) {
       });
 
       // Activar / extender membresia del socio si es plan
-      if (option?.category === "Plan" || option?.id === "day-pass" || option?.id === "senior") {
-        const days = planDays(option?.id ?? "month");
+      if (option.category === "Plan" || option.id === "day-pass" || option.id === "senior") {
+        const days = planDays(option.id);
         const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
         const base =
           existing?.membership?.nextBillingDate && existing.membership.nextBillingDate > todayIso()
@@ -176,7 +268,7 @@ export async function POST(req: Request) {
             : todayIso();
         const nextBillingDate = addDays(toUtcDate(base), days).toISOString().slice(0, 10);
         membershipUntil = nextBillingDate;
-        const planLabel = option?.label ?? existing?.membership?.plan ?? "Xtreme Mensual";
+        const planLabel = option.label ?? existing?.membership?.plan ?? "Xtreme Mensual";
         const startedAt = existing?.membership?.startedAt ?? todayIso();
         const isRenewal = Boolean(existing?.membership?.nextBillingDate);
 
@@ -188,7 +280,9 @@ export async function POST(req: Request) {
               memberName: customerName,
               phone: payment.phone || existing?.phone || "",
               email: payment.email || existing?.email || "",
-              goal: String(body.customer?.goal ?? existing?.goal ?? "").trim().slice(0, 80),
+              goal: String(pending.customer.goal ?? body.customer?.goal ?? existing?.goal ?? "")
+                .trim()
+                .slice(0, 80),
               membership: {
                 plan: planLabel,
                 nextBillingDate,
@@ -207,16 +301,14 @@ export async function POST(req: Request) {
           { upsert: true },
         );
 
-        // Strategy 2.0: grant entitlement from payment (source of truth for booking)
         const entShape = entitlementFromPayment({
           memberKey: normalizedName,
-          optionId: option?.id ?? payment.optionId,
+          optionId: option.id,
           optionLabel: planLabel,
           paymentId: payment.id,
           startDate: todayIso(),
-          category: option?.category,
+          category: option.category,
         });
-        // Align plan window with membership nextBillingDate for multi-day plans
         if (entShape.kind === "plan") {
           entShape.endsOn = nextBillingDate;
         }
@@ -224,7 +316,7 @@ export async function POST(req: Request) {
         membershipUntil = entitlement.endsOn;
 
         const lifecycleType =
-          option?.id === "day-pass"
+          option.id === "day-pass"
             ? existing
               ? "payment_completed"
               : "membership_started"
@@ -246,7 +338,6 @@ export async function POST(req: Request) {
           });
         }
 
-        // Optional: auto-book class when checkout carried session metadata
         const trainingId = String(body.trainingId ?? "").trim();
         const trainingName = String(body.trainingName ?? "").trim();
         const trainingDate = String(body.trainingDate ?? todayIso()).slice(0, 10);
@@ -274,10 +365,9 @@ export async function POST(req: Request) {
       }
     } catch (persistErr) {
       console.error("Xtreme payment persist error:", persistErr);
-      // No fallar el pago si Mongo falla; el capture de PayPal ya ocurrio.
+      // Capture already happened at PayPal — surface ops alert via logs.
     }
 
-    // Recibo por correo al cliente (con copia a recepcion)
     if (payment.email) {
       await sendPaymentReceiptEmail({
         to: payment.email,
@@ -306,7 +396,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Xtreme checkout capture-order error:", error);
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Error interno confirmando el pago." },
+      { success: false, message: "Error interno confirmando el pago." },
       { status: 500 },
     );
   }

@@ -7,6 +7,8 @@ import type { Db } from "mongodb";
 import {
   ENTITLEMENT_LEDGER_COLLECTION,
   ENTITLEMENTS_COLLECTION,
+  FREE_FIRST_DAY_OFFER_ID,
+  FREE_FIRST_DAY_PLAN_LABEL,
   MEMBERS_COLLECTION,
   membershipStatus,
   todayIso,
@@ -278,6 +280,43 @@ export async function ensureLegacyEntitlement(db: Db, member: MemberDoc): Promis
     source: doc.source,
   });
   return [...existing, doc];
+}
+
+/** One-time free first day: full-day access (unlimited class bookings within the day). */
+export function freeFirstDayEntitlementShape(
+  memberKey: string,
+  today = todayIso(),
+): Omit<EntitlementDoc, "createdAt" | "updatedAt"> {
+  return {
+    id: newEntitlementId("free"),
+    memberKey,
+    kind: "day_pass",
+    offerId: FREE_FIRST_DAY_OFFER_ID,
+    label: FREE_FIRST_DAY_PLAN_LABEL,
+    startsOn: today,
+    endsOn: today,
+    remainingBookings: null,
+    source: { type: "admin", id: FREE_FIRST_DAY_OFFER_ID },
+    status: "active",
+  };
+}
+
+export async function hasFreeFirstDayGrant(db: Db, memberKey: string) {
+  const n = await db.collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION).countDocuments({
+    memberKey,
+    offerId: FREE_FIRST_DAY_OFFER_ID,
+    status: { $ne: "revoked" },
+  });
+  return n > 0;
+}
+
+/**
+ * Grant free first day once per memberKey. Returns the entitlement or null if already granted.
+ * Also sets legacy membership fields via grantEntitlement.
+ */
+export async function grantFreeFirstDayIfEligible(db: Db, memberKey: string, today = todayIso()) {
+  if (await hasFreeFirstDayGrant(db, memberKey)) return null;
+  return grantEntitlement(db, freeFirstDayEntitlementShape(memberKey, today));
 }
 
 export async function grantEntitlement(

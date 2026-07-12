@@ -166,14 +166,35 @@ function buildPlan(name: string, goal: string) {
   };
 }
 
+/** Live production and local `next start` — never seed/wipe real data. Preview (VERCEL_ENV=preview) may still seed. */
+function seedDisabledInThisEnv() {
+  if (process.env.VERCEL_ENV === "production") return true;
+  if (process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "development") return false;
+  return process.env.NODE_ENV === "production";
+}
+
 export async function POST(req: NextRequest) {
-  if (!resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "")) {
+  if (seedDisabledInThisEnv()) {
+    return NextResponse.json(
+      { error: "Seed deshabilitado en produccion." },
+      { status: 403 },
+    );
+  }
+
+  const role = resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+  if (!role) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
   try {
     const body = (await req.json().catch(() => ({}))) as { wipeAll?: boolean };
     const wipeAll = Boolean(body.wipeAll);
+    if (wipeAll && role !== "super") {
+      return NextResponse.json(
+        { error: "Solo super admin puede hacer reset total." },
+        { status: 403 },
+      );
+    }
 
     const db = await getDb();
     const membersCol = db.collection(MEMBERS_COLLECTION);

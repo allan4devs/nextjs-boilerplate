@@ -20,23 +20,27 @@ export type GymStatus = {
   recent: RecentCheckinSummary[];
 };
 
-/** Serialized member lookup shared by the public kiosk and reception. */
+/**
+ * Serialized member lookup for kiosk (reduced) and reception (full with admin header).
+ * Public kiosk responses omit phone/email/cedula/accessCode.
+ */
 export type MemberHit = {
   memberName: string;
   normalizedName: string;
-  goal: string;
-  accessCode: string;
+  goal?: string;
+  accessCode?: string;
   plan: string;
   membershipStatus: MembershipStatus;
   daysRemaining: number;
   streak: number;
-  totalWorkouts: number;
-  coach: string;
-  phone: string;
+  totalWorkouts?: number;
+  coach?: string;
+  phone?: string;
   email?: string;
   cedula?: string;
   photoUrl?: string;
   hasPin?: boolean;
   hasFace?: boolean;
   faceDistance?: number;
+  levelName?: string;
 };
