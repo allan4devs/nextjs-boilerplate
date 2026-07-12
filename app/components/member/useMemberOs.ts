@@ -7,41 +7,36 @@
  * reciben el objeto `MemberOs` completo y destructuran lo que usan.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Award } from "lucide-react";
-import { pickPhrase } from "@/lib/xtreme/phrases";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { STREAK_MILESTONES } from "@/lib/xtreme/gamification";
-import { nextBadgeUp, phraseContextFor, type CelebrationData } from "../gamification";
+import type { CelebrationData } from "../gamification";
 import {
-  ACHIEVEMENTS,
   CEDULA_KEY,
   CEDULA_MIN_DIGITS,
-  DEFAULT_NOTIF_PREFS,
   GOALS,
   REMINDERS,
   SESSION_KEY,
   SESSION_TTL_MS,
   STORAGE_KEY,
   TOUR_KEY,
-  TRAININGS,
   type TabId,
   type Training,
 } from "./constants";
 import {
   ApiError,
   formatCedulaInput,
-  getWeekDates,
   initialMember,
-  memberCode,
   normalizeName,
   onlyDigits,
   readJson,
   resizePhoto,
   todayIso,
 } from "./utils";
+import { useMemberDerivedState } from "./hooks/useMemberDerivedState";
 import type {
   GymStatus,
   Member,
+  MemberProfilePatch,
   MembersResponse,
   NextBestAction,
   NotificationPrefs,
@@ -127,71 +122,37 @@ export function useMemberOs() {
     }
   }, []);
 
-  const unlocked = Boolean(memberName) && !showPin;
-  const currentMember = member ?? initialMember(memberName);
-  const completedToday = useMemo(() => {
-    const doneIds = new Set(
-      currentMember.workouts
-        .filter((workout) => workout.completedDate === todayIso())
-        .map((workout) => workout.trainingId),
-    );
-    return doneIds;
-  }, [currentMember.workouts]);
+  const {
+    unlocked,
+    currentMember,
+    completedToday,
+    recentWorkouts,
+    workoutDates,
+    weekDates,
+    gami,
+    weekDoneCount,
+    weeklyGoal,
+    level,
+    levelName,
+    milestoneLeft,
+    serverBadges,
+    achievements,
+    unlockedCount,
+    pinnedBadgeIds,
+    notifPrefs,
+    accessCode,
+    latestMetric,
+    metricTrend,
+    membershipTone,
+    trainedToday,
+    effectiveStreak,
+    dayPhrase,
+    nextBadge,
+    quickTraining,
+    selectedTraining,
+  } = useMemberDerivedState({ member, memberName, osModal, showPin });
 
-  const recentWorkouts = [...currentMember.workouts].reverse().slice(0, 5);
-  const workoutDates = useMemo(
-    () => new Set(currentMember.workouts.map((workout) => workout.completedDate)),
-    [currentMember.workouts],
-  );
-  const weekDates = useMemo(() => getWeekDates(), []);
-  const gami = currentMember.gamification;
-  const weekDoneCount = gami?.weekCount ?? weekDates.filter((date) => workoutDates.has(date)).length;
-  const weeklyGoal = gami?.weeklyGoal ?? 4;
-  const level = gami?.level?.index ?? Math.floor(currentMember.totalWorkouts / 10) + 1;
-  const levelName = gami?.level?.name ?? "Novato";
-  const nextMilestone = gami?.level?.nextXp ?? level * 10;
-  const milestoneLeft = gami
-    ? Math.max(0, (gami.level.nextXp ?? gami.xp) - gami.xp)
-    : Math.max(0, nextMilestone - currentMember.totalWorkouts);
-  const serverBadges = gami?.badges ?? [];
-  const achievements = serverBadges.length
-    ? serverBadges.map((b) => ({
-        id: b.id,
-        name: b.name,
-        desc: b.desc,
-        icon: Award,
-        done: b.earned,
-      }))
-    : ACHIEVEMENTS.map((a) => ({ ...a, done: a.test(currentMember) }));
-  const unlockedCount = achievements.filter((a) => a.done).length;
-  const pinnedBadgeIds = currentMember.pinnedBadges ?? gami?.pinnedBadges ?? [];
-  const notifPrefs = currentMember.notificationPrefs ?? DEFAULT_NOTIF_PREFS;
-  const accessCode = memberCode(currentMember.normalizedName || memberName.toUpperCase() || "XTREME01");
-  const latestMetric = currentMember.latestBodyMetric;
-  const metricTrend = currentMember.bodyMetrics.slice(-12);
-  const membershipTone =
-    currentMember.membership.status === "expired"
-      ? "border-red-400/40 bg-red-500/10 text-red-200"
-      : currentMember.membership.status === "warning"
-        ? "border-orange-300/40 bg-orange-300/10 text-orange-100"
-        : "border-[#d8ff3e]/35 bg-[#d8ff3e]/10 text-[#efffb8]";
-
-  // --- Gamificacion: frase del dia, proximo logro y celebraciones ---
-  const trainedToday = completedToday.size > 0;
-  const effectiveStreak = gami?.streak ?? currentMember.streak;
-  const dayPhrase = pickPhrase(
-    phraseContextFor({
-      trainedToday,
-      streak: effectiveStreak,
-      totalWorkouts: currentMember.totalWorkouts,
-      lastWorkoutDate: currentMember.lastWorkoutDate,
-    }),
-    memberName || "Xtreme",
-    { streak: effectiveStreak },
-  );
-  const nextBadge = nextBadgeUp(serverBadges);
-  const quickTraining =
-    TRAININGS.find((t) => t.name === currentMember.favoriteTraining) ?? TRAININGS[0];
+  // --- Gamificacion: celebraciones ante cambios del servidor ---
 
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
   const prevGamiRef = useRef<{ streak: number; levelIndex: number } | null>(null);
@@ -609,7 +570,7 @@ export function useMemberOs() {
     }
   }
 
-  async function saveProfileField(patch: Record<string, unknown>, okMessage: string) {
+  async function saveProfileField(patch: MemberProfilePatch, okMessage: string) {
     const trimmed = normalizeName(memberName);
     if (!trimmed || !unlocked) return;
     setError("");
@@ -890,11 +851,6 @@ export function useMemberOs() {
     setError("");
     window.setTimeout(() => cedulaInputRef.current?.focus(), 100);
   }
-
-  const selectedTraining =
-    osModal?.kind === "training"
-      ? TRAININGS.find((t) => t.id === osModal.trainingId) ?? null
-      : null;
 
   return {
     // inputs de sesion / registro

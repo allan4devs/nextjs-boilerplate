@@ -1,384 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { sendWelcomeEmail } from "@/lib/helpers/email";
+import { businessDate } from "@/lib/xtreme/business-date";
 import { recordEvent } from "@/lib/xtreme/events";
 import {
   cedulaDigits,
-  CHECKINS_COLLECTION,
   clampPinnedBadges,
-  computeStreak as sharedComputeStreak,
   findMemberByCedula,
   formatAccessCode,
   matchCedula,
   memberAccessCode,
+  MEMBERS_COLLECTION,
   mergeNotificationPrefs,
   normalizeCedula,
-  type CheckinDoc,
-  type NotificationPrefs,
 } from "@/lib/xtreme/shared";
 import {
-  BADGES,
   WEEKLY_GOAL_DEFAULT,
   WEEKLY_GOAL_MAX,
   WEEKLY_GOAL_MIN,
-  buildMemberView,
-  computeWeeklyStats,
-  computeXp,
-  evaluateBadges,
-  freezesAvailable,
-  levelForXp,
-  planFreezeUsage,
-  reconcileBadges,
-  type EarnedBadge,
 } from "@/lib/xtreme/gamification";
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 import { pickNextBestAction } from "@/lib/xtreme/next-best-action";
+import {
+  normalizeIsoDate,
+  normalizeMemberEmail,
+  normalizeMemberKey,
+  normalizeMemberName,
+  normalizeMemberPhone,
+  normalizeMemberPhoto,
+} from "@/lib/xtreme/members/normalizers";
+import { createDefaultMembership } from "@/lib/xtreme/members/membership";
+import { MemberWorkoutError } from "@/lib/xtreme/members/errors";
+import { syncMemberGamification } from "@/lib/xtreme/members/gamification-service";
+import { getMemberLeaderboard } from "@/lib/xtreme/members/leaderboard";
+import { toPublicMember } from "@/lib/xtreme/members/presenter";
+import { createMongoMemberRepository } from "@/lib/xtreme/members/repository";
+import type { BodyMetric, XtremeMemberDoc } from "@/lib/xtreme/members/types";
+import { completeTodayWorkout } from "@/lib/xtreme/members/complete-today-workout";
 
 export const dynamic = "force-dynamic";
 
-const MEMBERS_COLLECTION = "xtreme_gym_members";
-const MAX_PHOTO_CHARS = 400_000; // ~300 KB binario en base64
-
-type WorkoutEntry = {
-  id: string;
-  trainingId: string;
-  trainingName: string;
-  intensity: string;
-  minutes: number;
-  completedDate: string;
-  completedAt: Date;
-};
-
-type Membership = {
-  plan: string;
-  status: "active" | "warning" | "expired";
-  nextBillingDate: string;
-  startedAt: string;
-};
-
-type BodyMetric = {
-  id: string;
-  date: string;
-  weightKg: number;
-  waistCm: number;
-  note: string;
-  createdAt: Date;
-};
-
-type PlanItem = {
-  id: string;
-  day: string;
-  focus: string;
-  exercises: string;
-  targetMinutes: number;
-  done: boolean;
-  doneDate: string | null;
-};
-
-type TrainingPlan = {
-  title: string;
-  objective: string;
-  coachNote: string;
-  startDate: string;
-  endDate: string;
-  weeklySessions: number;
-  items: PlanItem[];
-};
-
-type XtremeMemberDoc = {
-  normalizedName: string;
-  memberName: string;
-  goal: string;
-  favoriteTraining: string;
-  phone?: string;
-  email?: string;
-  cedula?: string;
-  emailVerified?: boolean;
-  photoUrl?: string;
-  workouts: WorkoutEntry[];
-  membership?: Membership;
-  bodyMetrics?: BodyMetric[];
-  trainingPlan?: TrainingPlan;
-  weeklyGoal?: number;
-  earnedBadges?: EarnedBadge[];
-  freezeHistory?: string[];
-  xpBonus?: number;
-  freezesBonus?: number;
-  notificationPrefs?: Partial<NotificationPrefs>;
-  pinnedBadges?: string[];
-  buddies?: string[];
-  referredBy?: string;
-  referralCount?: number;
-  tourDoneAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-function normalizeName(value: unknown) {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
-
-function normalizeKey(value: string) {
-  return value.trim().toUpperCase();
-}
-
-function normalizePhone(value: unknown) {
-  return String(value ?? "").replace(/[^\d+]/g, "").slice(0, 24);
-}
-
-function normalizeEmail(value: unknown) {
-  return String(value ?? "").trim().toLowerCase().slice(0, 80);
-}
-
-function isoDate(value: unknown) {
-  const raw = String(value ?? "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : new Date().toISOString().slice(0, 10);
-}
-
-function toUtcDate(date: string) {
-  return new Date(`${date}T00:00:00.000Z`);
-}
-
-function computeStreak(workouts: WorkoutEntry[]) {
-  return sharedComputeStreak(workouts);
-}
-
-function normalizePhoto(value: unknown) {
-  const raw = String(value ?? "").trim();
-  if (!raw) return "";
-  if (!raw.startsWith("data:image/") || raw.length > MAX_PHOTO_CHARS) return "";
-  return raw;
-}
-
-function addMonths(date: Date, months: number) {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + months);
-  return next;
-}
-
-function defaultMembership() {
-  const now = new Date();
-  return {
-    plan: "Xtreme Mensual",
-    status: "active" as const,
-    startedAt: now.toISOString().slice(0, 10),
-    nextBillingDate: addMonths(now, 1).toISOString().slice(0, 10),
-  };
-}
-
-function membershipWithStatus(membership?: Membership) {
-  const current = membership ?? defaultMembership();
-  const today = toUtcDate(new Date().toISOString().slice(0, 10));
-  const nextBilling = toUtcDate(current.nextBillingDate);
-  const daysRemaining = Math.ceil((nextBilling.getTime() - today.getTime()) / 86_400_000);
-  const status: Membership["status"] =
-    daysRemaining < 0 ? "expired" : daysRemaining <= 5 ? "warning" : "active";
-
-  return {
-    ...current,
-    status,
-    daysRemaining,
-  };
-}
-
-function publicPlan(plan?: TrainingPlan) {
-  if (!plan) return null;
-  const items = plan.items ?? [];
-  const doneItems = items.filter((item) => item.done).length;
-  const totalItems = items.length;
-  return {
-    title: plan.title ?? "",
-    objective: plan.objective ?? "",
-    coachNote: plan.coachNote ?? "",
-    startDate: plan.startDate ?? "",
-    endDate: plan.endDate ?? "",
-    weeklySessions: plan.weeklySessions ?? 0,
-    items,
-    doneItems,
-    totalItems,
-    progressPct: totalItems ? Math.round((doneItems / totalItems) * 100) : 0,
-  };
-}
-
-function gamificationFor(doc: XtremeMemberDoc | null) {
-  const workouts = doc?.workouts ?? [];
-  const freezeHistory = doc?.freezeHistory ?? [];
-  const weeklyGoal = doc?.weeklyGoal ?? WEEKLY_GOAL_DEFAULT;
-  const xpBonus = Number(doc?.xpBonus) || 0;
-  const freezesBonus = Number(doc?.freezesBonus) || 0;
-  const planItems = doc?.trainingPlan?.items ?? [];
-  const planItemsDone = planItems.filter((item) => item.done).length;
-  const planProgressPct = planItems.length
-    ? Math.round((planItemsDone / planItems.length) * 100)
-    : 0;
-
-  const view = buildMemberView({
-    workouts,
-    weeklyGoal,
-    freezeHistory,
-    metricsCount: doc?.bodyMetrics?.length ?? 0,
-    planProgressPct,
-  });
-  const weekly = computeWeeklyStats(workouts, weeklyGoal);
-  const earned = doc?.earnedBadges ?? [];
-  const earnedIds = earned.map((badge) => badge.badgeId);
-  const xp = computeXp({
-    totalWorkouts: view.totalWorkouts,
-    totalMinutes: view.totalMinutes,
-    metricsCount: view.metricsCount,
-    planItemsDone,
-    totalWeeksMet: weekly.totalWeeksMet,
-    earnedBadgeIds: earnedIds,
-    xpBonus,
-  });
-
-  const badges = BADGES.filter((def) => !def.secret || earnedIds.includes(def.id)).map((def) => {
-    const entry = earned.find((badge) => badge.badgeId === def.id);
-    return {
-      id: def.id,
-      name: def.name,
-      desc: def.desc,
-      icon: def.icon,
-      tier: def.tier,
-      secret: Boolean(def.secret),
-      earned: Boolean(entry),
-      earnedAt: entry?.earnedAt ?? null,
-      seen: entry?.seen ?? true,
-      progress: def.progress ? def.progress(view) : null,
-    };
-  });
-
-  const pinnedBadges = clampPinnedBadges(doc?.pinnedBadges).filter((id) => earnedIds.includes(id));
-
-  return {
-    streak: view.streak,
-    weeklyGoal,
-    weekCount: weekly.weekCount,
-    weekMet: weekly.weekMet,
-    weeksStreak: weekly.weeksStreak,
-    totalWeeksMet: weekly.totalWeeksMet,
-    freezesAvailable: freezesAvailable(view.totalWorkouts, freezeHistory, freezesBonus),
-    freezesUsed: freezeHistory.length,
-    freezeHistory,
-    xp,
-    level: levelForXp(xp),
-    badges,
-    earnedBadgeCount: earnedIds.length,
-    unseenBadgeIds: earned.filter((badge) => !badge.seen).map((badge) => badge.badgeId),
-    pinnedBadges,
-  };
-}
-
-/**
- * Consume protectores de racha y otorga badges nuevos. Persiste solo si
- * hay cambios. Devuelve los ids recien ganados (para celebrar en cliente).
- */
-async function syncGamification(normalizedName: string): Promise<string[]> {
-  const db = await getDb();
-  const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-  if (!doc) return [];
-
-  const workouts = doc.workouts ?? [];
-  const freezeHistory = doc.freezeHistory ?? [];
-  const workoutDates = new Set(
-    workouts.map((workout) => workout.completedDate).filter(Boolean),
-  );
-  const newFreezes = planFreezeUsage(
-    workoutDates,
-    freezeHistory,
-    workouts.length,
-    undefined,
-    Number(doc.freezesBonus) || 0,
-  );
-  const allFreezes = [...freezeHistory, ...newFreezes];
-
-  const planItems = doc.trainingPlan?.items ?? [];
-  const planItemsDone = planItems.filter((item) => item.done).length;
-  const view = buildMemberView({
-    workouts,
-    weeklyGoal: doc.weeklyGoal ?? WEEKLY_GOAL_DEFAULT,
-    freezeHistory: allFreezes,
-    metricsCount: doc.bodyMetrics?.length ?? 0,
-    planProgressPct: planItems.length ? Math.round((planItemsDone / planItems.length) * 100) : 0,
-  });
-  const { all, newlyEarned } = reconcileBadges(evaluateBadges(view), doc.earnedBadges ?? []);
-
-  if (newFreezes.length || newlyEarned.length) {
-    await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
-      { normalizedName },
-      { $set: { freezeHistory: allFreezes, earnedBadges: all, updatedAt: new Date() } },
-    );
-  }
-  return newlyEarned;
-}
-
-function publicMember(doc: XtremeMemberDoc | null, entitlements: unknown[] = []) {
-  const workouts = doc?.workouts ?? [];
-  const bodyMetrics = [...(doc?.bodyMetrics ?? [])].sort((a, b) => a.date.localeCompare(b.date));
-  const totalMinutes = workouts.reduce((sum, workout) => sum + (workout.minutes || 0), 0);
-  const favoriteTraining = doc?.favoriteTraining || workouts.at(-1)?.trainingName || "";
-  const gamification = gamificationFor(doc);
-
-  return {
-    memberName: doc?.memberName ?? "",
-    normalizedName: doc?.normalizedName ?? "",
-    goal: doc?.goal ?? "",
-    favoriteTraining,
-    phone: doc?.phone ?? "",
-    email: doc?.email ?? "",
-    cedula: doc?.cedula ?? "",
-    emailVerified: Boolean(doc?.emailVerified),
-    photoUrl: doc?.photoUrl ?? "",
-    accessCode: formatAccessCode(memberAccessCode(doc?.normalizedName ?? "")),
-    workouts,
-    streak: gamification.streak || computeStreak(workouts),
-    totalWorkouts: workouts.length,
-    totalMinutes,
-    lastWorkoutDate: workouts.at(-1)?.completedDate ?? null,
-    membership: membershipWithStatus(doc?.membership),
-    bodyMetrics,
-    latestBodyMetric: bodyMetrics.at(-1) ?? null,
-    trainingPlan: publicPlan(doc?.trainingPlan),
-    notificationPrefs: mergeNotificationPrefs(doc?.notificationPrefs),
-    tourDone: Boolean(doc?.tourDoneAt),
-    pinnedBadges: gamification.pinnedBadges,
-    gamification,
-    entitlements,
-  };
-}
-
-async function leaderboard() {
-  const db = await getDb();
-  const docs = await db
-    .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
-    .find({}, { projection: { memberName: 1, normalizedName: 1, workouts: 1, favoriteTraining: 1, goal: 1, photoUrl: 1, weeklyGoal: 1, freezeHistory: 1, earnedBadges: 1 } })
-    .toArray();
-
-  return docs
-    .map((doc) => publicMember(doc))
-    .sort(
-      (a, b) =>
-        b.streak - a.streak ||
-        b.totalWorkouts - a.totalWorkouts ||
-        b.totalMinutes - a.totalMinutes ||
-        a.memberName.localeCompare(b.memberName),
-    )
-    .slice(0, 12);
-}
 
 export async function GET(req: NextRequest) {
-  const memberNameParam = normalizeName(req.nextUrl.searchParams.get("memberName"));
+  const memberNameParam = normalizeMemberName(req.nextUrl.searchParams.get("memberName"));
   const cedulaParam = String(req.nextUrl.searchParams.get("cedula") ?? "").trim();
   const digits = cedulaDigits(cedulaParam);
 
-  if (!memberNameParam && digits.length < 6) {
-    return NextResponse.json({ member: null, leaderboard: await leaderboard() });
-  }
-
   try {
     const db = await getDb();
+    const memberRepository = createMongoMemberRepository(db);
+    const today = businessDate();
 
-    let normalizedName = memberNameParam ? normalizeKey(memberNameParam) : "";
+    if (!memberNameParam && digits.length < 6) {
+      return NextResponse.json({
+        member: null,
+        leaderboard: await getMemberLeaderboard(memberRepository, today),
+      });
+    }
+
+    let normalizedName = memberNameParam ? normalizeMemberKey(memberNameParam) : "";
     let resolvedBy: "name" | "cedula" = "name";
 
     // Login por cedula (lector de barras / teclado): resuelve el socio y sigue por nombre.
@@ -403,7 +83,7 @@ export async function GET(req: NextRequest) {
           exists: false,
           lookup: "cedula",
           cedula: digits,
-          leaderboard: await leaderboard(),
+          leaderboard: await getMemberLeaderboard(memberRepository, today),
           nextBestAction: null,
         });
       }
@@ -412,11 +92,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Consumir protectores / otorgar badges pendientes antes de responder.
-    const newBadges = await syncGamification(normalizedName);
+    const newBadges = await syncMemberGamification(memberRepository, normalizedName, {
+      today,
+    });
     const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-    const member = publicMember(doc);
+    const member = toPublicMember(doc, today);
     const gami = member.gamification;
-    const today = new Date().toISOString().slice(0, 10);
     const trainedToday = member.lastWorkoutDate === today;
     const nextBadge = (gami?.badges ?? []).find(
       (b: { earned: boolean; progress: { current: number; target: number } | null }) =>
@@ -453,7 +134,7 @@ export async function GET(req: NextRequest) {
       lookup: resolvedBy,
       cedula: member.cedula || digits || "",
       newBadges,
-      leaderboard: await leaderboard(),
+      leaderboard: await getMemberLeaderboard(memberRepository, today),
       nextBestAction,
     });
   } catch (err) {
@@ -465,14 +146,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
-    const memberName = normalizeName(body.memberName);
+    const memberName = normalizeMemberName(body.memberName);
     const goal = String(body.goal ?? "").trim().slice(0, 80);
     const favoriteTraining = String(body.favoriteTraining ?? "").trim().slice(0, 80);
     const plan = String(body.plan ?? "Xtreme Mensual").trim().slice(0, 80);
-    const nextBillingDate = isoDate(body.nextBillingDate);
-    const phone = normalizePhone(body.phone);
-    const email = normalizeEmail(body.email);
-    const photo = normalizePhoto(body.photo);
+    const nextBillingDate = normalizeIsoDate(body.nextBillingDate);
+    const phone = normalizeMemberPhone(body.phone);
+    const email = normalizeMemberEmail(body.email);
+    const photo = normalizeMemberPhoto(body.photo);
     const cedulaRaw = body.cedula !== undefined ? normalizeCedula(body.cedula) : "";
     const cedulaKey = cedulaDigits(cedulaRaw);
 
@@ -484,8 +165,10 @@ export async function POST(req: NextRequest) {
     }
 
     const db = await getDb();
-    const normalizedName = normalizeKey(memberName);
+    const memberRepository = createMongoMemberRepository(db);
+    const normalizedName = normalizeMemberKey(memberName);
     const now = new Date();
+    const today = businessDate(now);
     const existing = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
 
     if (phone || email || cedulaKey) {
@@ -547,7 +230,7 @@ export async function POST(req: NextRequest) {
       set.membership = {
         plan,
         nextBillingDate,
-        startedAt: new Date().toISOString().slice(0, 10),
+        startedAt: today,
         status: "active",
       };
     }
@@ -584,7 +267,10 @@ export async function POST(req: NextRequest) {
         properties: { hasEmail: Boolean(email), hasPhone: Boolean(phone), plan },
       });
     }
-    return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });
+    return NextResponse.json({
+      member: toPublicMember(doc, today),
+      leaderboard: await getMemberLeaderboard(memberRepository, today),
+    });
   } catch (err) {
     console.error("XTREME USER POST", err);
     return NextResponse.json({ error: "No se pudo guardar el usuario." }, { status: 500 });
@@ -603,7 +289,10 @@ export async function PATCH(req: NextRequest) {
     const trainingName = String(body.trainingName ?? "").trim();
     const intensity = String(body.intensity ?? "").trim();
     const minutes = Math.max(1, Math.min(240, Number(body.minutes) || 45));
-    const completedDate = isoDate(body.completedDate);
+    const completedDate = normalizeIsoDate(body.completedDate);
+    const db = await getDb();
+    const memberRepository = createMongoMemberRepository(db);
+    const today = businessDate();
 
     if (action === "weeklyGoal") {
       const weeklyGoal = Math.max(
@@ -613,30 +302,27 @@ export async function PATCH(req: NextRequest) {
       if (!memberName) {
         return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
       }
-      const db = await getDb();
       const normalizedName = sessionOrErr.memberKey;
       await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
         { normalizedName },
         { $set: { weeklyGoal, updatedAt: new Date() } },
       );
-      const newBadges = await syncGamification(normalizedName);
+      const newBadges = await syncMemberGamification(memberRepository, normalizedName, { today });
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
+      return NextResponse.json({ member: toPublicMember(doc, today), newBadges, leaderboard: await getMemberLeaderboard(memberRepository, today) });
     }
 
     if (action === "badgesSeen") {
-      const db = await getDb();
       const normalizedName = sessionOrErr.memberKey;
       await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
         { normalizedName },
         { $set: { "earnedBadges.$[].seen": true, updatedAt: new Date() } },
       );
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: publicMember(doc) });
+      return NextResponse.json({ member: toPublicMember(doc, today) });
     }
 
     if (action === "tourDone") {
-      const db = await getDb();
       const normalizedName = sessionOrErr.memberKey;
       const now = new Date();
       const result = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
@@ -652,12 +338,11 @@ export async function PATCH(req: NextRequest) {
         });
       }
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: publicMember(doc) });
+      return NextResponse.json({ member: toPublicMember(doc, today) });
     }
 
     // Perfil self-service (Fase 3): prefs, showcase, meta/contacto
     if (action === "profile") {
-      const db = await getDb();
       const normalizedName = sessionOrErr.memberKey;
       const existing = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       if (!existing) {
@@ -671,11 +356,11 @@ export async function PATCH(req: NextRequest) {
         set.favoriteTraining = String(body.favoriteTraining ?? "").trim().slice(0, 80);
       }
       if (body.phone !== undefined) {
-        const phone = normalizePhone(body.phone);
+        const phone = normalizeMemberPhone(body.phone);
         if (phone) set.phone = phone;
       }
       if (body.email !== undefined) {
-        const email = normalizeEmail(body.email);
+        const email = normalizeMemberEmail(body.email);
         if (email) set.email = email;
       }
       if (body.cedula !== undefined) {
@@ -731,7 +416,7 @@ export async function PATCH(req: NextRequest) {
 
       await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne({ normalizedName }, { $set: set });
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: publicMember(doc), leaderboard: await leaderboard() });
+      return NextResponse.json({ member: toPublicMember(doc, today), leaderboard: await getMemberLeaderboard(memberRepository, today) });
     }
 
     if (action === "planItem") {
@@ -740,7 +425,6 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Falta la sesion del plan." }, { status: 400 });
       }
 
-      const db = await getDb();
       const normalizedName = sessionOrErr.memberKey;
       const done = Boolean(body.done);
       const result = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
@@ -759,9 +443,9 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "No se encontro la sesion." }, { status: 404 });
       }
 
-      const newBadges = await syncGamification(normalizedName);
+      const newBadges = await syncMemberGamification(memberRepository, normalizedName, { today });
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
+      return NextResponse.json({ member: toPublicMember(doc, today), newBadges, leaderboard: await getMemberLeaderboard(memberRepository, today) });
     }
 
     if (action === "bodyMetric") {
@@ -773,7 +457,6 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Faltan medidas." }, { status: 400 });
       }
 
-      const db = await getDb();
       const normalizedName = sessionOrErr.memberKey;
       const now = new Date();
       const metric: BodyMetric = {
@@ -797,7 +480,7 @@ export async function PATCH(req: NextRequest) {
             goal: "",
             favoriteTraining: "",
             workouts: [],
-            membership: defaultMembership(),
+            membership: createDefaultMembership(today),
             createdAt: now,
           },
           $push: { bodyMetrics: metric },
@@ -805,7 +488,7 @@ export async function PATCH(req: NextRequest) {
         { upsert: true },
       );
 
-      const newBadges = await syncGamification(normalizedName);
+      const newBadges = await syncMemberGamification(memberRepository, normalizedName, { today });
       await recordEvent(db, {
         type: "body_metric_logged",
         memberId: normalizedName,
@@ -814,67 +497,59 @@ export async function PATCH(req: NextRequest) {
         properties: { date: completedDate },
       });
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
+      return NextResponse.json({ member: toPublicMember(doc, today), newBadges, leaderboard: await getMemberLeaderboard(memberRepository, today) });
     }
 
     if (!trainingId || !trainingName) {
       return NextResponse.json({ error: "Faltan datos del entreno." }, { status: 400 });
     }
 
-    const db = await getDb();
-    const normalizedName = sessionOrErr.memberKey;
-    const checkin = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).findOne({
-      normalizedName,
-      date: completedDate,
+    const { member: doc, newBadges } = await completeTodayWorkout(
+      {
+        repository: memberRepository,
+        recordWorkoutCompleted: async ({
+          memberKey,
+          memberName: persistedMemberName,
+          checkinId,
+          workout,
+        }) => {
+          await recordEvent(db, {
+            type: "workout_logged",
+            memberId: memberKey,
+            source: "member_app",
+            entity: { type: "workout", id: workout.id },
+            properties: {
+              trainingId: workout.trainingId,
+              trainingName: workout.trainingName,
+              minutes: workout.minutes,
+              intensity: workout.intensity,
+              completedDate: workout.completedDate,
+              checkinId,
+              memberName: persistedMemberName,
+            },
+          });
+        },
+      },
+      {
+        memberKey: sessionOrErr.memberKey,
+        trainingId,
+        trainingName,
+        intensity,
+        minutes,
+      },
+    );
+    return NextResponse.json({
+      member: toPublicMember(doc, today),
+      newBadges,
+      leaderboard: await getMemberLeaderboard(memberRepository, today),
     });
-    if (!checkin) {
+  } catch (err) {
+    if (err instanceof MemberWorkoutError) {
       return NextResponse.json(
-        { error: "Primero registrá tu ingreso al gym para completar el entreno de hoy." },
-        { status: 403 },
+        { error: err.message, code: err.code },
+        { status: err.status },
       );
     }
-    const now = new Date();
-    const entry: WorkoutEntry = {
-      id: `${trainingId}-${completedDate}-${now.getTime()}`,
-      trainingId,
-      trainingName,
-      intensity,
-      minutes,
-      completedDate,
-      completedAt: now,
-    };
-
-    await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
-      { normalizedName },
-      {
-        $set: {
-          normalizedName,
-          memberName,
-          favoriteTraining: trainingName,
-          updatedAt: now,
-        },
-        $setOnInsert: {
-          goal: "",
-          membership: defaultMembership(),
-          bodyMetrics: [],
-          createdAt: now,
-        },
-        $push: { workouts: entry },
-      },
-      { upsert: true },
-    );
-
-    const newBadges = await syncGamification(normalizedName);
-    await recordEvent(db, {
-      type: "workout_logged",
-      memberId: normalizedName,
-      source: "member_app",
-      entity: { type: "workout", id: entry.id },
-      properties: { trainingId, trainingName, minutes, intensity, completedDate },
-    });
-    const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-    return NextResponse.json({ member: publicMember(doc), newBadges, leaderboard: await leaderboard() });
-  } catch (err) {
     console.error("XTREME USER PATCH", err);
     return NextResponse.json({ error: "No se pudo registrar el entreno." }, { status: 500 });
   }

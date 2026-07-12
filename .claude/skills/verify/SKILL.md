@@ -25,7 +25,7 @@ Debe listar todas las rutas al final sin errores.
 
 ## 3. Probar en el navegador (cambios de UI o de flujo)
 
-`npm run dev` → http://localhost:3000. Superficies:
+**El agente NO levanta el servidor.** Pedirle al usuario que corra `npm run dev` (http://localhost:3000) y decirle qué probar. Superficies:
 
 | Ruta | Qué es | Necesita |
 |---|---|---|

@@ -32,8 +32,9 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/90 p-0 backdrop-blur-md sm:items-center sm:p-4">
+      <div aria-hidden className="xg-atmosphere" />
       <form
-        className="w-full max-w-[400px] border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-5 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-6"
+        className="xg-corners relative w-full max-w-[400px] overflow-hidden border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-5 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25),0_0_70px_rgba(216,255,62,0.18)] sm:p-6"
         onSubmit={(event) => {
           event.preventDefault();
           void startMemberByCedula(memberCedulaInput, false, {
@@ -43,13 +44,16 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           });
         }}
       >
-        <div className="mx-auto grid h-16 w-16 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
+        <span aria-hidden className="xg-scanline" />
+        <div className="xg-glow-breathe mx-auto grid h-16 w-16 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
           <CreditCard className="h-8 w-8" />
         </div>
         <GameLabel tone="lime" className="mt-4">
           Member OS · Cedula
         </GameLabel>
-        <h2 className="mt-2 text-2xl font-black uppercase text-white">Escanee su cédula</h2>
+        <h2 className="xg-text-glow mt-2 text-2xl font-black uppercase text-white">
+          Escanee su cédula
+        </h2>
         <p className="mt-2 text-sm font-bold text-white/55">
           Pase el carnet por el lector o digite los números. Luego confirma con su PIN.
         </p>

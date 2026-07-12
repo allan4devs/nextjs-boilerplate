@@ -26,4 +26,4 @@ Route handlers en `app/api/xtreme/<recurso>/route.ts`; lógica compartida en `li
 
 ## Verificar
 
-`npx tsc --noEmit`. Para probar un endpoint: `npm run dev` y `curl http://localhost:3000/api/xtreme/status` (requiere `MONGODB_URI` en `.env.local`). `GET /api/health` no toca Mongo.
+`npx tsc --noEmit`. **No levantar el dev server**: para probar un endpoint en vivo, pedirle al usuario que corra `npm run dev` y entonces `curl http://localhost:3000/api/xtreme/status` (requiere `MONGODB_URI` en `.env.local`). `GET /api/health` no toca Mongo.

@@ -17,6 +17,8 @@ npm run lint     # eslint
 
 No hay suite de tests. La verificación estándar es `npx tsc --noEmit` + `npm run build`.
 
+**NO levantar servidores.** Nunca correr `npm run dev`, `npm start`, ni ningún otro comando que deje un servidor corriendo (ni en background). Verificar siempre con `npx tsc --noEmit` + `npm run build`; el usuario levanta el dev server él mismo cuando quiere probar en el navegador. Si un servidor quedó corriendo y estorba: `taskkill /F /IM node.exe` (o por puerto: `Get-NetTCPConnection -LocalPort 3000 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`).
+
 Si `tsc` reporta errores raros en `.next/types/validator.ts` sobre rutas que ya no existen, es caché obsoleta: borrar `.next` y volver a correr.
 
 ## Arquitectura

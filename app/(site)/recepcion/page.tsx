@@ -25,47 +25,14 @@ import {
   GameHudPill,
   GameLabel,
 } from "../../components/GameOS";
-import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/shared";
+import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
+import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
+import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
+import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
+import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 
 const ADMIN_CODE_KEY = "xtreme-admin-code";
 const AUTO_LOOKUP_MS = 280;
-
-type GymStatus = {
-  date: string;
-  capacity: number;
-  currentPeople: number;
-  occupancyPct: number;
-  level: string;
-  checkinsToday: number;
-  uniqueCheckins: number;
-  recent: {
-    id: string;
-    memberName: string;
-    accessCode: string;
-    membershipStatus: string;
-    checkedInAt: string;
-    method: string;
-  }[];
-};
-
-type MemberHit = {
-  memberName: string;
-  normalizedName: string;
-  goal: string;
-  accessCode: string;
-  plan: string;
-  membershipStatus: "active" | "warning" | "expired";
-  daysRemaining: number;
-  streak: number;
-  totalWorkouts: number;
-  coach: string;
-  phone: string;
-  email?: string;
-  cedula?: string;
-  photoUrl?: string;
-  hasFace?: boolean;
-  faceDistance?: number;
-};
 
 type RecentCheckin = {
   id: string;
@@ -78,12 +45,6 @@ type RecentCheckin = {
 };
 
 type Tab = "cedula" | "face" | "register";
-
-const STATUS_LABEL = {
-  active: "Activa",
-  warning: "Por vencer",
-  expired: "Vencida",
-} as const;
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -100,57 +61,6 @@ function formatTime(value: string | Date) {
   } catch {
     return "—";
   }
-}
-
-/** dHash 64-bit (hex 16) — match rapido de rostro sin modelos ML. */
-async function computeFaceHash(source: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement) {
-  const size = 9;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size - 1;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return "";
-
-  let w = 0;
-  let h = 0;
-  if (source instanceof HTMLVideoElement) {
-    w = source.videoWidth;
-    h = source.videoHeight;
-  } else if (source instanceof HTMLImageElement) {
-    w = source.naturalWidth || source.width;
-    h = source.naturalHeight || source.height;
-  } else {
-    w = source.width;
-    h = source.height;
-  }
-  if (!w || !h) return "";
-
-  // Centro (zona de cara tipica en kiosk)
-  const side = Math.min(w, h) * 0.72;
-  const sx = (w - side) / 2;
-  const sy = (h - side) / 2.4;
-  ctx.drawImage(source, sx, sy, side, side, 0, 0, size, size - 1);
-
-  const { data } = ctx.getImageData(0, 0, size, size - 1);
-  const gray: number[] = [];
-  for (let i = 0; i < data.length; i += 4) {
-    gray.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-  }
-
-  let bits = "";
-  for (let y = 0; y < size - 1; y += 1) {
-    for (let x = 0; x < size - 1; x += 1) {
-      const left = gray[y * size + x];
-      const right = gray[y * size + x + 1];
-      bits += left < right ? "1" : "0";
-    }
-  }
-
-  let hex = "";
-  for (let i = 0; i < 64; i += 4) {
-    hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
-  }
-  return hex;
 }
 
 async function capturePhotoDataUrl(video: HTMLVideoElement, maxSide = 480) {
@@ -203,10 +113,18 @@ export default function RecepcionPage() {
   const [isRegistering, setIsRegistering] = useState(false);
 
   // Camara
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [cameraOn, setCameraOn] = useState(false);
-  const [cameraError, setCameraError] = useState("");
+  const {
+    videoRef,
+    cameraOn,
+    cameraError,
+    reportCameraError,
+    startCamera,
+    stopCamera,
+  } = useUserCamera({
+    idealWidth: 1280,
+    idealHeight: 720,
+    permissionErrorMessage: "No se pudo abrir la camara. Revise permisos del navegador.",
+  });
   const [isScanning, setIsScanning] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
 
@@ -221,33 +139,6 @@ export default function RecepcionPage() {
     },
     [adminCode],
   );
-
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
-    setCameraOn(false);
-  }, []);
-
-  const startCamera = useCallback(async () => {
-    setCameraError("");
-    try {
-      stopCamera();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setCameraOn(true);
-    } catch {
-      setCameraError("No se pudo abrir la camara. Revise permisos del navegador.");
-      setCameraOn(false);
-    }
-  }, [stopCamera]);
 
   const loadPanel = useCallback(
     async (withRoster = false) => {
@@ -355,10 +246,6 @@ export default function RecepcionPage() {
       if (tab !== "face") stopCamera();
     };
   }, [tab, unlocked, startCamera, stopCamera, loadPanel]);
-
-  useEffect(() => {
-    return () => stopCamera();
-  }, [stopCamera]);
 
   useEffect(() => {
     if (!flash) return;
@@ -492,7 +379,7 @@ export default function RecepcionPage() {
   async function scanFace() {
     const video = videoRef.current;
     if (!video || !cameraOn) {
-      setCameraError("Active la camara primero.");
+      reportCameraError("Active la camara primero.");
       return;
     }
     setIsScanning(true);
@@ -548,7 +435,7 @@ export default function RecepcionPage() {
     }
     const video = videoRef.current;
     if (!video || !cameraOn) {
-      setCameraError("Active la camara primero.");
+      reportCameraError("Active la camara primero.");
       return;
     }
     setIsEnrolling(true);
@@ -1025,7 +912,7 @@ export default function RecepcionPage() {
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-black uppercase">{m.memberName}</p>
                               <p className="text-xs font-bold text-white/40">
-                                Dist. {m.faceDistance ?? "—"} · {STATUS_LABEL[m.membershipStatus]}
+                                Dist. {m.faceDistance ?? "—"} · {MEMBERSHIP_STATUS_LABELS[m.membershipStatus]}
                               </p>
                             </div>
                           </button>
@@ -1405,7 +1292,7 @@ function MemberPreview({
                     : "lime"
               }
             >
-              {STATUS_LABEL[member.membershipStatus]}
+              {MEMBERSHIP_STATUS_LABELS[member.membershipStatus]}
             </GameChip>
             {member.daysRemaining >= 0 && (
               <GameChip tone="cyan">{member.daysRemaining}d</GameChip>

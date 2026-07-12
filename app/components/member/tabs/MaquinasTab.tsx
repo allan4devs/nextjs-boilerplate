@@ -14,7 +14,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
   const { setOsModal } = os;
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="xg-tab-in space-y-3 sm:space-y-4">
       <GameCallout tone="lime" icon={ShieldCheck}>
         <span className="font-black uppercase">Guía de máquinas · </span>
         Tocá una tarjeta para abrir el modal con ajuste, tips y errores. Entrená fuerte sin
@@ -60,7 +60,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
           <button
             key={machine.id}
             type="button"
-            onClick={() => setOsModal({ kind: "machine", machine })}
+            onClick={() => setOsModal({ kind: "machine", machineId: machine.id })}
             className="group overflow-hidden border-[3px] border-white/20 bg-[#0c0c0c] text-left shadow-[4px_4px_0_rgba(0,0,0,.55)] transition active:translate-x-px active:translate-y-px active:shadow-none"
           >
             <div className={`h-2 bg-gradient-to-r ${machine.accent}`} />

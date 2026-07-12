@@ -24,6 +24,7 @@ import EntrenarTab from "./components/member/tabs/EntrenarTab";
 import MaquinasTab from "./components/member/tabs/MaquinasTab";
 import ProgresoTab from "./components/member/tabs/ProgresoTab";
 import PerfilTab from "./components/member/tabs/PerfilTab";
+import { useResumenViewModel } from "./components/member/view-models/useResumenViewModel";
 
 export default function ExtremeGymSite() {
   const os = useMemberOs();
@@ -49,9 +50,12 @@ export default function ExtremeGymSite() {
     error,
     setMessage,
   } = os;
+  const resumen = useResumenViewModel(os);
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white selection:bg-[#d8ff3e] selection:text-black">
+    <main className="relative min-h-screen bg-[#050505] text-white selection:bg-[#d8ff3e] selection:text-black">
+      {/* Fondo ambiental del OS: rejilla HUD + glows */}
+      <div aria-hidden className="xg-atmosphere" />
       {celebration && !showPin && (
         <CelebrationOverlay
           data={celebration}
@@ -89,7 +93,7 @@ export default function ExtremeGymSite() {
       <BottomDock os={os} />
 
       <section
-        className={`xg-os-content mx-auto max-w-[1600px] px-3 py-4 transition-[padding] sm:px-6 sm:py-5 ${
+        className={`xg-os-content relative mx-auto max-w-[1600px] px-3 py-4 transition-[padding] sm:px-6 sm:py-5 ${
           navOpen ? "lg:pl-[268px] lg:pr-10" : "lg:pl-[104px] lg:pr-10"
         }`}
       >
@@ -103,14 +107,14 @@ export default function ExtremeGymSite() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3 sm:space-y-4">
+          <div key={tab} className="space-y-3 sm:space-y-4">
             {(message || error) && (
               <GameCallout tone={error ? "red" : "lime"}>
                 {error || message}
               </GameCallout>
             )}
 
-            {tab === "resumen" && <ResumenTab os={os} />}
+            {tab === "resumen" && <ResumenTab model={resumen.model} actions={resumen.actions} />}
             {tab === "entrenar" && <EntrenarTab os={os} />}
             {tab === "maquinas" && <MaquinasTab os={os} />}
             {tab === "progreso" && <ProgresoTab os={os} />}

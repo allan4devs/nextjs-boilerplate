@@ -35,31 +35,14 @@ import {
   Zap,
 } from "lucide-react";
 import { pickPhrase, type PhraseContext } from "@/lib/xtreme/phrases";
+import type { Gamification, PublicBadge } from "./member/domain";
 
 // ---------------------------------------------------------------------------
 // Tipos (estructuralmente compatibles con la respuesta del API)
 // ---------------------------------------------------------------------------
 
-export type PublicBadge = {
-  id: string;
-  name: string;
-  desc: string;
-  icon: string;
-  tier: string;
-  secret: boolean;
-  earned: boolean;
-  earnedAt: string | null;
-  seen: boolean;
-  progress: { current: number; target: number } | null;
-};
-
-export type LevelPayload = {
-  index: number;
-  name: string;
-  minXp: number;
-  nextXp: number | null;
-  progressPct: number;
-};
+export type { PublicBadge } from "./member/domain";
+export type LevelPayload = Gamification["level"];
 
 // ---------------------------------------------------------------------------
 // Iconos y estilos por tier

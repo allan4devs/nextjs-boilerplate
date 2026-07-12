@@ -82,7 +82,7 @@ export default function SideNav({ os }: { os: MemberOs }) {
                 }}
                 className={`flex h-14 w-full items-center gap-3 border-[3px] px-3 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${
                   active
-                    ? "border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#d8ff3e]"
+                    ? "border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#d8ff3e] shadow-[0_0_18px_rgba(216,255,62,0.18)]"
                     : "border-transparent text-white/50 hover:border-white/15 hover:bg-white/[.05] hover:text-white"
                 }`}
               >

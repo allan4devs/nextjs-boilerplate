@@ -69,7 +69,7 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
   } = os;
 
   return (
-    <div className="space-y-8">
+    <div className="xg-tab-in space-y-8">
       <button
         type="button"
         onClick={() => {

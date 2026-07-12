@@ -20,49 +20,11 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/shared";
-
-type GymStatus = {
-  date: string;
-  capacity: number;
-  currentPeople: number;
-  occupancyPct: number;
-  level: string;
-  checkinsToday: number;
-  uniqueCheckins: number;
-  recent: {
-    id: string;
-    memberName: string;
-    accessCode: string;
-    membershipStatus: string;
-    checkedInAt: string;
-    method: string;
-  }[];
-};
-
-type MemberHit = {
-  memberName: string;
-  normalizedName: string;
-  goal: string;
-  accessCode: string;
-  plan: string;
-  membershipStatus: "active" | "warning" | "expired";
-  daysRemaining: number;
-  streak: number;
-  totalWorkouts: number;
-  coach: string;
-  phone: string;
-  photoUrl?: string;
-  hasPin?: boolean;
-  hasFace?: boolean;
-  faceDistance?: number;
-};
-
-const STATUS_LABEL = {
-  active: "Activa",
-  warning: "Por vencer",
-  expired: "Vencida",
-} as const;
+import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
+import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
+import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
+import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
+import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 
 const RECENT_KEY = "xtreme-ingreso-recientes";
 const LAST_KEY = "xtreme-gym-member-name";
@@ -266,57 +228,6 @@ function saveRecent(memberName: string) {
   }
 }
 
-/** dHash 64-bit (hex 16) — match rapido de rostro sin modelos ML. */
-async function computeFaceHash(source: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement) {
-  const size = 9;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size - 1;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return "";
-
-  let w = 0;
-  let h = 0;
-  if (source instanceof HTMLVideoElement) {
-    w = source.videoWidth;
-    h = source.videoHeight;
-  } else if (source instanceof HTMLImageElement) {
-    w = source.naturalWidth || source.width;
-    h = source.naturalHeight || source.height;
-  } else {
-    w = source.width;
-    h = source.height;
-  }
-  if (!w || !h) return "";
-
-  // Centro (zona de cara tipica en kiosk)
-  const side = Math.min(w, h) * 0.72;
-  const sx = (w - side) / 2;
-  const sy = (h - side) / 2.4;
-  ctx.drawImage(source, sx, sy, side, side, 0, 0, size, size - 1);
-
-  const { data } = ctx.getImageData(0, 0, size, size - 1);
-  const gray: number[] = [];
-  for (let i = 0; i < data.length; i += 4) {
-    gray.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-  }
-
-  let bits = "";
-  for (let y = 0; y < size - 1; y += 1) {
-    for (let x = 0; x < size - 1; x += 1) {
-      const left = gray[y * size + x];
-      const right = gray[y * size + x + 1];
-      bits += left < right ? "1" : "0";
-    }
-  }
-
-  let hex = "";
-  for (let i = 0; i < 64; i += 4) {
-    hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
-  }
-  return hex;
-}
-
 export default function IngresoPage() {
   const [recent, setRecent] = useState<RecentProfile[]>([]);
   const [profile, setProfile] = useState<MemberHit | null>(null);
@@ -334,50 +245,27 @@ export default function IngresoPage() {
   } | null>(null);
 
   // Face recognition
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const scanLockRef = useRef(false);
   const cooldownUntilRef = useRef(0);
   const faceSeenSinceRef = useRef<number | null>(null);
-  const [cameraOn, setCameraOn] = useState(false);
-  const [cameraError, setCameraError] = useState("");
+  const {
+    videoRef,
+    cameraOn,
+    cameraError,
+    reportCameraError,
+    startCamera,
+    stopCamera,
+  } = useUserCamera({
+    idealWidth: 720,
+    idealHeight: 540,
+    permissionErrorMessage:
+      "No se pudo abrir la camara. Permita el acceso o use busqueda por nombre.",
+  });
   const [isScanning, setIsScanning] = useState(false);
   const [faceMatches, setFaceMatches] = useState<MemberHit[]>([]);
   const [checkinMethod, setCheckinMethod] = useState<"name" | "face" | "code">("name");
   const [faceGuide, setFaceGuide] = useState<FaceGuideStatus>("waiting");
   const [holdProgress, setHoldProgress] = useState(0);
-
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
-    setCameraOn(false);
-  }, []);
-
-  const startCamera = useCallback(async () => {
-    setCameraError("");
-    try {
-      stopCamera();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-          width: { ideal: 720 },
-          height: { ideal: 540 },
-        },
-        audio: false,
-      });
-      streamRef.current = stream;
-      const video = videoRef.current;
-      if (video) {
-        video.srcObject = stream;
-        await video.play();
-      }
-      setCameraOn(true);
-    } catch {
-      setCameraError("No se pudo abrir la camara. Permita el acceso o use busqueda por nombre.");
-      setCameraOn(false);
-    }
-  }, [stopCamera]);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -449,10 +337,6 @@ export default function IngresoPage() {
       if (mode !== "face") stopCamera();
     };
   }, [mode, startCamera, stopCamera]);
-
-  useEffect(() => {
-    return () => stopCamera();
-  }, [stopCamera]);
 
   async function selectProfile(name: string) {
     setError("");
@@ -574,7 +458,7 @@ export default function IngresoPage() {
   const scanFace = useCallback(async () => {
     const video = videoRef.current;
     if (!video || !cameraOn) {
-      setCameraError("Active la camara primero.");
+      reportCameraError("Active la camara primero.");
       return;
     }
     if (scanLockRef.current) return;
@@ -619,7 +503,7 @@ export default function IngresoPage() {
       setIsScanning(false);
       scanLockRef.current = false;
     }
-  }, [armCooldown, cameraOn, confirmCheckin, fetchMember]);
+  }, [armCooldown, cameraOn, confirmCheckin, fetchMember, reportCameraError]);
 
   // Loop: detecta rostro en el círculo y dispara el escaneo solo
   useEffect(() => {
@@ -1029,7 +913,7 @@ function FaceCard({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black uppercase">{m.memberName}</span>
                   <span className="text-[11px] font-bold text-black/40">
-                    Match {m.faceDistance ?? "—"} · {STATUS_LABEL[m.membershipStatus]}
+                    Match {m.faceDistance ?? "—"} · {MEMBERSHIP_STATUS_LABELS[m.membershipStatus]}
                   </span>
                 </span>
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-[#8fbf00]" />
@@ -1084,7 +968,7 @@ function ProfileCard({
 
       <h2 className="mt-6 text-2xl font-black uppercase tracking-tight">{profile.memberName}</h2>
       <p className="mt-1 text-sm font-bold text-black/45">
-        {STATUS_LABEL[profile.membershipStatus]}
+        {MEMBERSHIP_STATUS_LABELS[profile.membershipStatus]}
         {profile.daysRemaining >= 0 ? ` · ${profile.daysRemaining} dias` : " · vencida"} · {profile.plan}
       </p>
       {method === "face" && (

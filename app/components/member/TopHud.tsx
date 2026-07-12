@@ -20,6 +20,10 @@ export default function TopHud({ os }: { os: MemberOs }) {
         >
           <Menu className="h-5 w-5" />
         </button>
+        <p className="hidden shrink-0 items-baseline gap-1.5 text-sm font-black uppercase tracking-[0.18em] sm:flex">
+          <span className="text-white">Xtreme</span>
+          <span className="xg-text-glow text-[#d8ff3e]">Member OS</span>
+        </p>
         {unlocked && (
           <div className="ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto sm:gap-2">
             {!trainedToday && (
@@ -56,6 +60,17 @@ export default function TopHud({ os }: { os: MemberOs }) {
           </div>
         )}
       </div>
+      {/* Progreso de la semana siempre a la vista: barra viva bajo el HUD */}
+      {unlocked && (
+        <div className="h-[3px] w-full bg-black/60">
+          <div
+            className="xg-stripes h-full bg-gradient-to-r from-[#d8ff3e] to-cyan-300 transition-[width] duration-700 ease-out"
+            style={{
+              width: `${Math.min(100, Math.round((weekDoneCount / Math.max(1, weeklyGoal)) * 100))}%`,
+            }}
+          />
+        </div>
+      )}
     </header>
   );
 }

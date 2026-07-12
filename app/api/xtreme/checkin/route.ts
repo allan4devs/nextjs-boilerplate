@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 import {
   CHECKINS_COLLECTION,
-  FACE_RECOGNITION_ENABLED,
   MEMBERS_COLLECTION,
   PINS_COLLECTION,
   type CheckinDoc,

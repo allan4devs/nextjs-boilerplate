@@ -38,7 +38,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
   } = os;
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="xg-tab-in space-y-3 sm:space-y-4">
       {currentMember.trainingPlan ? (
         <div className="border-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/[0.07] p-3 shadow-[4px_4px_0_rgba(216,255,62,0.2)] sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">

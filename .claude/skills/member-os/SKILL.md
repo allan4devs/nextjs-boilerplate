@@ -41,4 +41,4 @@ El Member OS vive en `app/components/member/` y se monta desde `app/ExtremeGymSi
 
 ## Verificar
 
-`npx tsc --noEmit` y luego `npm run dev` → probar en `/app` (login con cédula, el flujo completo depende de Mongo configurado).
+`npx tsc --noEmit`. **No levantar el dev server**: si el cambio necesita prueba en navegador, pedirle al usuario que corra `npm run dev` y probar en `/app` (login con cédula, el flujo completo depende de Mongo configurado).

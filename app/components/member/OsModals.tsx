@@ -31,7 +31,7 @@ import {
 } from "../GameOS";
 import { BadgeGallery, StreakRing, XpBar } from "../gamification";
 import { WEEKLY_GOAL_MAX, WEEKLY_GOAL_MIN } from "@/lib/xtreme/gamification";
-import { TRAININGS } from "./constants";
+import { findMachineGuide, TRAININGS } from "./constants";
 import { dayLabel, todayIso } from "./utils";
 import type { MemberOs } from "./useMemberOs";
 
@@ -59,16 +59,18 @@ export default function OsModals({ os }: { os: MemberOs }) {
     completeTraining,
     completedToday,
   } = os;
+  const selectedMachine =
+    osModal?.kind === "machine" ? findMachineGuide(osModal.machineId) : null;
 
   return (
     <>
       <GameModal
         open={osModal?.kind === "machine"}
         onClose={closeOsModal}
-        title={osModal?.kind === "machine" ? osModal.machine.name : "Máquina"}
+        title={selectedMachine?.name ?? "Máquina"}
         subtitle={
-          osModal?.kind === "machine"
-            ? `${osModal.machine.zone} · ${osModal.machine.level}`
+          selectedMachine
+            ? `${selectedMachine.zone} · ${selectedMachine.level}`
             : undefined
         }
         icon={Dumbbell}
@@ -80,23 +82,23 @@ export default function OsModals({ os }: { os: MemberOs }) {
           </GameButton>
         }
       >
-        {osModal?.kind === "machine" && (
+        {selectedMachine && (
           <div className="space-y-4">
-            <div className={`h-3 border-2 border-black/20 bg-gradient-to-r ${osModal.machine.accent}`} />
+            <div className={`h-3 border-2 border-black/20 bg-gradient-to-r ${selectedMachine.accent}`} />
             <div className="flex flex-wrap gap-2">
-              {osModal.machine.muscles.map((m) => (
+              {selectedMachine.muscles.map((m) => (
                 <GameChip key={m} tone="lime">
                   {m}
                 </GameChip>
               ))}
             </div>
             <GamePanel title="Ajuste inicial" tone="cyan" compact>
-              <p className="text-sm font-bold leading-6 text-white/70">{osModal.machine.setup}</p>
+              <p className="text-sm font-bold leading-6 text-white/70">{selectedMachine.setup}</p>
             </GamePanel>
             <div className="grid gap-3 sm:grid-cols-2">
               <GamePanel title="Tips" tone="lime" compact>
                 <ul className="space-y-2 text-sm font-bold text-white/65">
-                  {osModal.machine.tips.map((tip) => (
+                  {selectedMachine.tips.map((tip) => (
                     <li key={tip} className="flex gap-2">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#d8ff3e]" />
                       <span>{tip}</span>
@@ -106,7 +108,7 @@ export default function OsModals({ os }: { os: MemberOs }) {
               </GamePanel>
               <GamePanel title="Evite" tone="orange" compact>
                 <ul className="space-y-2 text-sm font-bold text-white/65">
-                  {osModal.machine.mistakes.map((mistake) => (
+                  {selectedMachine.mistakes.map((mistake) => (
                     <li key={mistake} className="flex gap-2">
                       <Lock className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
                       <span>{mistake}</span>
@@ -117,7 +119,7 @@ export default function OsModals({ os }: { os: MemberOs }) {
             </div>
             <GameCallout tone="orange" icon={Timer}>
               <span className="font-black uppercase">Starter · </span>
-              {osModal.machine.starter}
+              {selectedMachine.starter}
             </GameCallout>
           </div>
         )}
