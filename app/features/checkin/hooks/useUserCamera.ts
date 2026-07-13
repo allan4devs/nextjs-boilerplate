@@ -13,7 +13,7 @@ export type UserCamera = {
   cameraOn: boolean;
   cameraError: string;
   reportCameraError: (message: string) => void;
-  startCamera: () => Promise<void>;
+  startCamera: (facingMode?: "user" | "environment") => Promise<boolean>;
   stopCamera: () => void;
 };
 
@@ -38,13 +38,19 @@ export function useUserCamera({
     setCameraOn(false);
   }, []);
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (facingMode: "user" | "environment" = "user") => {
     setCameraError("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError(
+        "Este navegador no permite usar la cámara aquí. Abra la recepción con HTTPS o use el lector/teclado.",
+      );
+      return false;
+    }
     try {
       stopCamera();
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "user",
+          facingMode: { ideal: facingMode },
           width: { ideal: idealWidth },
           height: { ideal: idealHeight },
         },
@@ -52,14 +58,27 @@ export function useUserCamera({
       });
       streamRef.current = stream;
       const video = videoRef.current;
-      if (video) {
-        video.srcObject = stream;
-        await video.play();
+      if (!video) {
+        stream.getTracks().forEach((track) => track.stop());
+        throw new Error("camera-video-missing");
       }
+      video.srcObject = stream;
+      await video.play();
       setCameraOn(true);
-    } catch {
-      setCameraError(permissionErrorMessage);
+      return true;
+    } catch (cause) {
+      const name = cause instanceof DOMException ? cause.name : "";
+      const message =
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "La cámara está bloqueada. Permítala en la configuración del navegador e intente de nuevo."
+          : name === "NotFoundError" || name === "OverconstrainedError"
+            ? "No encontramos una cámara disponible en este dispositivo."
+            : name === "NotReadableError"
+              ? "La cámara está siendo usada por otra aplicación. Ciérrela e intente de nuevo."
+              : permissionErrorMessage;
+      setCameraError(message);
       setCameraOn(false);
+      return false;
     }
   }, [idealHeight, idealWidth, permissionErrorMessage, stopCamera]);
 

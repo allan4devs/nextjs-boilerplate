@@ -18,17 +18,22 @@ export default function GraciasContent() {
   const plan = (params.get("plan") ?? "").trim();
   const reference = (params.get("ref") ?? "").trim();
   const until = formatUntil(params.get("until") ?? "");
+  const appInviteSent = params.get("registro") === "correo";
 
   const STEPS = [
     {
       icon: Mail,
       title: "Revisá tu correo",
-      text: "Te enviamos el comprobante del pago. Si no lo ves, revisá la carpeta de spam.",
+      text: appInviteSent
+        ? "Te enviamos el comprobante y otro correo con el enlace seguro para completar tu perfil."
+        : "Te enviamos el comprobante del pago. Si no lo ves, revisá la carpeta de spam.",
     },
     {
       icon: Smartphone,
       title: "Entrá a tu app de socio",
-      text: "Ingresá con tu cédula, creá tu PIN de 4 dígitos y reservá clases, cuidá tu racha y seguí tu progreso.",
+      text: appInviteSent
+        ? "Abrí el enlace del correo, agregá tu cédula de forma segura y después creá tu PIN."
+        : "Ingresá con tu cédula, creá tu PIN de 4 dígitos y reservá clases, cuidá tu racha y seguí tu progreso.",
     },
     {
       icon: CheckCircle2,
@@ -49,8 +54,10 @@ export default function GraciasContent() {
             ¡Gracias por unirte!
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm font-semibold text-white/58 sm:text-base">
-            Tu pago se procesó correctamente y tu acceso ya quedó activo. En un momento te llega el
-            comprobante al correo.
+            Tu pago se procesó correctamente y tu acceso ya quedó activo.
+            {appInviteSent
+              ? " También enviamos un enlace seguro para completar tu perfil; no pedimos la cédula durante el pago."
+              : " En un momento te llega el comprobante al correo."}
           </p>
 
           {(plan || until || reference) && (

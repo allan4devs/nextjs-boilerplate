@@ -206,8 +206,12 @@ export type PendingRegistrationDoc = {
   confirmedAt?: Date | null;
   /** Perfil ya creado tras confirmar (para no duplicar). */
   memberNormalizedName?: string | null;
+  /** Perfil parcial creado por un pago, antes de agregar cedula y PIN. */
+  expectedMemberKey?: string | null;
+  expectedMemberName?: string | null;
+  paymentId?: string | null;
   createdAt: Date;
-  source: "primer-dia" | "app";
+  source: "primer-dia" | "app" | "paypal";
 };
 
 export function normalizeEmail(value: unknown) {

@@ -27,6 +27,7 @@ export default function SiteFooter() {
   return (
     <>
       <footer
+        id="mapa-footer"
         className={`border-t border-white/10 bg-[#070707] px-5 pt-12 sm:px-8 md:pb-12 ${
           showMobileCta ? "pb-24" : "pb-12"
         }`}

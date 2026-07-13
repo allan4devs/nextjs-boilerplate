@@ -179,14 +179,45 @@ export async function sendRegistrationConfirmEmail(args: {
   const href = absoluteAppUrl(`/registro/confirmar?token=${encodeURIComponent(args.token)}`);
   return sendEmail({
     to: args.to,
-    subject: "Confirma tu cuenta — Xtreme Gym",
+    subject: "Completa tu acceso a la app — Xtreme Gym",
     html: layout(
-      "Confirma tu correo",
+      "Confirma tu correo y entra a la app",
       `<p style="font-size:14px;line-height:1.6;">Gracias por registrarte en Xtreme Gym. Confirma tu correo para continuar y completar tu perfil (nombre, cedula y telefono):</p>
-      <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Confirmar mi cuenta</a>
+      <p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>
+      <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Completar mi perfil y entrar a la app</a>
       <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Si el boton no funciona, copia este enlace:<br><span style="word-break:break-all;">${escapeHtml(href)}</span></p>
       <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El enlace vence en ${args.expiresMinutes} minutos. Si no fuiste vos, ignora este correo.</p>`,
     ),
+  });
+}
+
+/** Invitacion posterior a PayPal para completar cedula y activar el ingreso a la app. */
+export async function sendPaymentAppInviteEmail(args: {
+  to: string;
+  token: string;
+  memberName: string;
+  optionLabel: string;
+  expiresHours: number;
+}) {
+  const href = absoluteAppUrl("/registro/confirmar?token=" + encodeURIComponent(args.token));
+  const body =
+    '<p style="font-size:14px;line-height:1.6;">Hola ' +
+    escapeHtml(args.memberName) +
+    ". Recibimos tu pago de <strong>" +
+    escapeHtml(args.optionLabel) +
+    "</strong> y conservamos el correo confirmado durante el pago para proteger tu acceso.</p>" +
+    '<p style="font-size:14px;line-height:1.6;">Ahora completa tu perfil de socio. La cedula se solicita solamente dentro del enlace seguro; nunca la pedimos en el correo ni antes de pagar.</p>' +
+    '<p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>' +
+    '<a href="' +
+    escapeHtml(href) +
+    '" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Completar mi perfil y entrar a la app</a>' +
+    '<p style="font-size:13px;line-height:1.6;color:#6b6b66;">Este enlace es personal, se usa una sola vez y vence en ' +
+    args.expiresHours +
+    " horas. No lo compartas. Si no reconoces el pago, escribenos de inmediato.</p>";
+  return sendEmail({
+    to: args.to,
+    subject: "Completa tu acceso a la app — Xtreme Gym",
+    html: layout("Tu pago ya esta ligado a este correo", body),
   });
 }
 

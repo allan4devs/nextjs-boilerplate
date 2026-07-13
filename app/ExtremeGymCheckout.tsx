@@ -272,6 +272,7 @@ export default function ExtremeGymCheckout({
                 success?: boolean;
                 captureID?: string;
                 membershipUntil?: string | null;
+                appInviteSent?: boolean;
                 message?: string;
               };
               if (!response.ok || !result.success) throw new Error(result.message || "No se pudo confirmar el pago.");
@@ -284,6 +285,7 @@ export default function ExtremeGymCheckout({
               const reference = result.captureID || data.orderID;
               if (reference) params.set("ref", reference);
               if (result.membershipUntil) params.set("until", result.membershipUntil);
+              if (result.appInviteSent) params.set("registro", "correo");
               window.location.assign(`/gracias?${params.toString()}`);
             },
             onCancel: () => setStatus("Pago cancelado. Puede intentar de nuevo cuando quiera."),
@@ -437,6 +439,11 @@ export default function ExtremeGymCheckout({
                 placeholder={english ? "email@example.com" : "correo@ejemplo.com"}
                 required
               />
+              <span className="mt-2 block text-xs font-semibold leading-5 text-black/50">
+                {english
+                  ? "After payment we will email you a private link to complete your ID and app access."
+                  : "Después del pago enviaremos a este correo un enlace privado para completar la cédula y crear el acceso a la app. No pedimos la cédula antes de pagar."}
+              </span>
             </label>
           </div>
 

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal";
 import { getDb } from "@/lib/helpers/mongodb";
-import { sendPaymentReceiptEmail } from "@/lib/helpers/email";
+import {
+  sendPaymentAppInviteEmail,
+  sendPaymentReceiptEmail,
+} from "@/lib/helpers/email";
 import { recordEvent } from "@/lib/xtreme/events";
 import { getXtremeCheckoutOption } from "../catalog";
 import type { PendingPayPalOrder } from "../create-order/route";
@@ -9,10 +12,14 @@ import {
   MEMBERS_COLLECTION,
   PAYMENTS_COLLECTION,
   PAYPAL_ORDERS_COLLECTION,
+  PENDING_REGISTRATIONS_COLLECTION,
   type MemberDoc,
+  type PendingRegistrationDoc,
   type PaymentDoc,
   addDays,
+  isValidEmail,
   membershipStatus,
+  normalizeEmail,
   normalizeKey,
   normalizeName,
   todayIso,
@@ -24,6 +31,10 @@ import {
   type EntitlementDoc,
 } from "@/lib/xtreme/entitlements";
 import { bookSession } from "@/lib/xtreme/inventory";
+import {
+  createRegistrationToken,
+  hashRegistrationToken,
+} from "@/lib/xtreme/registration-token";
 
 type CaptureBody = {
   orderID?: string;
@@ -84,6 +95,59 @@ function planDays(optionId: string) {
   }
 }
 
+const APP_INVITE_EXPIRES_HOURS = 24;
+
+async function sendAppInviteAfterPayment(
+  db: Awaited<ReturnType<typeof getDb>>,
+  payment: PaymentDoc,
+) {
+  if (!payment.email) return false;
+  try {
+    const paidMember = await db
+      .collection<MemberDoc>(MEMBERS_COLLECTION)
+      .findOne({ normalizedName: payment.normalizedName });
+    if (!paidMember || (paidMember.cedula && paidMember.emailVerified)) return false;
+
+    const token = createRegistrationToken();
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() + APP_INVITE_EXPIRES_HOURS * 60 * 60 * 1000,
+    );
+    await db
+      .collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION)
+      .updateOne(
+        { email: payment.email },
+        {
+          $set: {
+            email: payment.email,
+            tokenHash: hashRegistrationToken(token),
+            expiresAt,
+            confirmedAt: null,
+            memberNormalizedName: null,
+            expectedMemberKey: payment.normalizedName,
+            expectedMemberName: payment.memberName,
+            paymentId: payment.id,
+            source: "paypal",
+          },
+          $setOnInsert: { createdAt: now },
+        },
+        { upsert: true },
+      );
+
+    const invite = await sendPaymentAppInviteEmail({
+      to: payment.email,
+      token,
+      memberName: payment.memberName,
+      optionLabel: payment.optionLabel,
+      expiresHours: APP_INVITE_EXPIRES_HOURS,
+    });
+    return invite.ok;
+  } catch (inviteError) {
+    console.error("Xtreme PayPal app invite error:", inviteError);
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as CaptureBody;
@@ -118,11 +182,13 @@ export async function POST(req: Request) {
         paypalCaptureId: pending.paypalCaptureId,
       });
       if (existingPay) {
+        const appInviteSent = await sendAppInviteAfterPayment(db, existingPay);
         return NextResponse.json({
           success: true,
           id: orderID,
           captureID: pending.paypalCaptureId,
           paymentId: existingPay.id,
+          appInviteSent,
           idempotent: true,
         });
       }
@@ -169,14 +235,32 @@ export async function POST(req: Request) {
       );
     }
 
-    const customerName =
+    const submittedCustomerName =
       normalizeName(pending.customer.name || body.customer?.name) ||
       [data.payer?.name?.given_name, data.payer?.name?.surname].filter(Boolean).join(" ") ||
       "Cliente PayPal";
-    const normalizedName = normalizeKey(customerName) || pending.memberKey;
     const amountUsd = Number(pending.amountUsd);
     const amountCrc = option.priceCrc;
     const now = new Date();
+    const paypalEmail = normalizeEmail(data.payer?.email_address);
+    const checkoutEmail = normalizeEmail(pending.customer.email || body.customer?.email);
+    const paymentEmail = isValidEmail(paypalEmail)
+      ? paypalEmail
+      : isValidEmail(checkoutEmail)
+        ? checkoutEmail
+        : "";
+    // Solo un correo devuelto por PayPal puede alinear automaticamente un pago
+    // con un perfil existente. El correo escrito en el formulario debe probarse
+    // despues mediante el enlace de un solo uso.
+    const linkedMember = isValidEmail(paypalEmail)
+      ? await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+          email: paypalEmail,
+          emailVerified: true,
+        })
+      : null;
+    const customerName = normalizeName(linkedMember?.memberName) || submittedCustomerName;
+    const normalizedName =
+      normalizeKey(linkedMember?.normalizedName || customerName) || pending.memberKey;
 
     const payment: PaymentDoc = {
       id: `pay-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -184,11 +268,7 @@ export async function POST(req: Request) {
       normalizedName,
       customerName,
       phone: String(pending.customer.phone || body.customer?.phone || "").trim().slice(0, 40),
-      email: String(
-        pending.customer.email || body.customer?.email || data.payer?.email_address || "",
-      )
-        .trim()
-        .slice(0, 80),
+      email: paymentEmail,
       optionId: option.id,
       optionLabel: option.label,
       category: option.category,
@@ -228,12 +308,14 @@ export async function POST(req: Request) {
               },
             },
           );
+          const appInviteSent = await sendAppInviteAfterPayment(db, existingPay);
           return NextResponse.json({
             success: true,
             id: data.id,
             status: data.status,
             captureID: payment.paypalCaptureId,
             paymentId: existingPay.id,
+            appInviteSent,
             idempotent: true,
           });
         }
@@ -368,6 +450,7 @@ export async function POST(req: Request) {
       // Capture already happened at PayPal — surface ops alert via logs.
     }
 
+    const appInviteSent = await sendAppInviteAfterPayment(db, payment);
     if (payment.email) {
       await sendPaymentReceiptEmail({
         to: payment.email,
@@ -392,6 +475,7 @@ export async function POST(req: Request) {
       entitlementId: entitlement?.id ?? null,
       bookingId,
       membershipUntil: membershipUntil ?? null,
+      appInviteSent,
     });
   } catch (error) {
     console.error("Xtreme checkout capture-order error:", error);

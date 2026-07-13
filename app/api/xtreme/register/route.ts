@@ -1,4 +1,3 @@
-import { createHash, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { recordEvent } from "@/lib/xtreme/events";
@@ -9,6 +8,10 @@ import {
 import { grantFreeFirstDayIfEligible } from "@/lib/xtreme/entitlements";
 import { createFreeFirstDayMembership } from "@/lib/xtreme/members/membership";
 import { businessDate } from "@/lib/xtreme/business-date";
+import {
+  createRegistrationToken,
+  hashRegistrationToken,
+} from "@/lib/xtreme/registration-token";
 import {
   MEMBERS_COLLECTION,
   PENDING_REGISTRATIONS_COLLECTION,
@@ -27,10 +30,6 @@ import {
 export const dynamic = "force-dynamic";
 
 const TOKEN_TTL_MIN = 60;
-
-function hashToken(token: string) {
-  return createHash("sha256").update(`registro|${token}`).digest("hex");
-}
 
 /**
  * Paso 1 — el usuario da solo su correo. Creamos un registro pendiente y le
@@ -57,7 +56,7 @@ async function startRegistration(body: Record<string, unknown>) {
     );
   }
 
-  const token = randomBytes(32).toString("hex");
+  const token = createRegistrationToken();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + TOKEN_TTL_MIN * 60_000);
 
@@ -67,11 +66,16 @@ async function startRegistration(body: Record<string, unknown>) {
     {
       $set: {
         email,
-        tokenHash: hashToken(token),
+        tokenHash: hashRegistrationToken(token),
         expiresAt,
         confirmedAt: null,
         memberNormalizedName: null,
         source,
+      },
+      $unset: {
+        expectedMemberKey: "",
+        expectedMemberName: "",
+        paymentId: "",
       },
       $setOnInsert: { createdAt: now },
     },
@@ -114,9 +118,12 @@ async function verifyToken(token: string) {
   const db = await getDb();
   const pending = await db
     .collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION)
-    .findOne({ tokenHash: hashToken(token) });
+    .findOne({ tokenHash: hashRegistrationToken(token) });
 
   if (!pending) return { error: "Enlace invalido o ya usado.", status: 404 as const };
+  if (pending.confirmedAt || pending.memberNormalizedName) {
+    return { error: "Este enlace ya fue utilizado.", status: 409 as const };
+  }
   if (pending.expiresAt.getTime() < Date.now()) {
     return { error: "El enlace vencio. Registrese de nuevo.", status: 410 as const };
   }
@@ -132,7 +139,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     email: verified.pending.email,
-    alreadyCompleted: Boolean(verified.pending.memberNormalizedName),
+    source: verified.pending.source,
+    memberName: verified.pending.expectedMemberName || "",
   });
 }
 
@@ -148,7 +156,10 @@ async function confirmRegistration(body: Record<string, unknown>) {
   }
   const { pending, db } = verified;
 
-  const memberName = normalizeName(body.memberName);
+  const paidInvite = pending.source === "paypal" && Boolean(pending.expectedMemberKey);
+  const memberName = paidInvite
+    ? normalizeName(pending.expectedMemberName)
+    : normalizeName(body.memberName);
   const cedula = normalizeCedula(body.cedula);
   const phone = normalizePhone(body.phone);
   const goal = String(body.goal ?? "").trim().slice(0, 80);
@@ -164,7 +175,9 @@ async function confirmRegistration(body: Record<string, unknown>) {
     return NextResponse.json({ error: "El telefono es requerido." }, { status: 400 });
   }
 
-  const normalizedName = normalizeKey(memberName);
+  const normalizedName = paidInvite
+    ? normalizeKey(pending.expectedMemberKey || "")
+    : normalizeKey(memberName);
   const now = new Date();
 
   // Chequear duplicados de contacto ligados a OTRO perfil.
@@ -184,6 +197,12 @@ async function confirmRegistration(body: Record<string, unknown>) {
   const existing = await db
     .collection<MemberDoc>(MEMBERS_COLLECTION)
     .findOne({ normalizedName });
+  if (paidInvite && !existing) {
+    return NextResponse.json(
+      { error: "No encontramos el perfil asociado al pago. Contacte recepcion." },
+      { status: 409 },
+    );
+  }
 
   const today = businessDate(now);
   const set: Partial<MemberDoc> = {
@@ -218,8 +237,9 @@ async function confirmRegistration(body: Record<string, unknown>) {
   );
 
   const accessCode = formatAccessCode(memberAccessCode(normalizedName));
-  if (!existing) {
-    await sendWelcomeEmail({ to: email, memberName, accessCode });
+  const profileWasReady = Boolean(existing?.emailVerified && existing?.cedula);
+  if (!profileWasReady) {
+    await sendWelcomeEmail({ to: email, memberName, accessCode, cedula });
     await recordEvent(db, {
       type: "profile_created",
       memberId: normalizedName,
@@ -230,12 +250,19 @@ async function confirmRegistration(body: Record<string, unknown>) {
         hasPhone: true,
         verified: true,
         source: pending.source,
-        freeFirstDay: true,
+        freeFirstDay: !existing,
+        paidRegistration: paidInvite,
       },
     }).catch(() => {});
   }
 
-  return NextResponse.json({ ok: true, memberName, accessCode, freeFirstDay: !existing });
+  return NextResponse.json({
+    ok: true,
+    memberName,
+    accessCode,
+    freeFirstDay: !existing,
+    paidRegistration: paidInvite,
+  });
 }
 
 export async function POST(req: NextRequest) {

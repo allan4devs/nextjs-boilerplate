@@ -8,8 +8,8 @@ import { CheckCircle2, Dumbbell, Loader2, XCircle } from "lucide-react";
 type VerifyState =
   | { phase: "loading" }
   | { phase: "invalid"; error: string }
-  | { phase: "form"; email: string }
-  | { phase: "done"; memberName: string; accessCode: string };
+  | { phase: "form"; email: string; source: string }
+  | { phase: "done"; memberName: string; accessCode: string; paidRegistration: boolean };
 
 function ConfirmInner() {
   const params = useSearchParams();
@@ -34,13 +34,19 @@ function ConfirmInner() {
         const res = await fetch(`/api/xtreme/register?token=${encodeURIComponent(token)}`, {
           cache: "no-store",
         });
-        const json = (await res.json()) as { email?: string; error?: string };
+        const json = (await res.json()) as {
+          email?: string;
+          memberName?: string;
+          source?: string;
+          error?: string;
+        };
         if (cancelled) return;
         if (!res.ok || !json.email) {
           setState({ phase: "invalid", error: json.error || "Enlace invalido." });
           return;
         }
-        setState({ phase: "form", email: json.email });
+        if (json.memberName) setMemberName(json.memberName);
+        setState({ phase: "form", email: json.email, source: json.source || "app" });
       } catch {
         if (!cancelled) setState({ phase: "invalid", error: "Error de conexion." });
       }
@@ -68,6 +74,7 @@ function ConfirmInner() {
         ok?: boolean;
         memberName?: string;
         accessCode?: string;
+        paidRegistration?: boolean;
         error?: string;
       };
       if (!res.ok || !json.ok) {
@@ -78,6 +85,7 @@ function ConfirmInner() {
         phase: "done",
         memberName: json.memberName || memberName,
         accessCode: json.accessCode || "",
+        paidRegistration: Boolean(json.paidRegistration),
       });
     } catch {
       setError("Error de conexion.");
@@ -122,7 +130,9 @@ function ConfirmInner() {
           <form onSubmit={submit} className="border border-white/10 bg-[#111] p-6">
             <div className="flex items-center gap-2 text-[#d8ff3e]">
               <CheckCircle2 className="h-5 w-5" />
-              <p className="text-xs font-black uppercase tracking-[0.18em]">Correo confirmado</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em]">
+                {state.source === "paypal" ? "Pago y correo confirmados" : "Correo confirmado"}
+              </p>
             </div>
             <h1 className="mt-3 text-3xl font-black uppercase leading-none">Completá tu perfil</h1>
             <p className="mt-2 text-sm font-semibold text-white/60">{state.email}</p>
@@ -135,9 +145,15 @@ function ConfirmInner() {
                 autoComplete="name"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
+                readOnly={state.source === "paypal"}
+                className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e] read-only:cursor-not-allowed read-only:text-white/55"
                 placeholder="Nombre y apellidos"
               />
+              {state.source === "paypal" && (
+                <span className="mt-2 block text-xs font-semibold text-white/40">
+                  Usamos el nombre ligado al pago para evitar que el acceso se asigne a otra persona.
+                </span>
+              )}
             </label>
             <label className="mt-4 block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
@@ -199,7 +215,9 @@ function ConfirmInner() {
               ¡Listo, {state.memberName.split(" ")[0]}!
             </h1>
             <p className="mt-3 text-sm font-semibold text-white/70">
-              Tu cuenta quedó creada. Tu primer día es gratis: presentate en recepción con tu nombre.
+              {state.paidRegistration
+                ? "Tu pago, correo y cédula quedaron unidos de forma segura. Ya podés entrar a la app y crear tu PIN."
+                : "Tu cuenta quedó creada. Tu primer día es gratis: presentate en recepción con tu nombre."}
             </p>
             {state.accessCode && (
               <div className="mt-5 bg-[#0b0b0b] px-4 py-4">

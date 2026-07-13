@@ -82,10 +82,14 @@ export default function ExtremeGymLandingPage() {
         <div className="relative mx-auto flex max-w-7xl flex-col px-5 py-4 sm:px-8 lg:py-3">
           <div className="grid flex-1 gap-8 py-5 lg:grid-cols-[.95fr_1.05fr] lg:items-center lg:py-6">
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 border border-[#f6c400]/45 bg-black/45 px-3 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#ffe875] backdrop-blur">
+              <a
+                href="#mapa-footer"
+                aria-label="Ir al mapa y la ubicación de Xtreme Gym"
+                className="inline-flex items-center gap-2 border border-[#f6c400]/45 bg-black/45 px-3 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#ffe875] backdrop-blur transition hover:border-[#f6c400] hover:bg-[#f6c400]/10"
+              >
                 <MapPin className="h-4 w-4" />
                 {BUSINESS.location}
-              </div>
+              </a>
               <h1 className="mt-5 max-w-4xl text-[2.5rem] font-black uppercase leading-[0.88] tracking-tight min-[420px]:text-5xl sm:text-6xl lg:text-[4rem] xl:text-[4.5rem]">
                 Entrena fuerte.
                 <span className="block text-[#f6c400]">Vive con más energía.</span>
@@ -112,35 +116,37 @@ export default function ExtremeGymLandingPage() {
                 </Link>
               </div>
 
-              <div className="mt-6 grid max-w-2xl grid-cols-2 border border-white/10 bg-black/45 backdrop-blur sm:grid-cols-4">
+            </div>
+
+            <div className="min-w-0">
+              <div className="hidden gap-3 lg:grid lg:grid-cols-[1fr_230px]">
+                <div className="relative border border-white/12 bg-black/70 p-3 shadow-2xl backdrop-blur">
+                  <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" fit="contain" />
+                  <div className="absolute left-6 top-6 max-w-[210px] bg-[#f6c400] px-4 py-3 text-black">
+                    <p className="text-xs font-black uppercase tracking-[0.18em]">Movimiento Xtreme</p>
+                    <p className="text-2xl font-black uppercase leading-none">Fuerza con dirección</p>
+                  </div>
+                </div>
+
+                <div className="grid content-start gap-3">
+                  <ImageTile src={HERO_IMAGES[1].src} alt={HERO_IMAGES[1].alt} className="aspect-[4/3]" />
+                  <div className="border border-[#f6c400]/45 bg-[#f6c400] p-4 text-black shadow-[0_0_36px_-18px_rgba(246,196,0,.9)]">
+                    <p className="text-xs font-black uppercase tracking-[0.2em]">Empiece con decisión</p>
+                    <h2 className="mt-2 text-2xl font-black uppercase leading-none">Su próximo entreno ya tiene lugar</h2>
+                    <p className="mt-2 text-xs font-bold leading-5">
+                      Cada entrenamiento es una decisión a favor de su salud, energía y calidad de vida.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 border border-white/10 bg-black/55 backdrop-blur sm:grid-cols-4 lg:mt-3">
                 {SOCIAL_PROOF.map((item) => (
                   <div key={item.label} className="border-r border-white/10 p-2.5 last:border-r-0 sm:p-3">
                     <p className="text-2xl font-black text-[#f6c400]">{item.value}</p>
                     <p className="mt-1 text-xs font-black uppercase tracking-[0.14em] text-white/48">{item.label}</p>
                   </div>
                 ))}
-              </div>
-
-            </div>
-
-            <div className="hidden gap-3 lg:grid lg:grid-cols-[1fr_230px]">
-              <div className="relative border border-white/12 bg-black/70 p-3 shadow-2xl backdrop-blur">
-                <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" fit="contain" />
-                <div className="absolute left-6 top-6 max-w-[210px] bg-[#f6c400] px-4 py-3 text-black">
-                  <p className="text-xs font-black uppercase tracking-[0.18em]">Movimiento Xtreme</p>
-                  <p className="text-2xl font-black uppercase leading-none">Fuerza con dirección</p>
-                </div>
-              </div>
-
-              <div className="grid content-start gap-3">
-                <ImageTile src={HERO_IMAGES[1].src} alt={HERO_IMAGES[1].alt} className="aspect-[4/3]" />
-                <div className="border border-[#f6c400]/45 bg-[#f6c400] p-4 text-black shadow-[0_0_36px_-18px_rgba(246,196,0,.9)]">
-                  <p className="text-xs font-black uppercase tracking-[0.2em]">Empiece con decisión</p>
-                  <h2 className="mt-2 text-2xl font-black uppercase leading-none">Su próximo entreno ya tiene lugar</h2>
-                  <p className="mt-2 text-xs font-bold leading-5">
-                    Cada entrenamiento es una decisión a favor de su salud, energía y calidad de vida.
-                  </p>
-                </div>
               </div>
             </div>
           </div>

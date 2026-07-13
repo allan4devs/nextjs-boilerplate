@@ -32,6 +32,10 @@ import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
+import {
+  cedulaCandidates,
+  decodeCedulaBarcode,
+} from "@/app/features/checkin/cedula/decodeCedulaBarcode";
 import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 
@@ -134,9 +138,13 @@ export default function RecepcionPage() {
   });
   const [isScanning, setIsScanning] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [cedulaCameraMode, setCedulaCameraMode] = useState(false);
+  const [cedulaScanStatus, setCedulaScanStatus] = useState("");
 
   const cedulaInputRef = useRef<HTMLInputElement | null>(null);
   const lookupTimer = useRef<number | null>(null);
+  const barcodeScanBusyRef = useRef(false);
+  const lastBarcodeRef = useRef("");
 
   const headers = useCallback(
     (json = false): HeadersInit => {
@@ -268,15 +276,19 @@ export default function RecepcionPage() {
 
   useEffect(() => {
     if (tab === "face" && unlocked) {
-      void startCamera();
+      void startCamera("user");
       void loadPanel(true);
     } else {
       stopCamera();
     }
-    return () => {
-      if (tab !== "face") stopCamera();
-    };
+    return () => stopCamera();
   }, [tab, unlocked, startCamera, stopCamera, loadPanel]);
+
+  useEffect(() => {
+    if (tab === "cedula") return;
+    setCedulaCameraMode(false);
+    setCedulaScanStatus("");
+  }, [tab]);
 
   useEffect(() => {
     if (!flash) return;
@@ -346,6 +358,70 @@ export default function RecepcionPage() {
       if (lookupTimer.current) window.clearTimeout(lookupTimer.current);
     };
   }, [cedula, unlocked, tab, lookupMember]);
+
+  // Lee la cédula en memoria: nunca guarda ni envía una foto del documento.
+  useEffect(() => {
+    if (!unlocked || tab !== "cedula" || !cedulaCameraMode || !cameraOn) return;
+    let cancelled = false;
+    let timer = 0;
+    lastBarcodeRef.current = "";
+
+    async function scanBarcodeFrame() {
+      const video = videoRef.current;
+      if (cancelled || !video) return;
+
+      if (!barcodeScanBusyRef.current) {
+        barcodeScanBusyRef.current = true;
+        try {
+          const raw = await decodeCedulaBarcode(video);
+          if (raw && raw !== lastBarcodeRef.current) {
+            lastBarcodeRef.current = raw;
+            const candidates = cedulaCandidates(raw);
+            if (!candidates.length) {
+              setCedulaScanStatus(
+                "Código leído, pero no se pudo extraer la cédula. Digítela abajo.",
+              );
+            } else {
+              setCedulaScanStatus("Cédula detectada. Buscando socio...");
+              for (const candidate of candidates) {
+                const found = await lookupMember({ cedula: candidate });
+                if (found) {
+                  setCedula(candidate);
+                  setCedulaScanStatus("Cédula detectada. Confirme el ingreso.");
+                  setCedulaCameraMode(false);
+                  stopCamera();
+                  return;
+                }
+              }
+              setCedula(candidates[0]);
+              setCedulaScanStatus(
+                "Código leído, pero no encontramos al socio. Revise el número.",
+              );
+            }
+          }
+        } finally {
+          barcodeScanBusyRef.current = false;
+        }
+      }
+
+      if (!cancelled) timer = window.setTimeout(() => void scanBarcodeFrame(), 350);
+    }
+
+    void scanBarcodeFrame();
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+      barcodeScanBusyRef.current = false;
+    };
+  }, [
+    unlocked,
+    tab,
+    cedulaCameraMode,
+    cameraOn,
+    videoRef,
+    lookupMember,
+    stopCamera,
+  ]);
 
   async function confirmCheckin(target?: MemberHit, method: "cedula" | "face" | "name" | "code" = "cedula") {
     const m = target || member;
@@ -817,7 +893,69 @@ export default function RecepcionPage() {
                     Digite o escanee la cedula
                   </h2>
                   <p className="mt-2 text-sm font-bold text-white/45">
-                    El lector de barras o el teclado buscan solo. Enter confirma el ingreso.
+                    Use la cámara, el lector de barras o el teclado. Enter confirma el ingreso.
+                  </p>
+                </div>
+
+                <div className="mt-5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (cedulaCameraMode) {
+                        setCedulaCameraMode(false);
+                        setCedulaScanStatus("");
+                        stopCamera();
+                        return;
+                      }
+                      lastBarcodeRef.current = "";
+                      setCedulaScanStatus(
+                        "Muestre el código de barras del reverso dentro del recuadro.",
+                      );
+                      setCedulaCameraMode(true);
+                      void startCamera("environment");
+                    }}
+                    className="flex w-full items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/70 bg-[#d8ff3e]/10 px-4 py-3 text-sm font-black uppercase tracking-wide text-[#d8ff3e] transition hover:bg-[#d8ff3e] hover:text-black"
+                  >
+                    <Camera className="h-5 w-5" />
+                    {cedulaCameraMode ? "Cerrar cámara" : "Escanear cédula con cámara"}
+                  </button>
+
+                  <div
+                    className={
+                      cedulaCameraMode
+                        ? "relative mt-3 aspect-video overflow-hidden border-[3px] border-white/20 bg-black"
+                        : "hidden"
+                    }
+                  >
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/15">
+                        <div className="h-[34%] w-[84%] border-2 border-[#d8ff3e] shadow-[0_0_0_999px_rgba(0,0,0,.28)]" />
+                      </div>
+                      {!cameraOn && !cameraError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                          <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
+                        </div>
+                      )}
+                      {cameraError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/85 p-6 text-center text-sm font-bold text-red-300">
+                          {cameraError}
+                        </div>
+                      )}
+                  </div>
+
+                  {cedulaScanStatus && (
+                    <p className="mt-2 text-center text-xs font-bold text-white/55">
+                      {cedulaScanStatus}
+                    </p>
+                  )}
+                  <p className="mt-1 text-center text-[11px] font-bold text-white/35">
+                    La lectura ocurre en este dispositivo; no guardamos fotos de la cédula.
                   </p>
                 </div>
 
