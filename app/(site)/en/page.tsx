@@ -145,7 +145,7 @@ export default function EnglishLandingPage() {
         </div>
       </section>
 
-      <CtaBand eyebrow="Your first step" title="Visit us today and start training." message="Hello Xtreme Gym, I would like information about joining the gym." cta="Talk to reception" />
+      <CtaBand eyebrow="Start today" title="Choose your plan, pay online and start training." cta="Pay now" href="/en/prices#inscripcion" />
     </>
   );
 }

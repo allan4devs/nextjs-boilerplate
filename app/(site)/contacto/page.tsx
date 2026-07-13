@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BUSINESS, SCHEDULE, telLink, waLink } from "../../lib/site";
 import { gymJsonLd, pageMetadata } from "../../lib/seo";
 import JsonLd from "../../components/JsonLd";
-import { CalendarCheck, Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Clock, CreditCard, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 
 export const metadata: Metadata = pageMetadata({
   title: "Contacto y ubicación",
@@ -64,19 +64,19 @@ function TikTokIcon({ className }: BrandIconProps) {
 
 const CONTACT_ACTIONS = [
   {
-    href: waLink("Hola Xtreme Gym, quiero información para entrenar."),
+    href: "/precios#inscripcion",
+    label: "Pagar plan",
+    detail: "Pago en línea",
+    icon: CreditCard,
+    external: false,
+    primary: true,
+  },
+  {
+    href: waLink("Hola Xtreme Gym, quiero ayuda para elegir y pagar mi plan."),
     label: "WhatsApp",
     detail: BUSINESS.phone,
     icon: MessageCircle,
     external: true,
-    primary: true,
-  },
-  {
-    href: "/app",
-    label: "Reservar",
-    detail: "App de socios",
-    icon: CalendarCheck,
-    external: false,
     primary: false,
   },
   {

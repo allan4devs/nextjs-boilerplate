@@ -5,7 +5,8 @@
  * tabs del OS, perfil del socio y mini-login por cedula.
  */
 
-import { ArrowRight, UserRound, X } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CreditCard, UserRound, X } from "lucide-react";
 import { GameButton } from "../GameOS";
 import Avatar from "./Avatar";
 import { TABS } from "./constants";
@@ -94,6 +95,15 @@ export default function SideNav({ os }: { os: MemberOs }) {
         </nav>
 
         <div className="border-t-[3px] border-white/15 p-2">
+          <Link
+            href="/precios#inscripcion"
+            title="Comprar o renovar plan"
+            onClick={() => setNavOpen(false)}
+            className="mb-2 flex min-h-12 w-full items-center justify-center gap-2 border-[3px] border-black/30 bg-[#d8ff3e] px-2 text-xs font-black uppercase text-black transition hover:bg-white"
+          >
+            <CreditCard className="h-4 w-4 shrink-0" />
+            <span className={navOpen ? "block" : "lg:hidden"}>Comprar plan</span>
+          </Link>
           {memberName ? (
             <button
               type="button"

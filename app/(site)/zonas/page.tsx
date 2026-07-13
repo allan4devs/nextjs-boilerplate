@@ -74,10 +74,10 @@ export default function ZonasPage() {
               ))}
             </div>
             <Link
-              href="/precios"
+              href="/precios#inscripcion"
               className="mt-8 inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
             >
-              Ver precios
+              Elegir plan y pagar
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -91,10 +91,9 @@ export default function ZonasPage() {
       </section>
 
       <CtaBand
-        eyebrow="Conozca el gym"
-        title="Venga, recorra las zonas y haga su primera sesión."
-        message="Hola Xtreme Gym, quiero visitar el gym y conocer las instalaciones."
-        cta="Agendar visita"
+        eyebrow="Empezá hoy"
+        title="Elegí tu plan y desbloqueá todas las zonas."
+        cta="Comprar plan"
       />
     </>
   );

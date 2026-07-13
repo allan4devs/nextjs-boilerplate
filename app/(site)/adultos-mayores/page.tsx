@@ -110,10 +110,10 @@ export default function AdultosMayoresPage() {
       <ExtremeGymCheckout initialOption="senior" />
 
       <CtaBand
-        eyebrow="Primera clase"
-        title="Traiga ropa cómoda y agua. Del resto nos encargamos."
-        message="Hola Xtreme Gym, quiero asistir a mi primera clase de Adultos Mayores."
-        cta="Reservar cupo"
+        eyebrow="Inscripción abierta"
+        title="Pagá el plan de adultos mayores y asegurá tu acceso."
+        cta="Pagar plan"
+        href="#inscripcion"
       />
     </>
   );

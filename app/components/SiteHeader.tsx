@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, ChevronRight, Languages, MessageCircle, Phone, X } from "lucide-react";
-import { NAV_LINKS, BUSINESS, telLink, waLink } from "../lib/site";
+import { ArrowRight, ChevronRight, CreditCard, Languages, MessageCircle, X } from "lucide-react";
+import { NAV_LINKS, waLink } from "../lib/site";
 
 const WA_HEADER = waLink("Hola Xtreme Gym, quiero empezar a entrenar y conocer las opciones disponibles.");
 
@@ -117,14 +117,14 @@ export default function SiteHeader() {
           </Link>
           <Link
             href={english ? "/en/prices" : "/precios"}
-            className="hidden items-center gap-2 border border-white/20 bg-white/[0.07] px-4 py-2.5 text-sm font-black uppercase text-white transition hover:border-white/45 hover:bg-white/10 xl:inline-flex"
+            className="hidden items-center gap-2 bg-[#f6c400] px-4 py-2.5 text-sm font-black uppercase text-black shadow-[0_0_30px_-14px_rgba(246,196,0,.9)] transition hover:bg-white xl:inline-flex"
           >
-            {english ? "Join" : "Inscribirme"}
+            {english ? "Pay now" : "Pagar ahora"}
             <ArrowRight className="h-4 w-4" />
           </Link>
           <a
             href={WA_HEADER}
-            className="hidden items-center gap-2 bg-[#f6c400] px-5 py-2.5 text-sm font-black uppercase text-black shadow-[0_0_30px_-14px_rgba(246,196,0,.9)] transition hover:bg-white sm:inline-flex"
+            className="hidden items-center gap-2 border border-white/20 bg-white/[0.07] px-5 py-2.5 text-sm font-black uppercase text-white transition hover:border-white/45 hover:bg-white/10 sm:inline-flex"
           >
             <MessageCircle className="h-4 w-4" />
             WhatsApp
@@ -193,19 +193,20 @@ export default function SiteHeader() {
             })}
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Link
+                href={english ? "/en/prices" : "/precios#inscripcion"}
+                onClick={() => setOpen(false)}
+                className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-5 text-sm font-black uppercase text-black transition hover:bg-white"
+              >
+                <CreditCard className="h-4 w-4" />
+                {english ? "Pay now" : "Pagar ahora"}
+              </Link>
               <a
                 href={WA_HEADER}
-                className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-5 text-sm font-black uppercase text-black transition hover:bg-white"
+                className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 px-5 text-sm font-black uppercase text-white transition hover:border-white/40"
               >
                 <MessageCircle className="h-4 w-4" />
                 WhatsApp
-              </a>
-              <a
-                href={telLink}
-                className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 px-5 text-sm font-black uppercase text-white transition hover:border-white/40"
-              >
-                <Phone className="h-4 w-4" />
-                {BUSINESS.phone}
               </a>
             </div>
           </nav>

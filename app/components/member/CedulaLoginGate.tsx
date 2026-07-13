@@ -125,8 +125,15 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           nuevo, se pedirá nombre y teléfono.
         </p>
         <Link
+          href="/precios#inscripcion"
+          className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#d8ff3e] px-4 text-sm font-black uppercase text-black transition hover:bg-white"
+        >
+          <CreditCard className="h-4 w-4" />
+          Elegir plan y pagar
+        </Link>
+        <Link
           href="/"
-          className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45 transition hover:text-white"
+          className="mt-3 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45 transition hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           Ir al sitio Xtreme Gym

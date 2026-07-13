@@ -2,7 +2,8 @@
 
 /** HUD superior fijo: acciones rapidas del OS (todas abren su modal). */
 
-import { Flame, Menu, Star, Target, Zap } from "lucide-react";
+import Link from "next/link";
+import { CreditCard, Flame, Menu, Star, Target, Zap } from "lucide-react";
 import { GameButton, GameHudPill } from "../GameOS";
 import type { MemberOs } from "./useMemberOs";
 
@@ -26,6 +27,13 @@ export default function TopHud({ os }: { os: MemberOs }) {
         </p>
         {unlocked && (
           <div className="ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto sm:gap-2">
+            <Link
+              href="/precios#inscripcion"
+              className="inline-flex min-h-9 shrink-0 items-center gap-1.5 bg-[#d8ff3e] px-3 text-xs font-black uppercase text-black transition hover:bg-white"
+            >
+              <CreditCard className="h-4 w-4" />
+              <span className="hidden md:inline">Pagar plan</span>
+            </Link>
             {!trainedToday && (
               <GameButton
                 variant="orange"

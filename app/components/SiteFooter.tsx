@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, MapPin, MessageCircle, Phone, Star } from "lucide-react";
-import { BUSINESS, NAV_LINKS, telLink, waLink } from "../lib/site";
+import { ArrowRight, CreditCard, MapPin, MessageCircle, Star } from "lucide-react";
+import { BUSINESS, NAV_LINKS, waLink } from "../lib/site";
 
 /** Rutas de app / operación: sin footer de marketing ni CTA sticky. */
 function isOsSurface(pathname: string) {
@@ -22,8 +22,7 @@ export default function SiteFooter() {
   const navLabels = ["Training", "Prices", "Seniors", "App", "FAQ", "Contact"];
   const englishHrefs = ["/en/training", "/en/prices", "/en/seniors", "/app", "/en/faq", "/en/contact"];
 
-  // Barra sticky de conversión solo en el landing (no en /precios, /app, etc.)
-  const showMobileCta = pathname === "/" || pathname === "/en";
+  const showMobileCta = !pathname.startsWith("/gracias") && !pathname.startsWith("/registro");
 
   return (
     <>
@@ -42,19 +41,19 @@ export default function SiteFooter() {
               para sostener el hábito.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href={english ? "/en/prices" : "/precios#inscripcion"}
+                className="inline-flex items-center gap-2 bg-[#f6c400] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
+              >
+                <CreditCard className="h-4 w-4" />
+                {english ? "Pay now" : "Pagar plan"}
+              </Link>
               <a
                 href={waLink("Hola Xtreme Gym, quiero información para entrenar.")}
-                className="inline-flex items-center gap-2 bg-[#f6c400] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
+                className="inline-flex items-center gap-2 border border-white/15 px-5 py-3 text-sm font-black uppercase text-white transition hover:border-white/35"
               >
                 <MessageCircle className="h-4 w-4" />
                 WhatsApp
-              </a>
-              <a
-                href={telLink}
-                className="inline-flex items-center gap-2 border border-white/15 px-5 py-3 text-sm font-black uppercase text-white transition hover:border-white/35"
-              >
-                <Phone className="h-4 w-4" />
-                {BUSINESS.phone}
               </a>
             </div>
           </div>
@@ -90,18 +89,19 @@ export default function SiteFooter() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/92 px-3 py-3 backdrop-blur md:hidden">
           <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
             <Link
-              href={english ? "/en/first-day" : "/primer-dia#registro"}
+              href={english ? "/en/prices" : "/precios#inscripcion"}
               className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-3 text-xs font-black uppercase text-black"
             >
-              {english ? "Free first day" : "Reservar día"}
+              {english ? "Pay now" : "Pagar ahora"}
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link
-              href={english ? "/en/prices" : "/precios"}
+            <a
+              href={waLink("Hola Xtreme Gym, quiero ayuda para elegir y pagar mi plan.")}
               className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 bg-white/[0.06] px-3 text-xs font-black uppercase text-white"
             >
-              {english ? "View plans" : "Ver planes"}
-            </Link>
+              <MessageCircle className="h-4 w-4" />
+              WhatsApp
+            </a>
           </div>
         </div>
       )}

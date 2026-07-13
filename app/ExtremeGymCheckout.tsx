@@ -471,7 +471,7 @@ export default function ExtremeGymCheckout({
             )}
 
             <p className="mt-3 text-xs font-bold leading-5 text-black/52">
-              {english ? "Access is activated after payment. PayPal processes the charge and reception confirms activation." : "El acceso se activa solo después del pago. PayPal procesa el cobro; recepción confirma cupo y activación."}
+              {english ? "Your access is activated automatically as soon as PayPal approves the payment." : "Tu acceso se activa automáticamente apenas PayPal aprueba el pago."}
             </p>
           </div>
 

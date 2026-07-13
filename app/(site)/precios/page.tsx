@@ -153,10 +153,10 @@ export default function PreciosPage() {
       <ExtremeGymCheckout />
 
       <CtaBand
-        eyebrow="¿Dudas con el plan?"
-        title="Le ayudamos a escoger el que sí va a sostener."
-        message="Hola Xtreme Gym, quiero ayuda para escoger el plan adecuado."
-        cta="Consultar"
+        eyebrow="Empezá ahora"
+        title="Elegí el plan que querés y completá el pago en línea."
+        cta="Ir al pago"
+        href="#inscripcion"
       />
     </>
   );

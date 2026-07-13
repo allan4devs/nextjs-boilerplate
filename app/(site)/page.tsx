@@ -97,17 +97,17 @@ export default function ExtremeGymLandingPage() {
 
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link
-                  href="/primer-dia"
+                  href="/precios#inscripcion"
                   className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black shadow-[0_0_40px_-16px_rgba(246,196,0,.95)] transition hover:bg-white"
                 >
-                  Tu primer día gratis
+                  Elegir plan y pagar
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link
-                  href="/app"
+                  href="/primer-dia"
                   className="inline-flex min-h-14 items-center gap-2 border border-white/20 bg-white/[0.07] px-6 font-black uppercase text-white backdrop-blur transition hover:border-white/45 hover:bg-white/10"
                 >
-                  Ver app
+                  Primer día gratis
                   <Smartphone className="h-5 w-5" />
                 </Link>
               </div>
@@ -149,7 +149,7 @@ export default function ExtremeGymLandingPage() {
                 >
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/45">Plan mensual</p>
                   <p className="mt-1 text-3xl font-black text-white">CRC 23.000</p>
-                  <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-[#f6c400]">confirme vigencia</p>
+                  <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-[#f6c400]">pagar ahora</p>
                 </Link>
               </div>
 
@@ -262,8 +262,7 @@ export default function ExtremeGymLandingPage() {
       </section>
 
       <CtaBand
-        title="Venga hoy, confirme su plan y empiece sin darle más vueltas."
-        message="Hola Xtreme Gym, quiero visitar hoy y empezar mi plan."
+        title="Elegí tu plan, pagá en línea y empezá a entrenar hoy."
       />
     </>
   );

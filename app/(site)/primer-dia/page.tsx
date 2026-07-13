@@ -45,10 +45,10 @@ export default function PrimerDiaPage() {
                 Registrarme gratis <ArrowRight className="h-5 w-5" />
               </a>
               <Link
-                href="/zonas"
+                href="/precios#inscripcion"
                 className="inline-flex min-h-14 items-center border border-white/20 px-6 font-black uppercase text-white transition hover:border-[#f6c400]"
               >
-                Conocé las zonas
+                Elegir plan y pagar
               </Link>
             </div>
           </div>

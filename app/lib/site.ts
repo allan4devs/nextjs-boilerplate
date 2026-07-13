@@ -44,7 +44,7 @@ export const NAV_LINKS = [
 
 export const HERO_IMAGES = [
   {
-    src: "https://images.unsplash.com/photo-1593079831268-3381b0db4a77?auto=format&fit=crop&w=1200&q=86",
+    src: "/xtreme/logo.jpg",
     alt: "Zona de máquinas y pesas en gimnasio moderno",
   },
   {
@@ -125,7 +125,7 @@ export const COSTS = [
 ];
 
 export const QUICK_INFO = [
-  { label: "Mensualidad", value: "CRC 23.000", detail: "confirme vigencia", href: "/precios" },
+  { label: "Mensualidad", value: "CRC 23.000", detail: "pagar ahora", href: "/precios#inscripcion" },
   { label: "Primer día", value: "Gratis", detail: "registrate en la app", href: "/primer-dia" },
   { label: "Horario", value: "5 AM - 10 PM", detail: "lunes a viernes", href: "/contacto" },
 ];
@@ -134,7 +134,7 @@ export const PLAN_DETAILS = [
   "Equipo, ambiente y acompañamiento para entrenar mejor",
   "Clases y zonas para diferentes objetivos",
   "Reservas, rachas y progreso desde la app de socios",
-  "Información vigente directo con recepción",
+  "Compra y activación con pago en línea",
 ];
 
 export const GALLERY = [
@@ -248,7 +248,7 @@ export const FAQS = [
   {
     question: "¿Puedo pagar en línea?",
     answer:
-      "Sí. En la página de precios encuentra la inscripción con pago en línea. También puede coordinar el pago directamente en recepción.",
+      "Sí. Entrá a la página de precios, elegí el plan y completá el pago en línea con PayPal.",
   },
   {
     question: "¿Cuál es el horario del gimnasio?",

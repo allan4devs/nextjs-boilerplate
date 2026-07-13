@@ -8,7 +8,7 @@
 
 import { useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, CreditCard, Loader2 } from "lucide-react";
 import { CelebrationOverlay } from "./components/gamification";
 import OnboardingTour from "./components/OnboardingTour";
 import { TOUR_STEPS, type TabId } from "./components/member/constants";
@@ -134,7 +134,14 @@ export default function ExtremeGymSite() {
       </section>
 
       <footer className="xg-os-content mt-2 border-t-[3px] border-white/15 px-4 py-6 sm:px-8 lg:mt-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-center">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/precios#inscripcion"
+            className="inline-flex items-center gap-2 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-black shadow-[3px_3px_0_rgba(216,255,62,.25)] transition hover:bg-white"
+          >
+            <CreditCard className="h-4 w-4" />
+            Comprar o renovar plan
+          </Link>
           <Link
             href="/"
             className="inline-flex items-center gap-2 border-[3px] border-white/15 bg-[#0c0c0c] px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-white/60 shadow-[3px_3px_0_rgba(0,0,0,.5)] transition hover:border-[#d8ff3e]/50 hover:text-white"

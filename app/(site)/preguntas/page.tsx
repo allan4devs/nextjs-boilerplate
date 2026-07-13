@@ -21,7 +21,7 @@ export default function PreguntasPage() {
         eyebrow="Preguntas"
         title="Lo que la gente"
         highlight="pregunta antes de llegar."
-        text="Si no encuentra su respuesta acá, escríbanos por WhatsApp y recepción le confirma cualquier detalle."
+        text="Revisá las respuestas, elegí tu plan y completá el pago en línea para empezar."
         image="https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=2000&q=86"
         imageAlt="Entrenamiento funcional en Xtreme Gym"
       />
@@ -53,8 +53,7 @@ export default function PreguntasPage() {
       </section>
 
       <CtaBand
-        title="Ya sabe cómo funciona. Ahora falta empezar."
-        message="Hola Xtreme Gym, quiero visitar hoy y empezar mi plan."
+        title="Ya sabés cómo funciona. Elegí tu plan y pagá ahora."
       />
     </>
   );

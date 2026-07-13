@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import Link from "next/link";
 import { Check, ChevronRight, CreditCard, Flame, Loader2 } from "lucide-react";
 import { GameLabel } from "../../../GameOS";
 import type {
@@ -103,6 +104,15 @@ function PrimaryActionsComponent({
             Renovar ahora
           </a>
         </div>
+      )}
+      {!renewal && (
+        <Link
+          href="/precios#inscripcion"
+          className="flex min-h-12 items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/10 px-4 text-sm font-black uppercase text-[#eaff93] transition hover:bg-[#d8ff3e] hover:text-black"
+        >
+          <CreditCard className="h-4 w-4" />
+          Comprar o renovar plan
+        </Link>
       )}
     </>
   );
