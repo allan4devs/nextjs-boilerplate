@@ -12,8 +12,28 @@ import {
   toSessionView,
   updateVisitorProfile,
 } from "@/lib/xtreme/chat";
+import { MEMBERS_COLLECTION, type MemberDoc } from "@/lib/xtreme/shared";
+import { resolveMemberSession } from "@/lib/xtreme/session";
 
 export const dynamic = "force-dynamic";
+
+async function memberChatContext(req: NextRequest) {
+  const session = await resolveMemberSession(req);
+  if (!session) return null;
+  const db = await getDb();
+  const member = await db
+    .collection<MemberDoc>(MEMBERS_COLLECTION)
+    .findOne(
+      { normalizedName: session.memberKey },
+      { projection: { memberName: 1, phone: 1, normalizedName: 1 } },
+    );
+  if (!member?.normalizedName) return null;
+  return {
+    memberKey: member.normalizedName,
+    visitorName: member.memberName || session.memberName,
+    visitorPhone: member.phone,
+  };
+}
 
 function guestTokenFrom(req: NextRequest, body?: { guestToken?: string }) {
   return (
@@ -76,10 +96,13 @@ export async function POST(req: NextRequest) {
     const db = await getDb();
 
     if (action === "start") {
+      const memberCtx = await memberChatContext(req);
       const { session, message, guestToken } = await startChatSession(db, {
         body: body.body ?? "",
-        visitorName: body.visitorName,
-        visitorPhone: body.visitorPhone,
+        visitorName: memberCtx?.visitorName || body.visitorName,
+        visitorPhone: memberCtx?.visitorPhone || body.visitorPhone,
+        memberKey: memberCtx?.memberKey,
+        source: memberCtx ? "member_app" : "site",
       });
       return NextResponse.json({
         session: toSessionView(session),
@@ -108,12 +131,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "send") {
-      if (body.visitorName || body.visitorPhone) {
+      const memberCtx = await memberChatContext(req);
+      if (body.visitorName || body.visitorPhone || memberCtx) {
         await updateVisitorProfile(db, sessionId, {
-          visitorName: body.visitorName,
-          visitorPhone: body.visitorPhone,
+          visitorName: memberCtx?.visitorName || body.visitorName,
+          visitorPhone: memberCtx?.visitorPhone || body.visitorPhone,
+          memberKey: memberCtx?.memberKey,
         });
-        if (body.visitorName) session.visitorName = String(body.visitorName);
+        if (memberCtx?.visitorName || body.visitorName) {
+          session.visitorName = String(memberCtx?.visitorName || body.visitorName);
+        }
+        if (memberCtx?.memberKey) session.memberKey = memberCtx.memberKey;
       }
 
       const result = await appendChatMessage(db, {

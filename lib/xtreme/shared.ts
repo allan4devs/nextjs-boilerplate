@@ -170,6 +170,11 @@ export type MemberDoc = {
   freezesBonus?: number;
   /** Preferencias + showcase (Fase 3) */
   notificationPrefs?: Partial<NotificationPrefs>;
+  emailUnsubscribe?: {
+    reason: string;
+    feedback?: string;
+    at: Date;
+  };
   pinnedBadges?: string[];
   /** Social (Fase 5) */
   leaderboardOptIn?: boolean;

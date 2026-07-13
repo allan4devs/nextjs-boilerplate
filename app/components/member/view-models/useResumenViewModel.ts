@@ -290,7 +290,11 @@ export function useResumenViewModel(os: MemberOs): {
       return;
     }
     if (nextBestAction.href.startsWith("#")) {
-      setTab(nextBestAction.href === "#plan" ? "progreso" : "entrenar");
+      if (nextBestAction.kind === "coach_note" || nextBestAction.href === "#plan") {
+        setTab("entrenar");
+        return;
+      }
+      setTab(nextBestAction.href === "#progreso" ? "progreso" : "entrenar");
       return;
     }
     window.location.href = nextBestAction.href;

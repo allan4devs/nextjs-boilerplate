@@ -1,6 +1,11 @@
 import { absoluteAppUrl } from "@/lib/constants/app-url";
+import { BUSINESS } from "@/lib/constants/business";
+import { getDb } from "@/lib/helpers/mongodb";
+import { emailPreferencesToken } from "@/lib/xtreme/email-preferences-token";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const PREFERENCES_BLOCK = "__XTREME_EMAIL_PREFERENCES__";
+const SUPPRESSIONS_COLLECTION = "xtreme_gym_email_suppressions";
 
 export type SendEmailResult = { ok: boolean; skipped?: boolean; error?: string };
 
@@ -56,6 +61,8 @@ export async function sendEmail(args: {
   subject: string;
   html: string;
   cc?: string[];
+  optional?: boolean;
+  managePreferences?: boolean;
 }): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.SMTP_FROM?.trim();
@@ -64,6 +71,29 @@ export async function sendEmail(args: {
   if (!apiKey || !from || !to.length) return { ok: false, skipped: true };
 
   try {
+    if (args.optional) {
+      const db = await getDb();
+      const suppressed = await db
+        .collection(SUPPRESSIONS_COLLECTION)
+        .countDocuments({ email: { $in: to } }, { limit: 1 });
+      if (suppressed) return { ok: false, skipped: true };
+    }
+
+    const preferencesEnabled = args.managePreferences !== false;
+    const token = preferencesEnabled ? emailPreferencesToken(to[0]) : "";
+    const preferencesUrl = token
+      ? absoluteAppUrl("/correo/preferencias?token=" + encodeURIComponent(token))
+      : "";
+    const oneClickUrl = token
+      ? absoluteAppUrl("/api/xtreme/email-preferences?token=" + encodeURIComponent(token))
+      : "";
+    const preferencesHtml = preferencesUrl
+      ? '<p style="margin:14px 0 0;color:#8a8a84;font-size:12px;line-height:1.6;">Si prefieres no recibir recordatorios o novedades, <a href="' +
+        escapeHtml(preferencesUrl) +
+        '" style="color:#555;text-decoration:underline;">administra tus correos o desuscribete aqui</a>. Los recibos y avisos de seguridad seguiran disponibles.</p>'
+      : "";
+    const html = args.html.replace(PREFERENCES_BLOCK, preferencesHtml);
+
     const response = await fetch(RESEND_ENDPOINT, {
       method: "POST",
       headers: {
@@ -74,8 +104,16 @@ export async function sendEmail(args: {
         from,
         to,
         subject: args.subject,
-        html: args.html,
+        html,
         ...(args.cc?.length ? { cc: args.cc } : {}),
+        ...(oneClickUrl
+          ? {
+              headers: {
+                "List-Unsubscribe": "<" + oneClickUrl + ">",
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              },
+            }
+          : {}),
       }),
     });
 
@@ -103,9 +141,22 @@ function layout(title: string, bodyHtml: string) {
       <div style="background:#ffffff;border:1px solid #e5e5e0;border-top:none;padding:24px;">
         <h1 style="margin:0 0 16px;font-size:20px;text-transform:uppercase;">${title}</h1>
         ${bodyHtml}
+        <div style="margin-top:24px;padding-top:18px;border-top:1px solid #e5e5e0;">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:bold;">Encuentranos en ${escapeHtml(BUSINESS.location)}</p>
+          <p style="margin:0;font-size:12px;line-height:1.8;">
+            <a href="${escapeHtml(BUSINESS.maps)}" style="color:#111;font-weight:bold;">Como llegar en Maps</a>
+            &nbsp;·&nbsp;
+            <a href="https://wa.me/${escapeHtml(BUSINESS.whatsapp)}" style="color:#111;font-weight:bold;">WhatsApp ${escapeHtml(BUSINESS.phone)}</a>
+            &nbsp;·&nbsp;
+            <a href="${escapeHtml(BUSINESS.social.instagram)}" style="color:#111;font-weight:bold;">Instagram</a>
+            &nbsp;·&nbsp;
+            <a href="${escapeHtml(absoluteAppUrl("/contacto"))}" style="color:#111;font-weight:bold;">Contacto y horarios</a>
+          </p>
+          ${PREFERENCES_BLOCK}
+        </div>
       </div>
       <p style="color:#8a8a84;font-size:12px;margin-top:14px;">
-        Xtreme Gym · Ciudad Quesada · Este correo se genero automaticamente, no responda a este mensaje.
+        Xtreme Gym · Ciudad Quesada · Siempre seras bienvenido. Este correo se genero automaticamente.
       </p>
     </div>
   </body>
@@ -264,6 +315,7 @@ export async function sendMembershipReminderEmail(args: {
     : `Su membresia vence en ${args.daysRemaining} dia${args.daysRemaining === 1 ? "" : "s"}`;
   return sendEmail({
     to: args.to,
+    optional: true,
     subject: expired ? "Xtreme Gym — membresia vencida" : "Xtreme Gym — su membresia vence pronto",
     html: layout(
       "Recordatorio de membresia",
@@ -284,6 +336,7 @@ export async function sendCustomReminderEmail(args: {
 }) {
   return sendEmail({
     to: args.to,
+    optional: true,
     subject: "Recordatorio Xtreme Gym",
     html: layout(
       "Su recordatorio",
@@ -307,6 +360,7 @@ export async function sendStreakRiskEmail(args: {
   streak: number;
 }) {
   return sendEmail({
+    optional: true,
     to: args.to,
     subject: `Tu racha de ${args.streak} días sigue viva 🔥`,
     html: layout(
@@ -320,6 +374,7 @@ export async function sendStreakRiskEmail(args: {
 
 export async function sendMilestoneEmail(args: { to: string; memberName: string; streak: number }) {
   return sendEmail({
+    optional: true,
     to: args.to,
     subject: `¡${args.streak} días de constancia! 🏆`,
     html: layout(
@@ -338,6 +393,7 @@ export async function sendWinBackEmail(args: {
 }) {
   return sendEmail({
     to: args.to,
+    optional: true,
     subject: "Volvé a Xtreme — lo importante es retomar",
     html: layout(
       "Tu próximo entreno cuenta",
@@ -356,6 +412,7 @@ export async function sendMonthlyRecapEmail(args: {
   minutes: number;
 }) {
   return sendEmail({
+    optional: true,
     to: args.to,
     subject: `Tu mes en Xtreme — ${args.workouts} entrenos 💪`,
     html: layout(
@@ -401,6 +458,7 @@ export async function sendAdminNewMemberNotification(args: {
 
   return sendEmail({
     to: adminEmail,
+    managePreferences: false,
     subject: `Nuevo socio registrado: ${args.memberName}`,
     html: layout(
       "Nuevo registro con primer día gratis",

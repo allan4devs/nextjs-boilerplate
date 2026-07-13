@@ -755,6 +755,7 @@ export function useMemberOs() {
   function toggleNotifPref(key: keyof NotificationPrefs) {
     if (!unlocked) return;
     const next = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setMember((prev) => (prev ? { ...prev, notificationPrefs: next } : prev));
     void saveProfileField({ notificationPrefs: next }, MSG.ok.emailPrefsSaved);
   }
 

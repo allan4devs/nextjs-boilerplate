@@ -186,10 +186,17 @@ export default function ExtremeGymLandingPage() {
                 Llegar, entrenar y sostener el hábito.
               </h2>
             </div>
-            <p className="max-w-2xl text-base font-semibold leading-8 text-white/58 lg:ml-auto">
-              Desde la primera consulta hasta el seguimiento en la app, Xtreme Gym le da una
-              ruta clara para moverse mejor, ganar fuerza y mantenerse constante.
-            </p>
+            <div className="w-full max-w-2xl lg:ml-auto">
+              <ImageTile
+                src={HERO_IMAGES[2].src}
+                alt={HERO_IMAGES[2].alt}
+                className="h-28 border border-white/10 sm:h-36 lg:h-32"
+              />
+              <p className="mt-5 text-base font-semibold leading-8 text-white/58">
+                Desde la primera consulta hasta el seguimiento en la app, Xtreme Gym le da una
+                ruta clara para moverse mejor, ganar fuerza y mantenerse constante.
+              </p>
+            </div>
           </div>
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">

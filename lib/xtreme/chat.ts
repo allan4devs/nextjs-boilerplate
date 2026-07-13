@@ -26,6 +26,9 @@ export type ChatSessionDoc = {
   guestTokenHash: string;
   visitorName: string;
   visitorPhone?: string;
+  /** Socio autenticado en Member OS (normalizedName). */
+  memberKey?: string;
+  source?: "member_app" | "site";
   status: ChatSessionStatus;
   lastMessageAt: Date;
   lastMessagePreview: string;
@@ -55,6 +58,8 @@ export type ChatSessionView = {
   id: string;
   visitorName: string;
   visitorPhone?: string;
+  memberKey?: string;
+  source?: "member_app" | "site";
   status: ChatSessionStatus;
   lastMessageAt: string;
   lastMessagePreview: string;
@@ -118,6 +123,8 @@ export function toSessionView(doc: ChatSessionDoc): ChatSessionView {
     id: doc.id,
     visitorName: doc.visitorName,
     visitorPhone: doc.visitorPhone,
+    memberKey: doc.memberKey,
+    source: doc.source,
     status: doc.status,
     lastMessageAt: toIso(doc.lastMessageAt),
     lastMessagePreview: doc.lastMessagePreview,
@@ -185,6 +192,8 @@ export async function startChatSession(
     body: string;
     visitorName?: string;
     visitorPhone?: string;
+    memberKey?: string;
+    source?: "member_app" | "site";
   },
 ): Promise<{ session: ChatSessionDoc; message: ChatMessageDoc; guestToken: string }> {
   const body = sanitizeChatBody(args.body);
@@ -211,6 +220,8 @@ export async function startChatSession(
     guestTokenHash: hashGuestToken(guestToken),
     visitorName,
     visitorPhone,
+    ...(args.memberKey ? { memberKey: args.memberKey } : {}),
+    source: args.source ?? (args.memberKey ? "member_app" : "site"),
     status: "open",
     lastMessageAt: now,
     lastMessagePreview: previewOf(body),
@@ -387,11 +398,15 @@ export async function setChatSessionStatus(
 export async function updateVisitorProfile(
   db: Db,
   sessionId: string,
-  args: { visitorName?: string; visitorPhone?: string },
+  args: { visitorName?: string; visitorPhone?: string; memberKey?: string },
 ) {
   const $set: Partial<ChatSessionDoc> = { updatedAt: new Date() };
   if (args.visitorName !== undefined) $set.visitorName = sanitizeVisitorName(args.visitorName);
   if (args.visitorPhone !== undefined) $set.visitorPhone = sanitizeVisitorPhone(args.visitorPhone);
+  if (args.memberKey) {
+    $set.memberKey = args.memberKey;
+    $set.source = "member_app";
+  }
   await db.collection<ChatSessionDoc>(CHAT_SESSIONS_COLLECTION).updateOne({ id: sessionId }, { $set });
 }
 

@@ -533,6 +533,21 @@ export async function PATCH(req: NextRequest) {
       }
 
       await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne({ normalizedName }, { $set: set });
+      if (
+        set.notificationPrefs &&
+        Object.values(set.notificationPrefs).some(Boolean)
+      ) {
+        const preferenceEmail = String(set.email || existing.email || "").trim().toLowerCase();
+        if (preferenceEmail) {
+          await Promise.all([
+            db.collection("xtreme_gym_email_suppressions").deleteOne({ email: preferenceEmail }),
+            db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+              { normalizedName },
+              { $unset: { emailUnsubscribe: "" } },
+            ),
+          ]);
+        }
+      }
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       return NextResponse.json({ member: toPublicMember(doc, today), leaderboard: await getMemberLeaderboard(memberRepository, today) });
     }

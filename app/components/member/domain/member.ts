@@ -60,6 +60,8 @@ export type Membership = {
 export type Member = {
   memberName: string;
   normalizedName: string;
+  /** Código de 8 dígitos para check-in en recepción (viene del API). */
+  accessCode?: string;
   goal: string;
   favoriteTraining: string;
   phone: string;

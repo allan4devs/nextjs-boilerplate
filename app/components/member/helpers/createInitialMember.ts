@@ -1,11 +1,14 @@
 import { DEFAULT_NOTIF_PREFS } from "../config/profile";
 import type { Member } from "../domain/member";
 import { todayIso } from "./date";
+import { memberCode } from "./identity";
 
 export function initialMember(name = ""): Member {
+  const normalizedName = name.trim().toUpperCase();
   return {
     memberName: name,
-    normalizedName: name.toUpperCase(),
+    normalizedName,
+    accessCode: normalizedName ? memberCode(normalizedName) : "",
     goal: "",
     favoriteTraining: "",
     phone: "",

@@ -46,6 +46,14 @@ async function ensureIndexes(db: Db) {
     db.collection("xtreme_gym_checkins").createIndex({ normalizedName: 1, date: 1 }),
     db.collection("xtreme_gym_payments").createIndex({ status: 1, date: -1 }),
     db.collection("xtreme_gym_payments").createIndex({ id: 1 }),
+    // Registro por correo: evita duplicados, acelera la confirmacion y limpia
+    // automaticamente enlaces vencidos.
+    db.collection("xtreme_gym_pending_registrations").createIndex({ email: 1 }, { unique: true }),
+    db.collection("xtreme_gym_pending_registrations").createIndex({ tokenHash: 1 }, { unique: true }),
+    db
+      .collection("xtreme_gym_pending_registrations")
+      .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.collection("xtreme_gym_email_suppressions").createIndex({ email: 1 }, { unique: true }),
     // Fase 3: OTP de recuperacion de PIN (TTL) + audit + badges admin
     db.collection("xtreme_gym_otps").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection("xtreme_gym_otps").createIndex({ normalizedName: 1, purpose: 1 }),

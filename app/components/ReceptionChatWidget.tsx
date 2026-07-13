@@ -9,6 +9,12 @@ const POLL_OPEN_MS = 1500;
 const POLL_BADGE_MS = 5000;
 const HIDDEN_PATHS = ["/recepcion", "/admin", "/ingreso"];
 
+export type MemberChatContext = {
+  memberName: string;
+  memberPhone?: string;
+  normalizedName?: string;
+};
+
 type ChatMessage = {
   id: string;
   sessionId: string;
@@ -65,7 +71,12 @@ function formatTime(value: string) {
   }
 }
 
-export default function ReceptionChatWidget() {
+type Props = {
+  /** Socio logueado en Member OS: prellena nombre/teléfono y liga la sesión en recepción. */
+  memberContext?: MemberChatContext | null;
+};
+
+export default function ReceptionChatWidget({ memberContext = null }: Props) {
   const pathname = usePathname();
   const english = pathname === "/en" || pathname.startsWith("/en/");
   const hidden = HIDDEN_PATHS.some(
@@ -107,6 +118,11 @@ export default function ReceptionChatWidget() {
   }, []);
 
   useEffect(() => {
+    if (!memberContext?.memberName) return;
+    setVisitorName((current) => current || memberContext.memberName);
+  }, [memberContext?.memberName]);
+
+  useEffect(() => {
     sessionIdRef.current = session?.id || "";
     tokenRef.current = guestToken;
   }, [session?.id, guestToken]);
@@ -132,7 +148,10 @@ export default function ReceptionChatWidget() {
         afterSeq: String(afterSeqRef.current),
         guestToken: token,
       });
-      const res = await fetch(`/api/xtreme/chat?${params}`, { cache: "no-store" });
+      const res = await fetch(`/api/xtreme/chat?${params}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
       const json = (await res.json()) as {
         session?: ChatSession;
         messages?: ChatMessage[];
@@ -159,7 +178,7 @@ export default function ReceptionChatWidget() {
     } catch {
       /* soft fail */
     }
-  }, [mergeMessages, open]);
+  }, [mergeMessages, memberContext, open]);
 
   useEffect(() => {
     if (!hydrated || hidden || !sessionIdRef.current) return;
@@ -182,10 +201,12 @@ export default function ReceptionChatWidget() {
     const res = await fetch("/api/xtreme/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify({
         action: "start",
         body: text,
-        visitorName: visitorName.trim() || undefined,
+        visitorName: visitorName.trim() || memberContext?.memberName || undefined,
+        visitorPhone: memberContext?.memberPhone || undefined,
       }),
     });
     const json = (await res.json()) as {
@@ -230,12 +251,14 @@ export default function ReceptionChatWidget() {
           "Content-Type": "application/json",
           "x-xtreme-chat-token": tokenRef.current,
         },
+        credentials: "same-origin",
         body: JSON.stringify({
           action: "send",
           sessionId: sessionIdRef.current,
           guestToken: tokenRef.current,
           body: text,
-          visitorName: visitorName.trim() || undefined,
+          visitorName: visitorName.trim() || memberContext?.memberName || undefined,
+          visitorPhone: memberContext?.memberPhone || undefined,
         }),
       });
       const json = (await res.json()) as {
@@ -278,6 +301,11 @@ export default function ReceptionChatWidget() {
               <p className="truncate text-sm font-black uppercase tracking-tight">
                 {english ? "Chat with reception" : "Chat con recepción"}
               </p>
+              {memberContext && (
+                <p className="truncate text-[10px] font-bold text-black/55">
+                  {memberContext.memberName} · socio
+                </p>
+              )}
             </div>
             <button
               type="button"

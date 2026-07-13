@@ -18,6 +18,8 @@ type ChatSession = {
   id: string;
   visitorName: string;
   visitorPhone?: string;
+  memberKey?: string;
+  source?: "member_app" | "site";
   status: "open" | "closed";
   lastMessageAt: string;
   lastMessagePreview: string;
@@ -285,7 +287,14 @@ export default function ReceptionChatInbox({ adminCode }: Props) {
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-black uppercase">{s.visitorName}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black uppercase">{s.visitorName}</p>
+                    {s.memberKey && (
+                      <p className="truncate text-[9px] font-black uppercase tracking-wide text-[#d8ff3e]/80">
+                        Socio app · {s.memberKey}
+                      </p>
+                    )}
+                  </div>
                   <span className="shrink-0 text-[10px] font-bold text-white/40">
                     {formatWhen(s.lastMessageAt)}
                   </span>
@@ -329,6 +338,11 @@ export default function ReceptionChatInbox({ adminCode }: Props) {
                 <p className="truncate text-base font-black uppercase">
                   {activeSession?.visitorName || "Visitante"}
                 </p>
+                {activeSession?.memberKey && (
+                  <p className="text-[10px] font-black uppercase tracking-wide text-[#d8ff3e]/80">
+                    Socio registrado · {activeSession.memberKey}
+                  </p>
+                )}
                 {activeSession?.visitorPhone && (
                   <p className="text-xs font-bold text-white/45">{activeSession.visitorPhone}</p>
                 )}

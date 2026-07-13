@@ -83,9 +83,9 @@ export function useMemberDerivedState({
   const unlockedCount = achievements.filter((achievement) => achievement.done).length;
   const pinnedBadgeIds = currentMember.pinnedBadges ?? gami?.pinnedBadges ?? [];
   const notifPrefs = currentMember.notificationPrefs ?? DEFAULT_NOTIF_PREFS;
-  const accessCode = memberCode(
-    currentMember.normalizedName || memberName.toUpperCase() || "XTREME01",
-  );
+  const accessCode =
+    currentMember.accessCode ||
+    memberCode(currentMember.normalizedName || memberName.trim().toUpperCase() || "XTREME01");
   const latestMetric = currentMember.latestBodyMetric;
   const metricTrend = currentMember.bodyMetrics.slice(-12);
   const membershipTone =

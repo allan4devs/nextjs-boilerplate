@@ -439,6 +439,11 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
             </button>
           ))}
         </div>
+        <p className="mt-4 text-xs font-semibold text-white/42">
+          Los mismos avisos los maneja recepción y el sistema de recordatorios. Si querés dejar de
+          recibir correos opcionales por completo, usá el enlace de preferencias en cualquier correo
+          o pedilo en recepción.
+        </p>
         <div className="mt-5 border-t border-white/10 pt-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">
             Aviso rapido ahora
@@ -533,8 +538,8 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
               <p className="mt-2 text-center text-sm font-black tracking-[0.3em] text-white/70">{accessCode}</p>
             </div>
             <p className="mt-3 text-xs font-semibold text-white/45">
-              Mostra este codigo en recepcion para tu check-in. Pase de invitado: XT-
-              {accessCode.replace(/\s/g, "").slice(0, 5)}
+              Mostrá este código en recepción para tu check-in (cédula o código). Pase de invitado:
+              XT-{accessCode.replace(/\s/g, "").slice(0, 5)}
             </p>
           </>
         ) : (

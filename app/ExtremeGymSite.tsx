@@ -26,13 +26,16 @@ import MaquinasTab from "./components/member/tabs/MaquinasTab";
 import ProgresoTab from "./components/member/tabs/ProgresoTab";
 import PerfilTab from "./components/member/tabs/PerfilTab";
 import { useResumenViewModel } from "./components/member/view-models/useResumenViewModel";
+import ReceptionChatWidget from "./components/ReceptionChatWidget";
 
 export default function ExtremeGymSite() {
   const os = useMemberOs();
   const {
     memberName,
     memberCedulaInput,
+    memberPhoneInput,
     currentMember,
+    unlocked,
     celebration,
     setCelebration,
     effectiveStreak,
@@ -160,6 +163,16 @@ export default function ExtremeGymSite() {
 
       {/* ─── GAME OS MODALS ─── */}
       <OsModals os={os} />
+
+      {unlocked && memberName && (
+        <ReceptionChatWidget
+          memberContext={{
+            memberName,
+            memberPhone: memberPhoneInput || currentMember.phone || undefined,
+            normalizedName: currentMember.normalizedName,
+          }}
+        />
+      )}
     </main>
   );
 }
