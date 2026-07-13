@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
           {
             error: sent.skipped
               ? "Correo no configurado (RESEND_API_KEY). Use recuperacion por contacto o recepcion."
-              : "No se pudo enviar el codigo. Intente de nuevo.",
+              : sent.error || "No se pudo enviar el codigo. Intente de nuevo.",
           },
           { status: 502 },
         );

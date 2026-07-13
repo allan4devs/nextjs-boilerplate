@@ -93,7 +93,7 @@ async function startRegistration(body: Record<string, unknown>) {
 
   if (!result.ok && !result.skipped) {
     return NextResponse.json(
-      { error: "No se pudo enviar el correo de confirmacion. Intente de nuevo." },
+      { error: result.error || "No se pudo enviar el correo de confirmacion. Intente de nuevo." },
       { status: 502 },
     );
   }

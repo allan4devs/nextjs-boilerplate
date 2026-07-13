@@ -11,6 +11,32 @@ function reservationCc() {
   return cc ? [cc] : undefined;
 }
 
+function resendError(status: number, detail: string) {
+  let message = "";
+  try {
+    const parsed = JSON.parse(detail) as { message?: unknown };
+    if (typeof parsed.message === "string") message = parsed.message;
+  } catch {
+    message = detail;
+  }
+
+  const normalized = message.toLowerCase();
+  if (normalized.includes("only send testing emails to your own email address")) {
+    return "Resend está en modo de prueba y solo permite enviar al correo asociado con esa cuenta.";
+  }
+  if (normalized.includes("domain is not verified")) {
+    return "El dominio del remitente no está verificado en Resend.";
+  }
+  if (status === 401) return "La API key de Resend no es válida.";
+  if (status === 403) return "Resend rechazó el envío por permisos o configuración del remitente.";
+
+  const safeMessage = message
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[correo]")
+    .trim()
+    .slice(0, 180);
+  return safeMessage ? `Resend ${status}: ${safeMessage}` : `Resend rechazó el envío (HTTP ${status}).`;
+}
+
 export function escapeHtml(value: unknown) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -54,7 +80,7 @@ export async function sendEmail(args: {
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       console.error("EMAIL SEND FAILED", response.status, detail.slice(0, 300));
-      return { ok: false, error: `Resend ${response.status}` };
+      return { ok: false, error: resendError(response.status, detail) };
     }
 
     return { ok: true };

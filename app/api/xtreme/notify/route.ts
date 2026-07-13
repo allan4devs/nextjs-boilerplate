@@ -69,7 +69,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (!result.ok) {
-      return NextResponse.json({ error: "No se pudo enviar el correo." }, { status: 502 });
+      return NextResponse.json(
+        { error: result.error || "No se pudo enviar el correo." },
+        { status: 502 },
+      );
     }
 
     const masked = member.email.replace(/(.{2}).+(@.+)/, "$1***$2");
