@@ -36,6 +36,12 @@ const EXPLORE = [
     image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=900&q=84",
   },
   {
+    href: "/beneficios",
+    label: "Beneficios para socios",
+    text: "Instructores, medición corporal, parqueo, área infantil y más.",
+    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=84",
+  },
+  {
     href: "/adultos-mayores",
     label: "Adultos mayores",
     text: "Tres clases por semana para movilidad, fuerza y confianza.",
@@ -177,7 +183,8 @@ export default function ExtremeGymLandingPage() {
           <span>Funcional</span>
           <span>Cardio</span>
           <span>Acompañamiento</span>
-          <span>Hábitos reales</span>
+          <span>Medición sin costo</span>
+          <span>Parqueo</span>
           <span>Adultos mayores</span>
           <span>San Carlos</span>
         </div>

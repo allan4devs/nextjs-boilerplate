@@ -38,6 +38,7 @@ const STEPS = [
 const EXPLORE = [
   { href: "/en/prices", label: "Prices and plans", text: "Day, weekly, fortnightly and monthly options with online payment.", image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=900&q=84" },
   { href: "/en/training", label: "Training areas", text: "Strength, functional, cardio and lower-body equipment.", image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=900&q=84" },
+  { href: "/en/benefits", label: "Member benefits", text: "Instructor support, body assessments, parking, kids area and more.", image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=84" },
   { href: "/en/seniors", label: "Senior fitness", text: "Three guided classes per week for mobility, strength and confidence.", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=84" },
   { href: "/app", label: "Member app", text: "Reservations, streaks, digital membership card and progress in one place.", image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=84" },
   { href: "/en/faq", label: "Frequently asked questions", text: "Useful information before your first workout.", image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=900&q=84" },

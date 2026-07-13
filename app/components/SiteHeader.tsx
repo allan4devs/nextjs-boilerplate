@@ -34,6 +34,7 @@ export default function SiteHeader() {
     "/preguntas": "/en/faq",
     "/contacto": "/en/contact",
     "/primer-dia": "/en/first-day",
+    "/beneficios": "/en/benefits",
   };
   const languageHref = english
     ? Object.entries(languagePairs).find(([, englishPath]) => englishPath === pathname)?.[0] ?? "/"

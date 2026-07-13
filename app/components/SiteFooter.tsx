@@ -38,8 +38,9 @@ export default function SiteFooter() {
               Xtreme<span className="text-[#f6c400]">Gym</span>
             </p>
             <p className="mt-3 max-w-md text-sm font-semibold leading-7 text-white/55">
-              {BUSINESS.location}. Fuerza, funcional, cardio, adultos mayores y una app de socios
-              para sostener el hábito.
+              {english
+                ? `${BUSINESS.location}. Complete equipment, instructor support, body assessments, parking and spaces that make consistency easier.`
+                : `${BUSINESS.location}. Equipo completo, acompañamiento de instructores, medición corporal, parqueo y espacios que hacen más simple sostener el hábito.`}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
@@ -65,6 +66,9 @@ export default function SiteFooter() {
                 {english ? navLabels[NAV_LINKS.indexOf(link)] : link.label}
               </Link>
             ))}
+            <Link href={english ? "/en/benefits" : "/beneficios"} className="transition hover:text-[#f6c400]">
+              {english ? "Benefits" : "Beneficios"}
+            </Link>
             <a
               href={BUSINESS.maps}
               target="_blank"

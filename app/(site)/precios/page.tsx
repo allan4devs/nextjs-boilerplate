@@ -14,12 +14,12 @@ export const metadata: Metadata = pageMetadata({
 });
 
 const COMPARISON = [
-  { feature: "Acceso a todas las zonas", day: true, week: true, fortnight: true, month: true },
-  { feature: "Clases funcionales", day: true, week: true, fortnight: true, month: true },
-  { feature: "App de socios", day: false, week: true, fortnight: true, month: true },
-  { feature: "Reserva de cupo", day: false, week: true, fortnight: true, month: true },
-  { feature: "Seguimiento de progreso", day: false, week: false, fortnight: true, month: true },
-  { feature: "Mejor precio por día", day: false, week: false, fortnight: false, month: true },
+  { feature: "Acceso a todas las zonas", week: true, fortnight: true, month: true },
+  { feature: "Clases funcionales", week: true, fortnight: true, month: true },
+  { feature: "App de socios", week: true, fortnight: true, month: true },
+  { feature: "Reserva de cupo", week: true, fortnight: true, month: true },
+  { feature: "Seguimiento de progreso", week: false, fortnight: true, month: true },
+  { feature: "Mejor precio por día", week: false, fortnight: false, month: true },
 ];
 
 export default function PreciosPage() {
@@ -76,7 +76,7 @@ export default function PreciosPage() {
                   </div>
                   <p className="mt-6 text-4xl font-black uppercase leading-none">{item.price}</p>
                   <a
-                    href="/primer-dia#registro"
+                    href={item.price === "Gratis" ? "/primer-dia#registro" : "#inscripcion"}
                     className={`mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 text-sm font-black uppercase transition ${
                       featured ? "bg-black text-white hover:bg-white hover:text-black" : "bg-white text-black hover:bg-[#f6c400]"
                     }`}
@@ -110,7 +110,6 @@ export default function PreciosPage() {
               <thead>
                 <tr className="bg-white/[0.05] text-xs font-black uppercase tracking-[0.14em] text-white/55">
                   <th className="p-4">Beneficio</th>
-                  <th className="p-4 text-center">Primer día</th>
                   <th className="p-4 text-center">Semana</th>
                   <th className="p-4 text-center">Quincena</th>
                   <th className="p-4 text-center text-[#f6c400]">Mes</th>
@@ -120,7 +119,7 @@ export default function PreciosPage() {
                 {COMPARISON.map((row) => (
                   <tr key={row.feature} className="border-t border-white/10">
                     <td className="p-4 font-bold text-white/72">{row.feature}</td>
-                    {[row.day, row.week, row.fortnight, row.month].map((value, index) => (
+                    {[row.week, row.fortnight, row.month].map((value, index) => (
                       <td key={index} className="p-4 text-center">
                         {value ? (
                           <CheckCircle2 className="mx-auto h-5 w-5 text-[#f6c400]" />

@@ -120,10 +120,11 @@ export const QUICK_INFO = [
 ];
 
 export const PLAN_DETAILS = [
-  "Equipo, ambiente y acompañamiento para entrenar mejor",
-  "Clases y zonas para diferentes objetivos",
+  "Acompañamiento de instructores para entrenar con dirección",
+  "Medición corporal sin costo para seguir tus avances",
+  "Parqueo, área para merendar y espacio infantil",
+  "Variedad de máquinas y zonas para diferentes objetivos",
   "Reservas, rachas y progreso desde la app de socios",
-  "Inscripción y activación desde la web",
 ];
 
 export const GALLERY = [
@@ -197,13 +198,23 @@ export const TRANSFORM_STEPS = [
 ];
 
 export const TRUST_POINTS = [
-  "Planes flexibles para probar sin compromiso largo",
-  "Horario amplio para entrenar antes o después del trabajo",
-  "Zonas separadas para fuerza, cardio y funcional",
-  "Seguimiento digital para rachas, reservas y progreso",
+  "Instructores que orientan, corrigen y motivan",
+  "Medición corporal sin costo para seguir el progreso",
+  "Variedad de máquinas para un entrenamiento completo",
+  "Parqueo y espacios pensados para una visita más cómoda",
 ];
 
 export const FAQS = [
+  {
+    question: "¿Qué beneficios incluye entrenar en Xtreme Gym?",
+    answer:
+      "Además de las zonas y máquinas, contás con acompañamiento de instructores, medición corporal sin costo, parqueo para clientes, área para merendar y espacio infantil, sujetos a disponibilidad y normas de uso.",
+  },
+  {
+    question: "¿El área infantil tiene servicio de cuido?",
+    answer:
+      "No. Es un espacio pensado para niños, pero deben permanecer bajo la supervisión y responsabilidad de la persona adulta que los acompaña.",
+  },
   {
     question: "¿Puedo ir solo un día para probar?",
     answer:

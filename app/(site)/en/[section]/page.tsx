@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import CtaBand from "../../../components/CtaBand";
 import ExtremeGymCheckout from "../../../ExtremeGymCheckout";
+import GymBenefitsGrid from "../../../components/GymBenefitsGrid";
 import PageHero from "../../../components/PageHero";
 import { BUSINESS, telLink, waLink } from "../../../lib/site";
 import { pageMetadata } from "../../../lib/seo";
@@ -21,7 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 
-const SECTIONS = ["training", "prices", "seniors", "faq", "contact", "first-day"] as const;
+const SECTIONS = ["training", "prices", "benefits", "seniors", "faq", "contact", "first-day"] as const;
 type Section = (typeof SECTIONS)[number];
 
 export function generateStaticParams() {
@@ -33,6 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ section: 
   const titles: Record<Section, string> = {
     training: "Training areas",
     prices: "Membership prices",
+    benefits: "Member benefits",
     seniors: "Senior fitness classes",
     faq: "Frequently asked questions",
     contact: "Contact and location",
@@ -61,6 +63,8 @@ const PRICES = [
 ];
 
 const FAQ = [
+  ["What member benefits are available?", "Members have instructor support, free body assessments, customer parking, a snack area, equipment variety and a kids area, subject to availability and gym policies."],
+  ["Does the kids area include childcare?", "No. It is a space designed for children, but they must remain supervised by their responsible adult."],
   ["Can I try the gym for one day?", "Yes. Your first day is free after registration, so you can experience the gym before choosing a plan."],
   ["Can I pay online?", "Yes. Weekly, fortnightly and monthly plans can be paid online through PayPal from our prices page."],
   ["Do I need previous experience?", "No. Beginners are welcome and our team can guide you through the equipment and training areas."],
@@ -83,7 +87,69 @@ function PricesPage() {
   return (
     <>
       <PageHero eyebrow="Memberships" title="Flexible plans." highlight="No guesswork." text="Choose the amount of time that works for you. Pay online or speak with reception if you need help." image="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=2000&q=86" imageAlt="Gym training floor" />
-      <section className="px-5 py-16 sm:px-8"><div className="mx-auto max-w-7xl"><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{PRICES.map((plan) => <article key={plan.label} className="flex flex-col border border-white/10 bg-white/[0.045] p-5"><p className="text-xs font-black uppercase tracking-[.18em] text-white/40">{plan.note}</p><h2 className="mt-3 text-2xl font-black uppercase">{plan.label}</h2><p className="mt-7 text-4xl font-black text-[#f6c400]">{plan.price}</p><Link href={plan.href} className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 bg-white px-4 font-black uppercase text-black hover:bg-[#f6c400]">{plan.price === "Free" ? "Register" : "Choose and pay"}<ArrowRight className="h-4 w-4" /></Link></article>)}</div><div className="mt-8 border border-[#f6c400]/40 bg-[#f6c400]/10 p-5"><ShieldCheck className="h-6 w-6 text-[#f6c400]" /><p className="mt-3 font-bold text-white/70">Online checkout is securely processed through PayPal. Reception confirms activation after payment.</p></div></div></section>
+      <section className="px-5 py-16 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Prices</p>
+              <h2 className="mt-2 text-3xl font-black uppercase leading-none sm:text-4xl">Current options.</h2>
+              <p className="mt-2 max-w-2xl text-sm font-semibold text-white/58">
+                Start free, then choose a week, fortnight or month. Paid plans are activated securely through PayPal.
+              </p>
+            </div>
+            <a href="#inscripcion" className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white">
+              Join now <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {PRICES.map((plan) => {
+              const featured = plan.label === "Month";
+              return (
+                <article
+                  key={plan.label}
+                  className={`border p-5 ${
+                    featured
+                      ? "border-[#f6c400] bg-[#f6c400] text-black shadow-[0_0_44px_-20px_rgba(246,196,0,.9)]"
+                      : "border-white/10 bg-white/[0.045] text-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className={`text-xs font-black uppercase tracking-[0.18em] ${featured ? "text-black/55" : "text-white/45"}`}>
+                        {plan.note}
+                      </p>
+                      <h3 className="mt-2 text-2xl font-black uppercase">{plan.label}</h3>
+                    </div>
+                    {featured && (
+                      <span className="bg-black px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white">
+                        Popular
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-6 text-4xl font-black uppercase leading-none">{plan.price}</p>
+                  <Link
+                    href={plan.href}
+                    className={`mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 text-sm font-black uppercase transition ${
+                      featured ? "bg-black text-white hover:bg-white hover:text-black" : "bg-white text-black hover:bg-[#f6c400]"
+                    }`}
+                  >
+                    {plan.price === "Free" ? "Register free" : "Choose this plan"}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="mt-8 flex items-start gap-3 border border-[#f6c400]/40 bg-[#f6c400]/10 p-5">
+            <ShieldCheck className="h-6 w-6 shrink-0 text-[#f6c400]" />
+            <p className="font-bold text-white/70">
+              Online checkout is securely processed through PayPal. Your first free day stays outside the payment flow.
+            </p>
+          </div>
+        </div>
+      </section>
       <ExtremeGymCheckout locale="en" />
       <CtaBand eyebrow="Find your plan" title="Review the options and choose what works for you." cta="Join now" href="#inscripcion" />
     </>
@@ -93,6 +159,38 @@ function PricesPage() {
 function SeniorsPage() {
   const benefits = [["Mobility", "Improve joint movement and everyday comfort."], ["Safe strength", "Gentle, progressive resistance helps maintain muscle and prevent falls."], ["Balance", "Build stability and confidence for walking and stairs."], ["Community", "Small groups and friendly guidance in every session."]];
   return <><PageHero eyebrow="Senior fitness" title="It is never too late" highlight="to feel better." text="Three guided classes every week for mobility, strength, balance and confidence in a welcoming community." image="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=2000&q=86" imageAlt="Active older adults exercising" /><section className="px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2"><div className="border border-[#f6c400]/40 bg-white/[.04] p-6"><p className="text-xs font-black uppercase tracking-[.2em] text-[#f6c400]">Schedule and price</p><h2 className="mt-3 text-4xl font-black uppercase">Three classes per week</h2><p className="mt-6 text-3xl font-black text-[#f6c400]">CRC 16,000</p><p className="mt-3 font-semibold text-white/60">Morning groups run from 9:00–10:00 AM and 10:00–11:00 AM. Contact reception to confirm availability.</p><a href={waLink("Hello Xtreme Gym, I would like information about senior fitness classes.")} className="mt-6 inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black"><MessageCircle className="h-4 w-4" />Ask about classes</a></div><div className="grid gap-4 sm:grid-cols-2">{benefits.map(([title,text])=><article key={title} className="border border-white/10 bg-white/[.04] p-5"><CheckCircle2 className="h-5 w-5 text-[#f6c400]"/><h3 className="mt-4 text-xl font-black uppercase">{title}</h3><p className="mt-2 text-sm font-semibold leading-6 text-white/55">{text}</p></article>)}</div></div></section></>;
+}
+
+function BenefitsPage() {
+  return (
+    <>
+      <PageHero
+        eyebrow="Member benefits"
+        title="More than equipment."
+        highlight="Everything supports consistency."
+        text="Training is easier to sustain when you have guidance, convenient access and spaces designed around your visit."
+        image="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=2000&q=86"
+        imageAlt="Training floor with a variety of gym equipment"
+      />
+      <section className="px-5 py-16 sm:px-8 lg:py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.22em] text-[#f6c400]">Designed around your visit</p>
+              <h2 className="mt-3 max-w-3xl text-4xl font-black uppercase leading-none sm:text-6xl">
+                Arrive with fewer worries. Train with more direction.
+              </h2>
+            </div>
+            <p className="max-w-md text-sm font-semibold leading-7 text-white/55">
+              Benefits are subject to schedule, availability and gym usage policies.
+            </p>
+          </div>
+          <GymBenefitsGrid locale="en" />
+        </div>
+      </section>
+      <CtaBand eyebrow="Your next step" title="Choose a plan and make the most of everything Xtreme offers." cta="Join now" href="/en/prices#inscripcion" />
+    </>
+  );
 }
 
 function FaqPage() {
@@ -111,6 +209,6 @@ function FirstDayPage() {
 export default async function EnglishSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
   if (!SECTIONS.includes(section as Section)) notFound();
-  const pages: Record<Section, React.ReactNode> = { training: <TrainingPage />, prices: <PricesPage />, seniors: <SeniorsPage />, faq: <FaqPage />, contact: <ContactPage />, "first-day": <FirstDayPage /> };
+  const pages: Record<Section, React.ReactNode> = { training: <TrainingPage />, prices: <PricesPage />, benefits: <BenefitsPage />, seniors: <SeniorsPage />, faq: <FaqPage />, contact: <ContactPage />, "first-day": <FirstDayPage /> };
   return pages[section as Section];
 }
