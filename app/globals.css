@@ -147,6 +147,16 @@ body {
   padding-top: max(0px, env(safe-area-inset-top, 0px));
 }
 
+/* Header de marketing fuera de la isla dinámica/status bar en iPhone. */
+.xg-site-header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.xg-mobile-menu {
+  top: calc(73px + env(safe-area-inset-top, 0px));
+  max-height: calc(100dvh - 73px - env(safe-area-inset-top, 0px));
+}
+
 /* Dock keeps content readable above bottom nav on mobile */
 .xg-os-content {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));

@@ -66,7 +66,7 @@ export default function SiteHeader() {
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
+      className={`xg-site-header sticky top-0 z-50 border-b transition-colors duration-300 ${
         scrolled
           ? "border-white/10 bg-[#070707]/90 shadow-[0_10px_40px_-24px_rgba(0,0,0,1)] backdrop-blur-xl"
           : "border-transparent bg-[#070707]/60 backdrop-blur-md"
@@ -152,7 +152,7 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <div className="fixed inset-0 top-[73px] z-40 lg:hidden">
+        <div className="xg-mobile-menu fixed inset-x-0 bottom-0 z-40 lg:hidden">
           <button
             type="button"
             aria-label={english ? "Close menu" : "Cerrar menú"}
@@ -160,7 +160,7 @@ export default function SiteHeader() {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           />
 
-          <nav className="relative max-h-[calc(100dvh-73px)] overflow-y-auto border-b border-white/10 bg-[#0b0b0b] px-5 pb-6 pt-3">
+          <nav className="relative max-h-full overflow-y-auto border-b border-white/10 bg-[#0b0b0b] px-5 pb-6 pt-3">
             {navLinks.map((link) => {
               const active = isActive(link.href);
               return (
