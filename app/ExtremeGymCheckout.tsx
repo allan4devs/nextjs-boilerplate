@@ -101,9 +101,20 @@ const initialForm: FormState = {
 
 export default function ExtremeGymCheckout({
   initialOption = "month",
+  locale = "es",
 }: {
   initialOption?: string;
+  locale?: "es" | "en";
 }) {
+  const english = locale === "en";
+  const englishOptions: Record<string, { label: string; category: string; note: string }> = {
+    "day-pass": { label: "Day pass", category: "Class", note: "One full day of training with online payment." },
+    week: { label: "Weekly plan", category: "Plan", note: "One week to build momentum." },
+    fortnight: { label: "Fortnightly plan", category: "Plan", note: "A solid rhythm for consistent progress." },
+    month: { label: "Monthly plan", category: "Plan", note: "The main option for consistent training." },
+    senior: { label: "Senior fitness classes", category: "Class", note: "Three weekly classes for movement and wellbeing." },
+  };
+  const optionText = (option: CheckoutOption) => english ? englishOptions[option.id] : option;
   const validInitialOption = CHECKOUT_OPTIONS.some((option) => option.id === initialOption)
     ? initialOption
     : "month";
@@ -312,20 +323,20 @@ export default function ExtremeGymCheckout({
       <div className="mx-auto max-w-5xl">
         <div className="text-center">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-black/55">
-            Inscripción y pago
+            {english ? "Registration and payment" : "Inscripción y pago"}
           </p>
           <h2 className="mt-3 text-3xl font-black uppercase leading-none sm:text-5xl">
-            Elegí cómo querés entrenar
+            {english ? "Choose how you want to train" : "Elegí cómo querés entrenar"}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm font-bold text-black/60 sm:text-base">
-            Seleccioná un plan y pagá en línea con PayPal. Sin reserva por correo ni WhatsApp.
+            {english ? "Select a plan and pay securely online with PayPal." : "Seleccioná un plan y pagá en línea con PayPal. Sin reserva por correo ni WhatsApp."}
           </p>
         </div>
 
         <div
           className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
           role="radiogroup"
-          aria-label="Opciones de inscripción"
+          aria-label={english ? "Membership options" : "Opciones de inscripción"}
         >
           {CHECKOUT_OPTIONS.map((option) => {
             const style = OPTION_STYLES[option.id];
@@ -346,12 +357,12 @@ export default function ExtremeGymCheckout({
               <span className={`absolute inset-x-0 top-0 h-2 ${style.accent}`} aria-hidden="true" />
               <span className="flex w-full flex-col">
                 <span className={`block text-[11px] font-black uppercase tracking-[0.2em] ${style.eyebrow}`}>
-                  {option.category}
+                  {optionText(option).category}
                 </span>
                 <span className="mt-3 block min-h-14 text-xl font-black uppercase leading-[1.05] tracking-[-0.02em]">
-                  {option.label}
+                  {optionText(option).label}
                 </span>
-                <span className="mt-3 block text-xs font-bold leading-5 opacity-60">{option.note}</span>
+                <span className="mt-3 block text-xs font-bold leading-5 opacity-60">{optionText(option).note}</span>
                 <span className={`mt-5 block border-t border-current/15 pt-4 text-[1.65rem] font-black uppercase leading-none tracking-[-0.04em] ${active ? "text-[#f6c400]" : style.price}`}>
                   {option.priceLabel}
                 </span>
@@ -373,13 +384,13 @@ export default function ExtremeGymCheckout({
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-black/10 pb-5">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-black/50">
-                Seleccionado
+                {english ? "Selected" : "Seleccionado"}
               </p>
-              <h3 className="mt-2 text-2xl font-black uppercase">{selected.label}</h3>
+              <h3 className="mt-2 text-2xl font-black uppercase">{optionText(selected).label}</h3>
               <p className="mt-1 text-sm font-bold text-black/55">
-                {selected.priceLabel} · PayPal cobra USD {selected.usdAmount}
+                {selected.priceLabel} · {english ? "PayPal charges USD" : "PayPal cobra USD"} {selected.usdAmount}
               </p>
-              <p className="mt-1 text-sm font-semibold text-black/45">{selected.note}</p>
+              <p className="mt-1 text-sm font-semibold text-black/45">{optionText(selected).note}</p>
             </div>
             <ShieldCheck className="h-8 w-8 text-[#bd9300]" />
           </div>
@@ -387,20 +398,20 @@ export default function ExtremeGymCheckout({
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
-                Nombre
+                {english ? "Name" : "Nombre"}
               </span>
               <input
                 autoComplete="name"
                 value={form.name}
                 onChange={(event) => updateForm("name", event.target.value)}
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
-                placeholder="Nombre completo"
+                placeholder={english ? "Full name" : "Nombre completo"}
                 required
               />
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
-                Teléfono
+                {english ? "Phone" : "Teléfono"}
               </span>
               <input
                 autoComplete="tel"
@@ -414,7 +425,7 @@ export default function ExtremeGymCheckout({
             </label>
             <label className="block sm:col-span-2">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
-                Correo
+                {english ? "Email" : "Correo"}
               </span>
               <input
                 type="email"
@@ -423,7 +434,7 @@ export default function ExtremeGymCheckout({
                 value={form.email}
                 onChange={(event) => updateForm("email", event.target.value)}
                 className="mt-2 min-h-12 w-full border border-black/15 px-3 font-bold outline-none focus:border-black"
-                placeholder="correo@ejemplo.com"
+                placeholder={english ? "email@example.com" : "correo@ejemplo.com"}
                 required
               />
             </label>
@@ -432,12 +443,12 @@ export default function ExtremeGymCheckout({
           <div className="mt-6 border-t border-black/10 pt-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
               <CreditCard className="h-4 w-4" />
-              Pagar con PayPal
+              {english ? "Pay with PayPal" : "Pagar con PayPal"}
             </div>
 
             {!formReady && (
               <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
-                Complete nombre, teléfono y correo para activar el botón de pago.
+                {english ? "Complete your name, phone and email to enable payment." : "Complete nombre, teléfono y correo para activar el botón de pago."}
               </p>
             )}
             {error && (
@@ -456,12 +467,11 @@ export default function ExtremeGymCheckout({
             </div>
 
             {!paypalConfig?.clientId && !error && (
-              <p className="mt-2 text-sm font-bold text-black/50">Cargando PayPal...</p>
+              <p className="mt-2 text-sm font-bold text-black/50">{english ? "Loading PayPal..." : "Cargando PayPal..."}</p>
             )}
 
             <p className="mt-3 text-xs font-bold leading-5 text-black/52">
-              El acceso se activa solo después del pago. PayPal procesa el cobro; recepción confirma cupo y
-              activación.
+              {english ? "Access is activated after payment. PayPal processes the charge and reception confirms activation." : "El acceso se activa solo después del pago. PayPal procesa el cobro; recepción confirma cupo y activación."}
             </p>
           </div>
 
@@ -475,7 +485,7 @@ export default function ExtremeGymCheckout({
             className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-black/50 transition hover:text-black"
           >
             <Send className="h-4 w-4" />
-            Limpiar formulario
+            {english ? "Clear form" : "Limpiar formulario"}
           </button>
         </div>
       </div>

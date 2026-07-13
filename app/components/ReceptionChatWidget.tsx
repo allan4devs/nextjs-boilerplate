@@ -67,6 +67,7 @@ function formatTime(value: string) {
 
 export default function ReceptionChatWidget() {
   const pathname = usePathname();
+  const english = pathname === "/en" || pathname.startsWith("/en/");
   const hidden = HIDDEN_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
@@ -275,14 +276,14 @@ export default function ReceptionChatWidget() {
                 Xtreme Gym
               </p>
               <p className="truncate text-sm font-black uppercase tracking-tight">
-                Chat con recepción
+                {english ? "Chat with reception" : "Chat con recepción"}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="grid h-9 w-9 place-items-center border-[2px] border-black/20 hover:bg-black/10"
-              aria-label="Cerrar chat"
+              aria-label={english ? "Close chat" : "Cerrar chat"}
             >
               <X className="h-4 w-4" />
             </button>
@@ -290,12 +291,12 @@ export default function ReceptionChatWidget() {
 
           <div className="border-b border-white/10 px-3 py-2">
             <label className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
-              Tu nombre (opcional)
+              {english ? "Your name (optional)" : "Tu nombre (opcional)"}
             </label>
             <input
               value={visitorName}
               onChange={(e) => setVisitorName(e.target.value)}
-              placeholder="Cómo te decimos"
+              placeholder={english ? "What should we call you?" : "Cómo te decimos"}
               maxLength={80}
               className="mt-1 w-full border border-white/15 bg-black/40 px-2.5 py-2 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]/70"
             />
@@ -308,10 +309,10 @@ export default function ReceptionChatWidget() {
             {!messages.length && (
               <div className="rounded border border-dashed border-white/15 px-3 py-4 text-center">
                 <p className="text-sm font-bold text-white/70">
-                  ¡Pura vida! Escribí y recepción te contesta en vivo.
+                  {english ? "Hello! Send us a message and reception will reply." : "¡Pura vida! Escribí y recepción te contesta en vivo."}
                 </p>
                 <p className="mt-1 text-xs font-bold text-white/40">
-                  Horarios, planes, primer día… lo que ocupés.
+                  {english ? "Ask about hours, plans, your first day or anything else." : "Horarios, planes, primer día… lo que ocupés."}
                 </p>
               </div>
             )}
@@ -328,7 +329,7 @@ export default function ReceptionChatWidget() {
                 >
                   {!mine && (
                     <p className="mb-0.5 text-[10px] font-black uppercase tracking-wide text-[#d8ff3e]/80">
-                      {m.staffLabel || "Recepción"}
+                      {m.staffLabel || (english ? "Reception" : "Recepción")}
                     </p>
                   )}
                   <p className="whitespace-pre-wrap break-words">{m.body}</p>
@@ -340,7 +341,7 @@ export default function ReceptionChatWidget() {
             })}
             {closed && (
               <p className="text-center text-xs font-bold text-white/45">
-                Conversación cerrada. Escribí de nuevo para abrir otra.
+                {english ? "Conversation closed. Send another message to start a new one." : "Conversación cerrada. Escribí de nuevo para abrir otra."}
               </p>
             )}
           </div>
@@ -358,7 +359,7 @@ export default function ReceptionChatWidget() {
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={closed ? "Nuevo mensaje…" : "Escribí a recepción…"}
+              placeholder={closed ? (english ? "New message…" : "Nuevo mensaje…") : (english ? "Message reception…" : "Escribí a recepción…")}
               maxLength={1000}
               disabled={sending}
               className="min-w-0 flex-1 border-[2px] border-white/20 bg-black/50 px-3 py-2.5 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]"
@@ -367,7 +368,7 @@ export default function ReceptionChatWidget() {
               type="submit"
               disabled={sending || !draft.trim()}
               className="inline-flex min-h-11 min-w-11 items-center justify-center border-[2px] border-black/30 bg-[#d8ff3e] text-black disabled:opacity-40"
-              aria-label="Enviar"
+              aria-label={english ? "Send" : "Enviar"}
             >
               {sending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -383,7 +384,7 @@ export default function ReceptionChatWidget() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="pointer-events-auto relative inline-flex h-14 w-14 items-center justify-center border-[3px] border-black/30 bg-[#d8ff3e] text-black shadow-[4px_4px_0_rgba(0,0,0,.55)] transition hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_rgba(0,0,0,.55)]"
-        aria-label={open ? "Cerrar chat" : "Abrir chat con recepción"}
+        aria-label={open ? (english ? "Close chat" : "Cerrar chat") : (english ? "Open reception chat" : "Abrir chat con recepción")}
       >
         {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
         {!open && unread > 0 && (

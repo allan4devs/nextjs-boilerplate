@@ -376,8 +376,10 @@ export async function sendAdminNewMemberNotification(args: {
   email?: string;
   cedula?: string;
 }) {
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || "aallanrd@gmail.com";
+
   return sendEmail({
-    to: "aallanrd@gmail.com",
+    to: adminEmail,
     subject: `Nuevo socio registrado: ${args.memberName}`,
     html: layout(
       "Nuevo registro con primer día gratis",

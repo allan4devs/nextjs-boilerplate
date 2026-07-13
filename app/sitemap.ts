@@ -13,6 +13,13 @@ const ROUTES: Array<{
   { path: "/primer-dia", changeFrequency: "monthly", priority: 0.8 },
   { path: "/preguntas", changeFrequency: "monthly", priority: 0.7 },
   { path: "/contacto", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/en", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/en/prices", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/en/training", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/en/seniors", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/en/first-day", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/en/faq", changeFrequency: "monthly", priority: 0.6 },
+  { path: "/en/contact", changeFrequency: "monthly", priority: 0.6 },
   { path: "/app/comunidad", changeFrequency: "monthly", priority: 0.5 },
   { path: "/dzcate", changeFrequency: "monthly", priority: 0.3 },
 ];

@@ -36,12 +36,12 @@ const STEPS = [
 ];
 
 const EXPLORE = [
-  { href: "/precios", label: "Prices and plans", text: "Day, weekly, fortnightly and monthly options with online payment.", image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=900&q=84" },
-  { href: "/zonas", label: "Training areas", text: "Strength, functional, cardio and lower-body equipment.", image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=900&q=84" },
-  { href: "/adultos-mayores", label: "Senior fitness", text: "Three guided classes per week for mobility, strength and confidence.", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=84" },
+  { href: "/en/prices", label: "Prices and plans", text: "Day, weekly, fortnightly and monthly options with online payment.", image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=900&q=84" },
+  { href: "/en/training", label: "Training areas", text: "Strength, functional, cardio and lower-body equipment.", image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=900&q=84" },
+  { href: "/en/seniors", label: "Senior fitness", text: "Three guided classes per week for mobility, strength and confidence.", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=84" },
   { href: "/app", label: "Member app", text: "Reservations, streaks, digital membership card and progress in one place.", image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=84" },
-  { href: "/preguntas", label: "Frequently asked questions", text: "Useful information before your first workout.", image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=900&q=84" },
-  { href: "/contacto", label: "Hours and location", text: "Find us in Barrio San Pablo, Ciudad Quesada.", image: "https://images.unsplash.com/photo-1546483875-ad9014c88eba?auto=format&fit=crop&w=900&q=84" },
+  { href: "/en/faq", label: "Frequently asked questions", text: "Useful information before your first workout.", image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=900&q=84" },
+  { href: "/en/contact", label: "Hours and location", text: "Find us in Barrio San Pablo, Ciudad Quesada.", image: "https://images.unsplash.com/photo-1546483875-ad9014c88eba?auto=format&fit=crop&w=900&q=84" },
 ];
 
 export default function EnglishLandingPage() {
@@ -71,7 +71,7 @@ export default function EnglishLandingPage() {
               A complete gym in Ciudad Quesada for strength, functional training, cardio and lasting habits. Choose your plan, book through the app and train with a team that helps you move forward.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/primer-dia" className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black transition hover:bg-white">
+              <Link href="/en/first-day" className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black transition hover:bg-white">
                 Get your first day free <ArrowRight className="h-5 w-5" />
               </Link>
               <Link href="/app" className="inline-flex min-h-14 items-center gap-2 border border-white/20 bg-white/[0.07] px-6 font-black uppercase text-white transition hover:border-white/45">

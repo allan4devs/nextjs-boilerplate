@@ -14,6 +14,7 @@ export default function SiteHeader() {
   const navLinks = english
     ? NAV_LINKS.map((link, index) => ({
         ...link,
+        href: ["/en/training", "/en/prices", "/en/seniors", "/app", "/en/faq", "/en/contact"][index],
         label: ["Training", "Prices", "Seniors", "App", "FAQ", "Contact"][index],
         description: [
           "Strength, functional, cardio and lower-body areas",
@@ -25,6 +26,18 @@ export default function SiteHeader() {
         ][index],
       }))
     : NAV_LINKS;
+  const languagePairs: Record<string, string> = {
+    "/": "/en",
+    "/zonas": "/en/training",
+    "/precios": "/en/prices",
+    "/adultos-mayores": "/en/seniors",
+    "/preguntas": "/en/faq",
+    "/contacto": "/en/contact",
+    "/primer-dia": "/en/first-day",
+  };
+  const languageHref = english
+    ? Object.entries(languagePairs).find(([, englishPath]) => englishPath === pathname)?.[0] ?? "/"
+    : languagePairs[pathname] ?? "/en";
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -94,7 +107,7 @@ export default function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <Link
-            href={english ? "/" : "/en"}
+            href={languageHref}
             hrefLang={english ? "es-CR" : "en"}
             aria-label={english ? "Ver sitio en español" : "View website in English"}
             className="inline-flex h-11 items-center gap-1.5 border border-white/15 bg-white/[0.04] px-3 text-xs font-black uppercase tracking-[0.12em] text-white/70 transition hover:border-[#f6c400]/60 hover:text-[#f6c400]"
@@ -103,7 +116,7 @@ export default function SiteHeader() {
             {english ? "ES" : "EN"}
           </Link>
           <Link
-            href="/precios"
+            href={english ? "/en/prices" : "/precios"}
             className="hidden items-center gap-2 border border-white/20 bg-white/[0.07] px-4 py-2.5 text-sm font-black uppercase text-white transition hover:border-white/45 hover:bg-white/10 xl:inline-flex"
           >
             {english ? "Join" : "Inscribirme"}

@@ -20,6 +20,7 @@ export default function SiteFooter() {
 
   const english = pathname === "/en" || pathname.startsWith("/en/");
   const navLabels = ["Training", "Prices", "Seniors", "App", "FAQ", "Contact"];
+  const englishHrefs = ["/en/training", "/en/prices", "/en/seniors", "/app", "/en/faq", "/en/contact"];
 
   // Barra sticky de conversión solo en el landing (no en /precios, /app, etc.)
   const showMobileCta = pathname === "/" || pathname === "/en";
@@ -60,7 +61,7 @@ export default function SiteFooter() {
 
           <nav className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-3 lg:justify-items-end">
             {NAV_LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="transition hover:text-[#f6c400]">
+              <Link key={link.href} href={english ? englishHrefs[NAV_LINKS.indexOf(link)] : link.href} className="transition hover:text-[#f6c400]">
                 {english ? navLabels[NAV_LINKS.indexOf(link)] : link.label}
               </Link>
             ))}
@@ -89,14 +90,14 @@ export default function SiteFooter() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/92 px-3 py-3 backdrop-blur md:hidden">
           <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
             <Link
-              href="/primer-dia#registro"
+              href={english ? "/en/first-day" : "/primer-dia#registro"}
               className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-3 text-xs font-black uppercase text-black"
             >
               {english ? "Free first day" : "Reservar día"}
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/precios"
+              href={english ? "/en/prices" : "/precios"}
               className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 bg-white/[0.06] px-3 text-xs font-black uppercase text-white"
             >
               {english ? "View plans" : "Ver planes"}
