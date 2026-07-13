@@ -129,7 +129,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#d8ff3e] px-4 text-sm font-black uppercase text-black transition hover:bg-white"
         >
           <CreditCard className="h-4 w-4" />
-          Elegir plan y pagar
+          Ver planes
         </Link>
         <Link
           href="/"

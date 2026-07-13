@@ -1,3 +1,5 @@
+import { absoluteAppUrl } from "@/lib/constants/app-url";
+
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 export type SendEmailResult = { ok: boolean; skipped?: boolean; error?: string };
@@ -117,18 +119,13 @@ function row(label: string, value: string) {
   </tr>`;
 }
 
-function appOrigin() {
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "").trim();
-  return baseUrl ? (baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`) : "";
-}
-
 /** Correo con link magico para confirmar la cuenta antes de completar el perfil. */
 export async function sendRegistrationConfirmEmail(args: {
   to: string;
   token: string;
   expiresMinutes: number;
 }) {
-  const href = `${appOrigin()}/registro/confirmar?token=${encodeURIComponent(args.token)}`;
+  const href = absoluteAppUrl(`/registro/confirmar?token=${encodeURIComponent(args.token)}`);
   return sendEmail({
     to: args.to,
     subject: "Confirma tu cuenta — Xtreme Gym",
@@ -300,9 +297,7 @@ export async function sendCustomReminderEmail(args: {
 }
 
 function appButton(label: string, path = "/app") {
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "").trim();
-  const origin = baseUrl ? (baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`) : "";
-  const href = `${origin}${path}`;
+  const href = absoluteAppUrl(path);
   return `<a href="${escapeHtml(href)}" style="display:inline-block;margin-top:12px;background:#0b0b0b;color:#d8ff3e;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">${escapeHtml(label)}</a>`;
 }
 

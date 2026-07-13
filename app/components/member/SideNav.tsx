@@ -97,12 +97,12 @@ export default function SideNav({ os }: { os: MemberOs }) {
         <div className="border-t-[3px] border-white/15 p-2">
           <Link
             href="/precios#inscripcion"
-            title="Comprar o renovar plan"
+            title="Ver planes y renovaciones"
             onClick={() => setNavOpen(false)}
             className="mb-2 flex min-h-12 w-full items-center justify-center gap-2 border-[3px] border-black/30 bg-[#d8ff3e] px-2 text-xs font-black uppercase text-black transition hover:bg-white"
           >
             <CreditCard className="h-4 w-4 shrink-0" />
-            <span className={navOpen ? "block" : "lg:hidden"}>Comprar plan</span>
+            <span className={navOpen ? "block" : "lg:hidden"}>Ver planes</span>
           </Link>
           {memberName ? (
             <button

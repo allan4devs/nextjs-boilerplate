@@ -133,7 +133,7 @@ export default function FreeDayRegisterForm({
       <p className="mt-4 text-xs font-bold text-white/40">
         ¿Ya sabés tu plan?{" "}
         <Link href="/precios#inscripcion" className="text-[#d8ff3e] underline-offset-2 hover:underline">
-          Pagar en línea
+          Ver planes
         </Link>
       </p>
     </form>

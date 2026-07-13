@@ -140,7 +140,7 @@ export default function ExtremeGymSite() {
             className="inline-flex items-center gap-2 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-black shadow-[3px_3px_0_rgba(216,255,62,.25)] transition hover:bg-white"
           >
             <CreditCard className="h-4 w-4" />
-            Comprar o renovar plan
+            Ver planes y membresías
           </Link>
           <Link
             href="/"

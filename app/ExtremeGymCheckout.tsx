@@ -39,7 +39,7 @@ const CHECKOUT_OPTIONS: CheckoutOption[] = [
     priceCrc: 3000,
     priceLabel: "CRC 3.000",
     usdAmount: "6.00",
-    note: "Un día de entrenamiento. Pago en línea con PayPal.",
+    note: "Un día de entrenamiento con inscripción desde la web.",
   },
   {
     id: "week",
@@ -329,7 +329,7 @@ export default function ExtremeGymCheckout({
             {english ? "Choose how you want to train" : "Elegí cómo querés entrenar"}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm font-bold text-black/60 sm:text-base">
-            {english ? "Select a plan and pay securely online with PayPal." : "Seleccioná un plan y pagá en línea con PayPal. Sin reserva por correo ni WhatsApp."}
+            {english ? "Choose a plan and complete your registration securely with PayPal." : "Seleccioná un plan y completá tu inscripción de forma segura con PayPal."}
           </p>
         </div>
 

@@ -32,15 +32,15 @@ export default function PreciosPage() {
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Precios</p>
               <h1 className="mt-2 text-3xl font-black uppercase leading-none sm:text-4xl">Costos vigentes.</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold text-white/58">
-                Día, semana, quincena o mes. Estos son los precios vigentes: elegí tu plan y pagalo en línea con
-                tarjeta, sin filas ni trámites en recepción.
+                Día, semana, quincena o mes. Revisá las opciones, elegí la que mejor te funcione y completá la
+                inscripción de forma segura con PayPal.
               </p>
             </div>
             <a
               href="#inscripcion"
               className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
             >
-              Pagar en línea
+              Inscribirme
               <ArrowRight className="h-4 w-4" />
             </a>
           </div>
@@ -81,7 +81,7 @@ export default function PreciosPage() {
                       featured ? "bg-black text-white hover:bg-white hover:text-black" : "bg-white text-black hover:bg-[#f6c400]"
                     }`}
                   >
-                    {item.price === "Gratis" ? "Registrarme gratis" : "Elegir y pagar"}
+                    {item.price === "Gratis" ? "Registrarme gratis" : "Elegir este plan"}
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 </article>
@@ -153,9 +153,9 @@ export default function PreciosPage() {
       <ExtremeGymCheckout />
 
       <CtaBand
-        eyebrow="Empezá ahora"
-        title="Elegí el plan que querés y completá el pago en línea."
-        cta="Ir al pago"
+        eyebrow="Cuando estés listo"
+        title="Revisá las opciones y elegí el plan que mejor te acompañe."
+        cta="Inscribirme"
         href="#inscripcion"
       />
     </>

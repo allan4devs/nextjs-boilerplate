@@ -32,7 +32,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
               className="inline-flex min-h-9 shrink-0 items-center gap-1.5 bg-[#d8ff3e] px-3 text-xs font-black uppercase text-black transition hover:bg-white"
             >
               <CreditCard className="h-4 w-4" />
-              <span className="hidden md:inline">Pagar plan</span>
+              <span className="hidden md:inline">Planes</span>
             </Link>
             {!trainedToday && (
               <GameButton

@@ -145,7 +145,7 @@ export default function EnglishLandingPage() {
         </div>
       </section>
 
-      <CtaBand eyebrow="Start today" title="Choose your plan, pay online and start training." cta="Pay now" href="/en/prices#inscripcion" />
+      <CtaBand eyebrow="Start today" title="Choose the plan that works best for you." cta="Join now" href="/en/prices#inscripcion" />
     </>
   );
 }

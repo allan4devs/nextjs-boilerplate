@@ -70,7 +70,7 @@ export default function AdultosMayoresPage() {
                 href="#inscripcion"
                 className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
               >
-                Pagar en línea
+                Inscribirme
                 <CreditCard className="h-4 w-4" />
               </a>
               <a
@@ -110,9 +110,9 @@ export default function AdultosMayoresPage() {
       <ExtremeGymCheckout initialOption="senior" />
 
       <CtaBand
-        eyebrow="Inscripción abierta"
-        title="Pagá el plan de adultos mayores y asegurá tu acceso."
-        cta="Pagar plan"
+        eyebrow="Opciones disponibles"
+        title="Elegí el plan de adultos mayores y empezá con acompañamiento."
+        cta="Inscribirme"
         href="#inscripcion"
       />
     </>

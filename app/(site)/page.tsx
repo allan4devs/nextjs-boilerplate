@@ -79,93 +79,89 @@ export default function ExtremeGymLandingPage() {
           <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#070707] to-transparent" />
         </div>
 
-        <div className="relative mx-auto flex max-w-7xl flex-col px-5 py-8 sm:px-8">
-          <div className="grid flex-1 gap-10 py-8 lg:grid-cols-[.88fr_1.12fr] lg:items-center lg:py-12">
+        <div className="relative mx-auto flex max-w-7xl flex-col px-5 py-4 sm:px-8 lg:py-3">
+          <div className="grid flex-1 gap-8 py-5 lg:grid-cols-[.95fr_1.05fr] lg:items-center lg:py-6">
             <div className="min-w-0">
               <div className="inline-flex items-center gap-2 border border-[#f6c400]/45 bg-black/45 px-3 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#ffe875] backdrop-blur">
                 <MapPin className="h-4 w-4" />
                 {BUSINESS.location}
               </div>
-              <h1 className="mt-7 max-w-4xl text-[2.75rem] font-black uppercase leading-[0.86] tracking-tight min-[420px]:text-5xl sm:text-7xl lg:text-8xl">
+              <h1 className="mt-5 max-w-4xl text-[2.5rem] font-black uppercase leading-[0.88] tracking-tight min-[420px]:text-5xl sm:text-6xl lg:text-[4rem] xl:text-[4.5rem]">
                 Entrena fuerte.
                 <span className="block text-[#f6c400]">Vive con más energía.</span>
               </h1>
-              <p className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-white/72">
+              <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/72">
                 Un gimnasio completo en Ciudad Quesada para fuerza, funcional, cardio y hábitos
                 reales. Elija su plan, reserve desde la app y empiece con un equipo pensado para avanzar.
               </p>
 
-              <div className="mt-9 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/precios#inscripcion"
-                  className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black shadow-[0_0_40px_-16px_rgba(246,196,0,.95)] transition hover:bg-white"
+                  className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black shadow-[0_0_40px_-16px_rgba(246,196,0,.95)] transition hover:bg-white"
                 >
-                  Elegir plan y pagar
+                  Inscribirme
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link
                   href="/primer-dia"
-                  className="inline-flex min-h-14 items-center gap-2 border border-white/20 bg-white/[0.07] px-6 font-black uppercase text-white backdrop-blur transition hover:border-white/45 hover:bg-white/10"
+                  className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/[0.07] px-5 font-black uppercase text-white backdrop-blur transition hover:border-white/45 hover:bg-white/10"
                 >
                   Primer día gratis
                   <Smartphone className="h-5 w-5" />
                 </Link>
               </div>
 
-              <div className="mt-10 grid max-w-2xl grid-cols-2 border border-white/10 bg-black/45 backdrop-blur sm:grid-cols-4">
+              <div className="mt-6 grid max-w-2xl grid-cols-2 border border-white/10 bg-black/45 backdrop-blur sm:grid-cols-4">
                 {SOCIAL_PROOF.map((item) => (
-                  <div key={item.label} className="border-r border-white/10 p-3 last:border-r-0 sm:p-4">
-                    <p className="text-2xl font-black text-[#f6c400] sm:text-3xl">{item.value}</p>
+                  <div key={item.label} className="border-r border-white/10 p-2.5 last:border-r-0 sm:p-3">
+                    <p className="text-2xl font-black text-[#f6c400]">{item.value}</p>
                     <p className="mt-1 text-xs font-black uppercase tracking-[0.14em] text-white/48">{item.label}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-5 grid max-w-2xl gap-3 sm:grid-cols-3">
-                {QUICK_INFO.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className="border border-white/10 bg-white/[0.06] p-4 transition hover:border-[#f6c400]/55 hover:bg-[#f6c400]/10"
-                  >
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">{item.label}</p>
-                    <p className="mt-2 text-xl font-black uppercase text-white">{item.value}</p>
-                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-[#f6c400]">{item.detail}</p>
-                  </Link>
-                ))}
-              </div>
             </div>
 
-            <div className="hidden gap-4 lg:grid lg:grid-cols-[1fr_260px]">
-              <div className="relative border border-white/12 bg-black/70 p-4 shadow-2xl backdrop-blur">
-                <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-[4/5]" />
-                <div className="absolute left-8 top-8 max-w-[230px] bg-[#f6c400] px-4 py-3 text-black">
+            <div className="hidden gap-3 lg:grid lg:grid-cols-[1fr_230px]">
+              <div className="relative border border-white/12 bg-black/70 p-3 shadow-2xl backdrop-blur">
+                <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" fit="contain" />
+                <div className="absolute left-6 top-6 max-w-[210px] bg-[#f6c400] px-4 py-3 text-black">
                   <p className="text-xs font-black uppercase tracking-[0.18em]">Movimiento Xtreme</p>
                   <p className="text-2xl font-black uppercase leading-none">Fuerza con dirección</p>
                 </div>
-                <Link
-                  href="/precios"
-                  className="absolute bottom-8 right-8 border border-white/15 bg-black/80 p-4 backdrop-blur transition hover:border-[#f6c400]/60"
-                >
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-white/45">Plan mensual</p>
-                  <p className="mt-1 text-3xl font-black text-white">CRC 23.000</p>
-                  <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-[#f6c400]">pagar ahora</p>
-                </Link>
               </div>
 
-              <div className="grid gap-4">
-                <ImageTile src={HERO_IMAGES[1].src} alt={HERO_IMAGES[1].alt} className="aspect-square" />
-                <div className="border border-[#f6c400]/45 bg-[#f6c400] p-5 text-black shadow-[0_0_36px_-18px_rgba(246,196,0,.9)]">
+              <div className="grid content-start gap-3">
+                <ImageTile src={HERO_IMAGES[1].src} alt={HERO_IMAGES[1].alt} className="aspect-[4/3]" />
+                <div className="border border-[#f6c400]/45 bg-[#f6c400] p-4 text-black shadow-[0_0_36px_-18px_rgba(246,196,0,.9)]">
                   <p className="text-xs font-black uppercase tracking-[0.2em]">Empiece con decisión</p>
-                  <h2 className="mt-3 text-3xl font-black uppercase leading-none">Su próximo entreno ya tiene lugar</h2>
-                  <p className="mt-3 text-sm font-bold leading-6">
+                  <h2 className="mt-2 text-2xl font-black uppercase leading-none">Su próximo entreno ya tiene lugar</h2>
+                  <p className="mt-2 text-xs font-bold leading-5">
                     Cada entrenamiento es una decisión a favor de su salud, energía y calidad de vida.
                   </p>
                 </div>
-                <ImageTile src={HERO_IMAGES[2].src} alt={HERO_IMAGES[2].alt} className="aspect-[4/3]" />
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="border-b border-white/10 bg-[#090909] px-5 py-4 sm:px-8">
+        <div className="mx-auto grid max-w-7xl gap-3 sm:grid-cols-3">
+          {QUICK_INFO.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="border border-white/10 bg-white/[0.04] px-4 py-3 transition hover:border-[#f6c400]/55 hover:bg-[#f6c400]/10"
+            >
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/45">{item.label}</p>
+              <div className="mt-1 flex items-baseline justify-between gap-3">
+                <p className="text-lg font-black uppercase text-white">{item.value}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#f6c400]">{item.detail}</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -262,7 +258,7 @@ export default function ExtremeGymLandingPage() {
       </section>
 
       <CtaBand
-        title="Elegí tu plan, pagá en línea y empezá a entrenar hoy."
+        title="Elegí el plan que mejor te funcione y empezá a entrenar."
       />
     </>
   );

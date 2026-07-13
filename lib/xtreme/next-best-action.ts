@@ -60,8 +60,8 @@ export function pickNextBestAction(input: NbaInput): NextBestAction {
     candidates.push({
       kind: "renew_plan",
       title: "Tu plan está vencido",
-      body: "Renovás en 1 toque y volvés a sumar racha y clases.",
-      cta: "Renovar ahora",
+      body: "Podés revisar los planes y elegir cómo querés continuar.",
+      cta: "Ver planes",
       href: "/precios#inscripcion",
       priority: 1,
     });
@@ -69,8 +69,8 @@ export function pickNextBestAction(input: NbaInput): NextBestAction {
     candidates.push({
       kind: "renew_plan",
       title: `Renovación en ${input.daysRemaining} día${input.daysRemaining === 1 ? "" : "s"}`,
-      body: "Un toque y dejás listo el mismo plan. Sin perder el ritmo.",
-      cta: "Renovar en 1 toque",
+      body: "Revisá las opciones con tiempo y elegí la que mejor te funcione.",
+      cta: "Ver opciones",
       href: "/precios#inscripcion",
       priority: 2,
     });

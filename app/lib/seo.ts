@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
+import { APP_URL } from "@/lib/constants/app-url";
 import { BUSINESS, COSTS, FAQS, SCHEDULE } from "./site";
 
-const envUrl =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : "");
-
-export const SITE_URL = (envUrl || "http://localhost:3000").replace(/\/+$/, "");
+export const SITE_URL = APP_URL;
 
 export const SITE_NAME = "Xtreme Gym";
 

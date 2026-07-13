@@ -74,7 +74,7 @@ function TrainingPage() {
     <>
       <PageHero eyebrow="Training areas" title="A place for every" highlight="training goal." text="Train strength, functional fitness, cardio and lower body with dedicated equipment and a clear purpose." image="https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=2000&q=86" imageAlt="Strength training area" />
       <section className="px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-2">{TRAINING_AREAS.map(({ icon: Icon, ...area }) => <article key={area.title} className="border border-white/10 bg-white/[0.04] p-6"><Icon className="h-8 w-8 text-[#f6c400]" /><p className="mt-6 text-xs font-black uppercase tracking-[.18em] text-white/40">{area.label}</p><h2 className="mt-2 text-3xl font-black uppercase">{area.title}</h2><p className="mt-3 font-semibold leading-7 text-white/58">{area.text}</p></article>)}</div></section>
-      <CtaBand eyebrow="Start training" title="Choose your plan and make today count." cta="Pay now" href="/en/prices#inscripcion" />
+      <CtaBand eyebrow="Start training" title="Choose your plan and make today count." cta="Join now" href="/en/prices#inscripcion" />
     </>
   );
 }
@@ -85,7 +85,7 @@ function PricesPage() {
       <PageHero eyebrow="Memberships" title="Flexible plans." highlight="No guesswork." text="Choose the amount of time that works for you. Pay online or speak with reception if you need help." image="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=2000&q=86" imageAlt="Gym training floor" />
       <section className="px-5 py-16 sm:px-8"><div className="mx-auto max-w-7xl"><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{PRICES.map((plan) => <article key={plan.label} className="flex flex-col border border-white/10 bg-white/[0.045] p-5"><p className="text-xs font-black uppercase tracking-[.18em] text-white/40">{plan.note}</p><h2 className="mt-3 text-2xl font-black uppercase">{plan.label}</h2><p className="mt-7 text-4xl font-black text-[#f6c400]">{plan.price}</p><Link href={plan.href} className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 bg-white px-4 font-black uppercase text-black hover:bg-[#f6c400]">{plan.price === "Free" ? "Register" : "Choose and pay"}<ArrowRight className="h-4 w-4" /></Link></article>)}</div><div className="mt-8 border border-[#f6c400]/40 bg-[#f6c400]/10 p-5"><ShieldCheck className="h-6 w-6 text-[#f6c400]" /><p className="mt-3 font-bold text-white/70">Online checkout is securely processed through PayPal. Reception confirms activation after payment.</p></div></div></section>
       <ExtremeGymCheckout locale="en" />
-      <CtaBand eyebrow="Start now" title="Choose your plan and complete payment online." cta="Go to payment" href="#inscripcion" />
+      <CtaBand eyebrow="Find your plan" title="Review the options and choose what works for you." cta="Join now" href="#inscripcion" />
     </>
   );
 }

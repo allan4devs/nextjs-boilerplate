@@ -35,7 +35,7 @@ export const waLink = (message: string) =>
 
 export const NAV_LINKS = [
   { href: "/zonas", label: "Zonas", icon: Dumbbell, description: "Fuerza, funcional, cardio y lower lab" },
-  { href: "/precios", label: "Precios", icon: Tag, description: "Primer día gratis y planes con pago en línea" },
+  { href: "/precios", label: "Precios", icon: Tag, description: "Primer día gratis y planes para inscribirte" },
   { href: "/adultos-mayores", label: "Adultos", icon: HeartPulse, description: "Tres clases por semana con acompañamiento" },
   { href: "/app", label: "App", icon: Smartphone, description: "Reservas, rachas y carné digital" },
   { href: "/preguntas", label: "Preguntas", icon: HelpCircle, description: "Dudas frecuentes antes de empezar" },
@@ -125,7 +125,7 @@ export const COSTS = [
 ];
 
 export const QUICK_INFO = [
-  { label: "Mensualidad", value: "CRC 23.000", detail: "pagar ahora", href: "/precios#inscripcion" },
+  { label: "Mensualidad", value: "CRC 23.000", detail: "inscribirme", href: "/precios#inscripcion" },
   { label: "Primer día", value: "Gratis", detail: "registrate en la app", href: "/primer-dia" },
   { label: "Horario", value: "5 AM - 10 PM", detail: "lunes a viernes", href: "/contacto" },
 ];
@@ -134,7 +134,7 @@ export const PLAN_DETAILS = [
   "Equipo, ambiente y acompañamiento para entrenar mejor",
   "Clases y zonas para diferentes objetivos",
   "Reservas, rachas y progreso desde la app de socios",
-  "Compra y activación con pago en línea",
+  "Inscripción y activación desde la web",
 ];
 
 export const GALLERY = [
@@ -248,7 +248,7 @@ export const FAQS = [
   {
     question: "¿Puedo pagar en línea?",
     answer:
-      "Sí. Entrá a la página de precios, elegí el plan y completá el pago en línea con PayPal.",
+      "Sí. Entrá a la página de precios, elegí el plan que mejor te funcione y completá la inscripción con PayPal.",
   },
   {
     question: "¿Cuál es el horario del gimnasio?",

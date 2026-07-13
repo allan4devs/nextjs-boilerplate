@@ -46,7 +46,7 @@ export default function SiteFooter() {
                 className="inline-flex items-center gap-2 bg-[#f6c400] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
               >
                 <CreditCard className="h-4 w-4" />
-                {english ? "Pay now" : "Pagar plan"}
+                {english ? "Join now" : "Inscribirme"}
               </Link>
               <a
                 href={waLink("Hola Xtreme Gym, quiero información para entrenar.")}
@@ -92,11 +92,11 @@ export default function SiteFooter() {
               href={english ? "/en/prices" : "/precios#inscripcion"}
               className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-3 text-xs font-black uppercase text-black"
             >
-              {english ? "Pay now" : "Pagar ahora"}
+              {english ? "Join now" : "Inscribirme"}
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a
-              href={waLink("Hola Xtreme Gym, quiero ayuda para elegir y pagar mi plan.")}
+              href={waLink("Hola Xtreme Gym, quiero conocer los planes y recibir ayuda para inscribirme.")}
               className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 bg-white/[0.06] px-3 text-xs font-black uppercase text-white"
             >
               <MessageCircle className="h-4 w-4" />

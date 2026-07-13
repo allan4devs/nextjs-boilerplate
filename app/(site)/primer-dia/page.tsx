@@ -48,7 +48,7 @@ export default function PrimerDiaPage() {
                 href="/precios#inscripcion"
                 className="inline-flex min-h-14 items-center border border-white/20 px-6 font-black uppercase text-white transition hover:border-[#f6c400]"
               >
-                Elegir plan y pagar
+                Ver planes
               </Link>
             </div>
           </div>
@@ -102,7 +102,7 @@ export default function PrimerDiaPage() {
         <p className="mx-auto mt-8 max-w-xl text-center text-sm font-bold text-white/45">
           ¿Ya veniste y querés un plan?{" "}
           <Link href="/precios#inscripcion" className="text-[#f6c400] hover:underline">
-            Ver precios y pagar en línea
+            Conocer los planes
           </Link>
         </p>
       </section>

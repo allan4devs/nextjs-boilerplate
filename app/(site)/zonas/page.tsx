@@ -77,7 +77,7 @@ export default function ZonasPage() {
               href="/precios#inscripcion"
               className="mt-8 inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
             >
-              Elegir plan y pagar
+              Ver planes
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -92,8 +92,8 @@ export default function ZonasPage() {
 
       <CtaBand
         eyebrow="Empezá hoy"
-        title="Elegí tu plan y desbloqueá todas las zonas."
-        cta="Comprar plan"
+        title="Conocé los planes para entrenar en todas las zonas."
+        cta="Inscribirme"
       />
     </>
   );

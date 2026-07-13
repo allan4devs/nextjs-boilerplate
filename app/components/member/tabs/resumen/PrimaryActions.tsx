@@ -101,7 +101,7 @@ function PrimaryActionsComponent({
             onClick={onRenew}
           >
             <CreditCard className="h-4 w-4" />
-            Renovar ahora
+            Renovar plan
           </a>
         </div>
       )}
@@ -111,7 +111,7 @@ function PrimaryActionsComponent({
           className="flex min-h-12 items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/10 px-4 text-sm font-black uppercase text-[#eaff93] transition hover:bg-[#d8ff3e] hover:text-black"
         >
           <CreditCard className="h-4 w-4" />
-          Comprar o renovar plan
+          Ver planes
         </Link>
       )}
     </>

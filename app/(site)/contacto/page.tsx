@@ -65,14 +65,14 @@ function TikTokIcon({ className }: BrandIconProps) {
 const CONTACT_ACTIONS = [
   {
     href: "/precios#inscripcion",
-    label: "Pagar plan",
-    detail: "Pago en línea",
+    label: "Inscribirme",
+    detail: "Ver planes disponibles",
     icon: CreditCard,
     external: false,
     primary: true,
   },
   {
-    href: waLink("Hola Xtreme Gym, quiero ayuda para elegir y pagar mi plan."),
+    href: waLink("Hola Xtreme Gym, quiero conocer los planes y recibir ayuda para inscribirme."),
     label: "WhatsApp",
     detail: BUSINESS.phone,
     icon: MessageCircle,
