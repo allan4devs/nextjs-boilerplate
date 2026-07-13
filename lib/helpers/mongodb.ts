@@ -43,6 +43,7 @@ async function ensureIndexes(db: Db) {
       .collection("xtreme_gym_class_reservations")
       .createIndex({ normalizedName: 1, trainingId: 1, trainingDate: 1 }),
     db.collection("xtreme_gym_checkins").createIndex({ date: 1, checkedInAt: -1 }),
+    db.collection("xtreme_gym_checkins").createIndex({ date: 1, checkedOutAt: 1, checkedInAt: -1 }),
     db.collection("xtreme_gym_checkins").createIndex({ normalizedName: 1, date: 1 }),
     db.collection("xtreme_gym_payments").createIndex({ status: 1, date: -1 }),
     db.collection("xtreme_gym_payments").createIndex({ id: 1 }),

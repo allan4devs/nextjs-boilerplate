@@ -11,9 +11,11 @@ import {
   type MemberDoc,
   cedulaDigits,
   computeOccupancy,
+  findMemberByCedula,
   formatAccessCode,
   hammingHexDistance,
   isValidEmail,
+  isCheckinOpen,
   memberAccessCode,
   membershipStatus,
   normalizeCedula,
@@ -72,12 +74,42 @@ export async function GET(req: NextRequest) {
     const roster = req.nextUrl.searchParams.get("roster") === "1";
 
     const status = await computeOccupancy(db);
-    const recent = await db
+    const todayCheckins = await db
       .collection<CheckinDoc>(CHECKINS_COLLECTION)
       .find({ date: todayIso() })
       .sort({ checkedInAt: -1 })
-      .limit(20)
+      .limit(500)
       .toArray();
+    const recent = todayCheckins.slice(0, 20);
+    const latestByMember = new Map<string, CheckinDoc>();
+    for (const checkin of todayCheckins) {
+      if (!latestByMember.has(checkin.normalizedName)) {
+        latestByMember.set(checkin.normalizedName, checkin);
+      }
+    }
+    const openCheckins = [...latestByMember.values()].filter((checkin) => isCheckinOpen(checkin));
+    const insideMembers = openCheckins.length
+      ? await db
+          .collection<MemberDoc>(MEMBERS_COLLECTION)
+          .find({ normalizedName: { $in: openCheckins.map((checkin) => checkin.normalizedName) } })
+          .project({ memberName: 1, normalizedName: 1, cedula: 1, photoUrl: 1 })
+          .toArray()
+      : [];
+    const insideMemberMap = new Map(
+      insideMembers.map((member) => [member.normalizedName, member]),
+    );
+    const inside = openCheckins.map((checkin) => {
+      const member = insideMemberMap.get(checkin.normalizedName);
+      return {
+        id: checkin.id,
+        memberName: checkin.memberName,
+        normalizedName: checkin.normalizedName,
+        cedula: member?.cedula || "",
+        photoUrl: member?.photoUrl || "",
+        membershipStatus: checkin.membershipStatus,
+        checkedInAt: checkin.checkedInAt,
+      };
+    });
 
     if (faceHash && !FACE_RECOGNITION_ENABLED) {
       return NextResponse.json(
@@ -123,6 +155,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         role,
         status,
+        inside,
         recent: recent.map((c) => ({
           id: c.id,
           memberName: c.memberName,
@@ -178,6 +211,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       role,
       status,
+      inside,
       recent: recent.map((c) => ({
         id: c.id,
         memberName: c.memberName,
@@ -210,6 +244,83 @@ export async function POST(req: NextRequest) {
     const action = String(body.action ?? "register");
     const db = await getDb();
     const now = new Date();
+
+    if (action === "checkout") {
+      const checkinId = String(body.checkinId ?? "").trim();
+      const cedula = String(body.cedula ?? "").trim();
+      let normalizedName = normalizeKey(normalizeName(body.memberName));
+
+      if (!normalizedName && cedula) {
+        const memberDocs = await db
+          .collection<MemberDoc>(MEMBERS_COLLECTION)
+          .find({ cedula: { $exists: true, $ne: "" } })
+          .project({ memberName: 1, normalizedName: 1, cedula: 1 })
+          .toArray();
+        normalizedName = findMemberByCedula(memberDocs, cedula)?.normalizedName || "";
+      }
+
+      if (!checkinId && !normalizedName) {
+        return NextResponse.json(
+          { error: "Seleccione una persona o ingrese una cedula valida." },
+          { status: 400 },
+        );
+      }
+
+      const openCheckin = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).findOne(
+        {
+          ...(checkinId ? { id: checkinId } : { normalizedName }),
+          date: todayIso(),
+          checkedOutAt: null,
+        },
+        { sort: { checkedInAt: -1 } },
+      );
+      if (!openCheckin) {
+        return NextResponse.json(
+          { error: "No encontramos un ingreso abierto para esta persona." },
+          { status: 404 },
+        );
+      }
+
+      const updated = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).updateOne(
+        { id: openCheckin.id, checkedOutAt: null },
+        { $set: { checkedOutAt: now, checkedOutBy: role } },
+      );
+      if (!updated.modifiedCount) {
+        return NextResponse.json({ error: "La salida ya habia sido registrada." }, { status: 409 });
+      }
+
+      const durationMinutes = Math.max(
+        0,
+        Math.round((now.getTime() - new Date(openCheckin.checkedInAt).getTime()) / 60_000),
+      );
+      await writeAudit(db, {
+        actorRole: role,
+        action: "checkin.checkout",
+        targetType: "member",
+        targetId: openCheckin.normalizedName,
+        summary: `Salida registrada: ${openCheckin.memberName}`,
+        meta: { checkinId: openCheckin.id, durationMinutes },
+      });
+      await recordEvent(db, {
+        type: "checkout_completed",
+        memberId: openCheckin.normalizedName,
+        source: "reception",
+        entity: { type: "checkin", id: openCheckin.id },
+        properties: {
+          checkedInAt: new Date(openCheckin.checkedInAt).toISOString(),
+          checkedOutAt: now.toISOString(),
+          durationMinutes,
+        },
+      }).catch(() => {});
+
+      return NextResponse.json({
+        ok: true,
+        memberName: openCheckin.memberName,
+        checkedOutAt: now,
+        durationMinutes,
+        status: await computeOccupancy(db),
+      });
+    }
 
     if (action === "enroll_face") {
       if (!FACE_RECOGNITION_ENABLED) {
@@ -421,11 +532,11 @@ export async function POST(req: NextRequest) {
         const ms = membershipStatus(member.membership);
         membershipStatusValue = ms.status;
         const date = todayIso();
-        const recent = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).findOne({
-          normalizedName,
-          date,
-          checkedInAt: { $gte: new Date(now.getTime() - 20 * 60 * 1000) },
-        });
+        const latestCheckin = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).findOne(
+          { normalizedName, date },
+          { sort: { checkedInAt: -1 } },
+        );
+        const recent = latestCheckin && isCheckinOpen(latestCheckin) ? latestCheckin : null;
         if (recent) {
           checkin = recent;
         } else {
@@ -438,6 +549,7 @@ export async function POST(req: NextRequest) {
             membershipStatus: ms.status,
             date,
             checkedInAt: now,
+            checkedOutAt: null,
             by: "reception",
             note: "Alta + ingreso en recepcion",
           };

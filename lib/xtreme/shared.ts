@@ -341,9 +341,24 @@ export type CheckinDoc = {
   membershipStatus: "active" | "warning" | "expired" | "unknown";
   date: string;
   checkedInAt: Date;
+  checkedOutAt?: Date | null;
+  checkedOutBy?: AdminRole;
   by: "kiosk" | "admin" | "reception";
   note?: string;
 };
+
+const LEGACY_ACTIVE_CHECKIN_MINUTES = 90;
+
+/**
+ * New visits store checkedOutAt=null and stay open until reception closes them.
+ * Legacy visits had no checkout field, so they retain the previous 90-minute
+ * window during the migration instead of inflating today's occupancy.
+ */
+export function isCheckinOpen(checkin: CheckinDoc, now = Date.now()) {
+  if (checkin.checkedOutAt instanceof Date) return false;
+  if (checkin.checkedOutAt === null) return true;
+  return now - new Date(checkin.checkedInAt).getTime() <= LEGACY_ACTIVE_CHECKIN_MINUTES * 60_000;
+}
 
 export function normalizeName(value: unknown) {
   return String(value ?? "")
@@ -455,9 +470,6 @@ export function computeStreak(workouts: WorkoutEntry[]) {
   return streak;
 }
 
-/** Ventana en la que un check-in cuenta como "persona adentro". */
-export const ACTIVE_CHECKIN_WINDOW_MIN = 90;
-
 export type OccupancySnapshot = {
   date: string;
   capacity: number;
@@ -495,12 +507,13 @@ export async function computeOccupancy(db: Db): Promise<OccupancySnapshot> {
       .countDocuments({ trainingDate: date, status: "reserved" }),
   ]);
 
-  const activeSince = Date.now() - ACTIVE_CHECKIN_WINDOW_MIN * 60 * 1000;
-  const activeNow = new Set(
-    checkinDocs
-      .filter((c) => new Date(c.checkedInAt).getTime() >= activeSince)
-      .map((c) => c.normalizedName),
-  ).size;
+  const latestByMember = new Map<string, CheckinDoc>();
+  for (const checkin of checkinDocs) {
+    if (!latestByMember.has(checkin.normalizedName)) {
+      latestByMember.set(checkin.normalizedName, checkin);
+    }
+  }
+  const activeNow = [...latestByMember.values()].filter((checkin) => isCheckinOpen(checkin)).length;
 
   const currentPeople = Math.min(GYM_CAPACITY, activeNow);
   const occupancyPct = Math.round((currentPeople / GYM_CAPACITY) * 100);

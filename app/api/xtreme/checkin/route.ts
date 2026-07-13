@@ -12,6 +12,7 @@ import {
   formatAccessCode,
   hammingHexDistance,
   hashPin,
+  isCheckinOpen,
   memberAccessCode,
   membershipStatus,
   normalizeKey,
@@ -248,17 +249,17 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const date = todayIso();
 
-    const recent = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).findOne({
-      normalizedName,
-      date,
-      checkedInAt: { $gte: new Date(now.getTime() - 20 * 60 * 1000) },
-    });
+    const latestCheckin = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).findOne(
+      { normalizedName, date },
+      { sort: { checkedInAt: -1 } },
+    );
+    const recent = latestCheckin && isCheckinOpen(latestCheckin) ? latestCheckin : null;
     if (recent) {
       const status = await computeOccupancy(db);
       return NextResponse.json({
         ok: true,
         duplicate: true,
-        message: "Ya ingreso hace poco. Bienvenido de nuevo.",
+        message: "Esta persona ya aparece dentro del gimnasio.",
         member: staffRole ? toAdminMember(member) : toKioskMember(member, { hasPin: true }),
         membershipStatus: ms.status,
         checkin: recent,
@@ -275,6 +276,7 @@ export async function POST(req: NextRequest) {
       membershipStatus: ms.status,
       date,
       checkedInAt: now,
+      checkedOutAt: null,
       by: staffRole ? (by === "kiosk" ? "reception" : by) : "kiosk",
       note: String(body.note ?? "").trim().slice(0, 120),
     };

@@ -38,6 +38,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
   },
   manifest: "/manifest.webmanifest",
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
   appleWebApp: {
     capable: true,
     title: "Xtreme Gym",
@@ -53,9 +56,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f6c400",
-  colorScheme: "dark light",
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#070707",
+  colorScheme: "dark",
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

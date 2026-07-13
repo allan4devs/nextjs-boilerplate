@@ -52,7 +52,17 @@ type RecentCheckin = {
   by: string;
 };
 
-type Tab = "home" | "cedula" | "face" | "register" | "chat";
+type ActiveVisit = {
+  id: string;
+  memberName: string;
+  normalizedName: string;
+  cedula?: string;
+  photoUrl?: string;
+  membershipStatus: string;
+  checkedInAt: string;
+};
+
+type Tab = "home" | "inside" | "cedula" | "face" | "register" | "chat";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -94,7 +104,10 @@ export default function RecepcionPage() {
   const [tab, setTab] = useState<Tab>("home");
   const [status, setStatus] = useState<GymStatus | null>(null);
   const [recent, setRecent] = useState<RecentCheckin[]>([]);
+  const [inside, setInside] = useState<ActiveVisit[]>([]);
   const [roster, setRoster] = useState<MemberHit[]>([]);
+  const [checkoutQuery, setCheckoutQuery] = useState("");
+  const [checkingOutId, setCheckingOutId] = useState("");
 
   const [cedula, setCedula] = useState("");
   const [query, setQuery] = useState("");
@@ -167,12 +180,14 @@ export default function RecepcionPage() {
         const json = (await res.json()) as {
           status?: GymStatus;
           recent?: RecentCheckin[];
+          inside?: ActiveVisit[];
           members?: MemberHit[];
           error?: string;
         };
         if (!res.ok) throw new Error(json.error || "Error");
         if (json.status) setStatus(json.status);
         if (json.recent) setRecent(json.recent);
+        if (json.inside) setInside(json.inside);
         if (json.members) setRoster(json.members);
       } catch {
         /* poll soft-fail */
@@ -195,6 +210,7 @@ export default function RecepcionPage() {
       const json = (await res.json()) as {
         status?: GymStatus;
         recent?: RecentCheckin[];
+        inside?: ActiveVisit[];
         error?: string;
       };
       if (!res.ok) {
@@ -206,6 +222,7 @@ export default function RecepcionPage() {
       setUnlocked(true);
       if (json.status) setStatus(json.status);
       if (json.recent) setRecent(json.recent);
+      if (json.inside) setInside(json.inside);
     } catch {
       setUnlockError("Error de conexion.");
     } finally {
@@ -227,6 +244,7 @@ export default function RecepcionPage() {
           const json = (await res.json()) as {
             status?: GymStatus;
             recent?: RecentCheckin[];
+            inside?: ActiveVisit[];
           };
           if (!res.ok) {
             window.localStorage.removeItem(ADMIN_CODE_KEY);
@@ -236,6 +254,7 @@ export default function RecepcionPage() {
           setUnlocked(true);
           if (json.status) setStatus(json.status);
           if (json.recent) setRecent(json.recent);
+          if (json.inside) setInside(json.inside);
         } finally {
           setIsUnlocking(false);
         }
@@ -479,6 +498,48 @@ export default function RecepcionPage() {
     }
   }
 
+  async function confirmCheckout(visit: ActiveVisit) {
+    setCheckingOutId(visit.id);
+    setError("");
+    try {
+      const res = await fetch("/api/xtreme/reception", {
+        method: "POST",
+        headers: headers(true),
+        body: JSON.stringify({ action: "checkout", checkinId: visit.id }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        memberName?: string;
+        durationMinutes?: number;
+        status?: GymStatus;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) {
+        const message = json.error || "No se pudo registrar la salida.";
+        setError(message);
+        setFlash({ type: "err", title: "Salida no registrada", subtitle: message });
+        return;
+      }
+      if (json.status) setStatus(json.status);
+      setInside((current) => current.filter((item) => item.id !== visit.id));
+      setCheckoutQuery("");
+      const duration = json.durationMinutes
+        ? ` · ${json.durationMinutes} min en el gym`
+        : "";
+      setFlash({
+        type: "ok",
+        title: "Salida lista",
+        subtitle: `${json.memberName || visit.memberName}${duration}`,
+      });
+      void loadPanel(false);
+    } catch {
+      setError("Error de conexion al registrar la salida.");
+      setFlash({ type: "err", title: "Error", subtitle: "No se pudo registrar la salida." });
+    } finally {
+      setCheckingOutId("");
+    }
+  }
+
   async function searchFallback(e?: React.FormEvent) {
     e?.preventDefault();
     const q = query.trim();
@@ -670,6 +731,7 @@ export default function RecepcionPage() {
     setUnlocked(false);
     setAdminCode("");
     setMember(null);
+    setInside([]);
     setRoster([]);
     setRecent([]);
     setShowStaffGate(false);
@@ -802,10 +864,11 @@ export default function RecepcionPage() {
 
       <div className="mx-auto grid max-w-7xl gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[1fr_320px] lg:p-6">
         <section className="border-[3px] border-white/20 bg-[#0c0c0c] shadow-[4px_4px_0_rgba(0,0,0,.55)]">
-          <div className="flex border-b-[3px] border-white/15">
+          <div className="xg-mobile-scroll flex overflow-x-auto border-b-[3px] border-white/15">
             {(
               [
                 { id: "home" as const, label: "Mostrador", icon: LayoutDashboard },
+                { id: "inside" as const, label: "Adentro", icon: Users },
                 { id: "cedula" as const, label: "Cedula", icon: IdCard },
                 ...(FACE_RECOGNITION_ENABLED
                   ? [{ id: "face" as const, label: "Rostro", icon: ScanFace }]
@@ -826,7 +889,7 @@ export default function RecepcionPage() {
                     setError("");
                     setFaceMatches([]);
                   }}
-                  className={`relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 border-t-[3px] px-2 py-2 text-[10px] font-black uppercase tracking-wide transition sm:flex-row sm:gap-2 sm:text-sm ${
+                  className={`relative flex min-h-[56px] min-w-[76px] flex-none flex-col items-center justify-center gap-0.5 border-t-[3px] px-2 py-2 text-[10px] font-black uppercase tracking-wide transition sm:min-w-0 sm:flex-1 sm:flex-row sm:gap-2 sm:text-sm ${
                     active
                       ? "border-t-[#d8ff3e] bg-[#d8ff3e] text-black"
                       : "border-t-transparent text-white/50 hover:bg-white/5 hover:text-white"
@@ -862,6 +925,7 @@ export default function RecepcionPage() {
                   )}
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <ReceptionAction icon={LogOut} eyebrow={`${inside.length} dentro`} title="Registrar salida" description="Busque por nombre o cédula y marque la salida con un toque." tone="orange" onClick={() => setTab("inside")} />
                   <ReceptionAction icon={IdCard} eyebrow="Acceso rápido" title="Ingresar socio" description="Escanee o digite la cédula y confirme el ingreso." tone="lime" onClick={() => setTab("cedula")} />
                   <ReceptionAction icon={UserPlus} eyebrow="Persona nueva" title="Registrar persona" description="Nombre, cédula, teléfono, correo, plan, foto e ingreso inmediato." tone="cyan" onClick={() => setTab("register")} />
                   <ReceptionAction icon={MessageCircle} eyebrow={chatUnread > 0 ? String(chatUnread) + " por atender" : "Atención en vivo"} title="Responder chat" description="Lea conversaciones, responda consultas y cierre casos resueltos." tone="orange" onClick={() => setTab("chat")} />
@@ -882,6 +946,15 @@ export default function RecepcionPage() {
                   <ReceptionStat label="Chats pendientes" value={chatUnread} alert={chatUnread > 0} />
                 </div>
               </div>
+            )}
+            {tab === "inside" && (
+              <InsideRoster
+                visits={inside}
+                query={checkoutQuery}
+                onQueryChange={setCheckoutQuery}
+                checkingOutId={checkingOutId}
+                onCheckout={(visit) => void confirmCheckout(visit)}
+              />
             )}
             {tab === "chat" && <ReceptionChatInbox adminCode={adminCode} />}
 
@@ -1408,6 +1481,105 @@ export default function RecepcionPage() {
       </div>
 
     </main>
+  );
+}
+
+function InsideRoster({
+  visits,
+  query,
+  onQueryChange,
+  checkingOutId,
+  onCheckout,
+}: {
+  visits: ActiveVisit[];
+  query: string;
+  onQueryChange: (value: string) => void;
+  checkingOutId: string;
+  onCheckout: (visit: ActiveVisit) => void;
+}) {
+  const normalizedQuery = query.trim().toLocaleLowerCase("es");
+  const queryDigits = query.replace(/\D/g, "");
+  const filtered = visits.filter((visit) => {
+    if (!normalizedQuery) return true;
+    const nameMatch = visit.memberName.toLocaleLowerCase("es").includes(normalizedQuery);
+    const cedulaMatch = Boolean(
+      queryDigits && String(visit.cedula || "").replace(/\D/g, "").includes(queryDigits),
+    );
+    return nameMatch || cedulaMatch;
+  });
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <GameLabel tone="lime">Control de salida</GameLabel>
+          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight">
+            Personas dentro · {visits.length}
+          </h2>
+          <p className="mt-2 text-sm font-bold text-white/45">
+            Busque por nombre o cédula y marque la salida desde la lista.
+          </p>
+        </div>
+      </div>
+
+      <label className="relative mt-5 block">
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/35" />
+        <input
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+          inputMode="search"
+          autoComplete="off"
+          placeholder="Nombre o número de cédula"
+          className="min-h-14 w-full border-[3px] border-white/20 bg-black/50 pl-12 pr-4 text-base font-black text-white outline-none placeholder:text-white/25 focus:border-[#d8ff3e]"
+        />
+      </label>
+
+      <ul className="mt-4 grid gap-3 md:grid-cols-2">
+        {filtered.map((visit) => {
+          const minutes = Math.max(
+            0,
+            Math.round((Date.now() - new Date(visit.checkedInAt).getTime()) / 60_000),
+          );
+          const busy = checkingOutId === visit.id;
+          return (
+            <li
+              key={visit.id}
+              className="flex min-w-0 flex-col border-[3px] border-white/15 bg-black/45 p-4"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar name={visit.memberName} photoUrl={visit.photoUrl} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-black uppercase">{visit.memberName}</p>
+                  <p className="mt-0.5 text-xs font-bold text-white/40">
+                    {visit.cedula ? `Céd. ${visit.cedula} · ` : ""}
+                    Entrada {formatTime(visit.checkedInAt)} · {minutes} min
+                  </p>
+                </div>
+                <GameChip tone={visit.membershipStatus === "expired" ? "orange" : "lime"}>
+                  Dentro
+                </GameChip>
+              </div>
+              <button
+                type="button"
+                disabled={Boolean(checkingOutId)}
+                onClick={() => onCheckout(visit)}
+                className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-orange-300 bg-orange-300/10 px-4 text-sm font-black uppercase text-orange-200 transition hover:bg-orange-300 hover:text-black disabled:cursor-wait disabled:opacity-45"
+              >
+                {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
+                Marcar salida
+              </button>
+            </li>
+          );
+        })}
+        {!filtered.length && (
+          <li className="border-[3px] border-dashed border-white/15 px-4 py-10 text-center text-sm font-bold text-white/35 md:col-span-2">
+            {visits.length
+              ? "No hay una persona dentro que coincida con la búsqueda."
+              : "No hay personas registradas dentro del gimnasio."}
+          </li>
+        )}
+      </ul>
+    </div>
   );
 }
 

@@ -132,7 +132,7 @@ export default function PwaRuntime() {
   };
 
   return (
-    <aside className="fixed bottom-20 left-4 right-4 z-[70] mx-auto max-w-md border border-[#f6c400]/50 bg-[#111] p-5 text-white shadow-2xl md:bottom-5">
+    <aside className="xg-safe-bottom fixed bottom-20 left-3 right-3 z-[70] mx-auto max-h-[calc(100dvh-6rem)] max-w-md overflow-y-auto border border-[#f6c400]/50 bg-[#111] p-5 text-white shadow-2xl sm:left-4 sm:right-4 md:bottom-5">
       <p className="text-xs font-black uppercase tracking-[.18em] text-[#f6c400]">
         {isReception ? "Reception OS" : "Member OS"}
       </p>
@@ -151,7 +151,7 @@ export default function PwaRuntime() {
           <button
             type="button"
             onClick={() => void install()}
-            className="bg-[#f6c400] px-4 py-2 text-sm font-black uppercase text-black"
+            className="min-h-12 bg-[#f6c400] px-4 py-2 text-sm font-black uppercase text-black"
           >
             Instalar
           </button>
@@ -159,7 +159,7 @@ export default function PwaRuntime() {
         <button
           type="button"
           onClick={dismiss}
-          className="border border-white/15 px-4 py-2 text-sm font-black uppercase text-white/60"
+          className="min-h-12 border border-white/15 px-4 py-2 text-sm font-black uppercase text-white/60"
         >
           Ahora no
         </button>

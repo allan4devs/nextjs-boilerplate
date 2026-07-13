@@ -77,6 +77,10 @@ export default function ExtremeGymLandingPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88"
+            srcSet="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=720&q=72 720w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1280&q=80 1280w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88 2400w"
+            sizes="100vw"
+            fetchPriority="high"
+            decoding="async"
             alt="Interior de gimnasio con máquinas"
             className="h-full w-full object-cover opacity-44"
           />
@@ -260,6 +264,8 @@ export default function ExtremeGymLandingPage() {
                   <img
                     src={item.image}
                     alt={item.label}
+                    loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />

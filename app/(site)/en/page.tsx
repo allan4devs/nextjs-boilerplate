@@ -54,7 +54,15 @@ export default function EnglishLandingPage() {
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88" alt="Modern gym interior" className="h-full w-full object-cover opacity-44" />
+          <img
+            src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88"
+            srcSet="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=720&q=72 720w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1280&q=80 1280w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88 2400w"
+            sizes="100vw"
+            fetchPriority="high"
+            decoding="async"
+            alt="Modern gym interior"
+            className="h-full w-full object-cover opacity-44"
+          />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#070707_0%,rgba(7,7,7,.94)_38%,rgba(7,7,7,.62)_72%,rgba(7,7,7,.34)_100%)]" />
           <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:72px_72px]" />
         </div>
@@ -138,7 +146,7 @@ export default function EnglishLandingPage() {
           <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {EXPLORE.map((item) => (
               <Link key={item.href} href={item.href} className="group overflow-hidden border border-white/10 bg-black transition hover:border-[#f6c400]/55">
-                <div className="aspect-[16/10] overflow-hidden"><img src={item.image} alt={item.label} className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105" /></div>
+                <div className="aspect-[16/10] overflow-hidden"><img src={item.image} alt={item.label} loading="lazy" decoding="async" className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105" /></div>
                 <div className="p-5"><div className="flex justify-between gap-3"><h3 className="text-xl font-black uppercase">{item.label}</h3><ArrowRight className="h-5 w-5 text-[#f6c400]" /></div><p className="mt-2 text-sm font-semibold leading-6 text-white/55">{item.text}</p></div>
               </Link>
             ))}

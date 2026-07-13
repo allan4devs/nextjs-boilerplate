@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --xg-viewport-height: 100vh;
 }
 
 @theme inline {
@@ -19,10 +20,59 @@
   }
 }
 
+html {
+  min-height: 100%;
+  overflow-x: clip;
+  background: #070707;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: pan-y;
+}
+
 body {
+  min-height: var(--xg-viewport-height);
+  overflow-x: clip;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  overscroll-behavior-x: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+button,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --xg-viewport-height: 100dvh;
+  }
+
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+
+  .h-screen {
+    height: 100dvh;
+  }
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* --- Xtreme gamification micro-interactions --- */
@@ -155,6 +205,22 @@ body {
 .xg-mobile-menu {
   top: calc(73px + env(safe-area-inset-top, 0px));
   max-height: calc(100dvh - 73px - env(safe-area-inset-top, 0px));
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.xg-mobile-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.xg-mobile-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.xg-keyboard-panel {
+  max-height: calc(var(--xg-viewport-height) - 6rem - env(safe-area-inset-top, 0px));
 }
 
 /* Dock keeps content readable above bottom nav on mobile */

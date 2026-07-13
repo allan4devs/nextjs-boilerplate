@@ -6,12 +6,16 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Xtreme Gym",
     description:
       "App de socios de Xtreme Gym para rachas, check-ins, reservas, planes y progreso corporal.",
+    id: "/app",
     start_url: "/app",
     scope: "/",
     display: "standalone",
+    display_override: ["standalone", "minimal-ui"],
     orientation: "portrait",
     background_color: "#070707",
-    theme_color: "#f6c400",
+    theme_color: "#070707",
+    lang: "es-CR",
+    dir: "ltr",
     categories: ["fitness", "health", "sports"],
     icons: [
       {

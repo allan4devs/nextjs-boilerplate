@@ -15,6 +15,8 @@ export default function ImageTile({
       <img
         src={src}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         className={`h-full w-full transition duration-500 hover:scale-105 ${
           fit === "contain" ? "object-contain" : "object-cover"
         }`}
