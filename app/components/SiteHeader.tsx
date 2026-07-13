@@ -3,13 +3,28 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, ChevronRight, MessageCircle, Phone, X } from "lucide-react";
+import { ArrowRight, ChevronRight, Languages, MessageCircle, Phone, X } from "lucide-react";
 import { NAV_LINKS, BUSINESS, telLink, waLink } from "../lib/site";
 
 const WA_HEADER = waLink("Hola Xtreme Gym, quiero empezar a entrenar y conocer las opciones disponibles.");
 
 export default function SiteHeader() {
   const pathname = usePathname();
+  const english = pathname === "/en" || pathname.startsWith("/en/");
+  const navLinks = english
+    ? NAV_LINKS.map((link, index) => ({
+        ...link,
+        label: ["Training", "Prices", "Seniors", "App", "FAQ", "Contact"][index],
+        description: [
+          "Strength, functional, cardio and lower-body areas",
+          "Free first day and flexible online plans",
+          "Three guided classes every week",
+          "Bookings, streaks and digital membership card",
+          "Common questions before getting started",
+          "Hours, phone number and location",
+        ][index],
+      }))
+    : NAV_LINKS;
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -44,7 +59,7 @@ export default function SiteHeader() {
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
-        <Link href="/" className="group flex min-w-0 items-center gap-3">
+        <Link href={english ? "/en" : "/"} className="group flex min-w-0 items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden border border-[#f6c400]/50 bg-[#f6c400] text-black shadow-[0_0_28px_-12px_rgba(246,196,0,.9)] transition group-hover:shadow-[0_0_28px_-6px_rgba(246,196,0,.9)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/xtreme/logo.jpg" alt="Xtreme Gym" className="h-full w-full object-cover" />
@@ -55,7 +70,7 @@ export default function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
-          {NAV_LINKS.map((link) => {
+          {navLinks.map((link) => {
             const active = isActive(link.href);
             return (
               <Link
@@ -79,10 +94,19 @@ export default function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <Link
+            href={english ? "/" : "/en"}
+            hrefLang={english ? "es-CR" : "en"}
+            aria-label={english ? "Ver sitio en español" : "View website in English"}
+            className="inline-flex h-11 items-center gap-1.5 border border-white/15 bg-white/[0.04] px-3 text-xs font-black uppercase tracking-[0.12em] text-white/70 transition hover:border-[#f6c400]/60 hover:text-[#f6c400]"
+          >
+            <Languages className="h-4 w-4" />
+            {english ? "ES" : "EN"}
+          </Link>
+          <Link
             href="/precios"
             className="hidden items-center gap-2 border border-white/20 bg-white/[0.07] px-4 py-2.5 text-sm font-black uppercase text-white transition hover:border-white/45 hover:bg-white/10 xl:inline-flex"
           >
-            Inscribirme
+            {english ? "Join" : "Inscribirme"}
             <ArrowRight className="h-4 w-4" />
           </Link>
           <a
@@ -97,7 +121,7 @@ export default function SiteHeader() {
             type="button"
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
-            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            aria-label={open ? (english ? "Close menu" : "Cerrar menú") : (english ? "Open menu" : "Abrir menú")}
             className="grid h-11 w-11 place-items-center border border-white/15 bg-white/[0.06] text-white transition hover:border-[#f6c400]/60 lg:hidden"
           >
             {open ? (
@@ -117,13 +141,13 @@ export default function SiteHeader() {
         <div className="fixed inset-0 top-[73px] z-40 lg:hidden">
           <button
             type="button"
-            aria-label="Cerrar menú"
+            aria-label={english ? "Close menu" : "Cerrar menú"}
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           />
 
           <nav className="relative max-h-[calc(100dvh-73px)] overflow-y-auto border-b border-white/10 bg-[#0b0b0b] px-5 pb-6 pt-3">
-            {NAV_LINKS.map((link) => {
+            {navLinks.map((link) => {
               const active = isActive(link.href);
               return (
                 <Link

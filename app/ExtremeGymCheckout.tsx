@@ -260,12 +260,20 @@ export default function ExtremeGymCheckout({
               const result = (await response.json()) as {
                 success?: boolean;
                 captureID?: string;
+                membershipUntil?: string | null;
                 message?: string;
               };
               if (!response.ok || !result.success) throw new Error(result.message || "No se pudo confirmar el pago.");
 
-              setStatus(`Pago confirmado. Comprobante: ${result.captureID || data.orderID}`);
+              setStatus("Pago confirmado. Redirigiendo...");
               setError("");
+
+              const params = new URLSearchParams();
+              params.set("plan", currentCheckout.selected.label);
+              const reference = result.captureID || data.orderID;
+              if (reference) params.set("ref", reference);
+              if (result.membershipUntil) params.set("until", result.membershipUntil);
+              window.location.assign(`/gracias?${params.toString()}`);
             },
             onCancel: () => setStatus("Pago cancelado. Puede intentar de nuevo cuando quiera."),
             onError: (err: unknown) => {

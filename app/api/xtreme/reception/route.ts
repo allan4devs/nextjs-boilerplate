@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import { sendWelcomeEmail } from "@/lib/helpers/email";
 import { recordEvent } from "@/lib/xtreme/events";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
@@ -387,6 +388,14 @@ export async function POST(req: NextRequest) {
       });
 
       if (!existing) {
+        if (email) {
+          await sendWelcomeEmail({
+            to: email,
+            memberName,
+            accessCode: formatAccessCode(memberAccessCode(normalizedName)),
+            cedula,
+          });
+        }
         await recordEvent(db, {
           type: "profile_created",
           memberId: normalizedName,

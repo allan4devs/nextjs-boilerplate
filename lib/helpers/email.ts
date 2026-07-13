@@ -120,7 +120,13 @@ export async function sendWelcomeEmail(args: {
   to: string;
   memberName: string;
   accessCode: string;
+  cedula?: string;
 }) {
+  const step = (n: number, html: string) =>
+    `<tr>
+      <td style="padding:6px 12px 6px 0;vertical-align:top;"><span style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:#0b0b0b;color:#d8ff3e;font-weight:900;font-size:13px;">${n}</span></td>
+      <td style="padding:6px 0;font-size:14px;line-height:1.6;">${html}</td>
+    </tr>`;
   return sendEmail({
     to: args.to,
     subject: "Bienvenido a Xtreme Gym — su perfil quedo listo",
@@ -128,7 +134,14 @@ export async function sendWelcomeEmail(args: {
       `Bienvenido, ${escapeHtml(args.memberName)}`,
       `<p style="font-size:14px;line-height:1.6;">Su perfil de socio quedo creado. Con este codigo puede hacer check-in en recepcion o en la pantalla de ingreso:</p>
       <div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:16px;font-size:26px;font-weight:900;letter-spacing:6px;margin:16px 0;">${escapeHtml(args.accessCode)}</div>
-      <p style="font-size:14px;line-height:1.6;">En la app puede reservar clases, marcar entrenos, cuidar su racha y seguir su progreso corporal. Proteja su perfil con un PIN de 4 digitos.</p>`,
+      <p style="font-size:14px;line-height:1.6;font-weight:bold;text-transform:uppercase;">Como entrar a su app de socio</p>
+      <table style="border-collapse:collapse;margin:4px 0 8px;">
+        ${step(1, `Abra la app con el boton de abajo (guardela en su pantalla de inicio para tenerla a mano).`)}
+        ${step(2, args.cedula ? `Digite su cedula <strong>${escapeHtml(args.cedula)}</strong> para entrar a su perfil.` : `Digite su cedula para entrar a su perfil.`)}
+        ${step(3, `Cree su PIN de 4 digitos la primera vez; con el protege su perfil.`)}
+      </table>
+      ${appButton("Entrar a mi app")}
+      <p style="font-size:14px;line-height:1.6;margin-top:16px;">En la app puede reservar clases, marcar entrenos, cuidar su racha y seguir su progreso corporal. ¡Pura vida y nos vemos en el gym!</p>`,
     ),
   });
 }

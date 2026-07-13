@@ -18,8 +18,11 @@ export default function SiteFooter() {
   const pathname = usePathname() || "";
   if (isOsSurface(pathname)) return null;
 
+  const english = pathname === "/en" || pathname.startsWith("/en/");
+  const navLabels = ["Training", "Prices", "Seniors", "App", "FAQ", "Contact"];
+
   // Barra sticky de conversión solo en el landing (no en /precios, /app, etc.)
-  const showMobileCta = pathname === "/";
+  const showMobileCta = pathname === "/" || pathname === "/en";
 
   return (
     <>
@@ -58,7 +61,7 @@ export default function SiteFooter() {
           <nav className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-3 lg:justify-items-end">
             {NAV_LINKS.map((link) => (
               <Link key={link.href} href={link.href} className="transition hover:text-[#f6c400]">
-                {link.label}
+                {english ? navLabels[NAV_LINKS.indexOf(link)] : link.label}
               </Link>
             ))}
             <a
@@ -68,7 +71,7 @@ export default function SiteFooter() {
               className="inline-flex items-center gap-2 transition hover:text-[#f6c400]"
             >
               <MapPin className="h-4 w-4" />
-              Mapa
+              {english ? "Map" : "Mapa"}
             </a>
           </nav>
         </div>
@@ -77,7 +80,7 @@ export default function SiteFooter() {
           <span>Xtreme Gym - Ciudad Quesada, Barrio San Pablo</span>
           <span className="inline-flex items-center gap-2">
             <Star className="h-4 w-4 text-[#f6c400]" />
-            Hábitos, movimiento y progreso
+            {english ? "Habits, movement and progress" : "Hábitos, movimiento y progreso"}
           </span>
         </div>
       </footer>
@@ -89,14 +92,14 @@ export default function SiteFooter() {
               href="/primer-dia#registro"
               className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-3 text-xs font-black uppercase text-black"
             >
-              Reservar día
+              {english ? "Free first day" : "Reservar día"}
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/precios"
               className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 bg-white/[0.06] px-3 text-xs font-black uppercase text-white"
             >
-              Ver planes
+              {english ? "View plans" : "Ver planes"}
             </Link>
           </div>
         </div>

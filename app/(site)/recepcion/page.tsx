@@ -8,6 +8,7 @@ import {
   CreditCard,
   DoorOpen,
   IdCard,
+  LayoutDashboard,
   Loader2,
   Lock,
   LogOut,
@@ -47,7 +48,7 @@ type RecentCheckin = {
   by: string;
 };
 
-type Tab = "cedula" | "face" | "register" | "chat";
+type Tab = "home" | "cedula" | "face" | "register" | "chat";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -86,7 +87,7 @@ export default function RecepcionPage() {
   const [unlockError, setUnlockError] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  const [tab, setTab] = useState<Tab>("cedula");
+  const [tab, setTab] = useState<Tab>("home");
   const [status, setStatus] = useState<GymStatus | null>(null);
   const [recent, setRecent] = useState<RecentCheckin[]>([]);
   const [roster, setRoster] = useState<MemberHit[]>([]);
@@ -596,7 +597,7 @@ export default function RecepcionPage() {
     setRoster([]);
     setRecent([]);
     setShowStaffGate(false);
-    setTab("cedula");
+    setTab("home");
   }
 
   if (!unlocked) {
@@ -696,6 +697,7 @@ export default function RecepcionPage() {
             <p className="truncate text-base font-black uppercase tracking-tight sm:text-lg">
               Recepcion Xtreme
             </p>
+            <p className="hidden text-[10px] font-bold uppercase tracking-[0.16em] text-white/35 sm:block">Ingresos · personas · atención</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -710,7 +712,7 @@ export default function RecepcionPage() {
             href="/admin"
             className="inline-flex min-h-11 items-center border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-white/40 hover:text-white"
           >
-            Admin
+            Administración
           </Link>
           <button
             type="button"
@@ -727,6 +729,7 @@ export default function RecepcionPage() {
           <div className="flex border-b-[3px] border-white/15">
             {(
               [
+                { id: "home" as const, label: "Mostrador", icon: LayoutDashboard },
                 { id: "cedula" as const, label: "Cedula", icon: IdCard },
                 ...(FACE_RECOGNITION_ENABLED
                   ? [{ id: "face" as const, label: "Rostro", icon: ScanFace }]
@@ -768,6 +771,42 @@ export default function RecepcionPage() {
           </div>
 
           <div className="p-4 sm:p-6">
+            {tab === "home" && (
+              <div>
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <GameLabel tone="lime">Turno activo · herramientas de recepción</GameLabel>
+                    <h1 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">¿Qué necesita hacer?</h1>
+                    <p className="mt-2 max-w-2xl text-sm font-bold text-white/45">Todo lo del mostrador está acá. Administración, reportes y configuración viven en su panel separado.</p>
+                  </div>
+                  {chatUnread > 0 && (
+                    <button type="button" onClick={() => setTab("chat")} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-red-400 bg-red-500/15 px-4 text-xs font-black uppercase text-red-200">
+                      <MessageCircle className="h-4 w-4" /> {chatUnread} chat{chatUnread === 1 ? "" : "s"} pendiente{chatUnread === 1 ? "" : "s"}
+                    </button>
+                  )}
+                </div>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <ReceptionAction icon={IdCard} eyebrow="Acceso rápido" title="Ingresar socio" description="Escanee o digite la cédula y confirme el ingreso." tone="lime" onClick={() => setTab("cedula")} />
+                  <ReceptionAction icon={UserPlus} eyebrow="Persona nueva" title="Registrar persona" description="Nombre, cédula, teléfono, correo, plan, foto e ingreso inmediato." tone="cyan" onClick={() => setTab("register")} />
+                  <ReceptionAction icon={MessageCircle} eyebrow={chatUnread > 0 ? String(chatUnread) + " por atender" : "Atención en vivo"} title="Responder chat" description="Lea conversaciones, responda consultas y cierre casos resueltos." tone="orange" onClick={() => setTab("chat")} />
+                  {FACE_RECOGNITION_ENABLED ? (
+                    <ReceptionAction icon={ScanFace} eyebrow="Cámara" title="Ingreso por rostro" description="Reconozca socios enrolados o agregue su rostro al perfil." tone="violet" onClick={() => setTab("face")} />
+                  ) : (
+                    <div className="border-[3px] border-white/10 bg-white/[0.025] p-5 text-white/35 sm:p-6">
+                      <ShieldAlert className="h-7 w-7" />
+                      <p className="mt-5 text-xs font-black uppercase tracking-[0.18em]">Sistema</p>
+                      <p className="mt-1 text-xl font-black uppercase">Rostro desactivado</p>
+                      <p className="mt-2 text-sm font-bold">La cédula sigue siendo el método principal de ingreso.</p>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <ReceptionStat label="Personas adentro" value={status?.currentPeople ?? 0} />
+                  <ReceptionStat label="Ingresos hoy" value={status?.checkinsToday ?? recent.length} />
+                  <ReceptionStat label="Chats pendientes" value={chatUnread} alert={chatUnread > 0} />
+                </div>
+              </div>
+            )}
             {tab === "chat" && <ReceptionChatInbox adminCode={adminCode} />}
 
             {tab === "cedula" && (
@@ -1234,6 +1273,50 @@ export default function RecepcionPage() {
   );
 }
 
+function ReceptionAction({
+  icon: Icon,
+  eyebrow,
+  title,
+  description,
+  tone,
+  onClick,
+}: {
+  icon: typeof IdCard;
+  eyebrow: string;
+  title: string;
+  description: string;
+  tone: "lime" | "cyan" | "orange" | "violet";
+  onClick: () => void;
+}) {
+  const styles = {
+    lime: "border-[#d8ff3e]/55 hover:bg-[#d8ff3e]/10 text-[#d8ff3e]",
+    cyan: "border-cyan-300/45 hover:bg-cyan-300/10 text-cyan-300",
+    orange: "border-orange-300/45 hover:bg-orange-300/10 text-orange-300",
+    violet: "border-violet-300/45 hover:bg-violet-300/10 text-violet-300",
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={"group min-h-44 border-[3px] bg-black/35 p-5 text-left transition hover:-translate-y-1 hover:shadow-[5px_5px_0_rgba(255,255,255,.08)] sm:p-6 " + styles[tone]}
+    >
+      <Icon className="h-8 w-8" />
+      <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] opacity-65">{eyebrow}</p>
+      <p className="mt-1 text-2xl font-black uppercase tracking-tight text-white">{title}</p>
+      <p className="mt-2 text-sm font-bold leading-6 text-white/45">{description}</p>
+    </button>
+  );
+}
+
+function ReceptionStat({ label, value, alert = false }: { label: string; value: number; alert?: boolean }) {
+  return (
+    <div className={"border border-white/10 bg-white/[0.035] p-4 " + (alert ? "text-orange-300" : "text-white")}>
+      <p className="text-3xl font-black">{value}</p>
+      <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/40">{label}</p>
+    </div>
+  );
+}
 function OccupancyPill({ status }: { status: GymStatus | null }) {
   return (
     <span className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-black/50 px-3 py-2 text-xs font-black uppercase tracking-wide text-cyan-100 shadow-[3px_3px_0_rgba(0,0,0,.4)]">
