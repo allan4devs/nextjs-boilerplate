@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BUSINESS, SCHEDULE, telLink, waLink } from "../../lib/site";
+import { gymJsonLd, pageMetadata } from "../../lib/seo";
+import JsonLd from "../../components/JsonLd";
 import { CalendarCheck, Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Contacto y ubicación",
   description:
     "Horarios, teléfono, correo y ubicación de Xtreme Gym en Ciudad Quesada, Barrio San Pablo. Escríbanos por WhatsApp.",
-};
+  path: "/contacto",
+});
 
 type BrandIconProps = { className?: string };
 
@@ -104,6 +107,7 @@ const SOCIAL_LINKS = [
 export default function ContactoPage() {
   return (
     <section className="px-5 py-10 sm:px-8 lg:py-14">
+      <JsonLd data={gymJsonLd()} />
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>

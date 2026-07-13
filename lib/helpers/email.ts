@@ -355,3 +355,27 @@ export async function sendPinRecoveryOtpEmail(args: {
     ),
   });
 }
+
+/** Notificacion al admin cuando se registra un nuevo socio con primer dia gratis. */
+export async function sendAdminNewMemberNotification(args: {
+  memberName: string;
+  phone: string;
+  email?: string;
+  cedula?: string;
+}) {
+  return sendEmail({
+    to: "aallanrd@gmail.com",
+    subject: `Nuevo socio registrado: ${args.memberName}`,
+    html: layout(
+      "Nuevo registro con primer día gratis",
+      `<p style="font-size:14px;line-height:1.6;">Se ha registrado un nuevo socio en el Member OS aprovechando el primer día gratis:</p>
+      <table style="border-collapse:collapse;margin:12px 0;">
+        ${row("Nombre", escapeHtml(args.memberName))}
+        ${row("Teléfono", escapeHtml(args.phone))}
+        ${args.email ? row("Correo", escapeHtml(args.email)) : ""}
+        ${args.cedula ? row("Cédula", escapeHtml(args.cedula)) : ""}
+      </table>
+      <p style="font-size:14px;line-height:1.6;">Este socio se registró automáticamente desde la app y cuenta con un día gratis para entrenar.</p>`,
+    ),
+  });
+}

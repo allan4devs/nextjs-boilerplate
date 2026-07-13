@@ -4,13 +4,15 @@ import PageHero from "../../components/PageHero";
 import CtaBand from "../../components/CtaBand";
 import ImageTile from "../../components/ImageTile";
 import { GALLERY, TRUST_POINTS, ZONES } from "../../lib/site";
+import { pageMetadata } from "../../lib/seo";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Zonas de entrenamiento",
   description:
     "Fuerza, funcional, cardio y lower lab: las cuatro zonas de Xtreme Gym en Ciudad Quesada, con equipo completo y acompañamiento.",
-};
+  path: "/zonas",
+});
 
 export default function ZonasPage() {
   return (

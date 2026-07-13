@@ -10,13 +10,17 @@ import {
   SOCIAL_PROOF,
   TRANSFORM_STEPS,
 } from "../lib/site";
+import { gymJsonLd, pageMetadata } from "../lib/seo";
+import JsonLd from "../components/JsonLd";
 import { ArrowRight, MapPin, Smartphone } from "lucide-react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Xtreme Gym | Ciudad Quesada",
   description:
     "Xtreme Gym en Ciudad Quesada, San Carlos. Gimnasio completo para construir hábitos, mejorar condición física, ganar energía y entrenar con acompañamiento.",
-};
+  path: "/",
+  absoluteTitle: true,
+});
 
 const EXPLORE = [
   {
@@ -60,6 +64,7 @@ const EXPLORE = [
 export default function ExtremeGymLandingPage() {
   return (
     <>
+      <JsonLd data={gymJsonLd()} />
       <LandingTrack surface="home" />
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0">

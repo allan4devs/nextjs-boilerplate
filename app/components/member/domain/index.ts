@@ -9,5 +9,6 @@ export type {
   Workout,
 } from "./member";
 export type { NextBestAction, NextBestActionKind } from "./nextBestAction";
+export type { EntitlementRecord, PaymentHistoryResponse, PaymentRecord } from "./payment";
 export type { Reservation, ReservationState } from "./reservation";
 export type { GuideWorkout, MachineGuide, Routine, Training } from "./training";

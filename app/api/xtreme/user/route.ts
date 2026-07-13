@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
-import { sendWelcomeEmail } from "@/lib/helpers/email";
+import { sendWelcomeEmail, sendAdminNewMemberNotification } from "@/lib/helpers/email";
 import { businessDate } from "@/lib/xtreme/business-date";
 import { recordEvent } from "@/lib/xtreme/events";
 import { grantFreeFirstDayIfEligible } from "@/lib/xtreme/entitlements";
@@ -350,6 +350,13 @@ export async function POST(req: NextRequest) {
           accessCode: formatAccessCode(memberAccessCode(normalizedName)),
         });
       }
+      // Notificar al admin sobre el nuevo registro
+      await sendAdminNewMemberNotification({
+        memberName,
+        phone,
+        email: email || undefined,
+        cedula: cedulaRaw || undefined,
+      });
       await recordEvent(db, {
         type: "profile_created",
         memberId: normalizedName,

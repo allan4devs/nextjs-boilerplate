@@ -4,12 +4,14 @@ import { ArrowRight, CheckCircle2, Clock3, MapPin, ShieldCheck } from "lucide-re
 import FreeDayRegisterForm from "../../components/FreeDayRegisterForm";
 import LandingTrack from "../../components/LandingTrack";
 import { BUSINESS, SCHEDULE } from "../../lib/site";
+import { pageMetadata } from "../../lib/seo";
 
-export const metadata: Metadata = {
-  title: "Tu primer día gratis | Xtreme Gym",
+export const metadata: Metadata = pageMetadata({
+  title: "Tu primer día gratis",
   description:
     "Registrate con tu correo y entrená tu primer día gratis en Xtreme Gym. Después elegís tu plan.",
-};
+  path: "/primer-dia",
+});
 
 const INCLUDED = [
   "Acceso a fuerza, funcional, cardio y Lower Lab",

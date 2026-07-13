@@ -6,6 +6,7 @@
 
 export type {
   BodyMetric,
+  EntitlementRecord,
   Gamification,
   GuideWorkout,
   MachineGuide,
@@ -15,6 +16,8 @@ export type {
   NextBestAction,
   NextBestActionKind,
   NotificationPrefs,
+  PaymentHistoryResponse,
+  PaymentRecord,
   PlanItem,
   PublicBadge,
   Reservation,

@@ -487,6 +487,7 @@ export async function POST(req: NextRequest) {
       await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).insertOne(payment);
 
       // Extender membresia si se elige plan y existe el socio
+      let nextBillingDate: string | undefined;
       if (body.extendMembership && payment.category === "Plan") {
         const days = Math.max(1, Math.min(365, Number(body.extendDays) || 30));
         const member = await db
@@ -496,7 +497,7 @@ export async function POST(req: NextRequest) {
           member?.membership?.nextBillingDate && member.membership.nextBillingDate > todayIso()
             ? member.membership.nextBillingDate
             : todayIso();
-        const nextBillingDate = addDays(toUtcDate(base), days).toISOString().slice(0, 10);
+        nextBillingDate = addDays(toUtcDate(base), days).toISOString().slice(0, 10);
         await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
           { normalizedName: payment.normalizedName },
           {
@@ -519,6 +520,29 @@ export async function POST(req: NextRequest) {
           },
           { upsert: true },
         );
+      }
+
+      // Create entitlement for manual payments (matching PayPal behavior)
+      let entitlementId: string | null = null;
+      if (payment.category === "Plan" || payment.optionId === "day-pass") {
+        const { entitlementFromPayment, grantEntitlement } = await import("@/lib/xtreme/entitlements");
+
+        const entShape = entitlementFromPayment({
+          memberKey: payment.normalizedName,
+          optionId: payment.optionId,
+          optionLabel: payment.optionLabel,
+          paymentId: payment.id,
+          startDate: payment.date,
+          category: payment.category,
+        });
+
+        // Align entitlement end date with membership extension if applicable
+        if (nextBillingDate && entShape.kind === "plan") {
+          entShape.endsOn = nextBillingDate;
+        }
+
+        const entitlement = await grantEntitlement(db, entShape);
+        entitlementId = entitlement.id;
       }
 
       let receiptSent = false;
@@ -544,7 +568,7 @@ export async function POST(req: NextRequest) {
         meta: { method: payment.method, category: payment.category },
       });
 
-      return NextResponse.json({ ok: true, payment, receiptSent });
+      return NextResponse.json({ ok: true, payment, receiptSent, entitlementId });
     }
 
     // Enviar recordatorio de membresia a un socio

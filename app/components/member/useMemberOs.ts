@@ -43,6 +43,7 @@ import type {
   NextBestAction,
   NotificationPrefs,
   OsModal,
+  PaymentHistoryResponse,
   PlanItem,
   ReservationState,
   ReservationsResponse,
@@ -84,6 +85,8 @@ export function useMemberOs() {
   const [showTour, setShowTour] = useState(false);
   const [osModal, setOsModal] = useState<OsModal>(null);
   const closeOsModal = useCallback(() => setOsModal(null), []);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryResponse | null>(null);
+  const [isLoadingPayments, setIsLoadingPayments] = useState(false);
 
   const requirePinAgain = useCallback((err: unknown, fallback: string) => {
     const detail = errorText(err, fallback);
@@ -351,6 +354,25 @@ export function useMemberOs() {
     setGymStatus(data);
   }, []);
 
+  const fetchPayments = useCallback(async () => {
+    if (!unlocked) return;
+    setIsLoadingPayments(true);
+    try {
+      const response = await fetch("/api/xtreme/payments", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("Failed to fetch payments");
+      const data = (await response.json()) as PaymentHistoryResponse;
+      setPaymentHistory(data);
+    } catch (err) {
+      console.error("Failed to fetch payment history", err);
+      // Silent failure - payment history is not critical for app function
+    } finally {
+      setIsLoadingPayments(false);
+    }
+  }, [unlocked]);
+
   const applyMemberPayload = useCallback(
     (memberData: MembersResponse, fallbackName: string, phone = "", email = "", cedula = "") => {
       const resolved = memberData.member ?? initialMember(fallbackName);
@@ -451,7 +473,7 @@ export function useMemberOs() {
           const createData = await readJson<MembersResponse>(createResponse);
           const name = applyMemberPayload(createData, regName, phone, email, digits);
           setNeedsRegistration(false);
-          await Promise.all([loadReservations(name), loadGymStatus()]);
+          await Promise.all([loadReservations(name), loadGymStatus(), fetchPayments()]);
           setPinMode("set");
           setShowPin(true);
           return;
@@ -476,7 +498,7 @@ export function useMemberOs() {
           if (await hasServerSession(name)) {
             storeSession(name, digits);
             await reloadFullMember(name, digits);
-            await loadReservations(name);
+            await Promise.all([loadReservations(name), fetchPayments()]);
             setShowPin(false);
             return;
           }
@@ -583,7 +605,7 @@ export function useMemberOs() {
           if (await hasServerSession(trimmed)) {
             storeSession(trimmed, cedula || undefined);
             await reloadFullMember(trimmed, cedula || undefined);
-            await loadReservations(trimmed);
+            await Promise.all([loadReservations(trimmed), fetchPayments()]);
             setShowPin(false);
             return;
           }
@@ -1075,5 +1097,9 @@ export function useMemberOs() {
     uploadPhoto,
     activateReminder,
     resetMember,
+    // payment history
+    paymentHistory,
+    isLoadingPayments,
+    fetchPayments,
   };
 }

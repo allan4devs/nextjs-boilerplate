@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import PageHero from "../../components/PageHero";
 import CtaBand from "../../components/CtaBand";
+import JsonLd from "../../components/JsonLd";
 import { FAQS, waLink } from "../../lib/site";
+import { faqJsonLd, pageMetadata } from "../../lib/seo";
 import { MessageCircle } from "lucide-react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Preguntas frecuentes",
   description:
     "Respuestas sobre planes, horarios, pago en línea, clase de adultos mayores y app de socios de Xtreme Gym en Ciudad Quesada.",
-};
+  path: "/preguntas",
+});
 
 export default function PreguntasPage() {
   return (
     <>
+      <JsonLd data={faqJsonLd()} />
       <PageHero
         eyebrow="Preguntas"
         title="Lo que la gente"

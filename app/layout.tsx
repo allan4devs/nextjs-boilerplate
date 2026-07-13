@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import PwaRuntime from "./components/PwaRuntime";
+import { SITE_URL } from "./lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   applicationName: "Xtreme Gym",
   title: {
     default: "Xtreme Gym | Ciudad Quesada",
@@ -25,9 +27,13 @@ export const metadata: Metadata = {
     title: "Xtreme Gym | Ciudad Quesada",
     description:
       "Entrene en Ciudad Quesada con planes flexibles, zonas completas, clases, app de socios y acompañamiento.",
+    url: "/",
     type: "website",
     locale: "es_CR",
     siteName: "Xtreme Gym",
+  },
+  twitter: {
+    card: "summary_large_image",
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {

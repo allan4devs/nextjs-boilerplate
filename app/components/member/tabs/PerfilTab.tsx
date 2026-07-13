@@ -23,6 +23,7 @@ import {
 import { GameButton } from "../../GameOS";
 import Avatar from "../Avatar";
 import Barcode from "../Barcode";
+import PaymentHistory from "../PaymentHistory";
 import SettingCard from "../SettingCard";
 import { GOALS, REMINDERS, TRAININGS } from "../constants";
 import { formatCedulaInput } from "../utils";
@@ -81,6 +82,8 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
     setPinMode,
     setShowPin,
     resetMember,
+    paymentHistory,
+    isLoadingPayments,
   } = os;
 
   const [openSetting, setOpenSetting] = useState<SettingKey | null>(null);
@@ -467,6 +470,20 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
           </button>
         </div>
       </SettingCard>
+
+      {/* Payment History Section */}
+      {unlocked && paymentHistory && (
+        <PaymentHistory
+          payments={paymentHistory.payments}
+          entitlements={paymentHistory.entitlements}
+        />
+      )}
+
+      {isLoadingPayments && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-[#d8ff3e]" />
+        </div>
+      )}
 
       <div className="border-[3px] border-white/15 bg-gradient-to-br from-[#d8ff3e]/10 to-orange-400/[0.06] p-4 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5">
         <div className="flex items-center gap-3">

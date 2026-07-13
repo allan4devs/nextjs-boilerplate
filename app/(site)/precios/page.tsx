@@ -3,13 +3,15 @@ import Link from "next/link";
 import ExtremeGymCheckout from "../../ExtremeGymCheckout";
 import CtaBand from "../../components/CtaBand";
 import { BUSINESS, COSTS, PLAN_DETAILS } from "../../lib/site";
+import { pageMetadata } from "../../lib/seo";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Precios y planes",
   description:
     "Costos de Xtreme Gym en Ciudad Quesada: primer día gratis, semana, quincena y mensualidad. Inscripción y pago en línea.",
-};
+  path: "/precios",
+});
 
 const COMPARISON = [
   { feature: "Acceso a todas las zonas", day: true, week: true, fortnight: true, month: true },

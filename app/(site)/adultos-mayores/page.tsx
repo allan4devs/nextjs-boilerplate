@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
+import ExtremeGymCheckout from "../../ExtremeGymCheckout";
 import PageHero from "../../components/PageHero";
 import CtaBand from "../../components/CtaBand";
-import { BUSINESS, SENIOR_BENEFITS, SENIOR_CLASSES, telLink, waLink } from "../../lib/site";
-import { MessageCircle, Phone } from "lucide-react";
+import { BUSINESS, SENIOR_BENEFITS, SENIOR_CLASSES, telLink } from "../../lib/site";
+import { pageMetadata } from "../../lib/seo";
+import { CreditCard, Phone } from "lucide-react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Clase de adultos mayores",
   description:
     "Clase de adultos mayores en Xtreme Gym, Ciudad Quesada: tres sesiones por semana de movilidad, fuerza segura y equilibrio por CRC 16.000.",
-};
+  path: "/adultos-mayores",
+});
 
 const SENIOR_FACTS = [
   ["3", "clases por semana"],
@@ -64,11 +67,11 @@ export default function AdultosMayoresPage() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <a
-                href={waLink("Hola Xtreme Gym, quiero información de la clase de Adultos Mayores.")}
+                href="#inscripcion"
                 className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
               >
-                Consultar clase
-                <MessageCircle className="h-4 w-4" />
+                Pagar en línea
+                <CreditCard className="h-4 w-4" />
               </a>
               <a
                 href={telLink}
@@ -103,6 +106,8 @@ export default function AdultosMayoresPage() {
           </div>
         </div>
       </section>
+
+      <ExtremeGymCheckout initialOption="senior" />
 
       <CtaBand
         eyebrow="Primera clase"
