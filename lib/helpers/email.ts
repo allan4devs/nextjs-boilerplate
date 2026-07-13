@@ -1,4 +1,4 @@
-import { absoluteAppUrl } from "@/lib/constants/app-url";
+import { absoluteAppUrl, absoluteRequestUrl } from "@/lib/constants/app-url";
 import { BUSINESS } from "@/lib/constants/business";
 import { getDb } from "@/lib/helpers/mongodb";
 import { emailPreferencesToken } from "@/lib/xtreme/email-preferences-token";
@@ -175,8 +175,12 @@ export async function sendRegistrationConfirmEmail(args: {
   to: string;
   token: string;
   expiresMinutes: number;
+  baseUrl?: string;
 }) {
-  const href = absoluteAppUrl(`/registro/confirmar?token=${encodeURIComponent(args.token)}`);
+  const href = absoluteRequestUrl(
+    `/registro/confirmar?token=${encodeURIComponent(args.token)}`,
+    args.baseUrl,
+  );
   return sendEmail({
     to: args.to,
     subject: "Completa tu acceso a la app — Xtreme Gym",
@@ -198,8 +202,12 @@ export async function sendPaymentAppInviteEmail(args: {
   memberName: string;
   optionLabel: string;
   expiresHours: number;
+  baseUrl?: string;
 }) {
-  const href = absoluteAppUrl("/registro/confirmar?token=" + encodeURIComponent(args.token));
+  const href = absoluteRequestUrl(
+    "/registro/confirmar?token=" + encodeURIComponent(args.token),
+    args.baseUrl,
+  );
   const body =
     '<p style="font-size:14px;line-height:1.6;">Hola ' +
     escapeHtml(args.memberName) +

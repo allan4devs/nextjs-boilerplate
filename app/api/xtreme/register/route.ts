@@ -8,6 +8,7 @@ import {
 import { grantFreeFirstDayIfEligible } from "@/lib/xtreme/entitlements";
 import { createFreeFirstDayMembership } from "@/lib/xtreme/members/membership";
 import { businessDate } from "@/lib/xtreme/business-date";
+import { requestAppUrl } from "@/lib/constants/app-url";
 import {
   createRegistrationToken,
   hashRegistrationToken,
@@ -35,7 +36,7 @@ const TOKEN_TTL_MIN = 60;
  * Paso 1 — el usuario da solo su correo. Creamos un registro pendiente y le
  * enviamos un link magico para confirmar la cuenta. No se crea el perfil aun.
  */
-async function startRegistration(body: Record<string, unknown>) {
+async function startRegistration(req: NextRequest, body: Record<string, unknown>) {
   const email = normalizeEmail(body.email);
   const source = body.source === "app" ? "app" : "primer-dia";
 
@@ -96,6 +97,7 @@ async function startRegistration(body: Record<string, unknown>) {
     to: email,
     token,
     expiresMinutes: TOKEN_TTL_MIN,
+    baseUrl: requestAppUrl(req.url),
   });
 
   await recordEvent(db, {
@@ -135,9 +137,6 @@ async function verifyToken(token: string) {
   });
 
   if (!pending) return { error: "Enlace invalido o ya usado.", status: 404 as const };
-  if (pending.confirmedAt || pending.memberNormalizedName) {
-    return { error: "Este enlace ya fue utilizado.", status: 409 as const };
-  }
   if (pending.expiresAt.getTime() < Date.now()) {
     return { error: "El enlace vencio. Registrese de nuevo.", status: 410 as const };
   }
@@ -149,6 +148,25 @@ export async function GET(req: NextRequest) {
   const verified = await verifyToken(token);
   if ("error" in verified) {
     return NextResponse.json({ error: verified.error }, { status: verified.status });
+  }
+  if (verified.pending.confirmedAt || verified.pending.memberNormalizedName) {
+    const normalizedName = normalizeKey(verified.pending.memberNormalizedName || "");
+    const member = normalizedName
+      ? await verified.db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName })
+      : null;
+    if (!member) {
+      return NextResponse.json(
+        { error: "El perfil asociado a este enlace no esta disponible. Contacte recepcion." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({
+      ok: true,
+      completed: true,
+      memberName: member.memberName,
+      accessCode: formatAccessCode(memberAccessCode(normalizedName)),
+      paidRegistration: verified.pending.source === "paypal",
+    });
   }
   return NextResponse.json({
     ok: true,
@@ -169,6 +187,27 @@ async function confirmRegistration(body: Record<string, unknown>) {
     return NextResponse.json({ error: verified.error }, { status: verified.status });
   }
   const { pending, db } = verified;
+
+  if (pending.confirmedAt || pending.memberNormalizedName) {
+    const normalizedName = normalizeKey(pending.memberNormalizedName || "");
+    const member = normalizedName
+      ? await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName })
+      : null;
+    if (!member) {
+      return NextResponse.json(
+        { error: "El perfil asociado a este enlace no esta disponible. Contacte recepcion." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({
+      ok: true,
+      memberName: member.memberName,
+      accessCode: formatAccessCode(memberAccessCode(normalizedName)),
+      freeFirstDay: pending.source !== "paypal",
+      paidRegistration: pending.source === "paypal",
+      alreadyCompleted: true,
+    });
+  }
 
   const paidInvite = pending.source === "paypal" && Boolean(pending.expectedMemberKey);
   const memberName = paidInvite
@@ -284,7 +323,7 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as Record<string, unknown>;
     const action = String(body.action ?? "start");
     if (action === "confirm") return await confirmRegistration(body);
-    return await startRegistration(body);
+    return await startRegistration(req, body);
   } catch (err) {
     console.error("XTREME REGISTER POST", err);
     return NextResponse.json({ error: "No se pudo procesar el registro." }, { status: 500 });

@@ -35,6 +35,7 @@ import {
   createRegistrationToken,
   hashRegistrationToken,
 } from "@/lib/xtreme/registration-token";
+import { requestAppUrl } from "@/lib/constants/app-url";
 
 type CaptureBody = {
   orderID?: string;
@@ -100,6 +101,7 @@ const APP_INVITE_EXPIRES_HOURS = 24;
 async function sendAppInviteAfterPayment(
   db: Awaited<ReturnType<typeof getDb>>,
   payment: PaymentDoc,
+  baseUrl?: string,
 ) {
   if (!payment.email) return false;
   try {
@@ -140,6 +142,7 @@ async function sendAppInviteAfterPayment(
       memberName: payment.memberName,
       optionLabel: payment.optionLabel,
       expiresHours: APP_INVITE_EXPIRES_HOURS,
+      baseUrl,
     });
     return invite.ok;
   } catch (inviteError) {
@@ -150,6 +153,7 @@ async function sendAppInviteAfterPayment(
 
 export async function POST(req: Request) {
   try {
+    const baseUrl = requestAppUrl(req.url);
     const body = (await req.json()) as CaptureBody;
     const { orderID } = body;
 
@@ -182,7 +186,7 @@ export async function POST(req: Request) {
         paypalCaptureId: pending.paypalCaptureId,
       });
       if (existingPay) {
-        const appInviteSent = await sendAppInviteAfterPayment(db, existingPay);
+        const appInviteSent = await sendAppInviteAfterPayment(db, existingPay, baseUrl);
         return NextResponse.json({
           success: true,
           id: orderID,
@@ -308,7 +312,7 @@ export async function POST(req: Request) {
               },
             },
           );
-          const appInviteSent = await sendAppInviteAfterPayment(db, existingPay);
+          const appInviteSent = await sendAppInviteAfterPayment(db, existingPay, baseUrl);
           return NextResponse.json({
             success: true,
             id: data.id,
@@ -450,7 +454,7 @@ export async function POST(req: Request) {
       // Capture already happened at PayPal — surface ops alert via logs.
     }
 
-    const appInviteSent = await sendAppInviteAfterPayment(db, payment);
+    const appInviteSent = await sendAppInviteAfterPayment(db, payment, baseUrl);
     if (payment.email) {
       await sendPaymentReceiptEmail({
         to: payment.email,

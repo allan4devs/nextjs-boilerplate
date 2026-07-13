@@ -38,9 +38,21 @@ function ConfirmInner() {
           email?: string;
           memberName?: string;
           source?: string;
+          completed?: boolean;
+          accessCode?: string;
+          paidRegistration?: boolean;
           error?: string;
         };
         if (cancelled) return;
+        if (res.ok && json.completed && json.memberName) {
+          setState({
+            phase: "done",
+            memberName: json.memberName,
+            accessCode: json.accessCode || "",
+            paidRegistration: Boolean(json.paidRegistration),
+          });
+          return;
+        }
         if (!res.ok || !json.email) {
           setState({ phase: "invalid", error: json.error || "Enlace invalido." });
           return;
