@@ -29,7 +29,7 @@ export default function SiteFooter() {
       <footer
         id="mapa-footer"
         className={`border-t border-white/10 bg-[#070707] px-5 pt-12 sm:px-8 md:pb-12 ${
-          showMobileCta ? "pb-24" : "pb-12"
+          showMobileCta ? "xg-site-footer-with-cta" : "pb-12"
         }`}
       >
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_.9fr]">
@@ -91,7 +91,7 @@ export default function SiteFooter() {
       </footer>
 
       {showMobileCta && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/92 px-3 py-3 backdrop-blur md:hidden">
+        <div className="xg-mobile-cta fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/92 backdrop-blur md:hidden">
           <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
             <Link
               href={english ? "/en/prices" : "/precios#inscripcion"}

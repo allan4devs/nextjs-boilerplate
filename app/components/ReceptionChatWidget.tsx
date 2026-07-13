@@ -82,6 +82,7 @@ export default function ReceptionChatWidget({ memberContext = null }: Props) {
   const hidden = HIDDEN_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
+  const mobileCtaVisible = !pathname.startsWith("/gracias") && !pathname.startsWith("/registro");
 
   const [open, setOpen] = useState(false);
   const [visitorName, setVisitorName] = useState("");
@@ -290,7 +291,11 @@ export default function ReceptionChatWidget({ memberContext = null }: Props) {
   const closed = session?.status === "closed";
 
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div
+      className={`pointer-events-none fixed right-3 z-[60] flex flex-col items-end gap-3 sm:right-6 ${
+        mobileCtaVisible ? "xg-chat-above-mobile-cta" : "xg-chat-safe-bottom"
+      }`}
+    >
       {open && (
         <div className="pointer-events-auto flex w-[min(100vw-2rem,380px)] flex-col overflow-hidden border-[3px] border-[#d8ff3e] bg-[#0c0c0c] shadow-[6px_6px_0_rgba(0,0,0,.65)]">
           <div className="flex items-center justify-between gap-2 border-b-[3px] border-white/15 bg-[#d8ff3e] px-3 py-2.5 text-black">

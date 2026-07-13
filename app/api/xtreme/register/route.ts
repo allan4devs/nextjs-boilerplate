@@ -59,14 +59,24 @@ async function startRegistration(body: Record<string, unknown>) {
   const token = createRegistrationToken();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + TOKEN_TTL_MIN * 60_000);
+  const pendingCollection = db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION);
+  const existingPending = await pendingCollection.findOne({ email });
+  const previousTokenHashes = [
+    existingPending?.tokenHash,
+    ...(existingPending?.previousTokenHashes ?? []),
+  ]
+    .filter((hash): hash is string => Boolean(hash))
+    .filter((hash, index, hashes) => hashes.indexOf(hash) === index)
+    .slice(0, 5);
 
-  // Un solo registro pendiente por correo: se reemplaza con token nuevo.
-  await db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION).updateOne(
+  // Un documento por correo, conservando enlaces recientes hasta completar el perfil.
+  await pendingCollection.updateOne(
     { email },
     {
       $set: {
         email,
         tokenHash: hashRegistrationToken(token),
+        previousTokenHashes,
         expiresAt,
         confirmedAt: null,
         memberNormalizedName: null,
@@ -95,17 +105,19 @@ async function startRegistration(body: Record<string, unknown>) {
     properties: { source, emailSent: result.ok },
   }).catch(() => {});
 
-  if (!result.ok && !result.skipped) {
+  if (!result.ok) {
     return NextResponse.json(
-      { error: result.error || "No se pudo enviar el correo de confirmacion. Intente de nuevo." },
+      {
+        error:
+          result.error ||
+          "El correo de confirmacion no esta configurado. Contacte al administrador.",
+      },
       { status: 502 },
     );
   }
 
   return NextResponse.json({
     ok: true,
-    // En dev sin correo configurado, exponemos el link para poder continuar.
-    devToken: result.skipped ? token : undefined,
     message: "Le enviamos un correo para confirmar su cuenta.",
   });
 }
@@ -116,9 +128,11 @@ async function verifyToken(token: string) {
     return { error: "Falta el token de confirmacion.", status: 400 as const };
   }
   const db = await getDb();
-  const pending = await db
-    .collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION)
-    .findOne({ tokenHash: hashRegistrationToken(token) });
+  const collection = db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION);
+  const tokenHash = hashRegistrationToken(token);
+  const pending = await collection.findOne({
+    $or: [{ tokenHash }, { previousTokenHashes: tokenHash }],
+  });
 
   if (!pending) return { error: "Enlace invalido o ya usado.", status: 404 as const };
   if (pending.confirmedAt || pending.memberNormalizedName) {

@@ -202,6 +202,8 @@ export type OtpDoc = {
 export type PendingRegistrationDoc = {
   email: string;
   tokenHash: string;
+  /** Hashes recientes: evita romper un correo anterior si se solicita otro enlace. */
+  previousTokenHashes?: string[];
   expiresAt: Date;
   confirmedAt?: Date | null;
   /** Perfil ya creado tras confirmar (para no duplicar). */

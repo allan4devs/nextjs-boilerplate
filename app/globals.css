@@ -152,6 +152,33 @@ body {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Marketing móvil: barra pegada al viewport real y elementos flotantes sin choque. */
+.xg-mobile-cta {
+  width: 100%;
+  padding: 0.75rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  transform: translateZ(0);
+}
+
+.xg-site-footer-with-cta {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+}
+
+.xg-chat-above-mobile-cta {
+  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+.xg-chat-safe-bottom {
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .xg-chat-above-mobile-cta,
+  .xg-chat-safe-bottom {
+    bottom: 1.5rem;
+  }
+}
+
 @media (min-width: 1024px) {
   .xg-os-content {
     padding-bottom: 1.5rem;

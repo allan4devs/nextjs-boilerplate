@@ -18,7 +18,6 @@ export default function FreeDayRegisterForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
-  const [devToken, setDevToken] = useState("");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,11 +32,9 @@ export default function FreeDayRegisterForm({
       const json = (await res.json()) as {
         error?: string;
         message?: string;
-        devToken?: string;
       };
       if (!res.ok) throw new Error(json.error || "No se pudo enviar el correo.");
       setDone(true);
-      if (json.devToken) setDevToken(json.devToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrar.");
     } finally {
@@ -60,17 +57,6 @@ export default function FreeDayRegisterForm({
               <strong className="text-white">primer día gratis</strong>. Después configure su PIN
               en la app.
             </p>
-            {devToken && (
-              <p className="mt-4 text-xs font-bold text-amber-300/90">
-                Dev (sin Resend):{" "}
-                <Link
-                  href={`/registro/confirmar?token=${encodeURIComponent(devToken)}`}
-                  className="underline"
-                >
-                  abrir confirmación
-                </Link>
-              </p>
-            )}
             <Link
               href="/app"
               className="mt-6 inline-flex min-h-12 items-center gap-2 bg-[#d8ff3e] px-5 font-black uppercase text-black"
