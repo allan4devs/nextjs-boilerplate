@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { Check, ChevronRight, CreditCard, Flame, Loader2 } from "lucide-react";
+import { Check, ChevronRight, Flame, Loader2 } from "lucide-react";
 import { GameLabel } from "../../../GameOS";
 import type {
   ResumenActions,
@@ -11,19 +11,15 @@ import type {
 type PrimaryActionsProps = {
   streak: ResumenViewModel["streak"];
   todayTraining: ResumenViewModel["todayTraining"];
-  renewal: ResumenViewModel["renewal"];
   onOpenStreak: ResumenActions["openStreak"];
   onMarkTraining: ResumenActions["markTodayTraining"];
-  onRenew: ResumenActions["renewMembership"];
 };
 
 function PrimaryActionsComponent({
   streak,
   todayTraining,
-  renewal,
   onOpenStreak,
   onMarkTraining,
-  onRenew,
 }: PrimaryActionsProps) {
   return (
     <>
@@ -86,34 +82,6 @@ function PrimaryActionsComponent({
         </button>
       </div>
 
-      {renewal && (
-        <div className="flex flex-col gap-3 border-l-4 border-l-orange-300 bg-orange-300/[0.08] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-bold text-orange-50">
-            <span className="font-black uppercase tracking-[0.14em] text-orange-200">
-              {renewal.expired ? "Plan vencido · " : "Renovación próxima · "}
-            </span>
-            {renewal.message}
-          </p>
-          <button
-            type="button"
-            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 bg-[#d8ff3e] px-4 py-2 text-sm font-black uppercase text-black transition hover:bg-white"
-            onClick={onRenew}
-          >
-            <CreditCard className="h-4 w-4" />
-            Renovar plan
-          </button>
-        </div>
-      )}
-      {!renewal && (
-        <button
-          type="button"
-          onClick={onRenew}
-          className="flex min-h-12 items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/10 px-4 text-sm font-black uppercase text-[#eaff93] transition hover:bg-[#d8ff3e] hover:text-black"
-        >
-          <CreditCard className="h-4 w-4" />
-          Ver planes
-        </button>
-      )}
     </>
   );
 }

@@ -60,6 +60,21 @@ export default function PwaRuntime() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
+    // Turbopack reutiliza URLs de chunks durante el desarrollo. Un service
+    // worker cache-first puede entregar un chunk anterior junto con HTML nuevo
+    // y provocar errores falsos de hidratacion.
+    if (process.env.NODE_ENV !== "production") {
+      void navigator.serviceWorker.getRegistrations().then((registrations) =>
+        Promise.all(registrations.map((registration) => registration.unregister())),
+      );
+      if ("caches" in window) {
+        void caches.keys().then((keys) =>
+          Promise.all(keys.filter((key) => key.startsWith("xtreme-gym-pwa-")).map((key) => caches.delete(key))),
+        );
+      }
+      return;
+    }
+
     const register = async () => {
       try {
         await navigator.serviceWorker.register("/sw.js", {

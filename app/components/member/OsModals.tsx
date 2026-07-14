@@ -39,7 +39,6 @@ import {
 } from "@/lib/xtreme/gamification";
 import { findMachineGuide, TRAININGS } from "./constants";
 import { dayLabel, membershipPlanDays, membershipRemainingPct, todayIso } from "./utils";
-import MemberPayPalRenewal from "./MemberPayPalRenewal";
 import type { MemberOs } from "./useMemberOs";
 
 /** "2026-07-11" → 11 (sin pasar por Date: evita corrimientos de zona horaria). */
@@ -70,10 +69,6 @@ export default function OsModals({ os }: { os: MemberOs }) {
     savingTrainingId,
     completeTraining,
     completedToday,
-    memberName,
-    reloadFullMember,
-    fetchPayments,
-    setMessage,
   } = os;
   const [savingGoal, setSavingGoal] = useState<number | null>(null);
   const selectedMachine =
@@ -434,16 +429,6 @@ export default function OsModals({ os }: { os: MemberOs }) {
                 style={{ width: `${membershipProgress}%` }}
               />
             </div>
-          </div>
-          <div className="sm:col-span-3">
-            <MemberPayPalRenewal
-              currentPlan={currentMember.membership.plan}
-              onRenewed={async () => {
-                await reloadFullMember(memberName);
-                await fetchPayments();
-                setMessage("Pago confirmado. Tu membresía ya quedó renovada.");
-              }}
-            />
           </div>
         </div>
       </GameModal>

@@ -452,6 +452,50 @@ export async function sendMilestoneEmail(args: { to: string; memberName: string;
   });
 }
 
+/** Recordatorio 48 h: empezó el primer día gratis pero no completó el perfil. */
+export async function sendFreeDayPendingReminderEmail(args: {
+  to: string;
+  confirmUrl: string;
+  expiresHours: number;
+}) {
+  const restartUrl = absoluteAppUrl("/primer-dia#registro");
+  return sendEmail({
+    to: args.to,
+    optional: true,
+    subject: "Todavía podés activar tu primer día gratis — Xtreme Gym",
+    html: layout(
+      "Tu acceso sigue esperándote",
+      `<p style="font-size:14px;line-height:1.6;">Hace un par de días pediste tu <strong>primer día gratis</strong> en Xtreme Gym, pero todavía no completás el perfil para entrar a la app.</p>
+      <p style="font-size:14px;line-height:1.6;">Te enviamos un enlace nuevo para confirmar tu correo, agregar tu cédula y crear tu PIN. Después podés reservar, marcar entrenos y usar tu carné digital.</p>
+      <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:13px;line-height:1.6;margin:16px 0;"><strong>Sin tarjeta:</strong> este paso solo activa tu día de prueba. Pagás cuando quieras continuar.</div>
+      <a href="${escapeHtml(args.confirmUrl)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Completar mi perfil y entrar a la app</a>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El enlace vence en ${args.expiresHours} horas. Si preferís empezar de nuevo, <a href="${escapeHtml(restartUrl)}" style="color:#555;text-decoration:underline;">registrate otra vez acá</a>.</p>`,
+    ),
+  });
+}
+
+/** Recordatorio 48 h: completó el primer día gratis pero no se inscribió a un plan. */
+export async function sendFreeDayUpgradeReminderEmail(args: {
+  to: string;
+  memberName: string;
+  appUrl: string;
+  pricesUrl: string;
+}) {
+  return sendEmail({
+    to: args.to,
+    optional: true,
+    subject: "¿Seguimos entrenando? Tu app de socio te espera — Xtreme Gym",
+    html: layout(
+      "Tu próximo paso en Xtreme",
+      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Hace un par de días activaste tu acceso con el <strong>primer día gratis</strong> y ya podés usar la app de socios.</p>
+      <p style="font-size:14px;line-height:1.6;">Si te gustó el ambiente, elegí semana, quincena o mes y seguí con rachas, reservas y seguimiento de progreso. El mensual es el que más conviene por día.</p>
+      <a href="${escapeHtml(args.appUrl)}" style="display:inline-block;margin:16px 8px 0 0;background:#0b0b0b;color:#d8ff3e;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">Entrar a mi app</a>
+      <a href="${escapeHtml(args.pricesUrl)}" style="display:inline-block;margin:16px 0 0;background:#f6c400;color:#0b0b0b;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">Ver planes e inscribirme</a>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;margin-top:16px;">¿Tenés dudas? Escribinos por WhatsApp o vení a recepción en Ciudad Quesada. Pura vida.</p>`,
+    ),
+  });
+}
+
 export async function sendWinBackEmail(args: {
   to: string;
   memberName: string;
@@ -556,6 +600,7 @@ export async function sendAdminDailySummary(args: {
   pendingInvites: number;
   abandonedPayPalOrders: number;
   openAlerts: number;
+  freeDayNudgesSent?: number;
 }) {
   const needsAttention = args.notificationsFailed + args.abandonedPayPalOrders + args.openAlerts > 0;
   return sendEmail({
@@ -573,6 +618,7 @@ export async function sendAdminDailySummary(args: {
         ${row("Avisos automáticos", `${args.notificationsSent} enviados · ${args.notificationsFailed} fallidos`)}
         ${row("Invitaciones pendientes", String(args.pendingInvites))}
         ${row("Órdenes PayPal abandonadas", String(args.abandonedPayPalOrders))}
+        ${row("Recordatorios primer día (48 h)", String(args.freeDayNudgesSent ?? 0))}
         ${row("Alertas abiertas", String(args.openAlerts))}
       </table>
       <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Los incidentes y el estado del cron también aparecen en el panel Admin.</p>`,

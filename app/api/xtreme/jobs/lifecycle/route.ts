@@ -16,6 +16,7 @@ import { recordEvent } from "@/lib/xtreme/events";
 import { businessDate } from "@/lib/xtreme/business-date";
 import { notificationClickToken } from "@/lib/xtreme/notification-token";
 import { listOpenOpsAlerts, recordOpsAlert, resolveOpsAlert } from "@/lib/xtreme/ops-alerts";
+import { processFreeDayNudges } from "@/lib/xtreme/free-day-nudge";
 import { evaluateLifecycle, type LifecycleTrigger } from "@/lib/xtreme/lifecycle";
 import {
   CHECKINS_COLLECTION,
@@ -34,7 +35,7 @@ export const maxDuration = 60;
 type DeliveryDoc = {
   deliveryKey: string;
   memberKey: string;
-  kind: LifecycleTrigger["kind"];
+  kind: LifecycleTrigger["kind"] | "pending-profile" | "upgrade-plan";
   createdAt: Date;
   sentAt?: Date;
   status: "sending" | "sent" | "skipped";
@@ -94,8 +95,9 @@ export async function GET(req: NextRequest) {
       createdAt: { $lt: new Date(Date.now() - 30 * 60 * 1000) },
     });
 
+    const now = new Date();
     const members = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
-    const today = businessDate(new Date());
+    const today = businessDate(now);
     let sent = 0;
     let skipped = 0;
     let failed = 0;
@@ -160,6 +162,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const freeDayNudges = await processFreeDayNudges(db, now);
+    sent += freeDayNudges.sent;
+    skipped += freeDayNudges.skipped;
+    failed += freeDayNudges.failed;
+
     if (failed > 0) {
       await recordOpsAlert(db, {
         fingerprint: "lifecycle-delivery-failures",
@@ -174,7 +181,6 @@ export async function GET(req: NextRequest) {
     }
     await resolveOpsAlert(db, "lifecycle-job-failed");
 
-    const now = new Date();
     const [paymentDocs, checkins, pendingInvites, abandonedPayPalOrders] = await Promise.all([
       db
         .collection<PaymentDoc>(PAYMENTS_COLLECTION)
@@ -210,6 +216,7 @@ export async function GET(req: NextRequest) {
       pendingInvites,
       abandonedPayPalOrders,
       openAlerts: openAlerts.length,
+      freeDayNudgesSent: freeDayNudges.sent,
     });
     if (!dailyEmail.ok) {
       await recordOpsAlert(db, {
@@ -235,6 +242,9 @@ export async function GET(req: NextRequest) {
       abandonedPayPalOrders,
       openAlerts: openAlerts.length,
       adminEmailSent: dailyEmail.ok,
+      freeDayNudgesSent: freeDayNudges.sent,
+      freeDayNudgesSkipped: freeDayNudges.skipped,
+      freeDayNudgesFailed: freeDayNudges.failed,
     };
     await db.collection(JOB_RUNS_COLLECTION).updateOne(
       { id: runId },

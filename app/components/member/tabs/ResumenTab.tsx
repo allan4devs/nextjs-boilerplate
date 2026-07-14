@@ -22,10 +22,8 @@ export default function ResumenTab({ model, actions }: ResumenTabProps) {
       <PrimaryActions
         streak={model.streak}
         todayTraining={model.todayTraining}
-        renewal={model.renewal}
         onOpenStreak={actions.openStreak}
         onMarkTraining={actions.markTodayTraining}
-        onRenew={actions.renewMembership}
       />
       <DashboardOverview
         stats={model.stats}

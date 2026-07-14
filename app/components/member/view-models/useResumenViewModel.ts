@@ -26,11 +26,6 @@ export type ResumenViewModel = {
     disabled: boolean;
     actionLabel: string;
   };
-  renewal: {
-    expired: boolean;
-    daysRemaining: number;
-    message: string;
-  } | null;
   stats: SummaryStat[];
   nextClassName: string;
   nextAction: MemberOs["nextBestAction"];
@@ -70,7 +65,6 @@ export type ResumenActions = {
   openQuickTraining: () => void;
   openProgress: () => void;
   runNextAction: () => void;
-  renewMembership: () => void;
   openBadges: () => void;
   openMembership: () => void;
   openOccupancy: () => void;
@@ -155,17 +149,6 @@ export function useResumenViewModel(os: MemberOs): {
             ? "Abrir mi plan"
             : "Marcar entreno",
       },
-      renewal:
-        unlocked && daysRemaining <= 5
-          ? {
-              expired: daysRemaining <= 0,
-              daysRemaining,
-              message:
-                daysRemaining <= 0
-                  ? "Renová en 1 toque y no perdás la racha."
-                  : `Tu plan vence en ${daysRemaining} día${daysRemaining === 1 ? "" : "s"}.`,
-            }
-          : null,
       stats: [
         { id: "streak", label: "Racha", value: String(effectiveStreak), hint: "días · toca" },
         {
@@ -187,7 +170,7 @@ export function useResumenViewModel(os: MemberOs): {
         { id: "league", label: "Liga", value: `#${leaguePosition}`, hint: "ranking" },
       ],
       nextClassName: reservedTraining?.name ?? "Sin reserva",
-      nextAction: nextBestAction,
+      nextAction: nextBestAction?.kind === "renew_plan" ? null : nextBestAction,
       gamification: gami
         ? {
             xp: gami.xp,
@@ -278,13 +261,6 @@ export function useResumenViewModel(os: MemberOs): {
     [setOsModal],
   );
   const openProgress = useCallback(() => setTab("progreso"), [setTab]);
-  const renewMembership = useCallback(() => {
-    void trackMemberEvent("cta_clicked", memberName, {
-      cta: "one_tap_renewal",
-      daysRemaining: currentMember.membership.daysRemaining,
-    }).catch(() => {});
-    setOsModal({ kind: "membership" });
-  }, [currentMember.membership.daysRemaining, memberName, setOsModal]);
   const runNextAction = useCallback(() => {
     if (!nextBestAction) return;
     void trackMemberEvent("recommendation_acted", memberName, {
@@ -302,10 +278,6 @@ export function useResumenViewModel(os: MemberOs): {
       }
       return;
     }
-    if (nextBestAction.kind === "renew_plan") {
-      setOsModal({ kind: "membership" });
-      return;
-    }
     if (nextBestAction.href === "/app/comunidad") {
       window.location.href = nextBestAction.href;
       return;
@@ -319,7 +291,7 @@ export function useResumenViewModel(os: MemberOs): {
       return;
     }
     window.location.href = nextBestAction.href;
-  }, [completeTraining, currentMember.activePlanWorkout, currentMember.trainingPlan, memberName, nextBestAction, quickTraining, setOsModal, setTab, trainedToday]);
+  }, [completeTraining, currentMember.activePlanWorkout, currentMember.trainingPlan, memberName, nextBestAction, quickTraining, setTab, trainedToday]);
   const openBadges = useCallback(
     () => setOsModal({ kind: "badges" }),
     [setOsModal],
@@ -345,7 +317,6 @@ export function useResumenViewModel(os: MemberOs): {
       openQuickTraining,
       openProgress,
       runNextAction,
-      renewMembership,
       openBadges,
       openMembership,
       openOccupancy,
