@@ -6,6 +6,7 @@
 
 export type {
   BodyMetric,
+  ActivePlanWorkout,
   EntitlementRecord,
   Gamification,
   GuideWorkout,
@@ -19,12 +20,14 @@ export type {
   PaymentHistoryResponse,
   PaymentRecord,
   PlanItem,
+  PlanExercisePrescription,
   PublicBadge,
   Reservation,
   ReservationState,
   Routine,
   Training,
   Workout,
+  WorkoutExerciseDetail,
 } from "./domain";
 export type {
   GymStatus,

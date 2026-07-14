@@ -114,8 +114,8 @@ export const COSTS = [
 ];
 
 export const QUICK_INFO = [
-  { label: "Mensualidad", value: "CRC 23.000", detail: "inscribirme", href: "/precios#inscripcion" },
-  { label: "Primer día", value: "Gratis", detail: "registrate en la app", href: "/primer-dia" },
+  { label: "Primer día", value: "Gratis", detail: "probalo sin tarjeta", href: "/primer-dia" },
+  { label: "Mensualidad", value: "CRC 23.000", detail: "~CRC 767/día", href: "/precios?plan=month#inscripcion" },
   { label: "Horario", value: "5 AM - 10 PM", detail: "lunes a viernes", href: "/contacto" },
 ];
 

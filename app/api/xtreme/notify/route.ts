@@ -6,9 +6,9 @@ import {
   type MemberDoc,
   normalizeKey,
   normalizeName,
-  resolveAdminRole,
 } from "@/lib/xtreme/shared";
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const message = String(body.message ?? "").trim().slice(0, 200);
-    const adminRole = resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+    const staff = await resolveStaffSession(req, "admin");
+    const adminRole = staff?.role === "admin" || staff?.role === "super" ? staff.role : null;
 
     if (!message) {
       return NextResponse.json({ error: "Faltan datos del recordatorio." }, { status: 400 });

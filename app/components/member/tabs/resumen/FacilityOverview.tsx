@@ -35,7 +35,7 @@ function FacilityOverviewComponent({
               </p>
               <h2 className="mt-2 text-2xl font-black uppercase">{membership.plan}</h2>
               <p className="mt-2 text-sm font-bold opacity-75">
-                Próximo cobro: {membership.nextBillingDate}
+                Activo hasta: {membership.nextBillingDate}
               </p>
             </div>
             <CreditCard className="h-8 w-8" />
@@ -58,6 +58,22 @@ function FacilityOverviewComponent({
                 Plan
               </p>
               <p className="mt-1 truncate text-sm font-black">Local</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.12em] opacity-75">
+              <span>Tiempo disponible</span>
+              <span>
+                {membership.daysRemaining > membership.totalDays
+                  ? `${membership.daysRemaining} días acumulados`
+                  : `${membership.daysRemaining} de ${membership.totalDays} días`}
+              </span>
+            </div>
+            <div className="mt-2 h-3 border-[3px] border-white/20 bg-black/35">
+              <div
+                className="h-full bg-[#d8ff3e] transition-all duration-500"
+                style={{ width: `${membership.progressPct}%` }}
+              />
             </div>
           </div>
         </button>

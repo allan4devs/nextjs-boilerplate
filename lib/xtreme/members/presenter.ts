@@ -50,6 +50,7 @@ export function toPublicMember(
     bodyMetrics,
     latestBodyMetric: bodyMetrics.at(-1) ?? null,
     trainingPlan: toPublicTrainingPlan(doc?.trainingPlan),
+    activePlanWorkout: doc?.activePlanWorkout ?? null,
     notificationPrefs: mergeNotificationPrefs(doc?.notificationPrefs),
     tourDone: Boolean(doc?.tourDoneAt),
     pinnedBadges: gamification.pinnedBadges,

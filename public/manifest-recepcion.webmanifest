@@ -1,0 +1,17 @@
+{
+  "name": "Xtreme Gym Reception OS",
+  "short_name": "Recepcion",
+  "description": "Mostrador, altas, chat y gestion de ingresos de Xtreme Gym.",
+  "id": "/recepcion",
+  "start_url": "/recepcion",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#d8ff3e",
+  "lang": "es-CR",
+  "icons": [
+    { "src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/pwa-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/pwa-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

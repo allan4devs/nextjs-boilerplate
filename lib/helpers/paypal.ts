@@ -17,7 +17,7 @@ function pickCredential(...values: Array<string | undefined>) {
   return undefined;
 }
 
-function getPayPalCredentials() {
+export function getPayPalCredentials() {
   const liveId = pickCredential(process.env.PAYPAL_CLIENT_ID, process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID);
   const liveSecret = pickCredential(process.env.PAYPAL_CLIENT_SECRET);
   const sandboxId = pickCredential(
@@ -37,6 +37,11 @@ function getPayPalCredentials() {
     clientId: sandboxId || liveId,
     clientSecret: sandboxSecret || liveSecret,
   };
+}
+
+export function paypalEnabled() {
+  const { clientId, clientSecret } = getPayPalCredentials();
+  return Boolean(clientId && clientSecret);
 }
 
 export function getPayPalApiBaseUrl() {

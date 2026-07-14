@@ -17,11 +17,11 @@ import {
   membershipStatus,
   normalizeKey,
   normalizeName,
-  resolveAdminRole,
   todayIso,
   toAdminMember,
 } from "@/lib/xtreme/shared";
 import { recordEvent } from "@/lib/xtreme/events";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +87,7 @@ async function withKioskFlag(
 export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
-    const staff = Boolean(resolveAdminRole(req.headers.get("x-xtreme-admin") ?? ""));
+    const staff = Boolean(await resolveStaffSession(req, "reception"));
     const q = normalizeName(req.nextUrl.searchParams.get("q"));
     const codeDigits = String(req.nextUrl.searchParams.get("code") ?? "").replace(/\D/g, "");
     const cedula = String(req.nextUrl.searchParams.get("cedula") ?? "").trim();
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     const codeDigits = String(body.accessCode ?? body.code ?? "").replace(/\D/g, "");
     const pin = String(body.pin ?? "").trim();
     const cedula = String(body.cedula ?? "").trim();
-    const staffRole = resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+    const staffRole = (await resolveStaffSession(req, "reception"))?.role ?? null;
     const byRaw = String(body.by ?? (staffRole ? "reception" : "kiosk"));
     const by = (["kiosk", "admin", "reception"].includes(byRaw) ? byRaw : "kiosk") as CheckinDoc["by"];
     const methodRaw = String(

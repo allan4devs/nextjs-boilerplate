@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
-import { sendWelcomeEmail } from "@/lib/helpers/email";
+import { sendAdminOperationalAlert, sendReceptionAppInviteEmail, sendWelcomeEmail } from "@/lib/helpers/email";
+import { requestAppUrl } from "@/lib/constants/app-url";
 import { recordEvent } from "@/lib/xtreme/events";
 import { writeAudit } from "@/lib/xtreme/audit";
+import { createRegistrationToken, hashRegistrationToken } from "@/lib/xtreme/registration-token";
+import { recordOpsAlert } from "@/lib/xtreme/ops-alerts";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 import {
   CHECKINS_COLLECTION,
   MEMBERS_COLLECTION,
+  PENDING_REGISTRATIONS_COLLECTION,
   type CheckinDoc,
   type MemberDoc,
+  type PendingRegistrationDoc,
   cedulaDigits,
   computeOccupancy,
   findMemberByCedula,
@@ -23,10 +28,10 @@ import {
   normalizeKey,
   normalizeName,
   normalizePhone,
-  resolveAdminRole,
   todayIso,
   toAdminMember,
 } from "@/lib/xtreme/shared";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +43,8 @@ function unauthorized() {
   return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 }
 
-function roleFromReq(req: NextRequest) {
-  return resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+async function roleFromReq(req: NextRequest) {
+  return (await resolveStaffSession(req, "reception"))?.role ?? null;
 }
 
 function addMonths(date: Date, months: number) {
@@ -63,7 +68,7 @@ function isValidFaceHash(value: string) {
  *  - match de faceHash por query
  */
 export async function GET(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {
@@ -236,7 +241,7 @@ export async function GET(req: NextRequest) {
  *  - enroll_face: guarda foto + faceHash de un socio
  */
 export async function POST(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {
@@ -244,6 +249,104 @@ export async function POST(req: NextRequest) {
     const action = String(body.action ?? "register");
     const db = await getDb();
     const now = new Date();
+
+    if (action === "invite_app") {
+      const email = normalizeEmail(body.email);
+      if (!email || !isValidEmail(email)) {
+        return NextResponse.json({ error: "Ingrese un correo válido." }, { status: 400 });
+      }
+
+      const existingMember = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ email });
+      if (existingMember?.emailVerified) {
+        return NextResponse.json(
+          { error: "Ese correo ya tiene una cuenta. La persona puede ingresar directamente a la app." },
+          { status: 409 },
+        );
+      }
+
+      const token = createRegistrationToken();
+      const expiresHours = 24;
+      const expiresAt = new Date(now.getTime() + expiresHours * 60 * 60_000);
+      const collection = db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION);
+      const existingPending = await collection.findOne({ email });
+      const previousTokenHashes = [
+        existingPending?.tokenHash,
+        ...(existingPending?.previousTokenHashes ?? []),
+      ]
+        .filter((hash): hash is string => Boolean(hash))
+        .filter((hash, index, hashes) => hashes.indexOf(hash) === index)
+        .slice(0, 5);
+
+      await collection.updateOne(
+        { email },
+        {
+          $set: {
+            email,
+            tokenHash: hashRegistrationToken(token),
+            previousTokenHashes,
+            expiresAt,
+            confirmedAt: null,
+            memberNormalizedName: null,
+            source: "reception",
+          },
+          $unset: {
+            expectedMemberKey: "",
+            expectedMemberName: "",
+            paymentId: "",
+          },
+          $setOnInsert: { createdAt: now },
+        },
+        { upsert: true },
+      );
+
+      const sent = await sendReceptionAppInviteEmail({
+        to: email,
+        token,
+        expiresHours,
+        baseUrl: requestAppUrl(req.url),
+      });
+      await writeAudit(db, {
+        actorRole: role,
+        action: "registration.invite_app",
+        targetType: "system",
+        targetId: "app-invitation",
+        summary: "Invitación directa a la app generada desde recepción",
+        meta: { email, emailSent: sent.ok },
+      });
+      await recordEvent(db, {
+        type: "registration_invited",
+        source: "reception",
+        entity: { type: "registration", id: email },
+        properties: { emailSent: sent.ok, grantsFreeDay: false },
+      }).catch(() => {});
+
+      if (!sent.ok) {
+        const detail = sent.error || "No se pudo enviar el correo de invitación.";
+        await recordOpsAlert(db, {
+          fingerprint: `reception-invite:${email}`,
+          kind: "registration_invite",
+          severity: "warning",
+          title: "Invitación de recepción sin entregar",
+          detail,
+          context: { email },
+        });
+        await sendAdminOperationalAlert({
+          severity: "warning",
+          title: "Invitación de recepción sin entregar",
+          detail,
+          context: { email },
+        });
+        return NextResponse.json(
+          { error: detail },
+          { status: 502 },
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        message: "Invitación enviada. El enlace vence en 24 horas.",
+      });
+    }
 
     if (action === "checkout") {
       const checkinId = String(body.checkinId ?? "").trim();

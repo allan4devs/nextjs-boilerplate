@@ -38,7 +38,8 @@ import {
   WEEKLY_GOAL_MIN,
 } from "@/lib/xtreme/gamification";
 import { findMachineGuide, TRAININGS } from "./constants";
-import { dayLabel, todayIso } from "./utils";
+import { dayLabel, membershipPlanDays, membershipRemainingPct, todayIso } from "./utils";
+import MemberPayPalRenewal from "./MemberPayPalRenewal";
 import type { MemberOs } from "./useMemberOs";
 
 /** "2026-07-11" → 11 (sin pasar por Date: evita corrimientos de zona horaria). */
@@ -69,6 +70,10 @@ export default function OsModals({ os }: { os: MemberOs }) {
     savingTrainingId,
     completeTraining,
     completedToday,
+    memberName,
+    reloadFullMember,
+    fetchPayments,
+    setMessage,
   } = os;
   const [savingGoal, setSavingGoal] = useState<number | null>(null);
   const selectedMachine =
@@ -79,6 +84,9 @@ export default function OsModals({ os }: { os: MemberOs }) {
     gami ? STREAK_MILESTONES.find((m) => m > gami.streak) ?? null : null;
   const xpToNextLevel =
     gami && gami.level.nextXp !== null ? Math.max(0, gami.level.nextXp - gami.xp) : null;
+  const membershipTotalDays = membershipPlanDays(currentMember.membership.plan);
+  const membershipDaysRemaining = Math.max(0, currentMember.membership.daysRemaining);
+  const membershipProgress = membershipRemainingPct(membershipDaysRemaining, membershipTotalDays);
 
   return (
     <>
@@ -400,17 +408,43 @@ export default function OsModals({ os }: { os: MemberOs }) {
         subtitle="Membresía"
         icon={CreditCard}
         tone="lime"
-        size="md"
+        size="lg"
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <GameStat label="Estado" value={currentMember.membership.status} tone="lime" />
           <GameStat
             label="Días"
-            value={Math.max(0, currentMember.membership.daysRemaining)}
-            hint="restantes"
+            value={membershipDaysRemaining}
+            hint={membershipDaysRemaining > membershipTotalDays ? "acumulados" : `de ${membershipTotalDays}`}
             tone="orange"
           />
-          <GameStat label="Cobro" value={currentMember.membership.nextBillingDate} tone="cyan" />
+          <GameStat label="Activo hasta" value={currentMember.membership.nextBillingDate} tone="cyan" />
+          <div className="mt-4 border-[3px] border-white/15 bg-black/30 p-4 sm:col-span-3">
+            <div className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.14em]">
+              <span className="text-white/55">Tiempo restante del plan</span>
+              <span className="text-[#d8ff3e]">
+                {membershipDaysRemaining > membershipTotalDays
+                  ? `${membershipDaysRemaining} días acumulados`
+                  : `${membershipDaysRemaining}/${membershipTotalDays} días`}
+              </span>
+            </div>
+            <div className="mt-3 h-4 border-[3px] border-white/15 bg-black/50">
+              <div
+                className="h-full bg-gradient-to-r from-[#d8ff3e] to-cyan-300"
+                style={{ width: `${membershipProgress}%` }}
+              />
+            </div>
+          </div>
+          <div className="sm:col-span-3">
+            <MemberPayPalRenewal
+              currentPlan={currentMember.membership.plan}
+              onRenewed={async () => {
+                await reloadFullMember(memberName);
+                await fetchPayments();
+                setMessage("Pago confirmado. Tu membresía ya quedó renovada.");
+              }}
+            />
+          </div>
         </div>
       </GameModal>
 

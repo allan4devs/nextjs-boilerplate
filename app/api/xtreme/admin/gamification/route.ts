@@ -10,15 +10,16 @@ import {
   type MemberDoc,
   normalizeKey,
   normalizeName,
-  resolveAdminRole,
   todayIso,
   toAdminMember,
 } from "@/lib/xtreme/shared";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
 
-function roleFromReq(req: NextRequest): AdminRole | null {
-  return resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+async function roleFromReq(req: NextRequest): Promise<AdminRole | null> {
+  const session = await resolveStaffSession(req, "admin");
+  return session?.role === "admin" || session?.role === "super" ? session.role : null;
 }
 
 function unauthorized() {
@@ -72,7 +73,7 @@ function mergeCatalog(overrides: BadgeDoc[]) {
 }
 
 export async function GET(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {
@@ -165,7 +166,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {

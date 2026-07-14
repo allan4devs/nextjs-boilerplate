@@ -1,7 +1,6 @@
 "use client";
 
 import { memo } from "react";
-import Link from "next/link";
 import { Check, ChevronRight, CreditCard, Flame, Loader2 } from "lucide-react";
 import { GameLabel } from "../../../GameOS";
 import type {
@@ -83,7 +82,7 @@ function PrimaryActionsComponent({
           ) : (
             <Flame className="h-5 w-5" />
           )}
-          {todayTraining.completed ? "Entreno marcado" : "Marcar entreno"}
+          {todayTraining.completed ? "Entreno marcado" : todayTraining.actionLabel}
         </button>
       </div>
 
@@ -95,24 +94,25 @@ function PrimaryActionsComponent({
             </span>
             {renewal.message}
           </p>
-          <a
-            href="/precios#inscripcion"
+          <button
+            type="button"
             className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 bg-[#d8ff3e] px-4 py-2 text-sm font-black uppercase text-black transition hover:bg-white"
             onClick={onRenew}
           >
             <CreditCard className="h-4 w-4" />
             Renovar plan
-          </a>
+          </button>
         </div>
       )}
       {!renewal && (
-        <Link
-          href="/precios#inscripcion"
+        <button
+          type="button"
+          onClick={onRenew}
           className="flex min-h-12 items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/10 px-4 text-sm font-black uppercase text-[#eaff93] transition hover:bg-[#d8ff3e] hover:text-black"
         >
           <CreditCard className="h-4 w-4" />
           Ver planes
-        </Link>
+        </button>
       )}
     </>
   );

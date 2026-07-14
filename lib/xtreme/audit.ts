@@ -1,10 +1,10 @@
 import type { Db } from "mongodb";
-import { AUDIT_COLLECTION, type AdminRole, type AuditDoc } from "./shared";
+import { AUDIT_COLLECTION, type AuditDoc, type StaffRole } from "./shared";
 
 export async function writeAudit(
   db: Db,
   entry: {
-    actorRole: AdminRole;
+    actorRole: StaffRole;
     action: string;
     targetType: AuditDoc["targetType"];
     targetId: string;

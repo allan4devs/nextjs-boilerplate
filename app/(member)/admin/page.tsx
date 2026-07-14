@@ -44,8 +44,6 @@ import {
   GameLabel,
 } from "../../components/GameOS";
 
-const ADMIN_CODE_KEY = "xtreme-admin-code";
-
 type PlanItem = {
   id: string;
   day: string;
@@ -213,8 +211,20 @@ type AdminData = {
   } | null;
   system?: {
     lifecycle: { status: string; startedAt: Date; finishedAt?: Date; summary?: unknown } | null;
+    lifecycleStale?: boolean;
     checkedAt: string;
   } | null;
+  opsAlerts?: Array<{
+    fingerprint: string;
+    kind: string;
+    severity: "warning" | "critical";
+    title: string;
+    detail: string;
+    count: number;
+    createdAt: string;
+    lastSeenAt: string;
+    context?: Record<string, string | number | boolean | null>;
+  }>;
 };
 
 type PlanDraft = {
@@ -463,25 +473,21 @@ export default function XtremeAdminPage() {
   });
   const [adjustForm, setAdjustForm] = useState({ xpBonus: "0", freezesBonus: "0", weeklyGoal: "4" });
 
-  const load = useCallback(async (adminCode: string) => {
+  const load = useCallback(async (_sessionMarker: string) => {
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/xtreme/admin", {
-        headers: { "x-xtreme-admin": adminCode },
-        cache: "no-store",
-      });
+      const response = await fetch("/api/xtreme/admin", { cache: "no-store" });
       if (response.status === 401) {
         setError("Codigo incorrecto.");
         setCode("");
-        window.localStorage.removeItem(ADMIN_CODE_KEY);
+        setData(null);
         return;
       }
       const json = (await response.json()) as AdminData & { error?: string };
       if (!response.ok) throw new Error(json.error ?? "No se pudo cargar.");
       setData(json);
-      setCode(adminCode);
-      window.localStorage.setItem(ADMIN_CODE_KEY, adminCode);
+      setCode(json.role);
       if (json.role !== "super") {
         setTab((current) => (current === "ingresos" ? "resumen" : current));
       }
@@ -493,14 +499,62 @@ export default function XtremeAdminPage() {
   }, []);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(ADMIN_CODE_KEY);
-    if (stored) void load(stored);
+    void (async () => {
+      const response = await fetch("/api/xtreme/staff-session?surface=admin", { cache: "no-store" });
+      const session = (await response.json()) as { authenticated?: boolean };
+      if (session.authenticated) await load("session");
+    })();
   }, [load]);
 
-  const loadGami = useCallback(async (adminCode: string) => {
+  async function login() {
+    const accessCode = codeInput.trim();
+    if (!accessCode) return;
+    setIsLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/xtreme/staff-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ surface: "admin", code: accessCode }),
+      });
+      const json = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(json.error || "Codigo incorrecto.");
+      setCodeInput("");
+      await load("session");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo iniciar sesion.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function resolveOperationalAlert(fingerprint: string) {
+    setBusy(`ops:${fingerprint}`);
+    setError("");
+    try {
+      const response = await fetch("/api/xtreme/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resolveOpsAlert", fingerprint }),
+      });
+      const json = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !json.ok) throw new Error(json.error || "No se pudo resolver la alerta.");
+      setData((current) =>
+        current
+          ? { ...current, opsAlerts: current.opsAlerts?.filter((alert) => alert.fingerprint !== fingerprint) }
+          : current,
+      );
+      setMessage("Alerta marcada como resuelta.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo resolver la alerta.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  const loadGami = useCallback(async (_sessionMarker: string) => {
     try {
       const response = await fetch("/api/xtreme/admin/gamification", {
-        headers: { "x-xtreme-admin": adminCode },
         cache: "no-store",
       });
       const json = (await response.json()) as GamiData & { error?: string };
@@ -523,7 +577,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin/gamification", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const json = (await response.json()) as { error?: string };
@@ -579,7 +633,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/seed", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wipeAll }),
       });
       const json = (await response.json()) as {
@@ -608,7 +662,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberName }),
       });
       const json = (await response.json()) as { ok?: boolean; error?: string };
@@ -630,7 +684,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "checkin", memberName }),
       });
       const json = (await response.json()) as { ok?: boolean; message?: string; duplicate?: boolean; error?: string };
@@ -652,7 +706,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "notify", memberName }),
       });
       const json = (await response.json()) as { ok?: boolean; sentTo?: string; error?: string };
@@ -673,7 +727,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "notifyExpiring" }),
       });
       const json = (await response.json()) as { ok?: boolean; sent?: number; eligible?: number; error?: string };
@@ -729,7 +783,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "plan", memberName: planMember.memberName, plan: planDraft }),
       });
       const json = (await response.json()) as { ok?: boolean; error?: string };
@@ -753,7 +807,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "member",
           memberName: editMember.memberName,
@@ -787,7 +841,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "metric",
           memberName: detailMember.memberName,
@@ -830,7 +884,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberName, itemId: item.id, done: nextDone }),
       });
       if (!response.ok) throw new Error();
@@ -857,7 +911,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "payment",
           memberKey: selectedPaymentMember.normalizedName,
@@ -891,7 +945,7 @@ export default function XtremeAdminPage() {
     try {
       const response = await fetch("/api/xtreme/admin", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paymentId }),
       });
       if (!response.ok) throw new Error("No se pudo eliminar.");
@@ -904,10 +958,10 @@ export default function XtremeAdminPage() {
     }
   }
 
-  function logout() {
+  async function logout() {
+    await fetch("/api/xtreme/staff-session?surface=admin", { method: "DELETE" });
     setCode("");
     setData(null);
-    window.localStorage.removeItem(ADMIN_CODE_KEY);
   }
 
   if (!code) {
@@ -916,7 +970,7 @@ export default function XtremeAdminPage() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            if (codeInput.trim()) void load(codeInput.trim());
+            if (codeInput.trim()) void login();
           }}
           className="w-full max-w-md border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-7"
         >
@@ -931,6 +985,8 @@ export default function XtremeAdminPage() {
             Acceso para entrenadora personal y administracion del gym.
           </p>
           <input
+            type="password"
+            autoComplete="current-password"
             value={codeInput}
             onChange={(event) => setCodeInput(event.target.value)}
             placeholder="Codigo de acceso"
@@ -995,6 +1051,12 @@ export default function XtremeAdminPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
+              href="/entrenador"
+              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-cyan-300/10 px-3 py-2 text-xs font-black uppercase text-cyan-200 sm:text-sm"
+            >
+              <ClipboardList className="h-4 w-4" /> Trainer OS
+            </Link>
+            <Link
               href="/recepcion"
               className="inline-flex min-h-11 items-center gap-2 border-[3px] border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-3 py-2 text-xs font-black uppercase text-[#eaff93] sm:text-sm"
             >
@@ -1033,7 +1095,7 @@ export default function XtremeAdminPage() {
             )}
             <button
               type="button"
-              onClick={logout}
+              onClick={() => void logout()}
               className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/60 sm:text-sm"
             >
               <LogOut className="h-4 w-4" />
@@ -1096,6 +1158,51 @@ export default function XtremeAdminPage() {
                   <Kpi icon={Activity} label="Ocupacion" value={`${t?.occupancyPct ?? 0}%`} accent="from-lime-300 to-cyan-300" />
                 </div>
 
+                {data.opsAlerts && data.opsAlerts.length > 0 && (
+                  <div className="mt-4 border-[3px] border-red-400/45 bg-red-500/[0.08] p-4 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5">
+                    <div className="flex items-start gap-3">
+                      <ShieldAlert className="mt-0.5 h-6 w-6 shrink-0 text-red-300" />
+                      <div>
+                        <h2 className="text-lg font-black uppercase text-red-100">Atención operativa</h2>
+                        <p className="mt-1 text-xs font-bold text-white/48">
+                          {data.opsAlerts.length} incidente{data.opsAlerts.length === 1 ? "" : "s"} abierto{data.opsAlerts.length === 1 ? "" : "s"}. Los críticos también se enviaron al correo del administrador.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-2">
+                      {data.opsAlerts.slice(0, 5).map((alert) => (
+                        <div
+                          key={alert.fingerprint}
+                          className={`border p-3 ${
+                            alert.severity === "critical"
+                              ? "border-red-300/35 bg-red-400/10"
+                              : "border-orange-300/30 bg-orange-300/[0.07]"
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-black uppercase text-white">{alert.title}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-white/40">
+                                {alert.count > 1 ? `${alert.count} veces · ` : ""}
+                                {new Date(alert.lastSeenAt).toLocaleString("es-CR")}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={busy === `ops:${alert.fingerprint}`}
+                                onClick={() => void resolveOperationalAlert(alert.fingerprint)}
+                                className="border border-white/15 px-2 py-1 text-[10px] font-black uppercase text-white/55 transition hover:border-[#d8ff3e]/50 hover:text-[#d8ff3e] disabled:opacity-40"
+                              >
+                                {busy === `ops:${alert.fingerprint}` ? "Guardando" : "Resolver"}
+                              </button>
+                            </div>
+                          </div>
+                          <p className="mt-1 text-xs font-bold leading-5 text-white/52">{alert.detail}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {data.growth && (
                   <div className="border border-lime-300/25 bg-lime-300/[0.05] p-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1108,9 +1215,13 @@ export default function XtremeAdminPage() {
                           </p>
                         </div>
                       </div>
-                      {data.system?.lifecycle && (
-                        <span className="border border-white/10 bg-black/30 px-3 py-1.5 text-[11px] font-black uppercase text-white/55">
-                          Cron: {data.system.lifecycle.status}
+                      {data.system && (
+                        <span className={`border px-3 py-1.5 text-[11px] font-black uppercase ${
+                          data.system.lifecycleStale
+                            ? "border-red-300/40 bg-red-400/10 text-red-200"
+                            : "border-white/10 bg-black/30 text-white/55"
+                        }`}>
+                          Cron: {data.system.lifecycleStale ? "atrasado" : data.system.lifecycle?.status || "sin ejecución"}
                         </span>
                       )}
                     </div>

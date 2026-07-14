@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { TRAININGS } from "../constants";
 import type { MemberOs } from "../useMemberOs";
-import { dayLabel, todayIso } from "../utils";
+import { dayLabel, membershipPlanDays, membershipRemainingPct, todayIso } from "../utils";
 
 type SummaryStat = {
   id: "streak" | "month" | "week" | "league";
@@ -24,6 +24,7 @@ export type ResumenViewModel = {
     completed: boolean;
     saving: boolean;
     disabled: boolean;
+    actionLabel: string;
   };
   renewal: {
     expired: boolean;
@@ -49,6 +50,8 @@ export type ResumenViewModel = {
     nextBillingDate: string;
     status: string;
     daysRemaining: number;
+    totalDays: number;
+    progressPct: number;
   } | null;
   occupancy: {
     level: string;
@@ -121,6 +124,7 @@ export function useResumenViewModel(os: MemberOs): {
     const today = todayIso();
     const month = today.slice(0, 7);
     const daysRemaining = currentMember.membership.daysRemaining;
+    const totalDays = membershipPlanDays(currentMember.membership.plan);
     const leaguePosition = Math.max(
       1,
       leaderboard.findIndex(
@@ -145,6 +149,11 @@ export function useResumenViewModel(os: MemberOs): {
         completed: trainedToday,
         saving: Boolean(savingTrainingId),
         disabled: !unlocked || trainedToday || Boolean(savingTrainingId),
+        actionLabel: currentMember.activePlanWorkout
+          ? "Continuar entreno"
+          : currentMember.trainingPlan?.items.some((item) => !item.done)
+            ? "Abrir mi plan"
+            : "Marcar entreno",
       },
       renewal:
         unlocked && daysRemaining <= 5
@@ -205,13 +214,15 @@ export function useResumenViewModel(os: MemberOs): {
         : null,
       nextBadge,
       membership:
-        daysRemaining > 5
+        unlocked
           ? {
               tone: membershipTone,
               plan: currentMember.membership.plan,
               nextBillingDate: currentMember.membership.nextBillingDate,
               status: currentMember.membership.status,
               daysRemaining: Math.max(0, daysRemaining),
+              totalDays,
+              progressPct: membershipRemainingPct(daysRemaining, totalDays),
             }
           : null,
       occupancy: {
@@ -250,8 +261,13 @@ export function useResumenViewModel(os: MemberOs): {
   );
   const openLevel = useCallback(() => setOsModal({ kind: "level" }), [setOsModal]);
   const markTodayTraining = useCallback(() => {
-    if (!trainedToday) void completeTraining(quickTraining);
-  }, [completeTraining, quickTraining, trainedToday]);
+    if (trainedToday) return;
+    if (currentMember.activePlanWorkout || currentMember.trainingPlan?.items.some((item) => !item.done)) {
+      setTab("entrenar");
+      return;
+    }
+    void completeTraining(quickTraining);
+  }, [completeTraining, currentMember.activePlanWorkout, currentMember.trainingPlan, quickTraining, setTab, trainedToday]);
   const openWeek = useCallback(() => setOsModal({ kind: "week" }), [setOsModal]);
   const openLeague = useCallback(() => {
     window.location.href = "/app/comunidad";
@@ -267,7 +283,8 @@ export function useResumenViewModel(os: MemberOs): {
       cta: "one_tap_renewal",
       daysRemaining: currentMember.membership.daysRemaining,
     }).catch(() => {});
-  }, [currentMember.membership.daysRemaining, memberName]);
+    setOsModal({ kind: "membership" });
+  }, [currentMember.membership.daysRemaining, memberName, setOsModal]);
   const runNextAction = useCallback(() => {
     if (!nextBestAction) return;
     void trackMemberEvent("recommendation_acted", memberName, {
@@ -278,11 +295,15 @@ export function useResumenViewModel(os: MemberOs): {
       nextBestAction.kind === "protect_streak" ||
       nextBestAction.kind === "second_visit"
     ) {
-      if (!trainedToday) void completeTraining(quickTraining);
+      if (currentMember.activePlanWorkout || currentMember.trainingPlan?.items.some((item) => !item.done)) {
+        setTab("entrenar");
+      } else if (!trainedToday) {
+        void completeTraining(quickTraining);
+      }
       return;
     }
     if (nextBestAction.kind === "renew_plan") {
-      window.location.href = "/precios#inscripcion";
+      setOsModal({ kind: "membership" });
       return;
     }
     if (nextBestAction.href === "/app/comunidad") {
@@ -298,7 +319,7 @@ export function useResumenViewModel(os: MemberOs): {
       return;
     }
     window.location.href = nextBestAction.href;
-  }, [completeTraining, memberName, nextBestAction, quickTraining, setTab, trainedToday]);
+  }, [completeTraining, currentMember.activePlanWorkout, currentMember.trainingPlan, memberName, nextBestAction, quickTraining, setOsModal, setTab, trainedToday]);
   const openBadges = useCallback(
     () => setOsModal({ kind: "badges" }),
     [setOsModal],

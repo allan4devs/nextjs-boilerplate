@@ -9,7 +9,6 @@ import {
   CalendarClock,
   Check,
   ChevronRight,
-  ClipboardList,
   Dumbbell,
   Loader2,
   Sparkles,
@@ -19,6 +18,7 @@ import { GameLabel, GamePanel } from "../../GameOS";
 import { GOALS, ROUTINES, TRAININGS } from "../constants";
 import { todayIso } from "../utils";
 import type { MemberOs } from "../useMemberOs";
+import PlanTrainingPanel from "../PlanTrainingPanel";
 
 export default function EntrenarTab({ os }: { os: MemberOs }) {
   const {
@@ -27,7 +27,6 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
     goal,
     setGoal,
     saveProfile,
-    togglePlanItem,
     completedToday,
     reservations,
     reservingTrainingId,
@@ -39,99 +38,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
 
   return (
     <div className="xg-tab-in space-y-3 sm:space-y-4">
-      {currentMember.trainingPlan ? (
-        <div className="border-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/[0.07] p-3 shadow-[4px_4px_0_rgba(216,255,62,0.2)] sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center bg-[#d8ff3e] text-black">
-                <ClipboardList className="h-5 w-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Plan de tu coach</p>
-                <h2 className="text-xl font-black uppercase leading-tight">{currentMember.trainingPlan.title}</h2>
-              </div>
-            </div>
-            <span className="shrink-0 text-sm font-black text-[#eaff93]">
-              {currentMember.trainingPlan.doneItems}/{currentMember.trainingPlan.totalItems} · {currentMember.trainingPlan.progressPct}%
-            </span>
-          </div>
-
-          {currentMember.trainingPlan.objective && (
-            <p className="mt-3 text-sm font-semibold text-white/60">
-              Objetivo: {currentMember.trainingPlan.objective}
-            </p>
-          )}
-
-          <div className="mt-4 h-2.5 border border-white/10 bg-black/45">
-            <div className="h-full bg-[#d8ff3e] transition-all" style={{ width: `${currentMember.trainingPlan.progressPct}%` }} />
-          </div>
-
-          {currentMember.trainingPlan.coachNote && (
-            <p className="mt-4 border-l-2 border-[#d8ff3e]/40 pl-3 text-sm font-semibold italic text-white/55">
-              {currentMember.trainingPlan.coachNote}
-            </p>
-          )}
-
-          <div className="mt-5 grid gap-3">
-            {currentMember.trainingPlan.items.map((item, index) => (
-              <div
-                key={item.id}
-                className={`flex gap-3 border p-3 ${item.done ? "border-[#d8ff3e]/40 bg-[#d8ff3e]/[0.08]" : "border-white/10 bg-black/20"}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => void togglePlanItem(item)}
-                  disabled={!unlocked}
-                  aria-label={item.done ? "Marcar pendiente" : "Marcar hecha"}
-                  className={`grid h-8 w-8 shrink-0 place-items-center border transition ${
-                    item.done
-                      ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
-                      : "border-white/25 text-white/40 hover:border-[#d8ff3e] hover:text-[#eaff93]"
-                  } disabled:cursor-not-allowed disabled:opacity-40`}
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className={`font-black uppercase ${item.done ? "text-white/60 line-through" : "text-white"}`}>
-                      {item.day || `Sesion ${index + 1}`}
-                    </p>
-                    {item.focus && (
-                      <span className="bg-white/10 px-2 py-0.5 text-[11px] font-black uppercase text-white/60">
-                        {item.focus}
-                      </span>
-                    )}
-                    {item.targetMinutes > 0 && (
-                      <span className="text-[11px] font-bold uppercase text-white/40">{item.targetMinutes} min</span>
-                    )}
-                  </div>
-                  {item.exercises && (
-                    <p className="mt-1 text-sm font-semibold text-white/55">{item.exercises}</p>
-                  )}
-                  {item.done && item.doneDate && (
-                    <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-[#eaff93]">
-                      Hecho · {item.doneDate}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-            {!currentMember.trainingPlan.items.length && (
-              <p className="text-sm font-semibold text-white/45">Tu coach aun no agrego sesiones al plan.</p>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="border border-white/10 bg-white/[0.04] p-5">
-          <div className="flex items-center gap-3">
-            <ClipboardList className="h-5 w-5 text-white/45" />
-            <h2 className="text-lg font-black uppercase">Plan personalizado</h2>
-          </div>
-          <p className="mt-3 text-sm font-semibold text-white/45">
-            Tu coach aun no te asigno un plan. Pedilo en recepcion y aparece aqui para seguirlo dia a dia.
-          </p>
-        </div>
-      )}
+      <PlanTrainingPanel os={os} />
 
       <div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
         <div className="border border-white/10 bg-white/[0.04] p-5">

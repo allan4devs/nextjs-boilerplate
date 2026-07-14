@@ -12,10 +12,12 @@ import {
   Loader2,
   Lock,
   LogOut,
+  Mail,
   MessageCircle,
   ScanFace,
   Search,
   ShieldAlert,
+  Send,
   UserPlus,
   Users,
   XCircle,
@@ -27,7 +29,6 @@ import {
   GameHudPill,
   GameLabel,
 } from "../../components/GameOS";
-import IngresoKiosk from "../../components/ingreso/IngresoKiosk";
 import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
@@ -39,7 +40,6 @@ import {
 import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 
-const ADMIN_CODE_KEY = "xtreme-admin-code";
 const AUTO_LOOKUP_MS = 280;
 
 type RecentCheckin = {
@@ -62,7 +62,7 @@ type ActiveVisit = {
   checkedInAt: string;
 };
 
-type Tab = "home" | "inside" | "cedula" | "face" | "register" | "chat";
+type Tab = "home" | "inside" | "cedula" | "face" | "register" | "invite" | "chat";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -132,9 +132,10 @@ export default function RecepcionPage() {
   const [regFaceHash, setRegFaceHash] = useState("");
   const [regCheckIn, setRegCheckIn] = useState(true);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteResult, setInviteResult] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
-  /** Kiosco de ingreso por defecto; staff abre el form de código. */
-  const [showStaffGate, setShowStaffGate] = useState(false);
 
   // Camara
   const {
@@ -161,22 +162,26 @@ export default function RecepcionPage() {
 
   const headers = useCallback(
     (json = false): HeadersInit => {
-      const h: Record<string, string> = { "x-xtreme-admin": adminCode };
+      const h: Record<string, string> = {};
       if (json) h["Content-Type"] = "application/json";
       return h;
     },
-    [adminCode],
+    [],
   );
 
   const loadPanel = useCallback(
     async (withRoster = false) => {
-      if (!adminCode) return;
+      if (!unlocked) return;
       try {
         const params = withRoster ? "?roster=1" : "";
         const res = await fetch(`/api/xtreme/reception${params}`, {
           cache: "no-store",
-          headers: headers(),
         });
+        if (res.status === 401) {
+          setUnlocked(false);
+          setAdminCode("");
+          return;
+        }
         const json = (await res.json()) as {
           status?: GymStatus;
           recent?: RecentCheckin[];
@@ -193,7 +198,7 @@ export default function RecepcionPage() {
         /* poll soft-fail */
       }
     },
-    [adminCode, headers],
+    [unlocked],
   );
 
   async function unlock(e?: React.FormEvent) {
@@ -203,10 +208,17 @@ export default function RecepcionPage() {
     setIsUnlocking(true);
     setUnlockError("");
     try {
-      const res = await fetch("/api/xtreme/reception", {
-        cache: "no-store",
-        headers: { "x-xtreme-admin": code },
+      const loginRes = await fetch("/api/xtreme/staff-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ surface: "reception", code }),
       });
+      const loginJson = (await loginRes.json()) as { error?: string; role?: string };
+      if (!loginRes.ok) {
+        setUnlockError(loginJson.error || "Codigo incorrecto.");
+        return;
+      }
+      const res = await fetch("/api/xtreme/reception", { cache: "no-store" });
       const json = (await res.json()) as {
         status?: GymStatus;
         recent?: RecentCheckin[];
@@ -217,8 +229,7 @@ export default function RecepcionPage() {
         setUnlockError(json.error || "Codigo incorrecto.");
         return;
       }
-      window.localStorage.setItem(ADMIN_CODE_KEY, code);
-      setAdminCode(code);
+      setAdminCode(loginJson.role || "reception");
       setUnlocked(true);
       if (json.status) setStatus(json.status);
       if (json.recent) setRecent(json.recent);
@@ -231,23 +242,22 @@ export default function RecepcionPage() {
   }
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(ADMIN_CODE_KEY);
-    if (stored) {
-      setAdminCode(stored);
-      void (async () => {
+    void (async () => {
+      const sessionRes = await fetch("/api/xtreme/staff-session?surface=reception", {
+        cache: "no-store",
+      });
+      const session = (await sessionRes.json()) as { authenticated?: boolean; role?: string };
+      if (session.authenticated) {
+        setAdminCode(session.role || "reception");
         setIsUnlocking(true);
         try {
-          const res = await fetch("/api/xtreme/reception", {
-            cache: "no-store",
-            headers: { "x-xtreme-admin": stored },
-          });
+          const res = await fetch("/api/xtreme/reception", { cache: "no-store" });
           const json = (await res.json()) as {
             status?: GymStatus;
             recent?: RecentCheckin[];
             inside?: ActiveVisit[];
           };
           if (!res.ok) {
-            window.localStorage.removeItem(ADMIN_CODE_KEY);
             setAdminCode("");
             return;
           }
@@ -258,8 +268,8 @@ export default function RecepcionPage() {
         } finally {
           setIsUnlocking(false);
         }
-      })();
-    }
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -271,13 +281,12 @@ export default function RecepcionPage() {
 
   // Badge de chats no leídos (poll liviano aunque no estés en el tab)
   useEffect(() => {
-    if (!unlocked || !adminCode) return;
+    if (!unlocked) return;
     let cancelled = false;
     async function pollChatBadge() {
       try {
         const res = await fetch("/api/xtreme/chat/inbox?status=open", {
           cache: "no-store",
-          headers: { "x-xtreme-admin": adminCode },
         });
         const json = (await res.json()) as { unreadTotal?: number };
         if (!cancelled && res.ok) setChatUnread(json.unreadTotal ?? 0);
@@ -291,7 +300,7 @@ export default function RecepcionPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [unlocked, adminCode, tab]);
+  }, [unlocked, tab]);
 
   useEffect(() => {
     if (tab === "face" && unlocked) {
@@ -332,7 +341,6 @@ export default function RecepcionPage() {
         else if (opts.q) params.set("q", opts.q);
         const res = await fetch(`/api/xtreme/checkin?${params}`, {
           cache: "no-store",
-          headers: adminCode ? { "x-xtreme-admin": adminCode } : {},
         });
         const json = (await res.json()) as {
           status?: GymStatus;
@@ -355,7 +363,7 @@ export default function RecepcionPage() {
         setIsLooking(false);
       }
     },
-    [adminCode],
+    [],
   );
 
   // Auto-busqueda por cedula al digitar (lector de barras / teclado)
@@ -452,7 +460,6 @@ export default function RecepcionPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(adminCode ? { "x-xtreme-admin": adminCode } : {}),
         },
         body: JSON.stringify({
           memberName: m.memberName,
@@ -725,25 +732,54 @@ export default function RecepcionPage() {
     }
   }
 
-  function logout() {
+  async function inviteToApp(e?: React.FormEvent) {
+    e?.preventDefault();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) return;
+    setIsInviting(true);
+    setInviteResult("");
+    setError("");
+    try {
+      const res = await fetch("/api/xtreme/reception", {
+        method: "POST",
+        headers: headers(true),
+        body: JSON.stringify({ action: "invite_app", email }),
+      });
+      const json = (await res.json()) as { ok?: boolean; message?: string; error?: string };
+      if (!res.ok || !json.ok) {
+        const message = json.error || "No se pudo enviar la invitación.";
+        setError(message);
+        setFlash({ type: "err", title: "Invitación no enviada", subtitle: message });
+        return;
+      }
+      const message = json.message || "Invitación enviada.";
+      setInviteResult(`Enviada a ${email}. ${message}`);
+      setInviteEmail("");
+      setFlash({ type: "ok", title: "Invitación enviada", subtitle: email });
+    } catch {
+      setError("Error de conexión al enviar la invitación.");
+      setFlash({ type: "err", title: "Error", subtitle: "No se pudo enviar la invitación." });
+    } finally {
+      setIsInviting(false);
+    }
+  }
+
+  async function logout() {
     stopCamera();
-    window.localStorage.removeItem(ADMIN_CODE_KEY);
+    await fetch("/api/xtreme/staff-session?surface=reception", { method: "DELETE" });
     setUnlocked(false);
     setAdminCode("");
     setMember(null);
     setInside([]);
     setRoster([]);
     setRecent([]);
-    setShowStaffGate(false);
     setTab("home");
   }
 
   if (!unlocked) {
     return (
-      <>
-        <IngresoKiosk onStaffRequest={() => setShowStaffGate(true)} />
-        {showStaffGate && (
-          <div className="fixed inset-0 z-[80] grid place-items-end bg-black/70 p-0 backdrop-blur-sm sm:place-items-center sm:p-4">
+      <main className="grid min-h-screen place-items-end bg-[#050505] text-white sm:place-items-center sm:p-4">
+        <div className="w-full max-w-md">
             <form
               onSubmit={(e) => void unlock(e)}
               className="w-full max-w-md border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 text-white shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-8"
@@ -756,8 +792,8 @@ export default function RecepcionPage() {
               </GameLabel>
               <h1 className="mt-2 text-3xl font-black uppercase tracking-tight">Mostrador</h1>
               <p className="mt-2 text-sm font-bold text-white/50">
-                Cedula, registro, chat y herramientas de staff. El ingreso de socios queda en la
-                pantalla de atras (PIN / rostro).
+                Cedula, registro, chat y herramientas de recepcion. Esta sesion es independiente
+                del modo ingreso y de administracion.
               </p>
               <label className="mt-6 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
                 Codigo de staff
@@ -766,10 +802,11 @@ export default function RecepcionPage() {
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                 <input
                   type="password"
+                  autoComplete="current-password"
                   value={adminCode}
                   onChange={(e) => setAdminCode(e.target.value)}
                   autoFocus
-                  placeholder="Codigo admin"
+                  placeholder="Codigo de recepcion"
                   className="min-h-12 w-full border-[3px] border-white/20 bg-black/40 py-3.5 pl-10 pr-4 text-base font-bold outline-none focus:border-[#d8ff3e]"
                 />
               </div>
@@ -786,25 +823,17 @@ export default function RecepcionPage() {
               >
                 {isUnlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar al mostrador"}
               </GameButton>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowStaffGate(false);
-                  setUnlockError("");
-                }}
-                className="mt-3 w-full py-2 text-center text-xs font-black uppercase tracking-wide text-white/45 hover:text-white/70"
-              >
-                Volver al ingreso
-              </button>
-              <p className="mt-3 text-center text-xs font-bold text-white/35">
+              <p className="mt-4 flex justify-center gap-4 text-center text-xs font-bold text-white/35">
+                <Link href="/ingreso" className="hover:text-white/70">
+                  Modo ingreso
+                </Link>
                 <Link href="/admin" className="hover:text-white/70">
                   Panel admin
                 </Link>
               </p>
             </form>
-          </div>
-        )}
-      </>
+        </div>
+      </main>
     );
   }
 
@@ -854,7 +883,7 @@ export default function RecepcionPage() {
           </Link>
           <button
             type="button"
-            onClick={logout}
+            onClick={() => void logout()}
             className="inline-flex min-h-11 items-center gap-1.5 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-[#d8ff3e]/50 hover:text-[#d8ff3e]"
           >
             <LogOut className="h-3.5 w-3.5" /> Modo ingreso
@@ -874,6 +903,7 @@ export default function RecepcionPage() {
                   ? [{ id: "face" as const, label: "Rostro", icon: ScanFace }]
                   : []),
                 { id: "register" as const, label: "Registro", icon: UserPlus },
+                { id: "invite" as const, label: "Invitar", icon: Mail },
                 { id: "chat" as const, label: "Chat", icon: MessageCircle },
               ] as const
             ).map((t) => {
@@ -928,6 +958,7 @@ export default function RecepcionPage() {
                   <ReceptionAction icon={LogOut} eyebrow={`${inside.length} dentro`} title="Registrar salida" description="Busque por nombre o cédula y marque la salida con un toque." tone="orange" onClick={() => setTab("inside")} />
                   <ReceptionAction icon={IdCard} eyebrow="Acceso rápido" title="Ingresar socio" description="Escanee o digite la cédula y confirme el ingreso." tone="lime" onClick={() => setTab("cedula")} />
                   <ReceptionAction icon={UserPlus} eyebrow="Persona nueva" title="Registrar persona" description="Nombre, cédula, teléfono, correo, plan, foto e ingreso inmediato." tone="cyan" onClick={() => setTab("register")} />
+                  <ReceptionAction icon={Mail} eyebrow="Solo necesita correo" title="Invitar a la app" description="Envíe un enlace para crear la cuenta, sin primer día gratis ni plan automático." tone="violet" onClick={() => setTab("invite")} />
                   <ReceptionAction icon={MessageCircle} eyebrow={chatUnread > 0 ? String(chatUnread) + " por atender" : "Atención en vivo"} title="Responder chat" description="Lea conversaciones, responda consultas y cierre casos resueltos." tone="orange" onClick={() => setTab("chat")} />
                   {FACE_RECOGNITION_ENABLED ? (
                     <ReceptionAction icon={ScanFace} eyebrow="Cámara" title="Ingreso por rostro" description="Reconozca socios enrolados o agregue su rostro al perfil." tone="violet" onClick={() => setTab("face")} />
@@ -956,7 +987,90 @@ export default function RecepcionPage() {
                 onCheckout={(visit) => void confirmCheckout(visit)}
               />
             )}
-            {tab === "chat" && <ReceptionChatInbox adminCode={adminCode} />}
+            {tab === "chat" && <ReceptionChatInbox />}
+
+            {tab === "invite" && (
+              <div className="mx-auto max-w-2xl">
+                <div className="relative overflow-hidden border-[3px] border-violet-300/55 bg-gradient-to-br from-violet-400/[0.14] via-[#0b0b0b] to-[#d8ff3e]/[0.06] p-5 shadow-[6px_6px_0_rgba(0,0,0,.55)] sm:p-7">
+                  <span className="pointer-events-none absolute -right-12 top-20 h-[3px] w-52 rotate-45 bg-violet-200 opacity-10" />
+                  <span className="pointer-events-none absolute -right-12 top-20 h-[3px] w-52 -rotate-45 bg-violet-200 opacity-10" />
+                  <div className="relative flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <GameLabel tone="cyan">Invitación directa · sin registro en mostrador</GameLabel>
+                      <h2 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">Invitar a la app</h2>
+                      <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-white/52">
+                        La persona recibe un enlace privado para confirmar el correo y completar nombre, cédula y teléfono por su cuenta.
+                      </p>
+                    </div>
+                    <span className="grid h-14 w-14 shrink-0 place-items-center border-[3px] border-violet-200 bg-violet-300 text-black shadow-[4px_4px_0_rgba(0,0,0,.45)]">
+                      <Mail className="h-7 w-7" />
+                    </span>
+                  </div>
+
+                  <div className="relative mt-6 grid gap-2 sm:grid-cols-3">
+                    {[
+                      ["01", "Correo", "Recepción escribe únicamente el correo."],
+                      ["02", "Perfil", "La persona completa sus datos desde el enlace."],
+                      ["03", "App", "Entra a su cuenta y puede elegir un plan."],
+                    ].map(([number, title, description]) => (
+                      <div key={number} className="border-[3px] border-white/10 bg-black/35 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-200">{number} / {title}</p>
+                        <p className="mt-2 text-xs font-bold leading-5 text-white/48">{description}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <form onSubmit={(e) => void inviteToApp(e)} className="relative mt-5 border-[3px] border-white/15 bg-[#080808] p-4 sm:p-5">
+                    <label className="block">
+                      <span className="text-xs font-black uppercase tracking-[0.16em] text-white/55">Correo de la persona</span>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                        <div className="relative min-w-0 flex-1">
+                          <Mail className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/30" />
+                          <input
+                            type="email"
+                            autoComplete="email"
+                            value={inviteEmail}
+                            onChange={(event) => {
+                              setInviteEmail(event.target.value);
+                              setInviteResult("");
+                              setError("");
+                            }}
+                            required
+                            className="min-h-14 w-full border-[3px] border-white/15 bg-black pl-11 pr-3 text-sm font-bold text-white outline-none transition placeholder:text-white/25 focus:border-violet-300"
+                            placeholder="persona@correo.com"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isInviting || !inviteEmail.trim()}
+                          className="inline-flex min-h-14 items-center justify-center gap-2 bg-violet-300 px-6 text-sm font-black uppercase text-black transition hover:bg-[#d8ff3e] disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          {isInviting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                          Enviar invitación
+                        </button>
+                      </div>
+                    </label>
+
+                    {inviteResult ? (
+                      <p className="mt-3 flex items-start gap-2 border border-[#d8ff3e]/25 bg-[#d8ff3e]/10 p-3 text-sm font-bold text-[#eaff93]">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> {inviteResult}
+                      </p>
+                    ) : null}
+                    {error ? (
+                      <p className="mt-3 flex items-start gap-2 border border-red-400/25 bg-red-400/10 p-3 text-sm font-bold text-red-200">
+                        <XCircle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+                      </p>
+                    ) : null}
+                  </form>
+
+                  <div className="relative mt-4">
+                    <GameCallout tone="orange" icon={ShieldAlert}>
+                      La invitación crea la cuenta, pero no activa membresía, acceso al gimnasio ni primer día gratis. El enlace personal vence en 24 horas.
+                    </GameCallout>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {tab === "cedula" && (
               <div className="mx-auto max-w-xl">

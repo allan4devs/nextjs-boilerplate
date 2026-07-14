@@ -18,19 +18,21 @@ import {
   membershipStatus,
   normalizeKey,
   normalizeName,
-  resolveAdminRole,
   sanitizePlan,
   todayIso,
   toAdminMember,
   toUtcDate,
 } from "@/lib/xtreme/shared";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { writeAudit } from "@/lib/xtreme/audit";
+import { listOpenOpsAlerts, resolveOpsAlert } from "@/lib/xtreme/ops-alerts";
 import { sendMembershipReminderEmail, sendPaymentReceiptEmail } from "@/lib/helpers/email";
 
 export const dynamic = "force-dynamic";
 
-function roleFromReq(req: NextRequest): AdminRole | null {
-  return resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+async function roleFromReq(req: NextRequest): Promise<AdminRole | null> {
+  const session = await resolveStaffSession(req, "admin");
+  return session?.role === "admin" || session?.role === "super" ? session.role : null;
 }
 
 function unauthorized() {
@@ -129,7 +131,7 @@ async function revenueSummary(db: Awaited<ReturnType<typeof getDb>>) {
 }
 
 export async function GET(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {
@@ -178,6 +180,7 @@ export async function GET(req: NextRequest) {
       .toArray();
 
     const occupancySnapshot = await computeOccupancy(db);
+    const opsAlerts = await listOpenOpsAlerts(db, 20);
 
     // Serie de ingresos al gym de los ultimos 7 dias (para la grafica)
     const weekStartIso = daysAgoIso(6);
@@ -224,6 +227,7 @@ export async function GET(req: NextRequest) {
         classes,
       },
       checkinSeries,
+      opsAlerts,
       checkins: checkinDocs.map((c) => ({
         id: c.id,
         memberName: c.memberName,
@@ -257,6 +261,9 @@ export async function GET(req: NextRequest) {
       );
       payload.system = {
         lifecycle,
+        lifecycleStale:
+          !lifecycle?.startedAt ||
+          Date.now() - new Date(lifecycle.startedAt).getTime() > 36 * 60 * 60_000,
         checkedAt: new Date().toISOString(),
       };
     } catch {
@@ -271,12 +278,29 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const action = String(body.action ?? "plan");
+
+    if (action === "resolveOpsAlert") {
+      const fingerprint = String(body.fingerprint ?? "").trim();
+      if (!fingerprint) {
+        return NextResponse.json({ error: "Alerta requerida." }, { status: 400 });
+      }
+      const db = await getDb();
+      await resolveOpsAlert(db, fingerprint);
+      await writeAudit(db, {
+        actorRole: role,
+        action: "ops_alert.resolve",
+        targetType: "system",
+        targetId: fingerprint,
+        summary: `Alerta operativa resuelta: ${fingerprint}`,
+      });
+      return NextResponse.json({ ok: true });
+    }
 
     // Plan personalizado
     if (action === "plan") {
@@ -685,7 +709,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {
@@ -728,7 +752,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {

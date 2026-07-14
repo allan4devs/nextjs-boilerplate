@@ -47,6 +47,7 @@ import type {
   PlanItem,
   ReservationState,
   ReservationsResponse,
+  WorkoutExerciseDetail,
 } from "./types";
 
 export type MemberOs = ReturnType<typeof useMemberOs>;
@@ -761,6 +762,15 @@ export function useMemberOs() {
 
   async function completeTraining(training: Training) {
     if (!unlocked) return;
+    if (
+      currentMember.activePlanWorkout ||
+      currentMember.trainingPlan?.items.some((item) => !item.done)
+    ) {
+      setTab("entrenar");
+      setError("");
+      setMessage("Complete primero la sesion asignada en su plan.");
+      return;
+    }
     setError("");
     setMessage("");
     setSavingTrainingId(training.id);
@@ -918,6 +928,91 @@ export function useMemberOs() {
       setMessage(nextDone ? MSG.ok.planItemDone : MSG.ok.planItemPending);
     } catch (err) {
       requirePinAgain(err, MSG.errors.updatePlan);
+    }
+  }
+
+  async function startPlanWorkout(item: PlanItem) {
+    if (!unlocked || item.done) return;
+    setError("");
+    setMessage("");
+    setSavingTrainingId(`plan-${item.id}`);
+    try {
+      const response = await fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action: "planWorkoutStart", itemId: item.id }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      setMessage(`Entreno iniciado: ${item.focus || item.day}.`);
+    } catch (err) {
+      requirePinAgain(err, "No se pudo iniciar el entreno del plan.");
+    } finally {
+      setSavingTrainingId("");
+    }
+  }
+
+  async function savePlanWorkout(exercises: WorkoutExerciseDetail[]) {
+    if (!unlocked) return false;
+    setError("");
+    try {
+      const response = await fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action: "planWorkoutSave", exercises }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      setMessage("Detalle del entreno guardado.");
+      return true;
+    } catch (err) {
+      requirePinAgain(err, "No se pudo guardar el detalle del entreno.");
+      return false;
+    }
+  }
+
+  async function finishPlanWorkout(exercises: WorkoutExerciseDetail[]) {
+    if (!unlocked) return false;
+    setError("");
+    setMessage("");
+    setSavingTrainingId("plan-finish");
+    try {
+      const response = await fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action: "planWorkoutFinish", exercises }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      setLeaderboard(data.leaderboard ?? []);
+      setMessage("Entreno finalizado y sesion del plan completada.");
+      return true;
+    } catch (err) {
+      requirePinAgain(err, "No se pudo finalizar. Confirme que marco su ingreso al gym hoy.");
+      return false;
+    } finally {
+      setSavingTrainingId("");
+    }
+  }
+
+  async function cancelPlanWorkout() {
+    if (!unlocked) return;
+    setError("");
+    try {
+      const response = await fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action: "planWorkoutCancel" }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      setMessage("Entreno activo cancelado.");
+    } catch (err) {
+      requirePinAgain(err, "No se pudo cancelar el entreno.");
     }
   }
 
@@ -1099,6 +1194,10 @@ export function useMemberOs() {
     cancelReservation,
     saveBodyMetric,
     togglePlanItem,
+    startPlanWorkout,
+    savePlanWorkout,
+    finishPlanWorkout,
+    cancelPlanWorkout,
     uploadPhoto,
     activateReminder,
     resetMember,

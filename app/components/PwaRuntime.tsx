@@ -12,10 +12,14 @@ type InstallPromptEvent = Event & {
 function isInstallSurface(pathname: string) {
   if (pathname === "/app" || pathname.startsWith("/app/")) return true;
   if (pathname === "/recepcion" || pathname.startsWith("/recepcion/")) return true;
+  if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) return true;
   return false;
 }
 
 function dismissKeyFor(pathname: string) {
+  if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) {
+    return "xtreme-pwa-install-dismissed-ingreso";
+  }
   if (pathname === "/recepcion" || pathname.startsWith("/recepcion/")) {
     return "xtreme-pwa-install-dismissed-reception";
   }
@@ -23,6 +27,9 @@ function dismissKeyFor(pathname: string) {
 }
 
 function visitsKeyFor(pathname: string) {
+  if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) {
+    return "xtreme-pwa-visits-ingreso";
+  }
   if (pathname === "/recepcion" || pathname.startsWith("/recepcion/")) {
     return "xtreme-pwa-visits-reception";
   }
@@ -30,6 +37,9 @@ function visitsKeyFor(pathname: string) {
 }
 
 function sessionKeyFor(pathname: string) {
+  if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) {
+    return "xtreme-pwa-visit-counted-ingreso";
+  }
   if (pathname === "/recepcion" || pathname.startsWith("/recepcion/")) {
     return "xtreme-pwa-visit-counted-reception";
   }
@@ -44,6 +54,7 @@ export default function PwaRuntime() {
   const isIos = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
   const onOsSurface = isInstallSurface(pathname);
   const isReception = pathname === "/recepcion" || pathname.startsWith("/recepcion/");
+  const isIngreso = pathname === "/ingreso" || pathname.startsWith("/ingreso/");
 
   // Service worker global (offline/push); el banner solo en OS.
   useEffect(() => {
@@ -134,15 +145,17 @@ export default function PwaRuntime() {
   return (
     <aside className="xg-safe-bottom fixed bottom-20 left-3 right-3 z-[70] mx-auto max-h-[calc(100dvh-6rem)] max-w-md overflow-y-auto border border-[#f6c400]/50 bg-[#111] p-5 text-white shadow-2xl sm:left-4 sm:right-4 md:bottom-5">
       <p className="text-xs font-black uppercase tracking-[.18em] text-[#f6c400]">
-        {isReception ? "Reception OS" : "Member OS"}
+        {isIngreso ? "Ingreso OS" : isReception ? "Reception OS" : "Member OS"}
       </p>
       <p className="mt-2 font-black uppercase">
-        {isReception ? "Instalá Reception OS" : "Instalá la app de socios"}
+        {isIngreso ? "Instalá Ingreso OS" : isReception ? "Instalá Reception OS" : "Instalá la app de socios"}
       </p>
       <p className="mt-2 text-sm font-semibold leading-6 text-white/60">
         {isIos
           ? "Tocá Compartir y luego ‘Agregar a pantalla de inicio’."
-          : isReception
+          : isIngreso
+            ? "Dejá el ingreso de la puerta activo como una app independiente."
+            : isReception
             ? "Ingreso de socios y mostrador como app, sin buscar el sitio."
             : "Reservas, racha y progreso como una app, sin buscar el sitio."}
       </p>

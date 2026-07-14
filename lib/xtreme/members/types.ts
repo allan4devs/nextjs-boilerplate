@@ -1,5 +1,10 @@
 import type { EarnedBadge } from "@/lib/xtreme/gamification";
-import type { NotificationPrefs } from "@/lib/xtreme/shared";
+import type {
+  ActivePlanWorkout,
+  NotificationPrefs,
+  PlanExercisePrescription,
+  WorkoutExerciseDetail,
+} from "@/lib/xtreme/shared";
 
 export type WorkoutEntry = {
   id: string;
@@ -9,6 +14,11 @@ export type WorkoutEntry = {
   minutes: number;
   completedDate: string;
   completedAt: Date;
+  planItemId?: string;
+  planTitle?: string;
+  startedAt?: Date;
+  endedAt?: Date;
+  exercises?: WorkoutExerciseDetail[];
 };
 
 export type Membership = {
@@ -35,6 +45,8 @@ export type PlanItem = {
   targetMinutes: number;
   done: boolean;
   doneDate: string | null;
+  doneWorkoutId?: string | null;
+  prescribedExercises?: PlanExercisePrescription[];
 };
 
 export type TrainingPlan = {
@@ -61,6 +73,7 @@ export type XtremeMemberDoc = {
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
   trainingPlan?: TrainingPlan;
+  activePlanWorkout?: ActivePlanWorkout;
   weeklyGoal?: number;
   earnedBadges?: EarnedBadge[];
   freezeHistory?: string[];

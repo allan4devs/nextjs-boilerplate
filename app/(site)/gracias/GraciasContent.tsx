@@ -2,8 +2,19 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import { ArrowRight, CheckCircle2, Mail, Smartphone } from "lucide-react";
 import { BUSINESS, waLink } from "../../lib/site";
+
+declare global {
+  interface Window {
+    gtag?: (
+      command: "event",
+      eventName: "conversion",
+      parameters: { send_to: string; transaction_id: string },
+    ) => void;
+  }
+}
 
 function formatUntil(value: string) {
   const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -19,6 +30,32 @@ export default function GraciasContent() {
   const reference = (params.get("ref") ?? "").trim();
   const until = formatUntil(params.get("until") ?? "");
   const appInviteSent = params.get("registro") === "correo";
+
+  useEffect(() => {
+    if (!reference) return;
+
+    const sendConversion = () => {
+      if (typeof window.gtag !== "function") return false;
+
+      window.gtag("event", "conversion", {
+        send_to: "AW-18319195306/ydJACN7ShNAcEKr5op9E",
+        transaction_id: reference,
+      });
+      return true;
+    };
+
+    if (sendConversion()) return;
+
+    const retryId = window.setInterval(() => {
+      if (sendConversion()) window.clearInterval(retryId);
+    }, 250);
+    const timeoutId = window.setTimeout(() => window.clearInterval(retryId), 5_000);
+
+    return () => {
+      window.clearInterval(retryId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [reference]);
 
   const STEPS = [
     {

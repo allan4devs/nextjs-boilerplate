@@ -60,6 +60,8 @@ async function ensureIndexes(db: Db) {
     db.collection("xtreme_gym_otps").createIndex({ normalizedName: 1, purpose: 1 }),
     db.collection("xtreme_gym_audit").createIndex({ at: -1 }),
     db.collection("xtreme_gym_audit").createIndex({ targetId: 1, at: -1 }),
+    db.collection("xtreme_gym_ops_alerts").createIndex({ status: 1, lastSeenAt: -1 }),
+    db.collection("xtreme_gym_ops_alerts").createIndex({ fingerprint: 1, status: 1 }, { unique: true }),
     db.collection("xtreme_gym_badges").createIndex({ id: 1 }, { unique: true }),
     // Fase 2.0: eventos, sesiones sociales y entregas de lifecycle
     db.collection("xtreme_gym_events").createIndex({ type: 1, occurredAt: -1 }),

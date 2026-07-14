@@ -29,10 +29,6 @@ type ChatSession = {
   seq: number;
 };
 
-type Props = {
-  adminCode: string;
-};
-
 function formatTime(value: string) {
   try {
     return new Date(value).toLocaleTimeString("es-CR", {
@@ -59,7 +55,7 @@ function formatWhen(value: string) {
   }
 }
 
-export default function ReceptionChatInbox({ adminCode }: Props) {
+export default function ReceptionChatInbox() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [filter, setFilter] = useState<"open" | "all" | "closed">("open");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -78,21 +74,10 @@ export default function ReceptionChatInbox({ adminCode }: Props) {
     activeIdRef.current = activeId;
   }, [activeId]);
 
-  const headers = useCallback(
-    (json = false): HeadersInit => {
-      const h: Record<string, string> = { "x-xtreme-admin": adminCode };
-      if (json) h["Content-Type"] = "application/json";
-      return h;
-    },
-    [adminCode],
-  );
-
   const loadInbox = useCallback(async () => {
-    if (!adminCode) return;
     try {
       const res = await fetch(`/api/xtreme/chat/inbox?status=${filter}`, {
         cache: "no-store",
-        headers: headers(),
       });
       const json = (await res.json()) as {
         sessions?: ChatSession[];
@@ -103,11 +88,10 @@ export default function ReceptionChatInbox({ adminCode }: Props) {
     } catch {
       /* soft */
     }
-  }, [adminCode, filter, headers]);
+  }, [filter]);
 
   const loadThread = useCallback(
     async (sessionId: string, reset = false) => {
-      if (!adminCode) return;
       if (reset) {
         afterSeqRef.current = 0;
         setLoadingThread(true);
@@ -119,7 +103,6 @@ export default function ReceptionChatInbox({ adminCode }: Props) {
         });
         const res = await fetch(`/api/xtreme/chat/inbox?${params}`, {
           cache: "no-store",
-          headers: headers(),
         });
         const json = (await res.json()) as {
           session?: ChatSession;
@@ -150,7 +133,7 @@ export default function ReceptionChatInbox({ adminCode }: Props) {
         if (reset) setLoadingThread(false);
       }
     },
-    [adminCode, headers],
+    [],
   );
 
   useEffect(() => {
@@ -181,7 +164,7 @@ export default function ReceptionChatInbox({ adminCode }: Props) {
     try {
       const res = await fetch("/api/xtreme/chat/inbox", {
         method: "POST",
-        headers: headers(true),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "reply",
           sessionId: activeId,
@@ -219,7 +202,7 @@ export default function ReceptionChatInbox({ adminCode }: Props) {
     try {
       const res = await fetch("/api/xtreme/chat/inbox", {
         method: "POST",
-        headers: headers(true),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, sessionId: activeId }),
       });
       const json = (await res.json()) as { session?: ChatSession; error?: string };

@@ -7,6 +7,7 @@ import {
 import { syncMemberGamification } from "./gamification-service";
 import type { MemberRepository } from "./repository";
 import type { WorkoutEntry } from "./types";
+import type { WorkoutExerciseDetail } from "@/lib/xtreme/shared";
 
 export type CompleteTodayWorkoutInput = {
   memberKey: string;
@@ -14,6 +15,10 @@ export type CompleteTodayWorkoutInput = {
   trainingName: string;
   intensity: string;
   minutes: number;
+  planItemId?: string;
+  planTitle?: string;
+  startedAt?: Date;
+  exercises?: WorkoutExerciseDetail[];
 };
 
 export type WorkoutCompletedEvent = {
@@ -53,6 +58,10 @@ export async function completeTodayWorkout(
     minutes: input.minutes,
     completedDate,
     completedAt: now,
+    ...(input.planItemId ? { planItemId: input.planItemId } : {}),
+    ...(input.planTitle ? { planTitle: input.planTitle } : {}),
+    ...(input.startedAt ? { startedAt: input.startedAt, endedAt: now } : {}),
+    ...(input.exercises?.length ? { exercises: input.exercises } : {}),
   };
   const appendResult = await dependencies.repository.appendWorkoutOnce({
     memberKey: input.memberKey,

@@ -11,6 +11,8 @@ export {
   initialMember,
   initialsOf,
   memberCode,
+  membershipPlanDays,
+  membershipRemainingPct,
   normalizeName,
   onlyDigits,
   resizePhoto,

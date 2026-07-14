@@ -195,6 +195,32 @@ export async function sendRegistrationConfirmEmail(args: {
   });
 }
 
+/** Invitación directa de recepción: crea acceso a la app, sin regalar un día ni activar un plan. */
+export async function sendReceptionAppInviteEmail(args: {
+  to: string;
+  token: string;
+  expiresHours: number;
+  baseUrl?: string;
+}) {
+  const href = absoluteRequestUrl(
+    `/registro/confirmar?token=${encodeURIComponent(args.token)}`,
+    args.baseUrl,
+  );
+  return sendEmail({
+    to: args.to,
+    subject: "Te invitaron a la app de Xtreme Gym",
+    html: layout(
+      "Tu invitación a Xtreme Gym",
+      `<p style="font-size:14px;line-height:1.6;">Recepción de Xtreme Gym te invitó a crear tu acceso personal a la app.</p>
+      <p style="font-size:14px;line-height:1.6;">Desde ahí podés completar tu perfil, conocer los planes y, cuando tengás una membresía activa, administrar tus entrenos y reservas.</p>
+      <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:13px;line-height:1.6;margin:16px 0;"><strong>Importante:</strong> esta invitación crea tu cuenta, pero no activa un plan ni incluye el primer día gratis.</div>
+      <p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>
+      <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Aceptar invitación y crear mi cuenta</a>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Este enlace es personal, se usa una sola vez y vence en ${args.expiresHours} horas. Si no solicitaste esta invitación, podés ignorar el correo.</p>`,
+    ),
+  });
+}
+
 /** Invitacion posterior a PayPal para completar cedula y activar el ingreso a la app. */
 export async function sendPaymentAppInviteEmail(args: {
   to: string;
@@ -363,7 +389,8 @@ export async function sendMembershipReminderEmail(args: {
         ${row("Plan", escapeHtml(args.plan))}
         ${row(expired ? "Vencio" : "Vence", escapeHtml(args.nextBillingDate))}
       </table>
-      <p style="font-size:14px;line-height:1.6;">Puede renovar en recepcion o en linea desde la seccion de precios. No pierda su racha.</p>`,
+      <p style="font-size:14px;line-height:1.6;">Puede renovar directamente desde su app o en recepción. No pierda su racha.</p>
+      ${appButton("Abrir mi membresía")}`,
     ),
   });
 }
@@ -437,8 +464,8 @@ export async function sendWinBackEmail(args: {
     html: layout(
       "Tu próximo entreno cuenta",
       `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Han pasado ${args.inactiveDays} días desde tu último entreno. Eso no borra lo que ya avanzaste.</p>
-      <p style="font-size:14px;line-height:1.6;">Volvé con una sesión sencilla. Tu regreso arranca gratis: registrate en la app y entrená.</p>
-      ${appButton("Reservar mi regreso", "/primer-dia#reservar")}`,
+      <p style="font-size:14px;line-height:1.6;">Volvé con una sesión sencilla. Revisá tu plan y retomá desde donde estás.</p>
+      ${appButton("Abrir mi app")}`,
     ),
   });
 }
@@ -487,16 +514,80 @@ export async function sendPinRecoveryOtpEmail(args: {
 }
 
 /** Notificacion al admin cuando se registra un nuevo socio con primer dia gratis. */
+export function adminNotificationAddress() {
+  return process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || "aallanrd@gmail.com";
+}
+
+export async function sendAdminOperationalAlert(args: {
+  severity: "warning" | "critical";
+  title: string;
+  detail: string;
+  context?: Record<string, string | number | boolean | null | undefined>;
+}) {
+  const contextRows = Object.entries(args.context ?? {})
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([label, value]) => row(escapeHtml(label), escapeHtml(value)))
+    .join("");
+  return sendEmail({
+    to: adminNotificationAddress(),
+    managePreferences: false,
+    subject: `${args.severity === "critical" ? "URGENTE" : "Alerta"}: ${args.title}`,
+    html: layout(
+      args.severity === "critical" ? "Incidente crítico" : "Alerta operativa",
+      `<p style="font-size:16px;font-weight:900;line-height:1.5;">${escapeHtml(args.title)}</p>
+      <p style="font-size:14px;line-height:1.7;">${escapeHtml(args.detail)}</p>
+      ${contextRows ? `<table style="border-collapse:collapse;margin:12px 0;">${contextRows}</table>` : ""}
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El incidente también quedó guardado en el panel Admin de Xtreme Gym.</p>`,
+    ),
+  });
+}
+
+export async function sendAdminDailySummary(args: {
+  date: string;
+  members: number;
+  activeMemberships: number;
+  expiringMemberships: number;
+  expiredMemberships: number;
+  payments: number;
+  revenueCrc: number;
+  checkins: number;
+  notificationsSent: number;
+  notificationsFailed: number;
+  pendingInvites: number;
+  abandonedPayPalOrders: number;
+  openAlerts: number;
+}) {
+  const needsAttention = args.notificationsFailed + args.abandonedPayPalOrders + args.openAlerts > 0;
+  return sendEmail({
+    to: adminNotificationAddress(),
+    managePreferences: false,
+    subject: `${needsAttention ? "Revisar" : "Todo bien"} · Resumen Xtreme ${args.date}`,
+    html: layout(
+      "Resumen operativo diario",
+      `<p style="font-size:14px;line-height:1.6;">Estado automático de Xtreme Gym para ${escapeHtml(args.date)}.</p>
+      <table style="border-collapse:collapse;margin:12px 0;">
+        ${row("Socios", String(args.members))}
+        ${row("Membresías", `${args.activeMemberships} activas · ${args.expiringMemberships} por vencer · ${args.expiredMemberships} vencidas`)}
+        ${row("Pagos del día", `${args.payments} · CRC ${args.revenueCrc.toLocaleString("es-CR")}`)}
+        ${row("Ingresos del día", String(args.checkins))}
+        ${row("Avisos automáticos", `${args.notificationsSent} enviados · ${args.notificationsFailed} fallidos`)}
+        ${row("Invitaciones pendientes", String(args.pendingInvites))}
+        ${row("Órdenes PayPal abandonadas", String(args.abandonedPayPalOrders))}
+        ${row("Alertas abiertas", String(args.openAlerts))}
+      </table>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Los incidentes y el estado del cron también aparecen en el panel Admin.</p>`,
+    ),
+  });
+}
+
 export async function sendAdminNewMemberNotification(args: {
   memberName: string;
   phone: string;
   email?: string;
   cedula?: string;
 }) {
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || "aallanrd@gmail.com";
-
   return sendEmail({
-    to: adminEmail,
+    to: adminNotificationAddress(),
     managePreferences: false,
     subject: `Nuevo socio registrado: ${args.memberName}`,
     html: layout(

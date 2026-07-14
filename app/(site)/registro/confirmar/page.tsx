@@ -9,7 +9,7 @@ type VerifyState =
   | { phase: "loading" }
   | { phase: "invalid"; error: string }
   | { phase: "form"; email: string; source: string }
-  | { phase: "done"; memberName: string; accessCode: string; paidRegistration: boolean };
+  | { phase: "done"; memberName: string; accessCode: string; paidRegistration: boolean; invitedRegistration: boolean };
 
 function ConfirmInner() {
   const params = useSearchParams();
@@ -41,6 +41,7 @@ function ConfirmInner() {
           completed?: boolean;
           accessCode?: string;
           paidRegistration?: boolean;
+          invitedRegistration?: boolean;
           error?: string;
         };
         if (cancelled) return;
@@ -50,6 +51,7 @@ function ConfirmInner() {
             memberName: json.memberName,
             accessCode: json.accessCode || "",
             paidRegistration: Boolean(json.paidRegistration),
+            invitedRegistration: Boolean(json.invitedRegistration),
           });
           return;
         }
@@ -87,6 +89,7 @@ function ConfirmInner() {
         memberName?: string;
         accessCode?: string;
         paidRegistration?: boolean;
+        invitedRegistration?: boolean;
         error?: string;
       };
       if (!res.ok || !json.ok) {
@@ -98,6 +101,7 @@ function ConfirmInner() {
         memberName: json.memberName || memberName,
         accessCode: json.accessCode || "",
         paidRegistration: Boolean(json.paidRegistration),
+        invitedRegistration: Boolean(json.invitedRegistration),
       });
     } catch {
       setError("Error de conexion.");
@@ -143,7 +147,11 @@ function ConfirmInner() {
             <div className="flex items-center gap-2 text-[#d8ff3e]">
               <CheckCircle2 className="h-5 w-5" />
               <p className="text-xs font-black uppercase tracking-[0.18em]">
-                {state.source === "paypal" ? "Pago y correo confirmados" : "Correo confirmado"}
+                {state.source === "paypal"
+                  ? "Pago y correo confirmados"
+                  : state.source === "reception"
+                    ? "Invitación de recepción"
+                    : "Correo confirmado"}
               </p>
             </div>
             <h1 className="mt-3 text-3xl font-black uppercase leading-none">Completá tu perfil</h1>
@@ -229,6 +237,8 @@ function ConfirmInner() {
             <p className="mt-3 text-sm font-semibold text-white/70">
               {state.paidRegistration
                 ? "Tu pago, correo y cédula quedaron unidos de forma segura. Ya podés entrar a la app y crear tu PIN."
+                : state.invitedRegistration
+                  ? "Tu cuenta quedó creada y ya podés entrar a la app. Esta invitación no activa un plan ni incluye el primer día gratis; podés elegir una membresía cuando querás."
                 : "Tu cuenta quedó creada. Tu primer día es gratis: presentate en recepción con tu nombre."}
             </p>
             {state.accessCode && (

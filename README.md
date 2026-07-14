@@ -20,7 +20,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 Phase 4 email and push triggers run daily through `GET /api/xtreme/jobs/lifecycle`. Configure `CRON_SECRET`, `RESEND_API_KEY`, `SMTP_FROM`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` (for example `mailto:admin@example.com`) in the deployment environment. Generate the VAPID pair with `npx web-push generate-vapid-keys`.
 
-`vercel.json` schedules the job at `00:00 UTC` (6:00 PM in Costa Rica). Vercel sends `CRON_SECRET` as a Bearer token automatically. MongoDB delivery keys prevent retries from sending duplicate messages.
+`vercel.json` schedules the job at `12:00 UTC` (6:00 AM in Costa Rica). Vercel sends `CRON_SECRET` as a Bearer token automatically. MongoDB delivery keys prevent retries from sending duplicate messages. El job también envía al administrador el resumen operativo diario y persiste incidentes visibles en Admin.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
@@ -48,9 +48,12 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 | Variable | Notas |
 |----------|--------|
 | `MONGODB_URI` / `MONGODB_DB` | Base de datos |
-| `XTREME_ADMIN_CODE` / `XTREME_SUPER_ADMIN_CODE` | Códigos largos y aleatorios; sin defaults en prod |
+| `XTREME_RECEPTION_CODE` | Código exclusivo para recepción e ingreso; largo y aleatorio |
+| `XTREME_TRAINER_CODE` | Código exclusivo de Trainer OS; solo permite planes y seguimiento técnico |
+| `XTREME_ADMIN_CODE` / `XTREME_SUPER_ADMIN_CODE` | Códigos separados por rol; largos y aleatorios; sin defaults en prod |
 | `CRON_SECRET` | Auth del job lifecycle (Bearer) |
 | `RESEND_API_KEY` / `SMTP_FROM` | Correos (registro, PIN, recibos, lifecycle) |
+| `ADMIN_NOTIFICATION_EMAIL` | Destino de alertas críticas y resumen operativo diario |
 | `NEXT_PUBLIC_APP_URL` | URL canónica HTTPS |
 | `PAYPAL_MODE=live` | + `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` / `NEXT_PUBLIC_PAYPAL_CLIENT_ID` |
 
@@ -67,6 +70,6 @@ Opcional: VAPID (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUB
 1. `npx tsc --noEmit` y `npm run build`
 2. `GET /api/health` → `ok: true` y checks de db/admin/cron/email/paypal
 3. `/primer-dia` → correo → confirmar → app + PIN → membresía “Primer día gratis”
-4. Check-in en `/ingreso` exige PIN; recepción usa código admin
+4. `/ingreso`, `/recepcion`, `/entrenador` y `/admin` usan sesiones HttpOnly independientes; el check-in del socio exige PIN
 5. PayPal sandbox: capture otorga el plan de la orden creada (no se puede “upgradear” el `optionId` en el cliente)
 6. No usar Seed/Reset en la base live

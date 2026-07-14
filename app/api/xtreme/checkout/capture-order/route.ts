@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal";
 import { getDb } from "@/lib/helpers/mongodb";
 import {
   sendPaymentAppInviteEmail,
+  sendAdminOperationalAlert,
   sendPaymentReceiptEmail,
 } from "@/lib/helpers/email";
 import { recordEvent } from "@/lib/xtreme/events";
+import { recordOpsAlert } from "@/lib/xtreme/ops-alerts";
+import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 import { getXtremeCheckoutOption } from "../catalog";
 import type { PendingPayPalOrder } from "../create-order/route";
 import {
@@ -151,7 +154,7 @@ async function sendAppInviteAfterPayment(
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const baseUrl = requestAppUrl(req.url);
     const body = (await req.json()) as CaptureBody;
@@ -170,6 +173,11 @@ export async function POST(req: Request) {
         { success: false, message: "Orden no encontrada. Vuelva a iniciar el pago." },
         { status: 400 },
       );
+    }
+
+    if (pending.authenticatedMemberKey) {
+      const session = await requireMemberSession(req, pending.authenticatedMemberKey);
+      if (!isSession(session)) return session;
     }
 
     // Resolve catalog option only from the server-side pending order (not client body).
@@ -248,22 +256,29 @@ export async function POST(req: Request) {
     const now = new Date();
     const paypalEmail = normalizeEmail(data.payer?.email_address);
     const checkoutEmail = normalizeEmail(pending.customer.email || body.customer?.email);
-    const paymentEmail = isValidEmail(paypalEmail)
-      ? paypalEmail
-      : isValidEmail(checkoutEmail)
-        ? checkoutEmail
-        : "";
+    const sessionMember = pending.authenticatedMemberKey
+      ? await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+          normalizedName: pending.authenticatedMemberKey,
+        })
+      : null;
+    const paymentEmail = isValidEmail(sessionMember?.email ?? "")
+      ? normalizeEmail(sessionMember?.email ?? "")
+      : isValidEmail(paypalEmail)
+        ? paypalEmail
+        : isValidEmail(checkoutEmail)
+          ? checkoutEmail
+          : "";
     // Solo un correo devuelto por PayPal puede alinear automaticamente un pago
     // con un perfil existente. El correo escrito en el formulario debe probarse
     // despues mediante el enlace de un solo uso.
-    const linkedMember = isValidEmail(paypalEmail)
+    const linkedMember = sessionMember ?? (isValidEmail(paypalEmail)
       ? await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
           email: paypalEmail,
           emailVerified: true,
         })
-      : null;
+      : null);
     const customerName = normalizeName(linkedMember?.memberName) || submittedCustomerName;
-    const normalizedName =
+    const normalizedName = pending.authenticatedMemberKey ||
       normalizeKey(linkedMember?.normalizedName || customerName) || pending.memberKey;
 
     const payment: PaymentDoc = {
@@ -451,12 +466,43 @@ export async function POST(req: Request) {
       }
     } catch (persistErr) {
       console.error("Xtreme payment persist error:", persistErr);
-      // Capture already happened at PayPal — surface ops alert via logs.
+      const detail = persistErr instanceof Error ? persistErr.message : "Error desconocido persistiendo el pago";
+      try {
+        await recordOpsAlert(db, {
+          fingerprint: `paypal-persist:${payment.paypalCaptureId || orderID}`,
+          kind: "paypal_persist",
+          severity: "critical",
+          title: "Pago PayPal capturado pero no aplicado",
+          detail,
+          context: {
+            orderID,
+            captureID: payment.paypalCaptureId,
+            member: normalizedName,
+            option: payment.optionId,
+            amountUsd,
+          },
+        });
+        await sendAdminOperationalAlert({
+          severity: "critical",
+          title: "Pago PayPal capturado pero no aplicado",
+          detail: "PayPal cobró el dinero, pero el sistema no pudo completar todos los cambios de membresía. Revisar de inmediato en Admin.",
+          context: {
+            orderID,
+            captureID: payment.paypalCaptureId,
+            member: normalizedName,
+            option: payment.optionId,
+            amountUsd,
+            error: detail,
+          },
+        });
+      } catch (alertError) {
+        console.error("Xtreme payment ops alert error:", alertError);
+      }
     }
 
     const appInviteSent = await sendAppInviteAfterPayment(db, payment, baseUrl);
     if (payment.email) {
-      await sendPaymentReceiptEmail({
+      const receipt = await sendPaymentReceiptEmail({
         to: payment.email,
         customerName,
         optionLabel: payment.optionLabel,
@@ -467,6 +513,23 @@ export async function POST(req: Request) {
         reference: payment.paypalCaptureId,
         nextBillingDate: membershipUntil,
       });
+      if (!receipt.ok) {
+        const detail = receipt.error || "No se pudo enviar el recibo del pago.";
+        await recordOpsAlert(db, {
+          fingerprint: `payment-receipt:${payment.id}`,
+          kind: "payment_receipt",
+          severity: "warning",
+          title: "Recibo de pago sin entregar",
+          detail,
+          context: { paymentId: payment.id, captureID: payment.paypalCaptureId, member: normalizedName },
+        });
+        await sendAdminOperationalAlert({
+          severity: "warning",
+          title: "Recibo de pago sin entregar",
+          detail,
+          context: { paymentId: payment.id, captureID: payment.paypalCaptureId, member: normalizedName },
+        });
+      }
     }
 
     return NextResponse.json({

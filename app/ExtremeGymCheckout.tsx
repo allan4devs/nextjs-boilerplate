@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, CreditCard, HeartPulse, Send, ShieldCheck, Zap } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ArrowRight, CheckCircle2, CreditCard, HeartPulse, Send, ShieldCheck, Zap } from "lucide-react";
+import { XTREME_CHECKOUT_OPTIONS } from "@/lib/constants/checkout";
 
 type CheckoutOption = {
   id: string;
@@ -30,47 +32,30 @@ declare global {
   }
 }
 
+const CHECKOUT_NOTES: Record<string, string> = {
+  week: "Una semana para activar el hábito.",
+  fortnight: "Buen ritmo para sostener el progreso.",
+  month: "La opción principal para entrenar constante.",
+  senior: "Tres clases por semana para bienestar y movimiento.",
+};
+
 /** Paid-only catalog — every option requires PayPal checkout. */
-const CHECKOUT_OPTIONS: CheckoutOption[] = [
-  {
-    id: "week",
-    label: "Plan semanal",
-    category: "Plan",
-    priceCrc: 8000,
-    priceLabel: "CRC 8.000",
-    usdAmount: "16.00",
-    note: "Una semana para activar el hábito.",
-  },
-  {
-    id: "fortnight",
-    label: "Plan quincenal",
-    category: "Plan",
-    priceCrc: 13500,
-    priceLabel: "CRC 13.500",
-    usdAmount: "27.00",
-    note: "Buen ritmo para sostener el progreso.",
-  },
-  {
-    id: "month",
-    label: "Plan mensual",
-    category: "Plan",
-    priceCrc: 23000,
-    priceLabel: "CRC 23.000",
-    usdAmount: "46.00",
-    note: "La opción principal para entrenar constante.",
-  },
-  {
-    id: "senior",
-    label: "Clase adultos mayores",
-    category: "Clase",
-    priceCrc: 16000,
-    priceLabel: "CRC 16.000",
-    usdAmount: "32.00",
-    note: "Tres clases por semana para bienestar y movimiento.",
-  },
-];
+const CHECKOUT_OPTIONS: CheckoutOption[] = XTREME_CHECKOUT_OPTIONS
+  .filter((option) => option.id !== "day-pass")
+  .map((option) => ({ ...option, note: CHECKOUT_NOTES[option.id] ?? "" }));
 
 const MAIN_OPTION_IDS = new Set(["week", "fortnight", "month"]);
+const PLAN_DAYS: Record<string, number> = { week: 7, fortnight: 15, month: 30 };
+const CHECKOUT_FORM_KEY = "xtreme-checkout-form";
+
+function perDayLabel(priceCrc: number, days: number) {
+  const value = Math.round(priceCrc / days);
+  return value.toLocaleString("es-CR");
+}
+
+function isValidOptionId(value: string | null | undefined) {
+  return CHECKOUT_OPTIONS.some((option) => option.id === value);
+}
 
 const OPTION_STYLES: Record<string, { card: string; eyebrow: string; price: string; accent: string }> = {
   week: { card: "border-black bg-[#fff9df] text-black hover:bg-white", eyebrow: "text-black/50", price: "text-black", accent: "bg-black" },
@@ -112,15 +97,20 @@ export default function ExtremeGymCheckout({
     senior: { label: "Senior fitness classes", category: "Class", note: "Three weekly classes for movement and wellbeing." },
   };
   const optionText = (option: CheckoutOption) => english ? englishOptions[option.id] : option;
-  const validInitialOption = CHECKOUT_OPTIONS.some((option) => option.id === initialOption)
-    ? initialOption
-    : "month";
-  const [selectedId, setSelectedId] = useState(validInitialOption);
+  const searchParams = useSearchParams();
+  const planFromUrl = searchParams.get("plan");
+  const resolvedInitialOption = isValidOptionId(planFromUrl)
+    ? planFromUrl!
+    : isValidOptionId(initialOption)
+      ? initialOption
+      : "month";
+  const [selectedId, setSelectedId] = useState(resolvedInitialOption);
   const [form, setForm] = useState<FormState>(initialForm);
   const [paypalConfig, setPaypalConfig] = useState<PayPalConfig | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const paypalRef = useRef<HTMLDivElement>(null);
+  const formSectionRef = useRef<HTMLDivElement>(null);
   const checkoutRef = useRef<{
     form: FormState;
     formReady: boolean;
@@ -133,10 +123,55 @@ export default function ExtremeGymCheckout({
   );
 
   const formReady = Boolean(form.name.trim() && form.phone.trim() && form.email.trim());
+  const checkoutStep = formReady ? 3 : 2;
+  const monthPerDay = perDayLabel(23000, 30);
+  const weekPerDay = perDayLabel(8000, 7);
+  const monthSavingsPct = Math.round((1 - 23000 / 30 / (8000 / 7)) * 100);
 
   useEffect(() => {
     checkoutRef.current = { form, formReady, selected };
   }, [form, formReady, selected]);
+
+  useEffect(() => {
+    if (!isValidOptionId(planFromUrl)) return;
+    setSelectedId(planFromUrl!);
+  }, [planFromUrl]);
+
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(CHECKOUT_FORM_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<FormState>;
+      setForm({
+        name: saved.name?.trim() ?? "",
+        phone: saved.phone?.trim() ?? "",
+        email: saved.email?.trim() ?? "",
+      });
+    } catch {
+      // ignore corrupt cache
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (!form.name && !form.phone && !form.email) {
+        window.sessionStorage.removeItem(CHECKOUT_FORM_KEY);
+        return;
+      }
+      window.sessionStorage.setItem(CHECKOUT_FORM_KEY, JSON.stringify(form));
+    } catch {
+      // ignore storage failures
+    }
+  }, [form]);
+
+  function selectPlan(optionId: string) {
+    setSelectedId(optionId);
+    setStatus("");
+    setError("");
+    window.requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   useEffect(() => {
     const anon =
@@ -155,10 +190,10 @@ export default function ExtremeGymCheckout({
         type: "landing_viewed",
         source: "site",
         anonymousId: anon,
-        properties: { surface: "checkout", optionId: validInitialOption },
+        properties: { surface: "checkout", optionId: resolvedInitialOption },
       }),
     }).catch(() => {});
-  }, [validInitialOption]);
+  }, [resolvedInitialOption]);
 
   useEffect(() => {
     let cancelled = false;
@@ -314,6 +349,18 @@ export default function ExtremeGymCheckout({
     setError("");
   }
 
+  const TRUST_POINTS = english
+    ? [
+        { icon: ShieldCheck, text: "Secure PayPal checkout" },
+        { icon: Zap, text: "Access active right after payment" },
+        { icon: CheckCircle2, text: "No contracts or hidden fees" },
+      ]
+    : [
+        { icon: ShieldCheck, text: "Pago seguro con PayPal" },
+        { icon: Zap, text: "Acceso activo al confirmar el pago" },
+        { icon: CheckCircle2, text: "Sin contratos ni cargos ocultos" },
+      ];
+
   return (
     <section
       id="inscripcion"
@@ -332,9 +379,44 @@ export default function ExtremeGymCheckout({
             {english ? "Choose how you want to train" : "Elegí cómo querés entrenar"}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm font-bold text-black/60 sm:text-base">
-            {english ? "Choose a plan and complete your registration securely with PayPal." : "Seleccioná un plan y completá tu inscripción de forma segura con PayPal."}
+            {english
+              ? "Pick a plan, add your details and pay with PayPal. Prefer to try first? Your first day is free."
+              : "Elegí un plan, completá tus datos y pagá con PayPal. ¿Querés probar primero? Tu primer día es gratis."}
           </p>
+          <div className="mx-auto mt-5 flex max-w-2xl flex-wrap items-center justify-center gap-3">
+            {TRUST_POINTS.map((point) => (
+              <span
+                key={point.text}
+                className="inline-flex items-center gap-2 border border-black/15 bg-black/[0.05] px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-black/70"
+              >
+                <point.icon className="h-3.5 w-3.5 shrink-0" />
+                {point.text}
+              </span>
+            ))}
+          </div>
         </div>
+
+        <ol className="mx-auto mt-8 flex max-w-3xl flex-wrap items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-black/55 sm:gap-4">
+          {[
+            english ? "1. Choose plan" : "1. Elegí plan",
+            english ? "2. Your details" : "2. Tus datos",
+            english ? "3. Pay with PayPal" : "3. Pagá con PayPal",
+          ].map((label, index) => {
+            const step = index + 1;
+            const active = checkoutStep >= step;
+            return (
+              <li
+                key={label}
+                className={`inline-flex items-center gap-2 border px-3 py-2 ${
+                  active ? "border-black bg-black text-[#f6c400]" : "border-black/20 bg-white/70 text-black/45"
+                }`}
+              >
+                <span className="grid h-5 w-5 place-items-center bg-current/10 text-[11px]">{step}</span>
+                {label}
+              </li>
+            );
+          })}
+        </ol>
 
         <div
           className="mt-10 grid gap-4 md:grid-cols-3"
@@ -346,11 +428,14 @@ export default function ExtremeGymCheckout({
             const active = selected.id === option.id;
             const price = option.priceLabel.replace("CRC ", "");
             const period = PRICE_PERIOD[option.id];
+            const days = PLAN_DAYS[option.id];
+            const perDay = days ? perDayLabel(option.priceCrc, days) : "";
+            const featured = option.id === "month";
             return (
             <button
               key={option.id}
               type="button"
-              onClick={() => setSelectedId(option.id)}
+              onClick={() => selectPlan(option.id)}
               role="radio"
               aria-checked={active}
               className={`relative flex min-h-[18rem] overflow-hidden border-[3px] p-6 pt-8 text-left transition duration-200 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-black ${style.card} ${
@@ -360,6 +445,11 @@ export default function ExtremeGymCheckout({
               }`}
             >
               <span className={`absolute inset-x-0 top-0 h-2.5 ${style.accent}`} aria-hidden="true" />
+              {featured ? (
+                <span className="absolute left-4 top-4 bg-black px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-[#f6c400]">
+                  {english ? `Popular · save ${monthSavingsPct}%/day` : `Popular · ahorrás ${monthSavingsPct}%/día`}
+                </span>
+              ) : null}
               <span className="pointer-events-none absolute -right-8 top-20 h-[3px] w-36 rotate-45 bg-current opacity-[.08]" />
               <span className="pointer-events-none absolute -right-8 top-20 h-[3px] w-36 -rotate-45 bg-current opacity-[.08]" />
               <span className="flex w-full flex-col">
@@ -376,6 +466,12 @@ export default function ExtremeGymCheckout({
                   <span className="mt-2 block text-[10px] font-black uppercase tracking-[.15em] opacity-50">
                     {english ? period?.en : period?.es}
                   </span>
+                  {perDay ? (
+                    <span className="mt-2 block text-[10px] font-bold uppercase tracking-[.12em] opacity-45">
+                      {english ? `~CRC ${perDay}/day` : `~CRC ${perDay}/día`}
+                      {featured ? (english ? ` · vs ~CRC ${weekPerDay}/day weekly` : ` · vs ~CRC ${weekPerDay}/día semanal`) : ""}
+                    </span>
+                  ) : null}
                 </span>
               </span>
               {active && (
@@ -423,7 +519,7 @@ export default function ExtremeGymCheckout({
 
           <button
             type="button"
-            onClick={() => setSelectedId("senior")}
+            onClick={() => selectPlan("senior")}
             className={`group relative overflow-hidden border-[3px] border-black p-5 text-left transition hover:-translate-y-1 sm:p-6 ${
               selected.id === "senior"
                 ? "bg-black text-white shadow-[9px_9px_0_rgba(0,0,0,.28)]"
@@ -451,7 +547,11 @@ export default function ExtremeGymCheckout({
           </button>
         </div>
 
-        <div className="mt-8 border border-black/15 bg-white p-5 text-black shadow-[0_24px_70px_-30px_rgba(0,0,0,.65)] sm:p-7">
+        <div
+          id="checkout-form"
+          ref={formSectionRef}
+          className="mt-8 scroll-mt-24 border border-black/15 bg-white p-5 text-black shadow-[0_24px_70px_-30px_rgba(0,0,0,.65)] sm:p-7"
+        >
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-black/10 pb-5">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-black/50">
@@ -557,6 +657,11 @@ export default function ExtremeGymCheckout({
               setForm(initialForm);
               setStatus("");
               setError("");
+              try {
+                window.sessionStorage.removeItem(CHECKOUT_FORM_KEY);
+              } catch {
+                // ignore
+              }
             }}
             className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-black/50 transition hover:text-black"
           >

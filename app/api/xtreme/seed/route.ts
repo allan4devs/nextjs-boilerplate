@@ -11,9 +11,9 @@ import {
   hashPin,
   memberAccessCode,
   normalizeKey,
-  resolveAdminRole,
   todayIso,
 } from "@/lib/xtreme/shared";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
 
@@ -181,7 +181,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const role = resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+  const session = await resolveStaffSession(req, "admin");
+  const role = session?.role === "admin" || session?.role === "super" ? session.role : null;
   if (!role) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }

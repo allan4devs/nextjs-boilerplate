@@ -1,10 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PAYPAL_CURRENCY } from "@/lib/constants/paypal";
 import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal";
 import { getDb } from "@/lib/helpers/mongodb";
 import { recordEvent } from "@/lib/xtreme/events";
+import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 import {
+  MEMBERS_COLLECTION,
   PAYPAL_ORDERS_COLLECTION,
+  type MemberDoc,
   normalizeKey,
   normalizeName,
 } from "@/lib/xtreme/shared";
@@ -28,6 +31,8 @@ export type PendingPayPalOrder = {
   createdAt: Date;
   capturedAt?: Date;
   paypalCaptureId?: string | null;
+  authenticatedMemberKey?: string;
+  source?: "site" | "member_app";
 };
 
 type Customer = {
@@ -42,6 +47,7 @@ type Customer = {
 type CreateOrderBody = {
   optionId?: string;
   customer?: Customer;
+  memberCheckout?: boolean;
 };
 
 type PayPalCreateOrderResponse = {
@@ -71,12 +77,13 @@ function createPayer(customer: Customer) {
   const name = clean(customer.name).replace(/\s+/g, " ");
   const parts = name.split(" ").filter(Boolean);
   const nationalPhone = clean(customer.phone).replace(/^\+\d{1,3}\s*/, "").replace(/\D/g, "");
+  const email = clean(customer.email);
 
   return {
-    email_address: clean(customer.email),
     address: {
       country_code: "CR",
     },
+    ...(email ? { email_address: email } : {}),
     ...(parts[0] && parts.length > 1
       ? {
           name: {
@@ -98,11 +105,12 @@ function createPayer(customer: Customer) {
   };
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as CreateOrderBody;
     const option = getXtremeCheckoutOption(body.optionId);
-    const customer = body.customer ?? {};
+    let customer = body.customer ?? {};
+    let authenticatedMemberKey = "";
 
     if (!option) {
       return NextResponse.json({ success: false, message: "Seleccione un plan o clase válido." }, { status: 400 });
@@ -116,15 +124,36 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!clean(customer.name) || !clean(customer.phone) || !clean(customer.email)) {
+    const db = await getDb();
+    if (body.memberCheckout) {
+      const session = await requireMemberSession(req);
+      if (!isSession(session)) return session;
+      const member = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+        normalizedName: session.memberKey,
+      });
+      if (!member) {
+        return NextResponse.json(
+          { success: false, message: "No encontramos el perfil de esta sesión." },
+          { status: 404 },
+        );
+      }
+      authenticatedMemberKey = session.memberKey;
+      customer = {
+        name: member.memberName || session.memberName,
+        phone: member.phone || "",
+        email: member.email || "",
+        goal: member.goal || "",
+      };
+    }
+
+    if (!clean(customer.name) || (!body.memberCheckout && (!clean(customer.phone) || !clean(customer.email)))) {
       return NextResponse.json(
         { success: false, message: "Nombre, teléfono y correo son requeridos para pagar." },
         { status: 400 },
       );
     }
 
-    const memberKey = normalizeKey(normalizeName(customer.name));
-    const db = await getDb();
+    const memberKey = authenticatedMemberKey || normalizeKey(normalizeName(customer.name));
     const usdAmount = option.usdAmount;
     const priceCrc = option.priceCrc;
     const priceLabel = option.priceLabel;
@@ -179,6 +208,8 @@ export async function POST(req: Request) {
       },
       status: "created",
       createdAt: new Date(),
+      authenticatedMemberKey: authenticatedMemberKey || undefined,
+      source: body.memberCheckout ? "member_app" : "site",
     };
 
     await db.collection<PendingPayPalOrder>(PAYPAL_ORDERS_COLLECTION).updateOne(
@@ -190,7 +221,7 @@ export async function POST(req: Request) {
     await recordEvent(db, {
       type: "checkout_started",
       memberId: memberKey,
-      source: "site",
+      source: body.memberCheckout ? "member_app" : "site",
       entity: { type: "paypal_order", id: data.id },
       properties: {
         optionId: option.id,

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import ExtremeGymCheckout from "../../ExtremeGymCheckout";
 import PageHero from "../../components/PageHero";
 import CtaBand from "../../components/CtaBand";
@@ -107,7 +108,9 @@ export default function AdultosMayoresPage() {
         </div>
       </section>
 
-      <ExtremeGymCheckout initialOption="senior" />
+      <Suspense fallback={null}>
+        <ExtremeGymCheckout initialOption="senior" />
+      </Suspense>
 
       <CtaBand
         eyebrow="Opciones disponibles"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import CtaBand from "../../../components/CtaBand";
 import ExtremeGymCheckout from "../../../ExtremeGymCheckout";
 import GymBenefitsGrid from "../../../components/GymBenefitsGrid";
@@ -150,8 +151,17 @@ function PricesPage() {
           </div>
         </div>
       </section>
-      <ExtremeGymCheckout locale="en" />
-      <CtaBand eyebrow="Find your plan" title="Review the options and choose what works for you." cta="Join now" href="#inscripcion" />
+      <Suspense fallback={null}>
+        <ExtremeGymCheckout locale="en" />
+      </Suspense>
+      <CtaBand
+        eyebrow="Find your plan"
+        title="Try your first day free or join today with instant PayPal checkout."
+        cta="View plans and pay"
+        href="#inscripcion"
+        secondaryCta="First day free"
+        secondaryHref="/en/first-day"
+      />
     </>
   );
 }

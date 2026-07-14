@@ -118,7 +118,7 @@ export default function SiteHeader() {
             {english ? "ES" : "EN"}
           </Link>
           <Link
-            href={english ? "/en/prices" : "/precios"}
+            href={english ? "/en/prices#inscripcion" : "/precios#inscripcion"}
             className="hidden items-center gap-2 bg-[#f6c400] px-4 py-2.5 text-sm font-black uppercase text-black shadow-[0_0_30px_-14px_rgba(246,196,0,.9)] transition hover:bg-white xl:inline-flex"
           >
             {english ? "Join now" : "Inscribirme"}

@@ -18,6 +18,7 @@ import {
   PENDING_REGISTRATIONS_COLLECTION,
   type MemberDoc,
   type PendingRegistrationDoc,
+  addDays,
   formatAccessCode,
   isValidEmail,
   memberAccessCode,
@@ -26,6 +27,7 @@ import {
   normalizeKey,
   normalizeName,
   normalizePhone,
+  toUtcDate,
 } from "@/lib/xtreme/shared";
 
 export const dynamic = "force-dynamic";
@@ -166,6 +168,7 @@ export async function GET(req: NextRequest) {
       memberName: member.memberName,
       accessCode: formatAccessCode(memberAccessCode(normalizedName)),
       paidRegistration: verified.pending.source === "paypal",
+      invitedRegistration: verified.pending.source === "reception",
     });
   }
   return NextResponse.json({
@@ -203,13 +206,15 @@ async function confirmRegistration(body: Record<string, unknown>) {
       ok: true,
       memberName: member.memberName,
       accessCode: formatAccessCode(memberAccessCode(normalizedName)),
-      freeFirstDay: pending.source !== "paypal",
+      freeFirstDay: pending.source === "primer-dia" || pending.source === "app",
       paidRegistration: pending.source === "paypal",
+      invitedRegistration: pending.source === "reception",
       alreadyCompleted: true,
     });
   }
 
   const paidInvite = pending.source === "paypal" && Boolean(pending.expectedMemberKey);
+  const receptionInvite = pending.source === "reception";
   const memberName = paidInvite
     ? normalizeName(pending.expectedMemberName)
     : normalizeName(body.memberName);
@@ -269,8 +274,22 @@ async function confirmRegistration(body: Record<string, unknown>) {
   };
   if (goal) set.goal = goal;
   if (!existing) {
-    // Self-serve: free first day only — never open a paid monthly plan.
-    set.membership = createFreeFirstDayMembership(today);
+    // Solo los registros públicos reciben el primer día; recepción crea una cuenta sin plan.
+    set.membership = receptionInvite
+      ? {
+          plan: "Sin plan activo",
+          status: "expired",
+          startedAt: today,
+          nextBillingDate: addDays(toUtcDate(today), -1).toISOString().slice(0, 10),
+        }
+      : createFreeFirstDayMembership(today);
+  } else if (receptionInvite && !existing.membership) {
+    set.membership = {
+      plan: "Sin plan activo",
+      status: "expired",
+      startedAt: today,
+      nextBillingDate: addDays(toUtcDate(today), -1).toISOString().slice(0, 10),
+    };
   }
 
   await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
@@ -279,7 +298,8 @@ async function confirmRegistration(body: Record<string, unknown>) {
     { upsert: true },
   );
 
-  if (!existing) {
+  const freeFirstDay = !existing && !receptionInvite && !paidInvite;
+  if (freeFirstDay) {
     await grantFreeFirstDayIfEligible(db, normalizedName, today);
   }
 
@@ -303,8 +323,9 @@ async function confirmRegistration(body: Record<string, unknown>) {
         hasPhone: true,
         verified: true,
         source: pending.source,
-        freeFirstDay: !existing,
+        freeFirstDay,
         paidRegistration: paidInvite,
+        invitedRegistration: receptionInvite,
       },
     }).catch(() => {});
   }
@@ -313,8 +334,9 @@ async function confirmRegistration(body: Record<string, unknown>) {
     ok: true,
     memberName,
     accessCode,
-    freeFirstDay: !existing,
+    freeFirstDay,
     paidRegistration: paidInvite,
+    invitedRegistration: receptionInvite,
   });
 }
 

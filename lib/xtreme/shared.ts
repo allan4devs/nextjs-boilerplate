@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 import type { Db } from "mongodb";
 import type { EarnedBadge } from "./gamification";
 import {
@@ -17,11 +17,13 @@ export const CHECKINS_COLLECTION = "xtreme_gym_checkins";
 export const OTPS_COLLECTION = "xtreme_gym_otps";
 export const PENDING_REGISTRATIONS_COLLECTION = "xtreme_gym_pending_registrations";
 export const AUDIT_COLLECTION = "xtreme_gym_audit";
+export const OPS_ALERTS_COLLECTION = "xtreme_gym_ops_alerts";
 export const BADGES_COLLECTION = "xtreme_gym_badges";
 export const REFERRALS_COLLECTION = "xtreme_gym_referrals";
 export const BUDDY_REQUESTS_COLLECTION = "xtreme_gym_buddy_requests";
 /** Strategy 2.0 — trust + operations */
 export const SESSIONS_COLLECTION = "xtreme_gym_sessions";
+export const STAFF_SESSIONS_COLLECTION = "xtreme_gym_staff_sessions";
 export const ENTITLEMENTS_COLLECTION = "xtreme_gym_entitlements";
 export const ENTITLEMENT_LEDGER_COLLECTION = "xtreme_gym_entitlement_ledger";
 export const CLASS_TEMPLATES_COLLECTION = "xtreme_gym_class_templates";
@@ -45,7 +47,10 @@ export const PIN_PEPPER = "xtreme-gym-member-pin-v1";
  * Sin fallbacks en produccion (Fase 3 hygiene). En desarrollo se aceptan
  * defaults solo si las env no estan, con warning en consola.
  */
-function adminEnv(name: "XTREME_ADMIN_CODE" | "XTREME_SUPER_ADMIN_CODE", devFallback: string) {
+function adminEnv(
+  name: "XTREME_RECEPTION_CODE" | "XTREME_TRAINER_CODE" | "XTREME_ADMIN_CODE" | "XTREME_SUPER_ADMIN_CODE",
+  devFallback: string,
+) {
   const value = process.env[name]?.trim() ?? "";
   if (value) return value;
   if (process.env.NODE_ENV === "production") {
@@ -56,6 +61,8 @@ function adminEnv(name: "XTREME_ADMIN_CODE" | "XTREME_SUPER_ADMIN_CODE", devFall
   return devFallback;
 }
 
+export const RECEPTION_CODE = adminEnv("XTREME_RECEPTION_CODE", "xtreme-reception");
+export const TRAINER_CODE = adminEnv("XTREME_TRAINER_CODE", "xtreme-trainer");
 export const ADMIN_CODE = adminEnv("XTREME_ADMIN_CODE", "xtreme-admin");
 export const SUPER_ADMIN_CODE = adminEnv("XTREME_SUPER_ADMIN_CODE", "xtreme-super");
 
@@ -67,6 +74,7 @@ export const TRAININGS = [
 ] as const;
 
 export type AdminRole = "admin" | "super";
+export type StaffRole = "reception" | "trainer" | AdminRole;
 
 export type Membership = {
   plan?: string;
@@ -83,6 +91,44 @@ export type WorkoutEntry = {
   minutes?: number;
   completedDate?: string;
   completedAt?: Date | string;
+  planItemId?: string;
+  planTitle?: string;
+  startedAt?: Date | string;
+  endedAt?: Date | string;
+  exercises?: WorkoutExerciseDetail[];
+};
+
+export type WorkoutExerciseDetail = {
+  id: string;
+  machineId: string;
+  machineName: string;
+  exerciseName: string;
+  sets: number;
+  reps: number;
+  weightKg: number;
+  seconds: number;
+  notes: string;
+};
+
+export type PlanExercisePrescription = {
+  id: string;
+  machineId: string;
+  machineName: string;
+  exerciseName: string;
+  sets: number;
+  reps: number;
+  weightKg: number;
+  targetSeconds: number;
+  notes: string;
+};
+
+export type ActivePlanWorkout = {
+  id: string;
+  planItemId: string;
+  planTitle: string;
+  trainingName: string;
+  startedAt: Date;
+  exercises: WorkoutExerciseDetail[];
 };
 
 export type BodyMetric = {
@@ -99,6 +145,8 @@ export type WorkoutHistoryItem = {
   trainingName: string;
   minutes: number;
   intensity?: string;
+  planItemId?: string;
+  exercises?: WorkoutExerciseDetail[];
 };
 
 export type PlanItem = {
@@ -109,6 +157,8 @@ export type PlanItem = {
   targetMinutes: number;
   done: boolean;
   doneDate: string | null;
+  doneWorkoutId?: string | null;
+  prescribedExercises?: PlanExercisePrescription[];
 };
 
 export type TrainingPlan = {
@@ -161,6 +211,7 @@ export type MemberDoc = {
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
   trainingPlan?: TrainingPlan;
+  activePlanWorkout?: ActivePlanWorkout;
   /** Gamificacion (Fase 1) */
   weeklyGoal?: number;
   earnedBadges?: EarnedBadge[];
@@ -213,7 +264,7 @@ export type PendingRegistrationDoc = {
   expectedMemberName?: string | null;
   paymentId?: string | null;
   createdAt: Date;
-  source: "primer-dia" | "app" | "paypal";
+  source: "primer-dia" | "app" | "paypal" | "reception";
 };
 
 export function normalizeEmail(value: unknown) {
@@ -285,7 +336,7 @@ export function isValidEmail(value: string) {
 export type AuditDoc = {
   id: string;
   at: Date;
-  actorRole: AdminRole;
+  actorRole: StaffRole;
   action: string;
   targetType: "member" | "badge" | "payment" | "system";
   targetId: string;
@@ -342,7 +393,7 @@ export type CheckinDoc = {
   date: string;
   checkedInAt: Date;
   checkedOutAt?: Date | null;
-  checkedOutBy?: AdminRole;
+  checkedOutBy?: StaffRole;
   by: "kiosk" | "admin" | "reception";
   note?: string;
 };
@@ -410,8 +461,24 @@ export function resolveAdminRole(code: string): AdminRole | null {
   const value = code.trim();
   if (!value) return null;
   // Super primero: si ambos codigos coinciden por error, gana super.
-  if (SUPER_ADMIN_CODE && value === SUPER_ADMIN_CODE) return "super";
-  if (ADMIN_CODE && value === ADMIN_CODE) return "admin";
+  if (safeCodeEqual(value, SUPER_ADMIN_CODE)) return "super";
+  if (safeCodeEqual(value, ADMIN_CODE)) return "admin";
+  return null;
+}
+
+function safeCodeEqual(value: string, expected: string) {
+  if (!expected) return false;
+  const actualHash = createHash("sha256").update(value).digest();
+  const expectedHash = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(actualHash, expectedHash);
+}
+
+export function resolveStaffRole(code: string): StaffRole | null {
+  const adminRole = resolveAdminRole(code);
+  if (adminRole) return adminRole;
+  const value = code.trim();
+  if (safeCodeEqual(value, RECEPTION_CODE)) return "reception";
+  if (safeCodeEqual(value, TRAINER_CODE)) return "trainer";
   return null;
 }
 
@@ -604,6 +671,8 @@ export function toAdminMember(doc: MemberDoc) {
       trainingName: w.trainingName || "Entrenamiento",
       minutes: w.minutes || 0,
       intensity: w.intensity,
+      planItemId: w.planItemId,
+      exercises: w.exercises ?? [],
     }));
 
   return {
@@ -658,6 +727,42 @@ export function toAdminMember(doc: MemberDoc) {
   };
 }
 
+export function sanitizeWorkoutExercises(input: unknown): WorkoutExerciseDetail[] {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, 40).map((entry, index) => {
+    const raw = (entry ?? {}) as Record<string, unknown>;
+    return {
+      id: String(raw.id ?? "").trim().slice(0, 80) || `exercise-${index + 1}`,
+      machineId: String(raw.machineId ?? "").trim().slice(0, 80),
+      machineName: String(raw.machineName ?? "").trim().slice(0, 100),
+      exerciseName: String(raw.exerciseName ?? raw.machineName ?? "Ejercicio").trim().slice(0, 100),
+      sets: Math.max(0, Math.min(20, Math.round(Number(raw.sets) || 0))),
+      reps: Math.max(0, Math.min(500, Math.round(Number(raw.reps) || 0))),
+      weightKg: Math.max(0, Math.min(1000, Math.round((Number(raw.weightKg) || 0) * 10) / 10)),
+      seconds: Math.max(0, Math.min(8 * 60 * 60, Math.round(Number(raw.seconds) || 0))),
+      notes: String(raw.notes ?? "").trim().slice(0, 300),
+    };
+  });
+}
+
+function sanitizePrescriptions(input: unknown): PlanExercisePrescription[] {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, 30).map((entry, index) => {
+    const raw = (entry ?? {}) as Record<string, unknown>;
+    return {
+      id: String(raw.id ?? "").trim().slice(0, 80) || `prescription-${index + 1}`,
+      machineId: String(raw.machineId ?? "").trim().slice(0, 80),
+      machineName: String(raw.machineName ?? "").trim().slice(0, 100),
+      exerciseName: String(raw.exerciseName ?? raw.machineName ?? "Ejercicio").trim().slice(0, 100),
+      sets: Math.max(0, Math.min(20, Math.round(Number(raw.sets) || 0))),
+      reps: Math.max(0, Math.min(500, Math.round(Number(raw.reps) || 0))),
+      weightKg: Math.max(0, Math.min(1000, Math.round((Number(raw.weightKg) || 0) * 10) / 10)),
+      targetSeconds: Math.max(0, Math.min(8 * 60 * 60, Math.round(Number(raw.targetSeconds) || 0))),
+      notes: String(raw.notes ?? "").trim().slice(0, 300),
+    };
+  });
+}
+
 export function sanitizePlan(input: unknown): TrainingPlan {
   const raw = (input ?? {}) as Record<string, unknown>;
   const now = new Date();
@@ -672,6 +777,8 @@ export function sanitizePlan(input: unknown): TrainingPlan {
       targetMinutes: Math.max(0, Math.min(240, Number(it.targetMinutes) || 0)),
       done: Boolean(it.done),
       doneDate: isoDateOrEmpty(it.doneDate) || null,
+      doneWorkoutId: String(it.doneWorkoutId ?? "").trim().slice(0, 120) || null,
+      prescribedExercises: sanitizePrescriptions(it.prescribedExercises),
     };
   });
   return {

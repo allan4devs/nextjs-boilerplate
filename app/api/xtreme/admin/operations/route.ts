@@ -4,10 +4,10 @@ import {
   BOOKINGS_COLLECTION,
   normalizeKey,
   normalizeName,
-  resolveAdminRole,
   todayIso,
   type AdminRole,
 } from "@/lib/xtreme/shared";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { writeAudit } from "@/lib/xtreme/audit";
 import {
   grantEntitlement,
@@ -25,8 +25,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function roleFromReq(req: NextRequest): AdminRole | null {
-  return resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+async function roleFromReq(req: NextRequest): Promise<AdminRole | null> {
+  const session = await resolveStaffSession(req, "admin");
+  return session?.role === "admin" || session?.role === "super" ? session.role : null;
 }
 
 /**
@@ -35,7 +36,7 @@ function roleFromReq(req: NextRequest): AdminRole | null {
  * POST actions: upsertSession | grantEntitlement | revokeEntitlement | attendance
  */
 export async function GET(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
   try {
@@ -93,7 +94,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
   try {

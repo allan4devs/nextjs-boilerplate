@@ -11,7 +11,7 @@ import {
   toSessionView,
   type ChatSessionStatus,
 } from "@/lib/xtreme/chat";
-import { resolveAdminRole } from "@/lib/xtreme/shared";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +19,8 @@ function unauthorized() {
   return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 }
 
-function roleFromReq(req: NextRequest) {
-  return resolveAdminRole(req.headers.get("x-xtreme-admin") ?? "");
+async function roleFromReq(req: NextRequest) {
+  return (await resolveStaffSession(req, "reception"))?.role ?? null;
 }
 
 /**
@@ -29,7 +29,7 @@ function roleFromReq(req: NextRequest) {
  *  - con sessionId: mensajes (afterSeq) y marca leídos staff
  */
 export async function GET(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
 
 /** POST — reply | close | reopen */
 export async function POST(req: NextRequest) {
-  const role = roleFromReq(req);
+  const role = await roleFromReq(req);
   if (!role) return unauthorized();
 
   try {

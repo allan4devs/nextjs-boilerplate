@@ -34,10 +34,11 @@ export async function sendMemberPush(
   memberKey: string,
   payload: { title: string; body: string; url?: string; deliveryKey?: string; memberKey?: string; clickToken?: string },
 ) {
-  if (!configure()) return { sent: 0, skipped: true };
+  if (!configure()) return { sent: 0, attempted: 0, failed: 0, skipped: true };
   const collection = db.collection<StoredPushSubscription>(PUSH_SUBSCRIPTIONS_COLLECTION);
   const subscriptions = await collection.find({ memberKey }).toArray();
   let sent = 0;
+  let failed = 0;
   for (const subscription of subscriptions) {
     try {
       await webpush.sendNotification(
@@ -50,9 +51,10 @@ export async function sendMemberPush(
       if (statusCode === 404 || statusCode === 410) {
         await collection.deleteOne({ endpoint: subscription.endpoint });
       } else {
+        failed += 1;
         console.error("XTREME PUSH SEND", error);
       }
     }
   }
-  return { sent, skipped: false };
+  return { sent, attempted: subscriptions.length, failed, skipped: false };
 }

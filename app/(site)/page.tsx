@@ -111,18 +111,18 @@ export default function ExtremeGymLandingPage() {
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href="/precios#inscripcion"
-                  className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black shadow-[0_0_40px_-16px_rgba(246,196,0,.95)] transition hover:bg-white"
-                >
-                  Inscribirme
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
-                <Link
                   href="/primer-dia"
-                  className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/[0.07] px-5 font-black uppercase text-white backdrop-blur transition hover:border-white/45 hover:bg-white/10"
+                  className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black shadow-[0_0_40px_-16px_rgba(246,196,0,.95)] transition hover:bg-white"
                 >
                   Primer día gratis
                   <Smartphone className="h-5 w-5" />
+                </Link>
+                <Link
+                  href="/precios#inscripcion"
+                  className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/[0.07] px-5 font-black uppercase text-white backdrop-blur transition hover:border-white/45 hover:bg-white/10"
+                >
+                  Ver planes
+                  <ArrowRight className="h-5 w-5" />
                 </Link>
               </div>
 
@@ -284,7 +284,8 @@ export default function ExtremeGymLandingPage() {
       </section>
 
       <CtaBand
-        title="Elegí el plan que mejor te funcione y empezá a entrenar."
+        title="Empezá gratis hoy o inscribite y activá tu acceso al instante."
+        cta="Ver planes y pagar"
       />
     </>
   );

@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import ExtremeGymCheckout from "../../ExtremeGymCheckout";
 import CtaBand from "../../components/CtaBand";
 import { BUSINESS, COSTS, PLAN_DETAILS } from "../../lib/site";
 import { pageMetadata } from "../../lib/seo";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+
+const PLAN_OPTION_IDS: Record<string, string | null> = {
+  "Primer día": null,
+  Semana: "week",
+  Quincena: "fortnight",
+  Mes: "month",
+};
+
+const PER_DAY: Record<string, string> = {
+  Semana: "~CRC 1.143",
+  Quincena: "~CRC 900",
+  Mes: "~CRC 767",
+};
 
 export const metadata: Metadata = pageMetadata({
   title: "Precios y planes",
@@ -22,7 +36,15 @@ const COMPARISON = [
   { feature: "Mejor precio por día", week: false, fortnight: false, month: true },
 ];
 
-export default function PreciosPage() {
+export default async function PreciosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
+  const { plan } = await searchParams;
+  const validPlans = new Set(["week", "fortnight", "month", "senior"]);
+  const initialPlan = plan && validPlans.has(plan) ? plan : "month";
+
   return (
     <>
       <section className="px-5 py-10 sm:px-8 lg:py-14">
@@ -32,17 +54,24 @@ export default function PreciosPage() {
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Precios</p>
               <h1 className="mt-2 text-3xl font-black uppercase leading-none sm:text-4xl">Costos vigentes.</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold text-white/58">
-                Día, semana, quincena o mes. Revisá las opciones, elegí la que mejor te funcione y completá la
-                inscripción de forma segura con PayPal.
+                Empezá gratis un día o elegí semana, quincena o mes. El mensual es el que más conviene por día.
               </p>
             </div>
-            <a
-              href="#inscripcion"
-              className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
-            >
-              Inscribirme
-              <ArrowRight className="h-4 w-4" />
-            </a>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/primer-dia"
+                className="inline-flex min-h-12 items-center gap-2 border border-white/20 px-5 font-black uppercase text-white transition hover:border-[#f6c400] hover:text-[#f6c400]"
+              >
+                Primer día gratis
+              </Link>
+              <a
+                href="#inscripcion"
+                className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
+              >
+                Inscribirme
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -75,13 +104,26 @@ export default function PreciosPage() {
                     )}
                   </div>
                   <p className="mt-6 text-4xl font-black uppercase leading-none">{item.price}</p>
+                  {PER_DAY[item.period] ? (
+                    <p
+                      className={`mt-2 text-xs font-black uppercase tracking-[0.14em] ${
+                        featured ? "text-black/55" : "text-white/45"
+                      }`}
+                    >
+                      {PER_DAY[item.period]}/día
+                    </p>
+                  ) : null}
                   <a
-                    href={item.price === "Gratis" ? "/primer-dia#registro" : "#inscripcion"}
+                    href={
+                      item.price === "Gratis"
+                        ? "/primer-dia#registro"
+                        : `/precios?plan=${PLAN_OPTION_IDS[item.period]}#inscripcion`
+                    }
                     className={`mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 text-sm font-black uppercase transition ${
                       featured ? "bg-black text-white hover:bg-white hover:text-black" : "bg-white text-black hover:bg-[#f6c400]"
                     }`}
                   >
-                    {item.price === "Gratis" ? "Registrarme gratis" : "Elegir este plan"}
+                    {item.price === "Gratis" ? "Probar gratis" : featured ? "Elegir mensual" : "Elegir este plan"}
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 </article>
@@ -149,12 +191,14 @@ export default function PreciosPage() {
         </div>
       </section>
 
-      <ExtremeGymCheckout />
+      <Suspense fallback={null}>
+        <ExtremeGymCheckout initialOption={initialPlan} />
+      </Suspense>
 
       <CtaBand
         eyebrow="Cuando estés listo"
-        title="Revisá las opciones y elegí el plan que mejor te acompañe."
-        cta="Inscribirme"
+        title="Probá gratis o inscribite hoy y empezá a entrenar."
+        cta="Ver planes y pagar"
         href="#inscripcion"
       />
     </>
