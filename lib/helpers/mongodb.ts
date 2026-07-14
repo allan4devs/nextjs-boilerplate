@@ -111,7 +111,7 @@ async function ensureIndexes(db: Db) {
 
 export async function getDb(): Promise<Db> {
   const client = await getMongoClient();
-  const db = client.db(process.env.MONGODB_DB?.trim() || "lva");
+  const db = client.db(process.env.MONGODB_DB?.trim() || "xtreme_gym");
   if (!globalForMongo.mongoIndexesEnsured) {
     globalForMongo.mongoIndexesEnsured = true;
     void ensureIndexes(db);

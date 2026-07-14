@@ -442,10 +442,25 @@ export async function POST(req: NextRequest) {
     if (action === "payment") {
       if (role !== "super") return forbidden();
 
-      const customerName = normalizeName(body.customerName || body.memberName);
-      if (!customerName) {
-        return NextResponse.json({ error: "Cliente requerido." }, { status: 400 });
+      const memberKey = normalizeKey(normalizeName(body.memberKey));
+      if (!memberKey) {
+        return NextResponse.json(
+          { error: "Seleccione un socio registrado para asignar el pago." },
+          { status: 400 },
+        );
       }
+
+      const db = await getDb();
+      const member = await db
+        .collection<MemberDoc>(MEMBERS_COLLECTION)
+        .findOne({ normalizedName: memberKey });
+      if (!member?.memberName) {
+        return NextResponse.json(
+          { error: "El socio seleccionado ya no existe. Actualice la lista." },
+          { status: 404 },
+        );
+      }
+      const customerName = normalizeName(member.memberName);
 
       const amountCrc = Math.max(0, Math.round(Number(body.amountCrc) || 0));
       if (!amountCrc) {
@@ -461,10 +476,10 @@ export async function POST(req: NextRequest) {
       const payment: PaymentDoc = {
         id: `pay-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
         memberName: customerName,
-        normalizedName: normalizeKey(customerName),
+        normalizedName: member.normalizedName || memberKey,
         customerName,
-        phone: String(body.phone ?? "").trim().slice(0, 40),
-        email: String(body.email ?? "").trim().slice(0, 80),
+        phone: String(member.phone ?? "").trim().slice(0, 40),
+        email: String(member.email ?? "").trim().slice(0, 80),
         optionId: String(body.optionId ?? "manual").trim().slice(0, 40),
         optionLabel: String(body.optionLabel ?? "Pago manual").trim().slice(0, 80),
         category: (["Plan", "Clase", "Otro"].includes(String(body.category))
@@ -483,16 +498,12 @@ export async function POST(req: NextRequest) {
         recordedBy: "admin",
       };
 
-      const db = await getDb();
       await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).insertOne(payment);
 
       // Extender membresia si se elige plan y existe el socio
       let nextBillingDate: string | undefined;
       if (body.extendMembership && payment.category === "Plan") {
         const days = Math.max(1, Math.min(365, Number(body.extendDays) || 30));
-        const member = await db
-          .collection<MemberDoc>(MEMBERS_COLLECTION)
-          .findOne({ normalizedName: payment.normalizedName });
         const base =
           member?.membership?.nextBillingDate && member.membership.nextBillingDate > todayIso()
             ? member.membership.nextBillingDate
@@ -502,23 +513,13 @@ export async function POST(req: NextRequest) {
           { normalizedName: payment.normalizedName },
           {
             $set: {
-              normalizedName: payment.normalizedName,
-              memberName: customerName,
               "membership.plan": payment.optionLabel,
               "membership.nextBillingDate": nextBillingDate,
               "membership.status": "active",
+              "membership.startedAt": member.membership?.startedAt || todayIso(),
               updatedAt: now,
             },
-            $setOnInsert: {
-              workouts: [],
-              bodyMetrics: [],
-              goal: "",
-              favoriteTraining: "",
-              createdAt: now,
-              "membership.startedAt": todayIso(),
-            },
           },
-          { upsert: true },
         );
       }
 

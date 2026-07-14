@@ -187,7 +187,11 @@ export default function SideNav({ os }: { os: MemberOs }) {
           {memberName && (
             <button
               type="button"
-              onClick={resetMember}
+              onClick={() => {
+                setNavOpen(false);
+                setShowLogin(false);
+                resetMember();
+              }}
               title="Cerrar sesion"
               className={`mt-3 w-full border-[3px] border-red-400/25 py-2 text-xs font-black uppercase text-red-200/70 transition hover:border-red-400/50 hover:text-red-200 ${
                 navOpen ? "block" : "lg:hidden"

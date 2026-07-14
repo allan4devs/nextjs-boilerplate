@@ -441,7 +441,6 @@ export default function XtremeAdminPage() {
   const [savingMetric, setSavingMetric] = useState(false);
   const [newMetric, setNewMetric] = useState({ date: "", weightKg: "", waistCm: "", note: "" });
   const [paymentForm, setPaymentForm] = useState({
-    customerName: "",
     amountCrc: "",
     optionLabel: "Plan mensual",
     category: "Plan",
@@ -450,6 +449,8 @@ export default function XtremeAdminPage() {
     extendMembership: true,
     extendDays: "30",
   });
+  const [paymentMemberQuery, setPaymentMemberQuery] = useState("");
+  const [selectedPaymentMember, setSelectedPaymentMember] = useState<AdminMember | null>(null);
   const [gami, setGami] = useState<GamiData | null>(null);
   const [gamiMemberQ, setGamiMemberQ] = useState("");
   const [selectedGamiMember, setSelectedGamiMember] = useState("");
@@ -552,6 +553,23 @@ export default function XtremeAdminPage() {
       );
     });
   }, [data, query, statusFilter]);
+
+  const paymentMemberMatches = useMemo(() => {
+    if (!data || selectedPaymentMember) return [];
+    const q = paymentMemberQuery.trim().toUpperCase();
+    if (!q) return [];
+    const digits = q.replace(/\D/g, "");
+    return data.members
+      .filter((member) =>
+        member.memberName.toUpperCase().includes(q) ||
+        member.normalizedName.includes(q) ||
+        member.email.toUpperCase().includes(q) ||
+        member.phone.includes(digits || q) ||
+        Boolean(digits && String(member.cedula || "").replace(/\D/g, "").includes(digits)) ||
+        Boolean(digits && member.accessCode.replace(/\s/g, "").includes(digits)),
+      )
+      .slice(0, 8);
+  }, [data, paymentMemberQuery, selectedPaymentMember]);
 
   async function seed(wipeAll: boolean) {
     if (!code) return;
@@ -829,6 +847,10 @@ export default function XtremeAdminPage() {
 
   async function savePayment() {
     if (!code) return;
+    if (!selectedPaymentMember) {
+      setError("Seleccione un socio registrado antes de guardar el pago.");
+      return;
+    }
     setBusy("payment");
     setError("");
     setMessage("");
@@ -838,7 +860,7 @@ export default function XtremeAdminPage() {
         headers: { "Content-Type": "application/json", "x-xtreme-admin": code },
         body: JSON.stringify({
           action: "payment",
-          customerName: paymentForm.customerName,
+          memberKey: selectedPaymentMember.normalizedName,
           amountCrc: Number(paymentForm.amountCrc),
           optionLabel: paymentForm.optionLabel,
           optionId: paymentForm.optionLabel.toLowerCase().replace(/\s+/g, "-"),
@@ -852,7 +874,9 @@ export default function XtremeAdminPage() {
       const json = (await response.json()) as { ok?: boolean; error?: string };
       if (!response.ok) throw new Error(json.error ?? "No se pudo registrar el pago.");
       setMessage("Pago registrado.");
-      setPaymentForm((f) => ({ ...f, customerName: "", amountCrc: "", note: "" }));
+      setPaymentForm((f) => ({ ...f, amountCrc: "", note: "" }));
+      setSelectedPaymentMember(null);
+      setPaymentMemberQuery("");
       await load(code);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrar pago.");
@@ -1601,12 +1625,87 @@ export default function XtremeAdminPage() {
                   <div className="border border-white/10 bg-white/[0.04] p-5">
                     <h2 className="text-sm font-black uppercase text-white/70">Registrar pago manual</h2>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <input
-                        value={paymentForm.customerName}
-                        onChange={(e) => setPaymentForm((f) => ({ ...f, customerName: e.target.value }))}
-                        placeholder="Nombre del cliente"
-                        className="border border-white/12 bg-black/40 px-3 py-2 text-sm font-semibold outline-none focus:border-lime-300 sm:col-span-2"
-                      />
+                      <div className="relative sm:col-span-2">
+                        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+                          Socio registrado
+                        </p>
+                        {selectedPaymentMember ? (
+                          <div className="flex items-center gap-3 border border-lime-300/60 bg-lime-300/10 p-3">
+                            <span className="grid h-10 w-10 shrink-0 place-items-center bg-lime-300 font-black text-black">
+                              <CheckCircle2 className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-black uppercase">
+                                {selectedPaymentMember.memberName}
+                              </p>
+                              <p className="truncate text-xs font-semibold text-white/45">
+                                {selectedPaymentMember.cedula
+                                  ? `Céd. ${selectedPaymentMember.cedula} · `
+                                  : ""}
+                                {selectedPaymentMember.email || selectedPaymentMember.accessCode}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedPaymentMember(null);
+                                setPaymentMemberQuery("");
+                              }}
+                              className="grid h-10 w-10 shrink-0 place-items-center border border-white/15 text-white/55 hover:border-white/40 hover:text-white"
+                              aria-label="Cambiar socio"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="relative">
+                              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                              <input
+                                value={paymentMemberQuery}
+                                onChange={(event) => setPaymentMemberQuery(event.target.value)}
+                                placeholder="Buscar nombre, cédula, correo o código"
+                                autoComplete="off"
+                                className="min-h-12 w-full border border-white/12 bg-black/40 pl-10 pr-3 text-sm font-semibold outline-none focus:border-lime-300"
+                              />
+                            </div>
+                            {paymentMemberQuery.trim() && (
+                              <div className="xg-mobile-scroll absolute inset-x-0 top-full z-20 max-h-64 overflow-y-auto border border-white/15 bg-[#111] shadow-2xl">
+                                {paymentMemberMatches.map((member) => (
+                                  <button
+                                    key={member.normalizedName}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedPaymentMember(member);
+                                      setPaymentMemberQuery(member.memberName);
+                                      setError("");
+                                    }}
+                                    className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-white/10 px-3 py-2 text-left transition last:border-b-0 hover:bg-lime-300/10"
+                                  >
+                                    <span className="min-w-0">
+                                      <span className="block truncate text-sm font-black uppercase">
+                                        {member.memberName}
+                                      </span>
+                                      <span className="block truncate text-xs font-semibold text-white/40">
+                                        {member.cedula ? `Céd. ${member.cedula} · ` : ""}
+                                        {member.email || member.phone || member.accessCode}
+                                      </span>
+                                    </span>
+                                    <GameChip tone={member.membershipStatus === "expired" ? "orange" : "lime"}>
+                                      {member.membershipStatus === "expired" ? "Vencido" : member.plan || "Socio"}
+                                    </GameChip>
+                                  </button>
+                                ))}
+                                {!paymentMemberMatches.length && (
+                                  <p className="px-3 py-5 text-center text-sm font-semibold text-white/40">
+                                    No encontramos un socio registrado.
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                       <input
                         value={paymentForm.amountCrc}
                         onChange={(e) => setPaymentForm((f) => ({ ...f, amountCrc: e.target.value }))}
@@ -1666,7 +1765,7 @@ export default function XtremeAdminPage() {
                       <button
                         type="button"
                         onClick={() => void savePayment()}
-                        disabled={busy === "payment"}
+                        disabled={busy === "payment" || !selectedPaymentMember}
                         className="inline-flex items-center justify-center gap-2 bg-amber-300 px-4 py-2.5 text-sm font-black uppercase text-black transition hover:bg-white disabled:opacity-50 sm:col-span-2"
                       >
                         {busy === "payment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}

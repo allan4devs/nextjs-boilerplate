@@ -3,7 +3,7 @@ pid: 17472
 cwd: "C:\Users\aroja\OneDrive\Documents\GitHub\nextjs-boilerplate"
 command: "cd \"C:\\Users\\aroja\\OneDrive\\Documents\\GitHub\\nextjs-boilerplate\"; npm run build 2>&1"
 started_at: 2026-07-13T08:03:30.642Z
-running_for_ms: 44195006 
+running_for_ms: 49254998 
 ---
 
 > nextjs@0.1.0 build

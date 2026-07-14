@@ -108,7 +108,7 @@ export default function ExtremeGymSite() {
       />
 
       <TopHud os={os} />
-      <SideNav os={os} />
+      {memberName && <SideNav os={os} />}
       <BottomDock os={os} />
 
       <section

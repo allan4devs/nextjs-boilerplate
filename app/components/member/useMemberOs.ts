@@ -975,6 +975,10 @@ export function useMemberOs() {
     window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem(CEDULA_KEY);
     setShowPin(false);
+    setNavOpen(false);
+    setShowLogin(false);
+    setShowTour(false);
+    setOsModal(null);
     setMemberName("");
     setMemberNameInput("");
     setMemberCedulaInput("");
