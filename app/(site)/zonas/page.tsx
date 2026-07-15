@@ -22,7 +22,7 @@ export default function ZonasPage() {
         title="Todo el equipo."
         highlight="Cero excusas."
         text="Máquinas excelentes de todo tipo y zonas completas para quien decidió tomarse su entrenamiento en serio."
-        image="https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=2000&q=86"
+        image="/xtreme/piso-pesas-panoramica.jpg"
         imageAlt="Piso de fuerza en Xtreme Gym"
       />
 

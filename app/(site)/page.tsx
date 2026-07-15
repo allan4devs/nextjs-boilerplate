@@ -27,43 +27,43 @@ const EXPLORE = [
     href: "/precios",
     label: "Precios y planes",
     text: "Día, semana, quincena o mes. Inscríbase y pague en línea.",
-    image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=900&q=84",
+    image: "/xtreme/piso-maquinas-panoramica.jpg",
   },
   {
     href: "/zonas",
     label: "Zonas de entrenamiento",
     text: "Calistenia, peso libre, cardio, pierna y tren superior con equipo completo.",
-    image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=900&q=84",
+    image: "/xtreme/zona-mancuernas.jpg",
   },
   {
     href: "/beneficios",
     label: "Beneficios para socios",
     text: "Instructores, medición corporal, parqueo, área infantil y más.",
-    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=84",
+    image: "/xtreme/area-infantil.jpg",
   },
   {
     href: "/adultos-mayores",
     label: "Adultos mayores",
     text: "Tres clases por semana para movilidad, fuerza y confianza.",
-    image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=84",
+    image: "/xtreme/zona-funcional-clases.jpg",
   },
   {
     href: "/app",
     label: "App de socios",
     text: "Reservas, rachas, carné digital y progreso en un solo lugar.",
-    image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=84",
+    image: "/xtreme/maquinas-y-entrenador-xtreme.png",
   },
   {
     href: "/preguntas",
     label: "Preguntas frecuentes",
     text: "Lo que la gente consulta antes de su primera sesión.",
-    image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=900&q=84",
+    image: "/xtreme/recepcion-sala-espera.jpg",
   },
   {
     href: "/contacto",
     label: "Horario y ubicación",
     text: "Barrio San Pablo. Vea horarios, mapa y cómo llegar.",
-    image: "https://images.unsplash.com/photo-1546483875-ad9014c88eba?auto=format&fit=crop&w=900&q=84",
+    image: "/xtreme/fachada-xtreme-gym.jpg",
   },
 ];
 
@@ -76,8 +76,7 @@ export default function ExtremeGymLandingPage() {
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88"
-            srcSet="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=720&q=72 720w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1280&q=80 1280w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88 2400w"
+            src="/xtreme/piso-pesas-panoramica.jpg"
             sizes="100vw"
             fetchPriority="high"
             decoding="async"
@@ -131,7 +130,7 @@ export default function ExtremeGymLandingPage() {
             <div className="min-w-0">
               <div className="hidden gap-3 lg:grid lg:grid-cols-[1fr_230px]">
                 <div className="relative border border-white/12 bg-black/70 p-3 shadow-2xl backdrop-blur">
-                  <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" fit="contain" />
+                  <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" />
                   <div className="absolute left-6 top-6 max-w-[210px] bg-[#f6c400] px-4 py-3 text-black">
                     <p className="text-xs font-black uppercase tracking-[0.18em]">Movimiento Xtreme</p>
                     <p className="text-2xl font-black uppercase leading-none">Compromiso que se nota</p>

@@ -33,16 +33,16 @@ export const NAV_LINKS = [
 
 export const HERO_IMAGES = [
   {
-    src: "/xtreme/logo.jpg",
-    alt: "Zona de máquinas y pesas en gimnasio moderno",
+    src: "/xtreme/piso-pesas-panoramica.jpg",
+    alt: "Piso de pesas y máquinas de Xtreme Gym",
   },
   {
-    src: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=900&q=86",
-    alt: "Entrenamiento de fuerza con mancuernas",
+    src: "/xtreme/maquinas-xtreme-amarillas.png",
+    alt: "Máquinas amarillas de fuerza de Xtreme Gym",
   },
   {
-    src: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=86",
-    alt: "Clase grupal funcional",
+    src: "/xtreme/zona-funcional-clases.jpg",
+    alt: "Clase en la zona funcional de Xtreme Gym",
   },
 ];
 
@@ -52,7 +52,7 @@ export const ZONES = [
     title: "Calistenia",
     eyebrow: "Barras / funcional",
     text: "Un espacio para dominar tu cuerpo, mejorar la movilidad y desarrollar fuerza funcional.",
-    image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=1000&q=84",
+    image: "/xtreme/zona-funcional-turf.jpg",
     details: [
       "Barras funcionales y ejercicios con peso corporal",
       "Trabajo de core, coordinación y control",
@@ -64,7 +64,7 @@ export const ZONES = [
     title: "Peso libre",
     eyebrow: "Pesas / mancuernas",
     text: "Todo lo necesario para trabajar fuerza, masa muscular y progresión de cargas en serio.",
-    image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=1000&q=84",
+    image: "/xtreme/zona-mancuernas.jpg",
     details: [
       "Mancuernas, barras, discos y bancos",
       "Opciones para principiantes y avanzados",
@@ -76,7 +76,7 @@ export const ZONES = [
     title: "Cardio",
     eyebrow: "Condición / salud",
     text: "Trabajo cardiovascular para respirar mejor, rendir más y cuidar su salud todos los días.",
-    image: "https://images.unsplash.com/photo-1570829460005-c840387bb1ca?auto=format&fit=crop&w=1000&q=84",
+    image: "/xtreme/zona-cardio.jpg",
     details: [
       "Fajas, elípticas, bicicletas y escaladores",
       "Sesiones continuas o por intervalos",
@@ -88,7 +88,7 @@ export const ZONES = [
     title: "Pierna",
     eyebrow: "Pierna / glúteo",
     text: "Máquinas y estaciones para desarrollar pierna, glúteo, estabilidad y potencia.",
-    image: "https://images.unsplash.com/photo-1434596922112-19c563067271?auto=format&fit=crop&w=1000&q=84",
+    image: "/xtreme/maquinas-fuerza-xtreme.png",
     details: [
       "Sentadilla, peso muerto, hip thrust y accesorios",
       "Estabilidad de cadera, rodilla y tobillo",
@@ -100,7 +100,7 @@ export const ZONES = [
     title: "Tren superior",
     eyebrow: "Pecho / espalda / brazos",
     text: "Máquinas excelentes y opciones variadas para trabajar cada grupo muscular con intención.",
-    image: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1000&q=84",
+    image: "/xtreme/maquinas-y-entrenador-xtreme.png",
     details: [
       "Equipos para pecho, espalda, hombros y brazos",
       "Máquinas guiadas y trabajo con peso libre",
@@ -141,16 +141,16 @@ export const PLAN_DETAILS = [
 
 export const GALLERY = [
   {
-    src: "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=1200&q=84",
-    label: "Piso de fuerza",
+    src: "/xtreme/piso-maquinas-panoramica.jpg",
+    label: "Piso de máquinas de Xtreme Gym",
   },
   {
-    src: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1200&q=84",
-    label: "Zona funcional",
+    src: "/xtreme/zona-entrenamiento-vip.jpg",
+    label: "Zona de entrenamiento VIP",
   },
   {
-    src: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=1200&q=84",
-    label: "Entreno con coach",
+    src: "/xtreme/zona-funcional-amplia.jpg",
+    label: "Zona funcional amplia",
   },
 ];
 

@@ -36,13 +36,13 @@ const STEPS = [
 ];
 
 const EXPLORE = [
-  { href: "/en/prices", label: "Prices and plans", text: "Day, weekly, fortnightly and monthly options with online payment.", image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=900&q=84" },
-  { href: "/en/training", label: "Training areas", text: "Strength, functional, cardio and lower-body equipment.", image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=900&q=84" },
-  { href: "/en/benefits", label: "Member benefits", text: "Instructor support, body assessments, parking, kids area and more.", image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=84" },
-  { href: "/en/seniors", label: "Senior fitness", text: "Three guided classes per week for mobility, strength and confidence.", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=84" },
-  { href: "/app", label: "Member app", text: "Reservations, streaks, digital membership card and progress in one place.", image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=84" },
-  { href: "/en/faq", label: "Frequently asked questions", text: "Useful information before your first workout.", image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=900&q=84" },
-  { href: "/en/contact", label: "Hours and location", text: "Find us in Barrio San Pablo, Ciudad Quesada.", image: "https://images.unsplash.com/photo-1546483875-ad9014c88eba?auto=format&fit=crop&w=900&q=84" },
+  { href: "/en/prices", label: "Prices and plans", text: "Day, weekly, fortnightly and monthly options with online payment.", image: "/xtreme/piso-maquinas-panoramica.jpg" },
+  { href: "/en/training", label: "Training areas", text: "Strength, functional, cardio and lower-body equipment.", image: "/xtreme/zona-mancuernas.jpg" },
+  { href: "/en/benefits", label: "Member benefits", text: "Instructor support, body assessments, parking, kids area and more.", image: "/xtreme/area-infantil.jpg" },
+  { href: "/en/seniors", label: "Senior fitness", text: "Three guided classes per week for mobility, strength and confidence.", image: "/xtreme/zona-funcional-clases.jpg" },
+  { href: "/app", label: "Member app", text: "Reservations, streaks, digital membership card and progress in one place.", image: "/xtreme/maquinas-y-entrenador-xtreme.png" },
+  { href: "/en/faq", label: "Frequently asked questions", text: "Useful information before your first workout.", image: "/xtreme/recepcion-sala-espera.jpg" },
+  { href: "/en/contact", label: "Hours and location", text: "Find us in Barrio San Pablo, Ciudad Quesada.", image: "/xtreme/fachada-xtreme-gym.jpg" },
 ];
 
 export default function EnglishLandingPage() {
@@ -55,8 +55,7 @@ export default function EnglishLandingPage() {
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88"
-            srcSet="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=720&q=72 720w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1280&q=80 1280w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=2400&q=88 2400w"
+            src="/xtreme/piso-pesas-panoramica.jpg"
             sizes="100vw"
             fetchPriority="high"
             decoding="async"

@@ -143,6 +143,19 @@ export default function ContactoPage() {
           </div>
 
           <div className="grid content-start gap-3">
+            <div className="relative aspect-[16/7] overflow-hidden border border-white/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/xtreme/fachada-xtreme-gym.jpg"
+                alt="Fachada y entrada de Xtreme Gym"
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
+              <span className="absolute bottom-3 left-3 text-xs font-black uppercase tracking-[0.16em] text-[#f6c400]">
+                Esta es nuestra entrada
+              </span>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {CONTACT_ACTIONS.map(({ href, label, detail, icon: Icon, external, primary }) => {
                 const className = primary

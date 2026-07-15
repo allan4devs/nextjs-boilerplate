@@ -2,23 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import ExtremeGymCheckout from "../../ExtremeGymCheckout";
-import CtaBand from "../../components/CtaBand";
-import { BUSINESS, COSTS, PLAN_DETAILS } from "../../lib/site";
+import { BUSINESS, PLAN_DETAILS, waLink } from "../../lib/site";
 import { pageMetadata } from "../../lib/seo";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
-
-const PLAN_OPTION_IDS: Record<string, string | null> = {
-  "Primer día": null,
-  Semana: "week",
-  Quincena: "fortnight",
-  Mes: "month",
-};
-
-const PER_DAY: Record<string, string> = {
-  Semana: "~CRC 1.143",
-  Quincena: "~CRC 900",
-  Mes: "~CRC 767",
-};
+import { ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = pageMetadata({
   title: "Precios y planes",
@@ -28,12 +14,13 @@ export const metadata: Metadata = pageMetadata({
 });
 
 const COMPARISON = [
-  { feature: "Acceso a todas las zonas", week: true, fortnight: true, month: true },
-  { feature: "Clases funcionales", week: true, fortnight: true, month: true },
-  { feature: "App de socios", week: true, fortnight: true, month: true },
-  { feature: "Reserva de cupo", week: true, fortnight: true, month: true },
-  { feature: "Seguimiento de progreso", week: false, fortnight: true, month: true },
-  { feature: "Mejor precio por día", week: false, fortnight: false, month: true },
+  { feature: "Acceso a todas las zonas", week: true, fortnight: true, month: true, group: true },
+  { feature: "Clases funcionales", week: true, fortnight: true, month: true, group: true },
+  { feature: "App de socios", week: true, fortnight: true, month: true, group: true },
+  { feature: "Seguimiento de progreso", week: false, fortnight: true, month: true, group: true },
+  { feature: "Entrenador en grupo reducido", week: false, fortnight: false, month: false, group: true },
+  { feature: "Grupo de máximo 6 personas", week: false, fortnight: false, month: false, group: true },
+  { feature: "Mejor precio por día", week: false, fortnight: false, month: true, group: false },
 ];
 
 export default async function PreciosPage({
@@ -47,112 +34,54 @@ export default async function PreciosPage({
 
   return (
     <>
-      <section className="px-5 py-10 sm:px-8 lg:py-14">
+      <section className="px-5 pb-6 pt-10 sm:px-8 lg:pb-8 lg:pt-14">
         <div className="mx-auto max-w-7xl">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Precios</p>
-              <h1 className="mt-2 text-3xl font-black uppercase leading-none sm:text-4xl">Costos vigentes.</h1>
-              <p className="mt-2 max-w-2xl text-sm font-semibold text-white/58">
-                Empezá gratis un día o elegí semana, quincena o mes. El mensual es el que más conviene por día.
-              </p>
-            </div>
-            
-          </div>
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {COSTS.map((item) => {
-              const featured = item.period === "Mes";
-              return (
-                <article
-                  key={item.period}
-                  className={`border p-5 ${
-                    featured
-                      ? "border-[#f6c400] bg-[#f6c400] text-black shadow-[0_0_44px_-20px_rgba(246,196,0,.9)]"
-                      : "border-white/10 bg-white/[0.045] text-white"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p
-                        className={`text-xs font-black uppercase tracking-[0.18em] ${
-                          featured ? "text-black/55" : "text-white/45"
-                        }`}
-                      >
-                        {item.note}
-                      </p>
-                      <h3 className="mt-2 text-2xl font-black uppercase">{item.period}</h3>
-                    </div>
-                    {featured && (
-                      <span className="bg-black px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white">
-                        Popular
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-6 text-4xl font-black uppercase leading-none">{item.price}</p>
-                  {PER_DAY[item.period] ? (
-                    <p
-                      className={`mt-2 text-xs font-black uppercase tracking-[0.14em] ${
-                        featured ? "text-black/55" : "text-white/45"
-                      }`}
-                    >
-                      {PER_DAY[item.period]}/día
-                    </p>
-                  ) : null}
-                  <a
-                    href={
-                      item.price === "Gratis"
-                        ? "/primer-dia#registro"
-                        : `/precios?plan=${PLAN_OPTION_IDS[item.period]}#inscripcion`
-                    }
-                    className={`mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 text-sm font-black uppercase transition ${
-                      featured ? "bg-black text-white hover:bg-white hover:text-black" : "bg-white text-black hover:bg-[#f6c400]"
-                    }`}
-                  >
-                    {item.price === "Gratis" ? "Probar gratis" : featured ? "Elegir mensual" : "Elegir este plan"}
-                    <ArrowRight className="h-4 w-4" />
-                  </a>
-                </article>
-              );
-            })}
-          </div>
-
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            {PLAN_DETAILS.map((detail) => (
-              <div key={detail} className="flex items-center gap-3 border border-white/10 bg-white/[0.04] p-4">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#f6c400]" />
-                <span className="font-bold text-white/72">{detail}</span>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Precios claros</p>
+          <h1 className="mt-2 text-4xl font-black uppercase leading-[0.9] sm:text-6xl">Elegí tu plan.</h1>
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/58 sm:text-base">
+            Tocá una opción para inscribirte. El mensual ofrece el mejor precio por día.
+          </p>
         </div>
       </section>
+      <Suspense fallback={null}>
+        <ExtremeGymCheckout initialOption={initialPlan} compact />
+      </Suspense>
 
-      <section className="border-y border-white/10 bg-[#101010] px-5 py-16 sm:px-8">
+      <section className="border-t border-white/10 bg-[#0d0d0d] px-5 py-14 sm:px-8 lg:py-20">
         <div className="mx-auto max-w-7xl">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Comparación</p>
-          <h2 className="mt-3 text-4xl font-black uppercase leading-none sm:text-5xl">Qué incluye cada plan.</h2>
+          <div className="grid gap-4 lg:grid-cols-[1fr_.75fr] lg:items-end">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Compará con calma</p>
+              <h2 className="mt-3 text-3xl font-black uppercase leading-none sm:text-5xl">
+                Qué incluye cada opción.
+              </h2>
+            </div>
+            <p className="text-sm font-semibold leading-7 text-white/50 lg:text-right">
+              La clase grupal suma supervisión cercana y cupos reducidos. Los planes normales mantienen acceso flexible al gimnasio.
+            </p>
+          </div>
 
-          <div className="mt-8 overflow-x-auto border border-white/10">
-            <table className="w-full min-w-[640px] border-collapse text-left">
+          <div className="mt-8 overflow-x-auto border border-white/10 bg-black/35">
+            <table className="w-full min-w-[760px] border-collapse text-left">
               <thead>
-                <tr className="bg-white/[0.05] text-xs font-black uppercase tracking-[0.14em] text-white/55">
+                <tr className="bg-white/[0.05] text-[11px] font-black uppercase tracking-[0.12em] text-white/50">
                   <th className="p-4">Beneficio</th>
                   <th className="p-4 text-center">Semana</th>
                   <th className="p-4 text-center">Quincena</th>
-                  <th className="p-4 text-center text-[#f6c400]">Mes</th>
+                  <th className="bg-[#f6c400] p-4 text-center text-black">Mes</th>
+                  <th className="p-4 text-center text-[#f6c400]">Grupal</th>
                 </tr>
               </thead>
               <tbody>
                 {COMPARISON.map((row) => (
                   <tr key={row.feature} className="border-t border-white/10">
-                    <td className="p-4 font-bold text-white/72">{row.feature}</td>
-                    {[row.week, row.fortnight, row.month].map((value, index) => (
-                      <td key={index} className="p-4 text-center">
+                    <td className="p-4 text-sm font-bold text-white/72">{row.feature}</td>
+                    {[row.week, row.fortnight, row.month, row.group].map((value, index) => (
+                      <td key={index} className={index === 2 ? "bg-[#f6c400]/[0.06] p-4 text-center" : "p-4 text-center"}>
                         {value ? (
                           <CheckCircle2 className="mx-auto h-5 w-5 text-[#f6c400]" />
                         ) : (
-                          <span className="text-white/25">-</span>
+                          <span className="text-white/20">—</span>
                         )}
                       </td>
                     ))}
@@ -162,31 +91,48 @@ export default async function PreciosPage({
             </table>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border border-white/10 bg-white/[0.04] p-5">
-            <p className="text-sm font-black uppercase tracking-[0.14em] text-white/65">
-              Información: {BUSINESS.phone}
-            </p>
+          <div className="mt-10">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">Incluido según el plan</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {PLAN_DETAILS.map((detail) => (
+                <div key={detail} className="flex items-start gap-3 border-l-2 border-[#f6c400] bg-white/[0.035] p-4">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#f6c400]" />
+                  <span className="text-sm font-bold leading-6 text-white/65">{detail}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
+            <a
+              href="#inscripcion"
+              className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 text-sm font-black uppercase text-black transition hover:bg-white"
+            >
+              Elegir un plan
+              <ArrowRight className="h-4 w-4" />
+            </a>
+            <a
+              href={waLink("Hola Xtreme Gym, quiero consultar disponibilidad para las clases grupales de ₡45.000.")}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-12 items-center gap-2 border border-[#f6c400]/60 px-5 text-sm font-black uppercase text-[#f6c400] transition hover:bg-[#f6c400] hover:text-black"
+            >
+              Consultar clase grupal
+              <MessageCircle className="h-4 w-4" />
+            </a>
             <Link
               href="/adultos-mayores"
-              className="inline-flex items-center gap-2 text-sm font-black uppercase text-[#f6c400] transition hover:text-white"
+              className="inline-flex min-h-12 items-center gap-2 border border-white/15 px-5 text-sm font-black uppercase text-white/70 transition hover:border-white/40 hover:text-white"
             >
-              Ver costo de adultos mayores
+              Adultos mayores
               <ArrowRight className="h-4 w-4" />
             </Link>
+            <span className="ml-auto text-xs font-black uppercase tracking-[0.12em] text-white/35">
+              Información: {BUSINESS.phone}
+            </span>
           </div>
         </div>
       </section>
-
-      <Suspense fallback={null}>
-        <ExtremeGymCheckout initialOption={initialPlan} />
-      </Suspense>
-
-      <CtaBand
-        eyebrow="Cuando estés listo"
-        title="Probá gratis o inscribite hoy y empezá a entrenar."
-        cta="Ver planes y pagar"
-        href="#inscripcion"
-      />
     </>
   );
 }

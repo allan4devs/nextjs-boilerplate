@@ -13,6 +13,16 @@ export const metadata: Metadata = pageMetadata({
   path: "/beneficios",
 });
 
+const BENEFIT_IMAGES = [
+  { src: "/xtreme/consultorio-medicion-corporal.jpg", alt: "Consultorio de medición corporal", label: "Medición corporal" },
+  { src: "/xtreme/parqueo-clientes.jpg", alt: "Parqueo para clientes de Xtreme Gym", label: "Parqueo para clientes" },
+  { src: "/xtreme/parqueo-amplio.jpg", alt: "Parqueo amplio junto a Xtreme Gym", label: "Parqueo amplio" },
+  { src: "/xtreme/area-infantil.jpg", alt: "Área infantil de Xtreme Gym", label: "Área infantil" },
+  { src: "/xtreme/vestidores-lavamanos.jpg", alt: "Vestidores y lavamanos de Xtreme Gym", label: "Vestidores" },
+  { src: "/xtreme/vestidores-duchas.jpg", alt: "Duchas disponibles en Xtreme Gym", label: "Duchas" },
+  { src: "/xtreme/consultorio-valoracion.jpg", alt: "Espacio privado para valoración física", label: "Valoración privada" },
+];
+
 export default function BeneficiosPage() {
   return (
     <>
@@ -21,8 +31,8 @@ export default function BeneficiosPage() {
         title="Más que máquinas."
         highlight="Todo suma a tu constancia."
         text="Entrenar mejor también depende de sentirse acompañado, llegar con facilidad y contar con espacios que hacen más simple sostener el hábito."
-        image="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=2000&q=86"
-        imageAlt="Piso de entrenamiento con variedad de máquinas"
+        image="/xtreme/area-infantil-estantes.jpg"
+        imageAlt="Área infantil disponible para las familias de Xtreme Gym"
       >
         <Link
           href="/precios#inscripcion"
@@ -46,6 +56,25 @@ export default function BeneficiosPage() {
             </p>
           </div>
           <GymBenefitsGrid />
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {BENEFIT_IMAGES.map((item) => (
+              <figure key={item.src} className="group relative aspect-[4/3] overflow-hidden border border-white/10 bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.src}
+                  alt={item.alt}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover opacity-75 transition duration-500 group-hover:scale-105 group-hover:opacity-95"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                <figcaption className="absolute bottom-4 left-4 text-sm font-black uppercase tracking-[0.14em] text-[#f6c400]">
+                  {item.label}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         </div>
       </section>
 

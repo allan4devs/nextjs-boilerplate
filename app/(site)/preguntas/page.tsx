@@ -22,8 +22,8 @@ export default function PreguntasPage() {
         title="Lo que la gente"
         highlight="pregunta antes de llegar."
         text="Revisá las respuestas y conocé los planes disponibles para empezar a tu ritmo."
-        image="https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=2000&q=86"
-        imageAlt="Entrenamiento funcional en Xtreme Gym"
+        image="/xtreme/recepcion-sala-espera.jpg"
+        imageAlt="Recepción y sala de espera de Xtreme Gym"
       />
 
       <section className="px-5 py-16 sm:px-8 lg:py-20">

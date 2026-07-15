@@ -28,8 +28,8 @@ export default function AdultosMayoresPage() {
         title="Nunca es tarde"
         highlight="para sentirse mejor."
         text="Moverse es bienestar. No importa la edad ni el punto de partida: cada clase es una oportunidad para cuidar su cuerpo, fortalecer su mente y ganar confianza en comunidad."
-        image="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=2000&q=86"
-        imageAlt="Adultos activos entrenando bienestar"
+        image="/xtreme/zona-funcional-clases.jpg"
+        imageAlt="Zona funcional donde se realizan clases guiadas en Xtreme Gym"
       />
 
       <section className="px-5 py-16 sm:px-8 lg:py-20">

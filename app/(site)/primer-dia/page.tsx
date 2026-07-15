@@ -24,7 +24,15 @@ export default function PrimerDiaPage() {
     <>
       <LandingTrack surface="primer-dia" />
       <section className="relative overflow-hidden border-b border-white/10 px-5 py-16 sm:px-8 lg:py-24">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(246,196,0,.2),transparent_34%),linear-gradient(135deg,#070707,#121212)]" />
+        <div className="absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/xtreme/zona-funcional-amplia.jpg"
+            alt="Zona funcional de Xtreme Gym"
+            className="h-full w-full object-cover opacity-35"
+          />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(246,196,0,.2),transparent_34%),linear-gradient(90deg,rgba(7,7,7,.96),rgba(7,7,7,.6))]" />
+        </div>
         <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">
