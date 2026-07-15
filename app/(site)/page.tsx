@@ -17,7 +17,7 @@ import { ArrowRight, MapPin, Smartphone } from "lucide-react";
 export const metadata: Metadata = pageMetadata({
   title: "Xtreme Gym | Ciudad Quesada",
   description:
-    "Xtreme Gym en Ciudad Quesada, San Carlos. Gimnasio completo para construir hábitos, mejorar condición física, ganar energía y entrenar con acompañamiento.",
+    "Xtreme Gym en Ciudad Quesada, San Carlos. Un gimnasio para entrenar en serio, con máquinas excelentes, zonas completas y acompañamiento.",
   path: "/",
   absoluteTitle: true,
 });
@@ -32,7 +32,7 @@ const EXPLORE = [
   {
     href: "/zonas",
     label: "Zonas de entrenamiento",
-    text: "Fuerza, funcional, cardio y lower lab con equipo completo.",
+    text: "Calistenia, peso libre, cardio, pierna y tren superior con equipo completo.",
     image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=900&q=84",
   },
   {
@@ -101,12 +101,12 @@ export default function ExtremeGymLandingPage() {
                 {BUSINESS.location}
               </a>
               <h1 className="mt-5 max-w-4xl text-[2.5rem] font-black uppercase leading-[0.88] tracking-tight min-[420px]:text-5xl sm:text-6xl lg:text-[4rem] xl:text-[4.5rem]">
-                Entrena fuerte.
-                <span className="block text-[#f6c400]">Vive con más energía.</span>
+                Tomátelo en serio.
+                <span className="block text-[#f6c400]">Entrená sin excusas.</span>
               </h1>
               <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/72">
-                Un gimnasio completo en Ciudad Quesada para fuerza, funcional, cardio y hábitos
-                reales. Elija su plan, reserve desde la app y empiece con un equipo pensado para avanzar.
+                Si estás comprometido con tu progreso, este es tu lugar. Entrená con máquinas
+                excelentes de todo tipo, zonas completas y un ambiente que te impulsa a dar más.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -134,17 +134,17 @@ export default function ExtremeGymLandingPage() {
                   <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" fit="contain" />
                   <div className="absolute left-6 top-6 max-w-[210px] bg-[#f6c400] px-4 py-3 text-black">
                     <p className="text-xs font-black uppercase tracking-[0.18em]">Movimiento Xtreme</p>
-                    <p className="text-2xl font-black uppercase leading-none">Fuerza con dirección</p>
+                    <p className="text-2xl font-black uppercase leading-none">Compromiso que se nota</p>
                   </div>
                 </div>
 
                 <div className="grid content-start gap-3">
                   <ImageTile src={HERO_IMAGES[1].src} alt={HERO_IMAGES[1].alt} className="aspect-[4/3]" />
                   <div className="border border-[#f6c400]/45 bg-[#f6c400] p-4 text-black shadow-[0_0_36px_-18px_rgba(246,196,0,.9)]">
-                    <p className="text-xs font-black uppercase tracking-[0.2em]">Empiece con decisión</p>
-                    <h2 className="mt-2 text-2xl font-black uppercase leading-none">Su próximo entreno ya tiene lugar</h2>
+                    <p className="text-xs font-black uppercase tracking-[0.2em]">Entrená en serio</p>
+                    <h2 className="mt-2 text-2xl font-black uppercase leading-none">Todo el equipo para superarte</h2>
                     <p className="mt-2 text-xs font-bold leading-5">
-                      Cada entrenamiento es una decisión a favor de su salud, energía y calidad de vida.
+                      Máquinas de todo tipo, zonas completas y el ambiente para mantenerte enfocado.
                     </p>
                   </div>
                 </div>
@@ -183,14 +183,15 @@ export default function ExtremeGymLandingPage() {
 
       <section className="border-y border-white/10 bg-[#f6c400] px-5 py-4 text-black sm:px-8">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em]">
-          <span>Fuerza</span>
-          <span>Funcional</span>
+          <span>Calistenia</span>
+          <span>Peso libre</span>
           <span>Cardio</span>
-          <span>Acompañamiento</span>
-          <span>Medición sin costo</span>
-          <span>Parqueo</span>
+          <span>Pierna</span>
+          <span>Tren superior</span>
+          <span>Entrenamiento VIP</span>
+          <span>Clases grupales</span>
           <span>Adultos mayores</span>
-          <span>San Carlos</span>
+          <span>Bronceado</span>
         </div>
       </section>
 
@@ -200,7 +201,7 @@ export default function ExtremeGymLandingPage() {
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Ruta simple</p>
               <h2 className="mt-3 max-w-2xl text-4xl font-black uppercase leading-none sm:text-6xl">
-                Llegar, entrenar y sostener el hábito.
+                Compromiso, constancia y resultados.
               </h2>
             </div>
             <div className="w-full max-w-2xl lg:ml-auto">
@@ -210,8 +211,8 @@ export default function ExtremeGymLandingPage() {
                 className="h-28 border border-white/10 sm:h-36 lg:h-32"
               />
               <p className="mt-5 text-base font-semibold leading-8 text-white/58">
-                Desde la primera consulta hasta el seguimiento en la app, Xtreme Gym le da una
-                ruta clara para moverse mejor, ganar fuerza y mantenerse constante.
+                Xtreme Gym te da el espacio, las máquinas y el acompañamiento. Vos ponés la
+                decisión de presentarte, entrenar con intención y no abandonar tu progreso.
               </p>
             </div>
           </div>

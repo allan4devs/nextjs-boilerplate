@@ -57,21 +57,7 @@ export default async function PreciosPage({
                 Empezá gratis un día o elegí semana, quincena o mes. El mensual es el que más conviene por día.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/primer-dia"
-                className="inline-flex min-h-12 items-center gap-2 border border-white/20 px-5 font-black uppercase text-white transition hover:border-[#f6c400] hover:text-[#f6c400]"
-              >
-                Primer día gratis
-              </Link>
-              <a
-                href="#inscripcion"
-                className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
-              >
-                Inscribirme
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
+            
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

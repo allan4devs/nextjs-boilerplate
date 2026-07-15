@@ -23,7 +23,7 @@ export const waLink = (message: string) =>
   `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(message)}`;
 
 export const NAV_LINKS = [
-  { href: "/zonas", label: "Zonas", icon: Dumbbell, description: "Fuerza, funcional, cardio y lower lab" },
+  { href: "/zonas", label: "Zonas", icon: Dumbbell, description: "Calistenia, peso libre, cardio, pierna y tren superior" },
   { href: "/precios", label: "Precios", icon: Tag, description: "Primer día gratis y planes para inscribirte" },
   { href: "/adultos-mayores", label: "Adultos", icon: HeartPulse, description: "Tres clases por semana con acompañamiento" },
   { href: "/app", label: "App", icon: Smartphone, description: "Reservas, rachas y carné digital" },
@@ -48,27 +48,27 @@ export const HERO_IMAGES = [
 
 export const ZONES = [
   {
-    icon: Dumbbell,
-    title: "Fuerza",
-    eyebrow: "Pesas / máquinas",
-    text: "Equipo completo para ganar fuerza, mejorar técnica y convertir el esfuerzo en progreso.",
+    icon: Zap,
+    title: "Calistenia",
+    eyebrow: "Barras / funcional",
+    text: "Un espacio para dominar tu cuerpo, mejorar la movilidad y desarrollar fuerza funcional.",
     image: "https://images.unsplash.com/photo-1534368420009-621bfab424a8?auto=format&fit=crop&w=1000&q=84",
     details: [
-      "Barras, discos, mancuernas y máquinas guiadas",
-      "Progresión de cargas con técnica supervisada",
-      "Ideal para hipertrofia, fuerza y composición corporal",
+      "Barras funcionales y ejercicios con peso corporal",
+      "Trabajo de core, coordinación y control",
+      "Circuitos funcionales para distintos niveles",
     ],
   },
   {
-    icon: Zap,
-    title: "Funcional",
-    eyebrow: "HIIT / circuitos",
-    text: "Sesiones dinámicas para moverse mejor, subir energía y mantener el cuerpo activo.",
+    icon: Dumbbell,
+    title: "Peso libre",
+    eyebrow: "Pesas / mancuernas",
+    text: "Todo lo necesario para trabajar fuerza, masa muscular y progresión de cargas en serio.",
     image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d712?auto=format&fit=crop&w=1000&q=84",
     details: [
-      "Circuitos de alta intensidad por tiempo",
-      "Trabajo de core, coordinación y potencia",
-      "Buena opción si entrena con poco tiempo disponible",
+      "Mancuernas, barras, discos y bancos",
+      "Opciones para principiantes y avanzados",
+      "Equipo para hipertrofia, fuerza y composición corporal",
     ],
   },
   {
@@ -85,14 +85,26 @@ export const ZONES = [
   },
   {
     icon: Flame,
-    title: "Lower Lab",
+    title: "Pierna",
     eyebrow: "Pierna / glúteo",
-    text: "Pierna, glúteo y estabilidad con ejercicios pensados para avanzar sin perder control.",
+    text: "Máquinas y estaciones para desarrollar pierna, glúteo, estabilidad y potencia.",
     image: "https://images.unsplash.com/photo-1434596922112-19c563067271?auto=format&fit=crop&w=1000&q=84",
     details: [
       "Sentadilla, peso muerto, hip thrust y accesorios",
       "Estabilidad de cadera, rodilla y tobillo",
       "Progresiones para principiantes y avanzados",
+    ],
+  },
+  {
+    icon: Dumbbell,
+    title: "Tren superior",
+    eyebrow: "Pecho / espalda / brazos",
+    text: "Máquinas excelentes y opciones variadas para trabajar cada grupo muscular con intención.",
+    image: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1000&q=84",
+    details: [
+      "Equipos para pecho, espalda, hombros y brazos",
+      "Máquinas guiadas y trabajo con peso libre",
+      "Variedad para una rutina completa y progresiva",
     ],
   },
 ];
@@ -123,7 +135,7 @@ export const PLAN_DETAILS = [
   "Acompañamiento de instructores para entrenar con dirección",
   "Medición corporal sin costo para seguir tus avances",
   "Parqueo, área para merendar y espacio infantil",
-  "Variedad de máquinas y zonas para diferentes objetivos",
+  "Máquinas excelentes de todo tipo para diferentes objetivos",
   "Reservas, rachas y progreso desde la app de socios",
 ];
 
@@ -174,7 +186,7 @@ export const SENIOR_BENEFITS = [
 
 export const SOCIAL_PROOF = [
   { value: "5 AM", label: "apertura entre semana" },
-  { value: "4", label: "zonas de entrenamiento" },
+  { value: "5", label: "zonas de entrenamiento" },
   { value: "3", label: "planes flexibles" },
   { value: "1", label: "app para socios" },
 ];
@@ -182,25 +194,25 @@ export const SOCIAL_PROOF = [
 export const TRANSFORM_STEPS = [
   {
     icon: CalendarCheck,
-    title: "Elija su ritmo",
-    text: "Día, semana, quincena o mensualidad para empezar sin complicarse.",
+    title: "Tomá la decisión",
+    text: "Elegí tu plan y comprometete con el tiempo que vas a dedicarle a tu progreso.",
   },
   {
     icon: Dumbbell,
-    title: "Entrene con estructura",
-    text: "Zonas de fuerza, funcional, cardio y lower lab para objetivos distintos.",
+    title: "Entrená en serio",
+    text: "Aprovechá máquinas de todo tipo y zonas completas para trabajar cada objetivo.",
   },
   {
     icon: Trophy,
-    title: "Sostenga el avance",
-    text: "Rachas, reservas y progreso desde la app para mantenerse constante.",
+    title: "Sostené el compromiso",
+    text: "Usá las rachas, reservas y el progreso de la app para mantenerte constante.",
   },
 ];
 
 export const TRUST_POINTS = [
   "Instructores que orientan, corrigen y motivan",
   "Medición corporal sin costo para seguir el progreso",
-  "Variedad de máquinas para un entrenamiento completo",
+  "Máquinas excelentes de todo tipo para un entrenamiento completo",
   "Parqueo y espacios pensados para una visita más cómoda",
 ];
 
