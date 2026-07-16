@@ -10,6 +10,7 @@ import {
   TRAININGS,
   todayIso,
 } from "./shared";
+import { classStartAt } from "./class-schedule";
 import {
   consumeBookingEntitlement,
   decideBooking,
@@ -133,7 +134,8 @@ export async function ensureClassSession(
     trainingId: args.trainingId,
   });
   const capacity = args.capacity ?? template?.capacity ?? 12;
-  const startAt = new Date(`${args.date}T12:00:00.000Z`);
+  const scheduledStart = classStartAt(args.trainingId, args.date);
+  const startAt = scheduledStart ?? new Date(`${args.date}T12:00:00.000Z`);
   const endAt = new Date(startAt.getTime() + (template?.durationMin ?? 55) * 60_000);
   const now = new Date();
   const doc: ClassSessionDoc = {
@@ -215,6 +217,14 @@ export async function bookSession(
     trainingName: args.trainingName,
     date: args.date,
   });
+
+  const scheduledStart = classStartAt(args.trainingId, args.date);
+  if (!scheduledStart) {
+    return { ok: false, code: "wrong_class", message: "Esta clase no se imparte hoy." };
+  }
+  if (new Date() >= scheduledStart) {
+    return { ok: false, code: "cutoff", message: "La clase ya inició y cerró sus reservas." };
+  }
 
   if (session.status !== "scheduled") {
     return { ok: false, code: "cancelled_session", message: "Esta clase no esta disponible." };

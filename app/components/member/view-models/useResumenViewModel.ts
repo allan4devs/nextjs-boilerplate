@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { classStartAt, classTimeLabel } from "@/lib/xtreme/class-schedule";
 import { TRAININGS } from "../constants";
 import type { MemberOs } from "../useMemberOs";
 import { dayLabel, membershipPlanDays, membershipRemainingPct, todayIso } from "../utils";
@@ -47,7 +48,40 @@ export type ResumenViewModel = {
     daysRemaining: number;
     totalDays: number;
     progressPct: number;
+    lastPaymentMethod: string;
+    lastPlanLabel: string;
+    renewPlanId: "week" | "fortnight" | "month";
   } | null;
+  trainingPlan: {
+    title: string;
+    coachNote: string;
+    pendingCount: number;
+    totalCount: number;
+    progressPct: number;
+    nextItem: { day: string; focus: string; exercises: string; targetMinutes: number } | null;
+  } | null;
+  classes: Array<{
+    id: string;
+    name: string;
+    time: string;
+    coach: string;
+    focus: string;
+    remaining: number;
+    capacity: number;
+    isMine: boolean;
+    isFull: boolean;
+    hasStarted: boolean;
+    isToday: boolean;
+    busy: boolean;
+  }>;
+  progress: {
+    workoutsThisMonth: number;
+    minutesThisMonth: number;
+    latestWeight: number | null;
+    latestWaist: number | null;
+    weightChange: number | null;
+    weeklyWorkouts: Array<{ date: string; value: number }>;
+  };
   occupancy: {
     level: string;
     percentage: number;
@@ -68,6 +102,9 @@ export type ResumenActions = {
   openBadges: () => void;
   openMembership: () => void;
   openOccupancy: () => void;
+  renewMembership: () => void;
+  reserveClass: (trainingId: string) => void;
+  cancelClass: (trainingId: string) => void;
 };
 
 async function trackMemberEvent(
@@ -87,6 +124,12 @@ export function useResumenViewModel(os: MemberOs): {
   model: ResumenViewModel;
   actions: ResumenActions;
 } {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const {
     unlocked,
     currentMember,
@@ -112,6 +155,10 @@ export function useResumenViewModel(os: MemberOs): {
     nextBadge,
     membershipTone,
     gymStatus,
+    paymentHistory,
+    reservingTrainingId,
+    reserveTraining,
+    cancelReservation,
   } = os;
 
   const model = useMemo<ResumenViewModel>(() => {
@@ -128,6 +175,36 @@ export function useResumenViewModel(os: MemberOs): {
     const reservedTraining = TRAININGS.find(
       (training) => reservations[training.id]?.isMine,
     );
+    const planPayments = (paymentHistory?.payments ?? [])
+      .filter((payment) => payment.category === "Plan" && payment.status === "completed")
+      .sort((a, b) => b.date.localeCompare(a.date));
+    const lastPlanPayment = planPayments[0];
+    const planText = `${lastPlanPayment?.optionLabel ?? currentMember.membership.plan}`.toLowerCase();
+    const renewPlanId = planText.includes("quinc")
+      ? "fortnight"
+      : planText.includes("seman") && !planText.includes("quinc")
+        ? "week"
+        : "month";
+    const methodLabels: Record<string, string> = {
+      paypal: "PayPal",
+      cash: "Efectivo",
+      transfer: "Transferencia",
+      sinpe: "SINPE Móvil",
+      other: "Otro",
+    };
+    const pendingPlanItems = currentMember.trainingPlan?.items.filter((item) => !item.done) ?? [];
+    const monthWorkouts = currentMember.workouts.filter((workout) =>
+      workout.completedDate.startsWith(month),
+    );
+    const metrics = currentMember.bodyMetrics
+      .filter((metric) => metric.weightKg > 0)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const latestWeight = metrics.at(-1)?.weightKg ?? null;
+    const previousWeight = metrics.at(-2)?.weightKg ?? null;
+    const weeklyWorkouts = weekDates.map((date) => ({
+      date,
+      value: currentMember.workouts.filter((workout) => workout.completedDate === date).length,
+    }));
 
     return {
       streak: gami
@@ -206,8 +283,64 @@ export function useResumenViewModel(os: MemberOs): {
               daysRemaining: Math.max(0, daysRemaining),
               totalDays,
               progressPct: membershipRemainingPct(daysRemaining, totalDays),
+              lastPaymentMethod: lastPlanPayment
+                ? methodLabels[lastPlanPayment.method] ?? lastPlanPayment.method
+                : "Sin pago registrado",
+              lastPlanLabel: lastPlanPayment?.optionLabel ?? currentMember.membership.plan,
+              renewPlanId,
             }
           : null,
+      trainingPlan: currentMember.trainingPlan
+        ? {
+            title: currentMember.trainingPlan.title,
+            coachNote: currentMember.trainingPlan.coachNote,
+            pendingCount: pendingPlanItems.length,
+            totalCount: currentMember.trainingPlan.totalItems,
+            progressPct: currentMember.trainingPlan.progressPct,
+            nextItem: pendingPlanItems[0]
+              ? {
+                  day: pendingPlanItems[0].day,
+                  focus: pendingPlanItems[0].focus,
+                  exercises: pendingPlanItems[0].exercises,
+                  targetMinutes: pendingPlanItems[0].targetMinutes,
+                }
+              : null,
+          }
+        : null,
+      classes: TRAININGS.map((training) => {
+        const reservation = reservations[training.id] ?? {
+          reserved: 0,
+          capacity: training.slots,
+          remaining: training.slots,
+          isMine: false,
+        };
+        const startsAt = classStartAt(training.id, today);
+        return {
+          id: training.id,
+          name: training.name,
+          time: classTimeLabel(training.id),
+          coach: training.coach,
+          focus: training.focus,
+          remaining: reservation.remaining,
+          capacity: reservation.capacity,
+          isMine: reservation.isMine,
+          isFull: reservation.remaining <= 0 && !reservation.isMine,
+          hasStarted: Boolean(startsAt && now >= startsAt.getTime()),
+          isToday: Boolean(startsAt),
+          busy: reservingTrainingId === training.id,
+        };
+      }),
+      progress: {
+        workoutsThisMonth: monthWorkouts.length,
+        minutesThisMonth: monthWorkouts.reduce((sum, workout) => sum + workout.minutes, 0),
+        latestWeight,
+        latestWaist: currentMember.latestBodyMetric?.waistCm ?? null,
+        weightChange:
+          latestWeight !== null && previousWeight !== null
+            ? Math.round((latestWeight - previousWeight) * 10) / 10
+            : null,
+        weeklyWorkouts,
+      },
       occupancy: {
         level: gymStatus?.level ?? "Cargando",
         percentage: gymStatus?.occupancyPct ?? 0,
@@ -228,7 +361,10 @@ export function useResumenViewModel(os: MemberOs): {
     milestoneLeft,
     nextBadge,
     nextBestAction,
+    now,
+    paymentHistory,
     reservations,
+    reservingTrainingId,
     savingTrainingId,
     trainedToday,
     unlocked,
@@ -304,6 +440,26 @@ export function useResumenViewModel(os: MemberOs): {
     () => setOsModal({ kind: "occupancy" }),
     [setOsModal],
   );
+  const renewMembership = useCallback(() => {
+    const plan = model.membership?.renewPlanId ?? "month";
+    window.location.href = `/precios?plan=${plan}#checkout-form`;
+  }, [model.membership?.renewPlanId]);
+  const reserveClass = useCallback(
+    (trainingId: string) => {
+      const training = TRAININGS.find((entry) => entry.id === trainingId);
+      const classModel = model.classes.find((entry) => entry.id === trainingId);
+      if (!training || !classModel?.isToday || classModel.hasStarted) return;
+      void reserveTraining(training);
+    },
+    [model.classes, reserveTraining],
+  );
+  const cancelClass = useCallback(
+    (trainingId: string) => {
+      const training = TRAININGS.find((entry) => entry.id === trainingId);
+      if (training) void cancelReservation(training);
+    },
+    [cancelReservation],
+  );
 
   return {
     model,
@@ -320,6 +476,9 @@ export function useResumenViewModel(os: MemberOs): {
       openBadges,
       openMembership,
       openOccupancy,
+      renewMembership,
+      reserveClass,
+      cancelClass,
     },
   };
 }

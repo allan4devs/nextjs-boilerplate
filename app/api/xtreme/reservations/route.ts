@@ -77,7 +77,9 @@ export async function POST(req: NextRequest) {
           ? 409
           : result.code === "payment_required" || result.code === "expired" || result.code === "limit_reached"
             ? 402
-            : 400;
+            : result.code === "cutoff" || result.code === "wrong_class"
+              ? 409
+              : 400;
       return NextResponse.json(
         {
           error: result.message,

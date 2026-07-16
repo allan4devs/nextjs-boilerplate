@@ -526,6 +526,7 @@ export function useMemberOs() {
     },
     [
       applyMemberPayload,
+      fetchPayments,
       goal,
       hasServerSession,
       loadGymStatus,
@@ -632,6 +633,7 @@ export function useMemberOs() {
     },
     [
       applyMemberPayload,
+      fetchPayments,
       goal,
       hasServerSession,
       loadGymStatus,
@@ -664,6 +666,15 @@ export function useMemberOs() {
       return () => window.clearTimeout(id);
     }
   }, [memberName, isLoading, showPin]);
+
+  // El resumen necesita el último método/período pagado para ofrecer renovación directa.
+  useEffect(() => {
+    if (!unlocked || !memberName) {
+      setPaymentHistory(null);
+      return;
+    }
+    void fetchPayments();
+  }, [fetchPayments, memberName, unlocked]);
 
   function applyProfileResponse(data: MembersResponse) {
     setMember(data.member);

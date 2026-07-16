@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "crypto";
 import type { Db } from "mongodb";
 import type { EarnedBadge } from "./gamification";
+import { businessDate } from "./business-date";
 import {
   WEEKLY_GOAL_DEFAULT,
   buildMemberView,
@@ -422,7 +423,7 @@ export function normalizeKey(value: string) {
 }
 
 export function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return businessDate();
 }
 
 export function toUtcDate(date: string) {
