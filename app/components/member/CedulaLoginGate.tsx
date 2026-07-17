@@ -3,7 +3,7 @@
 /**
  * Pantalla de entrada sin sesion: login por cedula
  * (lector de barras USB tipo teclado, o digitada a mano).
- * Si la cedula no existe pide nombre + telefono para el alta.
+ * Alta pública cerrada: sin enlace mágico no se crea cuenta ni PIN.
  */
 
 import Link from "next/link";
@@ -14,14 +14,8 @@ import type { MemberOs } from "./useMemberOs";
 
 export default function CedulaLoginGate({ os }: { os: MemberOs }) {
   const {
-    memberNameInput,
-    setMemberNameInput,
     memberCedulaInput,
     setMemberCedulaInput,
-    memberPhoneInput,
-    setMemberPhoneInput,
-    memberEmailInput,
-    setMemberEmailInput,
     needsRegistration,
     setNeedsRegistration,
     cedulaInputRef,
@@ -37,11 +31,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
         className="xg-corners relative w-full max-w-[400px] overflow-hidden border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-5 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25),0_0_70px_rgba(216,255,62,0.18)] sm:p-6"
         onSubmit={(event) => {
           event.preventDefault();
-          void startMemberByCedula(memberCedulaInput, false, {
-            name: memberNameInput,
-            phone: memberPhoneInput,
-            email: memberEmailInput,
-          });
+          void startMemberByCedula(memberCedulaInput, false);
         }}
       >
         <span aria-hidden className="xg-scanline" />
@@ -83,31 +73,11 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           </label>
 
           {needsRegistration && (
-            <>
-              <GameCallout tone="orange">
-                Primera vez: completá nombre y teléfono para ligar esta cédula a tu perfil.
-              </GameCallout>
-              <input
-                value={memberNameInput}
-                onChange={(event) => setMemberNameInput(event.target.value)}
-                placeholder="Nombre completo"
-                className="min-h-12 min-w-0 border-[3px] border-white/20 bg-black/50 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
-              />
-              <input
-                value={memberPhoneInput}
-                onChange={(event) => setMemberPhoneInput(event.target.value)}
-                placeholder="Telefono"
-                inputMode="tel"
-                className="min-h-12 border-[3px] border-white/15 bg-black/40 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
-              />
-              <input
-                value={memberEmailInput}
-                onChange={(event) => setMemberEmailInput(event.target.value)}
-                placeholder="Correo opcional"
-                type="email"
-                className="min-h-12 border-[3px] border-white/15 bg-black/40 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
-              />
-            </>
+            <GameCallout tone="orange">
+              Esta cédula aún no tiene cuenta activa. La cuenta y el PIN solo se crean con el
+              enlace del correo (invitación o registro) o en recepción. Así nadie se mete con
+              solo saber tu cédula.
+            </GameCallout>
           )}
         </div>
 
@@ -118,12 +88,31 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
         )}
 
         <GameButton type="submit" full className="mt-4">
-          {needsRegistration ? "Crear perfil y entrar" : "Entrar"} <ArrowRight className="h-4 w-4" />
+          Entrar <ArrowRight className="h-4 w-4" />
         </GameButton>
-        <p className="mt-3 px-1 text-xs font-semibold text-white/38">
-          Lector USB tipo teclado: escaneá y el sistema recibe la cédula + Enter. Si es socio
-          nuevo, se pedirá nombre y teléfono.
-        </p>
+
+        {needsRegistration ? (
+          <div className="mt-4 grid gap-2 text-left">
+            <Link
+              href="/primer-dia"
+              className="border-[3px] border-white/15 bg-black/40 px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#d8ff3e] transition hover:border-[#d8ff3e]"
+            >
+              Primer día gratis · registrate con correo
+            </Link>
+            <Link
+              href="/precios"
+              className="border-[3px] border-white/10 px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-white/55 transition hover:border-white/30 hover:text-white"
+            >
+              Ver planes
+            </Link>
+          </div>
+        ) : (
+          <p className="mt-3 px-1 text-xs font-semibold text-white/38">
+            Lector USB tipo teclado: escaneá y el sistema recibe la cédula + Enter. Primera vez:
+            usá el enlace del correo o el alta en recepción.
+          </p>
+        )}
+
         <Link
           href="/"
           className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45 transition hover:text-white"

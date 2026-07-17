@@ -151,7 +151,8 @@ export type MemberDoc = {
 
 export type OtpDoc = {
   normalizedName: string;
-  purpose: "pin_recovery";
+  /** pin_recovery = reset con PIN ya existente; pin_setup = primer PIN con correo verificado. */
+  purpose: "pin_recovery" | "pin_setup";
   codeHash: string;
   attempts: number;
   expiresAt: Date;
@@ -169,7 +170,7 @@ export type PendingRegistrationDoc = {
   expectedMemberName?: string | null;
   paymentId?: string | null;
   createdAt: Date;
-  source: "primer-dia" | "app" | "paypal" | "reception";
+  source: "primer-dia" | "app" | "paypal" | "reception" | "admin";
 };
 
 export type AuditDoc = {

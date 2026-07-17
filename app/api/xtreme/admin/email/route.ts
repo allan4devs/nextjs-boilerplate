@@ -49,7 +49,8 @@ async function requireSuper(req: NextRequest) {
 async function audienceEmails(db: Awaited<ReturnType<typeof getDb>>) {
   const [contacts, members, pending, suppressed, recentlyActive] = await Promise.all([
     db.collection<ContactDoc>(EMAIL_CONTACTS_COLLECTION).find({ status: "active" }).project({ email: 1 }).toArray(),
-    db.collection<MemberDoc>(MEMBERS_COLLECTION).find({ email: { $exists: true, $ne: "" } }).project({ email: 1, normalizedName: 1 }).toArray(),
+    // Solo correos verificados en audiencia de socios (import legacy está cruzado).
+    db.collection<MemberDoc>(MEMBERS_COLLECTION).find({ email: { $exists: true, $ne: "" }, emailVerified: true }).project({ email: 1, normalizedName: 1 }).toArray(),
     db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION).find({ confirmedAt: null }).project({ email: 1 }).toArray(),
     db.collection(EMAIL_SUPPRESSIONS_COLLECTION).distinct<string>("email"),
     db.collection(EVENTS_COLLECTION).distinct<string>("memberId", {

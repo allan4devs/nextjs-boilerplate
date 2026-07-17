@@ -519,14 +519,10 @@ export function useMemberOs() {
 
   /**
    * Login principal por cedula (lector de barras o teclado).
-   * Si no existe, pide nombre+telefono para registrar y ligar la cedula.
+   * Alta y primer PIN solo con enlace mágico / recepción (no self-serve).
    */
   const startMemberByCedula = useCallback(
-    async (
-      cedulaRaw: string,
-      allowSession = true,
-      contact: { name?: string; phone?: string; email?: string } = {},
-    ) => {
+    async (cedulaRaw: string, allowSession = true) => {
       const digits = onlyDigits(cedulaRaw);
       if (digits.length < CEDULA_MIN_DIGITS) {
         setError(MSG.errors.cedulaTooShort(CEDULA_MIN_DIGITS));
@@ -545,44 +541,24 @@ export function useMemberOs() {
           credentials: "same-origin",
         });
         const lookupData = await readJson<
-          MembersResponse & { exists?: boolean; lookup?: string; cedula?: string; hasPinSet?: boolean }
+          MembersResponse & {
+            exists?: boolean;
+            lookup?: string;
+            cedula?: string;
+            hasPinSet?: boolean;
+            pinGate?: string;
+            emailVerified?: boolean;
+          }
         >(lookupResponse);
 
-        const phone = contact.phone?.trim() ?? "";
-        const email = contact.email?.trim() ?? "";
-        const regName = normalizeName(contact.name ?? "");
-
         if (!lookupData.exists) {
-          // Socio nuevo: necesita nombre + telefono + cedula
-          if (!regName || !phone) {
-            setNeedsRegistration(true);
-            setShowPin(false);
-            setMemberName("");
-            setMember(null);
-            setError(MSG.errors.cedulaNotRegistered);
-            setIsLoading(false);
-            return;
-          }
-
-          const createResponse = await fetch("/api/xtreme/user", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({
-              memberName: regName,
-              cedula: digits,
-              phone,
-              email,
-              goal: goal || GOALS[0],
-              favoriteTraining: "",
-            }),
-          });
-          const createData = await readJson<MembersResponse>(createResponse);
-          const name = applyMemberPayload(createData, regName, phone, email, digits);
-          setNeedsRegistration(false);
-          await Promise.all([loadReservations(name), loadGymStatus(), fetchPayments()]);
-          setPinMode("set");
-          setShowPin(true);
+          // Alta pública cerrada: no se inventa ficha con cédula + nombre.
+          setNeedsRegistration(true);
+          setShowPin(false);
+          setMemberName("");
+          setMember(null);
+          setError(MSG.errors.cedulaNotRegistered);
+          setIsLoading(false);
           return;
         }
 
@@ -612,15 +588,31 @@ export function useMemberOs() {
           window.localStorage.removeItem(SESSION_KEY);
         }
 
-        const hasPin =
-          lookupData.hasPinSet ??
-          (
-            (await (
-              await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(name)}`, {
-                cache: "no-store",
-              })
-            ).json()) as { hasPinSet?: boolean }
-          ).hasPinSet;
+        type PinMeta = { hasPinSet?: boolean; pinGate?: string; emailVerified?: boolean };
+        const pinMeta: PinMeta =
+          lookupData.pinGate || lookupData.hasPinSet !== undefined
+            ? {
+                hasPinSet: lookupData.hasPinSet,
+                pinGate: lookupData.pinGate,
+                emailVerified: lookupData.emailVerified,
+              }
+            : ((await (
+                await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(name)}`, {
+                  cache: "no-store",
+                })
+              ).json()) as PinMeta);
+
+        const hasPin = Boolean(pinMeta.hasPinSet);
+        const pinGate =
+          pinMeta.pinGate ||
+          (hasPin ? "verify" : pinMeta.emailVerified ? "setup_otp" : "needs_invite");
+
+        if (!hasPin && pinGate === "needs_invite") {
+          setShowPin(false);
+          setError(MSG.errors.cedulaNeedsInvite);
+          return;
+        }
+
         setPinMode(hasPin ? "verify" : "set");
         setShowPin(true);
       } catch (err) {
@@ -630,25 +622,12 @@ export function useMemberOs() {
         setIsLoading(false);
       }
     },
-    [
-      applyMemberPayload,
-      fetchPayments,
-      goal,
-      hasServerSession,
-      loadGymStatus,
-      loadReservations,
-      reloadFullMember,
-      storeSession,
-    ],
+    [fetchPayments, hasServerSession, loadGymStatus, loadReservations, reloadFullMember, storeSession],
   );
 
   /** @deprecated Preferir startMemberByCedula — se mantiene para rehidratacion por nombre en storage. */
   const startMember = useCallback(
-    async (
-      name: string,
-      allowSession = true,
-      contact: { phone?: string; email?: string; cedula?: string } = {},
-    ) => {
+    async (name: string, allowSession = true, contact: { cedula?: string } = {}) => {
       const trimmed = normalizeName(name);
       if (!trimmed) return;
 
@@ -665,13 +644,16 @@ export function useMemberOs() {
           credentials: "same-origin",
         });
         const memberData = await readJson<
-          MembersResponse & { exists?: boolean; hasPinSet?: boolean }
+          MembersResponse & {
+            exists?: boolean;
+            hasPinSet?: boolean;
+            pinGate?: string;
+            emailVerified?: boolean;
+          }
         >(memberResponse);
-        const phone = contact.phone?.trim() ?? "";
-        const email = contact.email?.trim() ?? "";
         const cedula = onlyDigits(contact.cedula ?? "");
 
-        if (!memberData.exists && !phone) {
+        if (!memberData.exists) {
           setError(MSG.errors.profileNotFound);
           setMember(null);
           setLeaderboard([]);
@@ -681,35 +663,11 @@ export function useMemberOs() {
           return;
         }
 
-        if (!memberData.exists && phone) {
-          if (!cedula || cedula.length < CEDULA_MIN_DIGITS) {
-            setError(MSG.errors.cedulaTooShort(CEDULA_MIN_DIGITS));
-            return;
-          }
-          const createResponse = await fetch("/api/xtreme/user", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({
-              memberName: trimmed,
-              goal: goal || GOALS[0],
-              favoriteTraining: "",
-              phone,
-              email,
-              cedula,
-            }),
-          });
-          const createData = await readJson<MembersResponse>(createResponse);
-          applyMemberPayload(createData, trimmed, phone, email, cedula);
-        } else {
-          setMemberName(trimmed);
-          setMember(initialMember(trimmed));
-        }
-
+        setMemberName(trimmed);
+        setMember(initialMember(trimmed));
         await loadGymStatus();
 
         if (allowSession) {
-          // Igual que en startMemberByCedula: la cookie del server manda.
           if (await hasServerSession(trimmed)) {
             storeSession(trimmed, cedula || undefined);
             await reloadFullMember(trimmed, cedula || undefined);
@@ -720,15 +678,15 @@ export function useMemberOs() {
           window.localStorage.removeItem(SESSION_KEY);
         }
 
-        const hasPin =
-          memberData.hasPinSet ??
-          (
-            (await (
-              await fetch(`/api/xtreme/pin?memberName=${encodeURIComponent(trimmed)}`, {
-                cache: "no-store",
-              })
-            ).json()) as { hasPinSet?: boolean }
-          ).hasPinSet;
+        const hasPin = Boolean(memberData.hasPinSet);
+        const pinGate =
+          memberData.pinGate ||
+          (hasPin ? "verify" : memberData.emailVerified ? "setup_otp" : "needs_invite");
+        if (!hasPin && pinGate === "needs_invite") {
+          setShowPin(false);
+          setError(MSG.errors.cedulaNeedsInvite);
+          return;
+        }
         setPinMode(hasPin ? "verify" : "set");
         setShowPin(true);
       } catch (err) {
@@ -737,16 +695,7 @@ export function useMemberOs() {
         setIsLoading(false);
       }
     },
-    [
-      applyMemberPayload,
-      fetchPayments,
-      goal,
-      hasServerSession,
-      loadGymStatus,
-      loadReservations,
-      reloadFullMember,
-      storeSession,
-    ],
+    [fetchPayments, hasServerSession, loadGymStatus, loadReservations, reloadFullMember, storeSession],
   );
 
   // Solo al montar: rehidratar sesion por cedula (preferido) o nombre legacy.

@@ -4,6 +4,7 @@ import { emailEnabled, sendCustomReminderEmail } from "@/lib/helpers/email";
 import {
   MEMBERS_COLLECTION,
   type MemberDoc,
+  memberEmailIsTrusted,
   normalizeKey,
   normalizeName,
 } from "@/lib/xtreme/shared";
@@ -51,14 +52,20 @@ export async function POST(req: NextRequest) {
     const db = await getDb();
     const member = await db
       .collection<MemberDoc>(MEMBERS_COLLECTION)
-      .findOne({ normalizedName: memberKey }, { projection: { email: 1, memberName: 1 } });
+      .findOne(
+        { normalizedName: memberKey },
+        { projection: { email: 1, emailVerified: 1, memberName: 1 } },
+      );
 
     if (!member) {
       return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
     }
-    if (!member.email) {
+    if (!memberEmailIsTrusted(member) || !member.email) {
       return NextResponse.json(
-        { error: "Agregá tu correo en el perfil para recibir avisos." },
+        {
+          error:
+            "Necesitás un correo verificado en el perfil para recibir avisos. Confirmalo en Perfil o en recepción.",
+        },
         { status: 400 },
       );
     }

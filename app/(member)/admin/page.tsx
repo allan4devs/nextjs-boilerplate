@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Banknote,
   CalendarCheck,
   CheckCircle2,
@@ -29,6 +32,7 @@ import {
   Trash2,
   TrendingUp,
   Trophy,
+  UserPlus,
   UserRound,
   Users,
   X,
@@ -76,6 +80,7 @@ type AdminMember = {
   favoriteTraining: string;
   phone: string;
   email: string;
+  emailVerified?: boolean;
   cedula?: string;
   coach: string;
   notes: string;
@@ -110,6 +115,16 @@ type AdminMember = {
     intensity?: string;
   }>;
 };
+
+type MemberSortKey =
+  | "member"
+  | "contact"
+  | "streak"
+  | "coach"
+  | "membership"
+  | "code"
+  | "plan";
+type SortDirection = "asc" | "desc";
 
 type CheckinRow = {
   id: string;
@@ -446,6 +461,43 @@ const ADMIN_TABS = [
   { id: "ingresos" as const, label: "Ingresos", icon: Banknote, superOnly: true },
 ];
 
+function SortableMemberHeader({
+  label,
+  sortKey,
+  activeKey,
+  direction,
+  onSort,
+  className = "px-3 py-3",
+}: {
+  label: string;
+  sortKey: MemberSortKey;
+  activeKey: MemberSortKey;
+  direction: SortDirection;
+  onSort: (key: MemberSortKey) => void;
+  className?: string;
+}) {
+  const active = sortKey === activeKey;
+  const SortIcon = active ? (direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+  return (
+    <th
+      className={className}
+      aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1.5 whitespace-nowrap transition hover:text-white ${
+          active ? "text-lime-200" : "text-white/40"
+        }`}
+      >
+        {label}
+        <SortIcon className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </th>
+  );
+}
+
 export default function XtremeAdminPage() {
   const [code, setCode] = useState("");
   const [codeInput, setCodeInput] = useState("");
@@ -457,6 +509,10 @@ export default function XtremeAdminPage() {
   const [tab, setTab] = useState<Tab>("resumen");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "warning" | "expired">("all");
+  const [memberSort, setMemberSort] = useState<{
+    key: MemberSortKey;
+    direction: SortDirection;
+  }>({ key: "member", direction: "asc" });
   const [planMember, setPlanMember] = useState<AdminMember | null>(null);
   const [planDraft, setPlanDraft] = useState<PlanDraft | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
@@ -466,6 +522,9 @@ export default function XtremeAdminPage() {
   const [quickPlanMember, setQuickPlanMember] = useState<AdminMember | null>(null);
   const [quickPlanOption, setQuickPlanOption] = useState<QuickPlanOptionId>("month");
   const [grantingQuickPlan, setGrantingQuickPlan] = useState(false);
+  const [inviteMember, setInviteMember] = useState<AdminMember | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
   const [detailMember, setDetailMember] = useState<AdminMember | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
   const [newMetric, setNewMetric] = useState({ date: "", weightKg: "", waistCm: "", note: "" });
@@ -627,6 +686,50 @@ export default function XtremeAdminPage() {
     });
   }, [data, query, statusFilter]);
 
+  const sortedMembers = useMemo(() => {
+    const collator = new Intl.Collator("es-CR", { numeric: true, sensitivity: "base" });
+    const valueFor = (member: AdminMember): string | number => {
+      switch (memberSort.key) {
+        case "member":
+          return member.memberName;
+        case "contact":
+          return member.phone || member.email;
+        case "streak":
+          return member.streak;
+        case "coach":
+          return member.coach;
+        case "membership":
+          return member.daysRemaining;
+        case "code":
+          return Number(member.accessCode.replace(/\D/g, "")) || 0;
+        case "plan":
+          return member.trainingPlan?.title || "";
+      }
+    };
+    const direction = memberSort.direction === "asc" ? 1 : -1;
+
+    return [...filteredMembers].sort((left, right) => {
+      const leftValue = valueFor(left);
+      const rightValue = valueFor(right);
+      const leftBlank = leftValue === "";
+      const rightBlank = rightValue === "";
+      if (leftBlank !== rightBlank) return leftBlank ? 1 : -1;
+
+      const comparison =
+        typeof leftValue === "number" && typeof rightValue === "number"
+          ? leftValue - rightValue
+          : collator.compare(String(leftValue), String(rightValue));
+      return comparison ? comparison * direction : collator.compare(left.memberName, right.memberName);
+    });
+  }, [filteredMembers, memberSort]);
+
+  function toggleMemberSort(key: MemberSortKey) {
+    setMemberSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }));
+  }
+
   const paymentMemberMatches = useMemo(() => {
     if (!data || selectedPaymentMember) return [];
     const q = paymentMemberQuery.trim().toUpperCase();
@@ -779,6 +882,54 @@ export default function XtremeAdminPage() {
     setQuickPlanOption("month");
     setError("");
     setMessage("");
+  }
+
+  function openInvite(member: AdminMember) {
+    if (data?.role !== "super") return;
+    setInviteMember(member);
+    setInviteEmail(member.email || "");
+    setError("");
+    setMessage("");
+  }
+
+  async function sendMemberInvite() {
+    if (!code || data?.role !== "super" || !inviteMember) return;
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) {
+      setError("Ingresá el correo del socio.");
+      return;
+    }
+    setSendingInvite(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/xtreme/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "invite_member",
+          memberName: inviteMember.memberName,
+          normalizedName: inviteMember.normalizedName,
+          email,
+        }),
+      });
+      const json = (await response.json()) as {
+        ok?: boolean;
+        sentTo?: string;
+        expiresHours?: number;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(json.error ?? "No se pudo enviar la invitación.");
+      setMessage(
+        `Invitación enviada a ${json.sentTo}. El enlace vence en ${json.expiresHours ?? 24} h.`,
+      );
+      setInviteMember(null);
+      await load(code);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al invitar.");
+    } finally {
+      setSendingInvite(false);
+    }
   }
 
   async function grantQuickPlan() {
@@ -1543,18 +1694,61 @@ export default function XtremeAdminPage() {
                     <table className="w-full min-w-[1100px] text-left text-sm">
                       <thead>
                         <tr className="border-b border-white/10 text-[11px] font-black uppercase tracking-wide text-white/40">
-                          <th className="px-5 py-3">Socio</th>
-                          <th className="px-3 py-3">Contacto</th>
-                          <th className="px-3 py-3">Racha</th>
-                          <th className="px-3 py-3">Coach</th>
-                          <th className="px-3 py-3">Membresia</th>
-                          <th className="px-3 py-3">Codigo</th>
-                          <th className="px-3 py-3">Plan</th>
+                          <SortableMemberHeader
+                            label="Socio"
+                            sortKey="member"
+                            activeKey={memberSort.key}
+                            direction={memberSort.direction}
+                            onSort={toggleMemberSort}
+                            className="px-5 py-3"
+                          />
+                          <SortableMemberHeader
+                            label="Contacto"
+                            sortKey="contact"
+                            activeKey={memberSort.key}
+                            direction={memberSort.direction}
+                            onSort={toggleMemberSort}
+                          />
+                          <SortableMemberHeader
+                            label="Racha"
+                            sortKey="streak"
+                            activeKey={memberSort.key}
+                            direction={memberSort.direction}
+                            onSort={toggleMemberSort}
+                          />
+                          <SortableMemberHeader
+                            label="Coach"
+                            sortKey="coach"
+                            activeKey={memberSort.key}
+                            direction={memberSort.direction}
+                            onSort={toggleMemberSort}
+                          />
+                          <SortableMemberHeader
+                            label="Membresía"
+                            sortKey="membership"
+                            activeKey={memberSort.key}
+                            direction={memberSort.direction}
+                            onSort={toggleMemberSort}
+                          />
+                          <SortableMemberHeader
+                            label="Código"
+                            sortKey="code"
+                            activeKey={memberSort.key}
+                            direction={memberSort.direction}
+                            onSort={toggleMemberSort}
+                          />
+                          <SortableMemberHeader
+                            label="Plan"
+                            sortKey="plan"
+                            activeKey={memberSort.key}
+                            direction={memberSort.direction}
+                            onSort={toggleMemberSort}
+                          />
                           <th className="px-3 py-3">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredMembers.map((m) => (
+                        {sortedMembers.map((m) => (
                           <tr key={m.normalizedName} className="border-b border-white/[0.06] hover:bg-white/[0.02]">
                             <td
                               className="px-5 py-3 cursor-pointer"
@@ -1578,6 +1772,19 @@ export default function XtremeAdminPage() {
                             <td className="px-3 py-3 text-xs font-semibold text-white/55">
                               <div>{m.phone || "—"}</div>
                               <div className="truncate max-w-[140px]">{m.email || "—"}</div>
+                              {m.email ? (
+                                <div
+                                  className={`mt-0.5 text-[10px] font-black uppercase tracking-wide ${
+                                    m.emailVerified ? "text-lime-300/80" : "text-orange-300/80"
+                                  }`}
+                                >
+                                  {m.emailVerified ? "Correo OK" : "Sin verificar"}
+                                </div>
+                              ) : (
+                                <div className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-white/35">
+                                  Sin correo
+                                </div>
+                              )}
                             </td>
                             <td className="px-3 py-3">
                               <span className="inline-flex items-center gap-1 font-black text-orange-300">
@@ -1641,14 +1848,26 @@ export default function XtremeAdminPage() {
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
                                 </button>
+                                {data.role === "super" && !m.emailVerified && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openInvite(m)}
+                                    title="Invitar a la app / confirmar correo"
+                                    className="grid h-8 w-8 place-items-center border border-[#d8ff3e]/35 bg-[#d8ff3e]/10 text-[#eaff93] transition hover:bg-[#d8ff3e] hover:text-black"
+                                  >
+                                    <UserPlus className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => void sendReminder(m.memberName)}
-                                  disabled={Boolean(busy) || !m.email}
+                                  disabled={Boolean(busy) || !m.email || !m.emailVerified}
                                   title={
-                                    m.email
-                                      ? "Enviar recordatorio de membresia por correo"
-                                      : "Sin correo registrado"
+                                    !m.email
+                                      ? "Sin correo registrado"
+                                      : !m.emailVerified
+                                        ? "Correo sin verificar — usá Invitar app"
+                                        : "Enviar recordatorio de membresia por correo"
                                   }
                                   className="grid h-8 w-8 place-items-center border border-white/10 text-white/60 transition hover:border-orange-300 hover:text-orange-200 disabled:opacity-40"
                                 >
@@ -2442,6 +2661,17 @@ export default function XtremeAdminPage() {
         />
       )}
 
+      {inviteMember && data?.role === "super" && (
+        <InviteMemberModal
+          member={inviteMember}
+          email={inviteEmail}
+          saving={sendingInvite}
+          onEmailChange={setInviteEmail}
+          onClose={() => setInviteMember(null)}
+          onConfirm={() => void sendMemberInvite()}
+        />
+      )}
+
       {planMember && planDraft && (
         <PlanModal
           member={planMember}
@@ -2474,6 +2704,7 @@ export default function XtremeAdminPage() {
       {detailMember && (
         <UserDetailModal
           member={detailMember}
+          isSuper={data?.role === "super"}
           savingMetric={savingMetric}
           newMetric={newMetric}
           onClose={closeDetail}
@@ -2488,10 +2719,99 @@ export default function XtremeAdminPage() {
             closeDetail();
             setTimeout(() => openEdit(detailMember), 50);
           }}
+          onOpenInvite={() => {
+            closeDetail();
+            setTimeout(() => openInvite(detailMember), 50);
+          }}
           onRefresh={() => code && void load(code)}
         />
       )}
     </main>
+  );
+}
+
+function InviteMemberModal({
+  member,
+  email,
+  saving,
+  onEmailChange,
+  onClose,
+  onConfirm,
+}: {
+  member: AdminMember;
+  email: string;
+  saving: boolean;
+  onEmailChange: (value: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const inputClass =
+    "min-h-11 w-full border-[3px] border-white/20 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]";
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/85 px-3 py-6 backdrop-blur-sm">
+      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
+      <section className="relative w-full max-w-lg border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-4 text-white shadow-[7px_7px_0_rgba(216,255,62,.2)] sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <GameLabel tone="lime">Solo super admin</GameLabel>
+            <h2 className="mt-2 text-2xl font-black uppercase">Invitar a la app</h2>
+            <p className="mt-1 text-sm font-bold text-white/50">{member.memberName}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 place-items-center border-[2px] border-white/15 text-white/55 hover:border-white/40 hover:text-white"
+            aria-label="Cerrar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          <GameCallout tone="lime">
+            Se guarda el correo en la ficha (sin verificar) y se manda un enlace de 24 h. Al
+            confirmarlo, el correo queda verificado y unido a este socio — no crea ficha nueva.
+          </GameCallout>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Correo</span>
+            <input
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              value={email}
+              onChange={(e) => onEmailChange(e.target.value)}
+              placeholder="persona@correo.com"
+              className={inputClass}
+            />
+          </label>
+          {member.emailVerified ? (
+            <p className="text-xs font-bold text-orange-300">
+              Este socio ya tiene correo verificado. No hace falta invitarlo.
+            </p>
+          ) : null}
+        </div>
+
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="min-h-12 flex-1 border-[3px] border-white/15 px-4 text-xs font-black uppercase text-white/60 disabled:opacity-40"
+          >
+            Cancelar
+          </button>
+          <GameButton
+            onClick={onConfirm}
+            disabled={saving || !email.trim() || Boolean(member.emailVerified)}
+            className="flex-1"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+            Enviar invitación
+          </GameButton>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -2808,6 +3128,7 @@ function MemberModal({
 
 function UserDetailModal({
   member,
+  isSuper,
   savingMetric,
   newMetric,
   onClose,
@@ -2815,9 +3136,11 @@ function UserDetailModal({
   onAddMetric,
   onOpenPlan,
   onOpenEdit,
+  onOpenInvite,
   onRefresh,
 }: {
   member: AdminMember;
+  isSuper?: boolean;
   savingMetric: boolean;
   newMetric: { date: string; weightKg: string; waistCm: string; note: string };
   onClose: () => void;
@@ -2825,6 +3148,7 @@ function UserDetailModal({
   onAddMetric: () => void;
   onOpenPlan: () => void;
   onOpenEdit: () => void;
+  onOpenInvite?: () => void;
   onRefresh: () => void;
 }) {
   const metrics = member.bodyMetrics ?? [];
@@ -2890,6 +3214,15 @@ function UserDetailModal({
             >
               <Pencil className="h-4 w-4" /> Perfil
             </button>
+            {isSuper && !member.emailVerified && onOpenInvite ? (
+              <button
+                type="button"
+                onClick={onOpenInvite}
+                className="inline-flex min-h-11 items-center gap-2 border-2 border-black/30 bg-black/15 px-3 py-2 text-xs font-black uppercase sm:text-sm"
+              >
+                <UserPlus className="h-4 w-4" /> Invitar
+              </button>
+            ) : null}
             <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center border-2 border-black/30 bg-black/10">
               <X className="h-5 w-5" />
             </button>
@@ -2903,7 +3236,17 @@ function UserDetailModal({
               <div className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Informacion del socio</div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-white/50">Telefono</span><span className="font-semibold">{member.phone || "—"}</span></div>
-                <div className="flex justify-between"><span className="text-white/50">Email</span><span className="font-semibold truncate max-w-[200px]">{member.email || "—"}</span></div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-white/50 shrink-0">Email</span>
+                  <span className="font-semibold truncate max-w-[200px] text-right">
+                    {member.email || "—"}
+                    {member.email ? (
+                      <span className={`ml-2 text-[10px] font-black uppercase ${member.emailVerified ? "text-lime-300" : "text-orange-300"}`}>
+                        {member.emailVerified ? "OK" : "sin verificar"}
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
                 <div className="flex justify-between"><span className="text-white/50">Coach asignado</span><span className="font-semibold">{member.coach || "—"}</span></div>
                 <div className="flex justify-between"><span className="text-white/50">Objetivo</span><span className="font-semibold">{member.goal || "—"}</span></div>
                 <div className="flex justify-between"><span className="text-white/50">Entrenamiento favorito</span><span className="font-semibold">{member.favoriteTraining || "—"}</span></div>

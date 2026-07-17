@@ -29,6 +29,10 @@ import {
   normalizePhone,
   toUtcDate,
 } from "@/lib/xtreme/shared";
+import {
+  attachSessionCookie,
+  createMemberSession,
+} from "@/lib/xtreme/session";
 
 export const dynamic = "force-dynamic";
 
@@ -171,7 +175,8 @@ export async function GET(req: NextRequest) {
       memberName: member.memberName,
       accessCode: formatAccessCode(memberAccessCode(normalizedName)),
       paidRegistration: verified.pending.source === "paypal",
-      invitedRegistration: verified.pending.source === "reception",
+      invitedRegistration:
+        verified.pending.source === "reception" || verified.pending.source === "admin",
     });
   }
   return NextResponse.json({
@@ -179,6 +184,7 @@ export async function GET(req: NextRequest) {
     email: verified.pending.email,
     source: verified.pending.source,
     memberName: verified.pending.expectedMemberName || "",
+    boundProfile: Boolean(verified.pending.expectedMemberKey),
   });
 }
 
@@ -211,15 +217,18 @@ async function confirmRegistration(body: Record<string, unknown>) {
       accessCode: formatAccessCode(memberAccessCode(normalizedName)),
       freeFirstDay: pending.source === "primer-dia" || pending.source === "app",
       paidRegistration: pending.source === "paypal",
-      invitedRegistration: pending.source === "reception",
+      invitedRegistration: pending.source === "reception" || pending.source === "admin",
       alreadyCompleted: true,
     });
   }
 
-  const paidInvite = pending.source === "paypal" && Boolean(pending.expectedMemberKey);
-  const receptionInvite = pending.source === "reception";
-  const memberName = paidInvite
-    ? normalizeName(pending.expectedMemberName)
+  // Invitación ligada a ficha existente (PayPal, super admin, recepción con socio).
+  const boundKey = normalizeKey(pending.expectedMemberKey || "");
+  const boundInvite = Boolean(boundKey);
+  const paidInvite = pending.source === "paypal" && boundInvite;
+  const staffInvite = pending.source === "reception" || pending.source === "admin";
+  const memberName = boundInvite
+    ? normalizeName(pending.expectedMemberName) || normalizeName(body.memberName)
     : normalizeName(body.memberName);
   const cedula = normalizeCedula(body.cedula);
   const phone = normalizePhone(body.phone);
@@ -236,9 +245,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
     return NextResponse.json({ error: "El telefono es requerido." }, { status: 400 });
   }
 
-  const normalizedName = paidInvite
-    ? normalizeKey(pending.expectedMemberKey || "")
-    : normalizeKey(memberName);
+  const normalizedName = boundInvite ? boundKey : normalizeKey(memberName);
   const now = new Date();
 
   // Chequear duplicados de contacto ligados a OTRO perfil.
@@ -258,9 +265,13 @@ async function confirmRegistration(body: Record<string, unknown>) {
   const existing = await db
     .collection<MemberDoc>(MEMBERS_COLLECTION)
     .findOne({ normalizedName });
-  if (paidInvite && !existing) {
+  if (boundInvite && !existing) {
     return NextResponse.json(
-      { error: "No encontramos el perfil asociado al pago. Contactá recepción." },
+      {
+        error: paidInvite
+          ? "No encontramos el perfil asociado al pago. Contactá recepción."
+          : "No encontramos el perfil asociado a la invitación. Contactá recepción.",
+      },
       { status: 409 },
     );
   }
@@ -277,8 +288,8 @@ async function confirmRegistration(body: Record<string, unknown>) {
   };
   if (goal) set.goal = goal;
   if (!existing) {
-    // Solo los registros públicos reciben el primer día; recepción crea una cuenta sin plan.
-    set.membership = receptionInvite
+    // Solo los registros públicos reciben el primer día; staff crea cuenta sin plan.
+    set.membership = staffInvite
       ? {
           plan: "Sin plan activo",
           status: "expired",
@@ -286,7 +297,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
           nextBillingDate: addDays(toUtcDate(today), -1).toISOString().slice(0, 10),
         }
       : createFreeFirstDayMembership(today);
-  } else if (receptionInvite && !existing.membership) {
+  } else if (staffInvite && !existing.membership) {
     set.membership = {
       plan: "Sin plan activo",
       status: "expired",
@@ -297,11 +308,15 @@ async function confirmRegistration(body: Record<string, unknown>) {
 
   await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
     { normalizedName },
-    { $set: set, $setOnInsert: { workouts: [], bodyMetrics: [], createdAt: now } },
+    {
+      $set: set,
+      $unset: { emailQuarantine: "" },
+      $setOnInsert: { workouts: [], bodyMetrics: [], createdAt: now },
+    },
     { upsert: true },
   );
 
-  const freeFirstDay = !existing && !receptionInvite && !paidInvite;
+  const freeFirstDay = !existing && !staffInvite && !paidInvite && !boundInvite;
   if (freeFirstDay) {
     await grantFreeFirstDayIfEligible(db, normalizedName, today);
   }
@@ -328,19 +343,29 @@ async function confirmRegistration(body: Record<string, unknown>) {
         source: pending.source,
         freeFirstDay,
         paidRegistration: paidInvite,
-        invitedRegistration: receptionInvite,
+        invitedRegistration: staffInvite,
+        boundInvite,
       },
     }).catch(() => {});
   }
 
-  return NextResponse.json({
+  // Sesión HttpOnly al confirmar el enlace: solo quien abrió el mail puede setear PIN en /app.
+  const { token: sessionToken, expiresAt: sessionExpires } = await createMemberSession(db, {
+    memberKey: normalizedName,
+    memberName,
+  });
+  const res = NextResponse.json({
     ok: true,
     memberName,
     accessCode,
     freeFirstDay,
     paidRegistration: paidInvite,
-    invitedRegistration: receptionInvite,
+    invitedRegistration: staffInvite,
+    session: true,
+    canSetPin: true,
   });
+  attachSessionCookie(res, sessionToken, sessionExpires);
+  return res;
 }
 
 export async function POST(req: NextRequest) {

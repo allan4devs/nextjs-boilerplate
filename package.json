@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "import:estado": "powershell -ExecutionPolicy Bypass -File scripts/import-estado.ps1",
     "check:encoding": "node scripts/check-encoding.mjs"
   },
   "dependencies": {

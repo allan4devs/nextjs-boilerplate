@@ -36,6 +36,12 @@ import {
   grantEntitlement,
   newEntitlementId,
 } from "@/lib/xtreme/entitlements";
+import { recordEvent } from "@/lib/xtreme/events";
+import {
+  inviteBaseUrlFromRequest,
+  inviteExistingMemberToApp,
+} from "@/lib/xtreme/member-app-invite";
+import { requestAppUrl } from "@/lib/constants/app-url";
 
 export const dynamic = "force-dynamic";
 
@@ -294,6 +300,48 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const action = String(body.action ?? "plan");
 
+    // Super admin: invitación individual desde la lista de socios (magic link ligado a la ficha).
+    if (action === "invite_member") {
+      if (role !== "super") return forbidden();
+      const memberKey = normalizeKey(
+        String(body.normalizedName ?? "").trim() || normalizeName(body.memberName),
+      );
+      if (!memberKey) {
+        return NextResponse.json({ error: "Socio requerido." }, { status: 400 });
+      }
+      const db = await getDb();
+      const result = await inviteExistingMemberToApp(db, {
+        memberKey,
+        email: body.email !== undefined ? String(body.email) : undefined,
+        source: "admin",
+        baseUrl: inviteBaseUrlFromRequest(req.url) || requestAppUrl(req.url),
+      });
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: result.status });
+      }
+      await writeAudit(db, {
+        actorRole: role,
+        action: "registration.invite_member",
+        targetType: "member",
+        targetId: result.memberKey,
+        summary: `Invitación a la app enviada a ${result.memberName}`,
+        meta: { email: result.email, expiresHours: result.expiresHours },
+      });
+      await recordEvent(db, {
+        type: "registration_invited",
+        source: "admin",
+        memberId: result.memberKey,
+        entity: { type: "member", id: result.memberKey },
+        properties: { email: result.email, emailSent: true, bound: true },
+      }).catch(() => {});
+      return NextResponse.json({
+        ok: true,
+        sentTo: result.email,
+        memberName: result.memberName,
+        expiresHours: result.expiresHours,
+      });
+    }
+
     if (action === "resolveOpsAlert") {
       const fingerprint = String(body.fingerprint ?? "").trim();
       if (!fingerprint) {
@@ -368,14 +416,15 @@ export async function POST(req: NextRequest) {
         summary: `${option.label} otorgado a ${member.memberName || memberName} hasta ${endsOn}`,
         meta: { optionId, days: option.days, endsOn, entitlementId: entitlement.id },
       });
-      const emailResult = member.email
-        ? await sendAdminGrantedPlanEmail({
-            to: member.email,
-            memberName: member.memberName || memberName,
-            plan: option.label,
-            endsOn,
-          })
-        : { ok: false, skipped: true };
+      const emailResult =
+        member.email && member.emailVerified === true
+          ? await sendAdminGrantedPlanEmail({
+              to: member.email,
+              memberName: member.memberName || memberName,
+              plan: option.label,
+              endsOn,
+            })
+          : { ok: false, skipped: true };
       return NextResponse.json({
         ok: true,
         entitlementId: entitlement.id,
@@ -383,7 +432,7 @@ export async function POST(req: NextRequest) {
         days: option.days,
         endsOn,
         emailSent: emailResult.ok,
-        emailAvailable: Boolean(member.email),
+        emailAvailable: Boolean(member.email && member.emailVerified === true),
       });
     }
 
@@ -695,9 +744,12 @@ export async function POST(req: NextRequest) {
       if (!member) {
         return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
       }
-      if (!member.email) {
+      if (!member.email || member.emailVerified !== true) {
         return NextResponse.json(
-          { error: "Este socio no tiene correo registrado." },
+          {
+            error:
+              "Este socio no tiene correo verificado. Pedile que lo confirme en la app o actualizalo en recepción.",
+          },
           { status: 400 },
         );
       }
@@ -729,7 +781,12 @@ export async function POST(req: NextRequest) {
       const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
       const targets = docs
         .map((doc) => ({ doc, ms: membershipStatus(doc.membership) }))
-        .filter(({ doc, ms }) => doc.email && (ms.status === "warning" || ms.status === "expired"));
+        .filter(
+          ({ doc, ms }) =>
+            doc.email &&
+            doc.emailVerified === true &&
+            (ms.status === "warning" || ms.status === "expired"),
+        );
 
       let sent = 0;
       for (const { doc, ms } of targets) {

@@ -15,7 +15,9 @@ export const MSG = {
     cedulaTooShort: (minDigits: number) =>
       `Digitá o escaneá la cédula (mínimo ${minDigits} dígitos).`,
     cedulaNotRegistered:
-      "Cédula no registrada. Escribí tu nombre y teléfono para crear el perfil, o pedí el alta en recepción.",
+      "Cédula sin cuenta activa. Usá el enlace del correo de invitación/registro o pedí el alta en recepción. No se crea cuenta solo con la cédula.",
+    cedulaNeedsInvite:
+      "Tu ficha existe pero aún no tenés acceso a la app. Pedí el enlace de invitación en recepción o al admin para confirmar tu correo y crear el PIN.",
     cedulaNoProfile: "No se pudo resolver el perfil de esa cédula.",
     profileNotFound: "Perfil no encontrado. Iniciá sesión con tu cédula.",
     saveGoal: "No se pudo guardar la meta.",
@@ -36,7 +38,11 @@ export const MSG = {
     pinOtpMissing: "Pedí el código al correo, o escribí tu teléfono/correo registrado.",
     pinMismatch: "Los PIN no coinciden.",
     pinAlreadySet: "Ya existe PIN. Ingresalo para entrar.",
-    pinNotSet: "Este perfil no tiene PIN. Creá uno de 4 dígitos.",
+    pinNotSet: "Este perfil no tiene PIN. Creá uno de 4 dígitos con el código del correo.",
+    pinSetupOtpRequired:
+      "Para crear el PIN pedí un código al correo verificado de la cuenta (botón Enviar código).",
+    pinSetupInviteRequired:
+      "No se puede crear el PIN solo con la cédula. Usá el enlace de invitación del correo o recepción.",
     pinWrong: "PIN incorrecto.",
     pinValidate: "No se pudo validar el PIN.",
   },

@@ -142,7 +142,7 @@ async function bootstrapLookup(
 ) {
   const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne(
     { normalizedName },
-    { projection: { memberName: 1, normalizedName: 1, cedula: 1 } },
+    { projection: { memberName: 1, normalizedName: 1, cedula: 1, emailVerified: 1 } },
   );
   if (!doc) {
     return {
@@ -151,6 +151,9 @@ async function bootstrapLookup(
       lookup: resolvedBy,
       cedula: digits,
       hasPinSet: false,
+      /** Alta pública cerrada: solo enlace mágico o recepción. */
+      canSelfRegister: false,
+      pinGate: "not_found" as const,
       leaderboard: [],
       nextBestAction: null,
     };
@@ -158,6 +161,14 @@ async function bootstrapLookup(
   const pinDoc = await db
     .collection(PINS_COLLECTION)
     .findOne({ normalizedName }, { projection: { pinHash: 1 } });
+  const hasPinSet = Boolean(pinDoc?.pinHash);
+  const emailVerified = Boolean(doc.emailVerified);
+  // Cómo puede autenticarse el socio sin regalar acceso a cualquiera con la cédula.
+  const pinGate = hasPinSet
+    ? ("verify" as const)
+    : emailVerified
+      ? ("setup_otp" as const)
+      : ("needs_invite" as const);
   return {
     member: {
       memberName: doc.memberName ?? "",
@@ -168,7 +179,10 @@ async function bootstrapLookup(
     exists: true,
     lookup: resolvedBy,
     cedula: digits || "",
-    hasPinSet: Boolean(pinDoc?.pinHash),
+    hasPinSet,
+    emailVerified,
+    pinGate,
+    canSelfRegister: false,
     leaderboard: [],
     nextBestAction: null,
   };
@@ -295,20 +309,17 @@ export async function POST(req: NextRequest) {
       if (!isSession(sessionOrErr)) return sessionOrErr;
     }
 
-    // Create path: cédula required for self-serve alta (anti-orphan profiles).
+    // Alta pública cerrada: cualquiera con una cédula podía inventar/robar ficha + PIN.
+    // Cuentas nuevas solo por magic link (/registro) o recepción/admin.
     if (!existing) {
-      if (!cedulaKey || cedulaKey.length < 6) {
-        return NextResponse.json(
-          { error: "Para crear perfil se requiere cedula (minimo 6 digitos)." },
-          { status: 400 },
-        );
-      }
-      if (!phone) {
-        return NextResponse.json(
-          { error: "Para crear perfil se requiere telefono." },
-          { status: 400 },
-        );
-      }
+      return NextResponse.json(
+        {
+          error:
+            "No se puede crear la cuenta solo con la cédula. Usá el enlace del correo de invitación o registro, o pedí el alta en recepción.",
+          code: "registration_required",
+        },
+        { status: 403 },
+      );
     }
 
     if (phone || email || cedulaKey) {

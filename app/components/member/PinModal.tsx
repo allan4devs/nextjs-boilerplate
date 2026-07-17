@@ -86,6 +86,7 @@ export default function PinModal({
   const completePin = useCallback(
     async (pin: string) => {
       if (mode === "set" && step === "enter") {
+        // Preferí OTP al correo; si venís del enlace mágico hay sesión y el server lo acepta sin OTP.
         setFirstPin(pin);
         setDigits("");
         setStep("confirm");
@@ -107,7 +108,7 @@ export default function PinModal({
       }
 
       if (mode === "recover" && step === "enter") {
-        if (!otpCode.trim() && !recoveryContact.trim()) {
+        if (!otpCode.trim() || otpCode.replace(/\D/g, "").length !== 6) {
           setError(MSG.errors.pinOtpMissing);
           setDigits("");
           return;
@@ -156,9 +157,14 @@ export default function PinModal({
           return;
         }
 
-        if (!response.ok) throw new Error(data.error ?? MSG.errors.pinValidate);
+        if (!response.ok) {
+          if (response.status === 403 && mode === "set") {
+            throw new Error(data.error ?? MSG.errors.pinSetupOtpRequired);
+          }
+          throw new Error(data.error ?? MSG.errors.pinValidate);
+        }
         if (mode === "verify" && data.hasPinSet === false) {
-          // El perfil no tiene PIN (nuevo o reseteado en recepcion): crear uno.
+          // El perfil no tiene PIN: crear uno (requiere enlace/sesión o OTP al correo).
           resetPinFlow("set");
           setError(MSG.errors.pinNotSet);
           return;
@@ -233,11 +239,11 @@ export default function PinModal({
           : "Ingresá tu PIN";
   const subtitle =
     mode === "set"
-      ? "4 digitos para proteger tu racha y entrenos"
+      ? "Código al correo verificado + PIN de 4 dígitos"
       : mode === "change"
         ? "Primero validamos el PIN actual"
         : mode === "recover"
-          ? "Codigo al correo del perfil (o contacto registrado)"
+          ? "Código al correo verificado de la cuenta"
           : "Entramos a tu perfil Xtreme";
 
   return (
@@ -250,7 +256,7 @@ export default function PinModal({
         <h2 className="mt-2 text-2xl font-black uppercase text-white">{title}</h2>
         <p className="mt-2 text-sm font-bold text-white/55">{subtitle}</p>
 
-        {mode === "recover" && (
+        {(mode === "recover" || mode === "set") && (
           <div className="mt-4 space-y-2 text-left">
             <button
               type="button"
@@ -265,19 +271,19 @@ export default function PinModal({
               <p className="text-center text-[11px] font-semibold text-white/50">
                 Enviado a {otpSentTo}
               </p>
-            ) : null}
+            ) : (
+              <p className="text-center text-[11px] font-semibold text-white/45">
+                {mode === "set"
+                  ? "Si acabás de abrir el enlace del correo, podés crear el PIN de una. Si no, pedí el código."
+                  : "Solo con el código del correo verificado."}
+              </p>
+            )}
             <input
               value={otpCode}
               onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
               inputMode="numeric"
-              placeholder="Codigo de 6 digitos"
+              placeholder={mode === "set" ? "Codigo de 6 digitos (si te lo pidió)" : "Codigo de 6 digitos"}
               className="w-full border border-white/12 bg-black/45 px-3 py-3 text-center text-sm font-bold tracking-[0.3em] text-white outline-none placeholder:tracking-normal placeholder:text-white/30 focus:border-[#d8ff3e]"
-            />
-            <input
-              value={recoveryContact}
-              onChange={(event) => setRecoveryContact(event.target.value)}
-              placeholder="O telefono/correo (fallback)"
-              className="w-full border border-white/12 bg-black/45 px-3 py-3 text-center text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]"
             />
           </div>
         )}

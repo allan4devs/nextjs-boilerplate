@@ -24,14 +24,8 @@ export default function SideNav({ os }: { os: MemberOs }) {
     currentMember,
     showLogin,
     setShowLogin,
-    memberNameInput,
-    setMemberNameInput,
     memberCedulaInput,
     setMemberCedulaInput,
-    memberPhoneInput,
-    setMemberPhoneInput,
-    memberEmailInput,
-    needsRegistration,
     startMemberByCedula,
     resetMember,
   } = os;
@@ -117,11 +111,7 @@ export default function SideNav({ os }: { os: MemberOs }) {
                 event.preventDefault();
                 setShowLogin(false);
                 setNavOpen(false);
-                void startMemberByCedula(memberCedulaInput, false, {
-                  name: memberNameInput,
-                  phone: memberPhoneInput,
-                  email: memberEmailInput,
-                });
+                void startMemberByCedula(memberCedulaInput, false);
               }}
             >
               <input
@@ -132,23 +122,9 @@ export default function SideNav({ os }: { os: MemberOs }) {
                 autoFocus
                 className="min-w-0 border-[3px] border-white/15 bg-black/45 px-4 py-3 text-center font-black tracking-widest text-white outline-none transition placeholder:tracking-normal placeholder:text-white/35 focus:border-[#d8ff3e]"
               />
-              {needsRegistration && (
-                <>
-                  <input
-                    value={memberNameInput}
-                    onChange={(event) => setMemberNameInput(event.target.value)}
-                    placeholder="Nombre si es nuevo"
-                    className="min-w-0 border-[3px] border-white/15 bg-black/45 px-4 py-3 font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#d8ff3e]"
-                  />
-                  <input
-                    value={memberPhoneInput}
-                    onChange={(event) => setMemberPhoneInput(event.target.value)}
-                    placeholder="Telefono si es nuevo"
-                    inputMode="tel"
-                    className="border-[3px] border-white/15 bg-black/35 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]"
-                  />
-                </>
-              )}
+              <p className="text-[10px] font-semibold leading-snug text-white/40">
+                Primera vez: enlace del correo o recepción. No se crea cuenta solo con cédula.
+              </p>
               <GameButton type="submit" full>
                 Entrar <ArrowRight className="h-4 w-4" />
               </GameButton>

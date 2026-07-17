@@ -125,10 +125,13 @@ export async function POST(req: NextRequest) {
     }
 
     const member = await db
-      .collection<{ email?: string; memberName?: string }>(MEMBERS_COLLECTION)
-      .findOne({ normalizedName: sessionOrErr.memberKey }, { projection: { email: 1, memberName: 1 } });
-    // Correo (opcional) + push al dispositivo del socio (Member OS).
-    if (member?.email) {
+      .collection<{ email?: string; emailVerified?: boolean; memberName?: string }>(MEMBERS_COLLECTION)
+      .findOne(
+        { normalizedName: sessionOrErr.memberKey },
+        { projection: { email: 1, emailVerified: 1, memberName: 1 } },
+      );
+    // Solo correo verificado: el import del Excel trae muchos correos cruzados.
+    if (member?.email && member.emailVerified === true) {
       await sendReservationEmail({
         to: member.email,
         memberName: member.memberName || sessionOrErr.memberName,

@@ -9,8 +9,16 @@ const PREFERENCES_BLOCK = "__XTREME_EMAIL_PREFERENCES__";
 
 export type SendEmailResult = { ok: boolean; skipped?: boolean; error?: string };
 
+/**
+ * Interruptor de seguridad de salida. Tener credenciales configuradas no basta:
+ * los correos solo salen cuando se habilitan de forma deliberada.
+ */
 export function emailEnabled() {
-  return Boolean(process.env.RESEND_API_KEY?.trim() && process.env.SMTP_FROM?.trim());
+  return Boolean(
+    process.env.EMAIL_SENDING_ENABLED?.trim().toLowerCase() === "true" &&
+      process.env.RESEND_API_KEY?.trim() &&
+      process.env.SMTP_FROM?.trim(),
+  );
 }
 
 function reservationCc() {
@@ -69,7 +77,9 @@ export async function sendEmail(args: {
   const from = process.env.SMTP_FROM?.trim();
   const to = (Array.isArray(args.to) ? args.to : [args.to]).map((t) => t.trim()).filter(Boolean);
 
-  if (!apiKey || !from || !to.length) return { ok: false, skipped: true };
+  if (!emailEnabled() || !apiKey || !from || !to.length) {
+    return { ok: false, skipped: true };
+  }
 
   try {
     if (args.optional) {
@@ -204,20 +214,52 @@ export async function sendReceptionAppInviteEmail(args: {
   expiresHours: number;
   baseUrl?: string;
 }) {
+  return sendStaffMemberAppInviteEmail({
+    ...args,
+    memberName: "",
+    source: "reception",
+  });
+}
+
+/**
+ * Invitación de staff (recepción o super admin) a un socio existente o correo suelto.
+ * No regala plan ni primer día; el enlace confirma el correo y completa la ficha.
+ */
+export async function sendStaffMemberAppInviteEmail(args: {
+  to: string;
+  token: string;
+  expiresHours: number;
+  memberName?: string;
+  source?: "reception" | "admin";
+  baseUrl?: string;
+}) {
   const href = absoluteRequestUrl(
     `/registro/confirmar?token=${encodeURIComponent(args.token)}`,
     args.baseUrl,
   );
+  const who = args.source === "admin" ? "Xtreme Gym" : "Recepción de Xtreme Gym";
+  const hello = args.memberName
+    ? `Hola ${escapeHtml(args.memberName)}. `
+    : "";
+  const bound = Boolean(args.memberName);
   return sendEmail({
     to: args.to,
-    subject: "Te invitaron a la app de Xtreme Gym",
+    subject: bound
+      ? "Confirmá tu correo en la app de Xtreme Gym"
+      : "Te invitaron a la app de Xtreme Gym",
     html: layout(
-      "Tu invitación a Xtreme Gym",
-      `<p style="font-size:14px;line-height:1.6;">Recepción de Xtreme Gym te invitó a crear tu acceso personal a la app.</p>
+      bound ? "Confirmá tu acceso a Xtreme Gym" : "Tu invitación a Xtreme Gym",
+      `<p style="font-size:14px;line-height:1.6;">${hello}${escapeHtml(who)} te invitó a ${
+        bound ? "confirmar tu correo y activar tu acceso" : "crear tu acceso personal"
+      } a la app.</p>
       <p style="font-size:14px;line-height:1.6;">Desde ahí podés completar tu perfil, conocer los planes y, cuando tengás una membresía activa, administrar tus entrenos y reservas.</p>
-      <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:13px;line-height:1.6;margin:16px 0;"><strong>Importante:</strong> esta invitación crea tu cuenta, pero no activa un plan ni incluye el primer día gratis.</div>
+      <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:13px;line-height:1.6;margin:16px 0;"><strong>Importante:</strong> esta invitación ${
+        bound ? "verifica tu correo y une la cuenta a tu ficha" : "crea tu cuenta"
+      }, pero no activa un plan ni incluye el primer día gratis.</div>
       <p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>
-      <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Aceptar invitación y crear mi cuenta</a>
+      <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">${
+        bound ? "Confirmar correo y entrar a la app" : "Aceptar invitación y crear mi cuenta"
+      }</a>
       <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Este enlace es personal, se usa una sola vez y vence en ${args.expiresHours} horas. Si no solicitaste esta invitación, podés ignorar el correo.</p>`,
     ),
   });

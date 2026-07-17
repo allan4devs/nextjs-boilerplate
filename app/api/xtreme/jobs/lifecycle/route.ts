@@ -24,6 +24,7 @@ import {
   PAYMENTS_COLLECTION,
   PAYPAL_ORDERS_COLLECTION,
   PENDING_REGISTRATIONS_COLLECTION,
+  memberEmailIsTrusted,
   membershipStatus,
   type MemberDoc,
   type PaymentDoc,
@@ -50,7 +51,8 @@ function authorized(req: NextRequest) {
 }
 
 async function deliver(trigger: LifecycleTrigger, member: MemberDoc): Promise<SendEmailResult> {
-  const to = member.email || "";
+  // Import legacy: no mandar lifecycle a correos no verificados (muchos están cruzados).
+  const to = memberEmailIsTrusted(member) ? member.email || "" : "";
   if (!to || !emailEnabled()) return { ok: false, skipped: true };
   const memberName = member.memberName || "Socio Xtreme";
   if (trigger.kind === "streak-risk") {
@@ -202,23 +204,26 @@ export async function GET(req: NextRequest) {
     ]);
     const membershipStates = members.map((member) => membershipStatus(member.membership).status);
     const openAlerts = await listOpenOpsAlerts(db, 50);
-    const dailyEmail = await sendAdminDailySummary({
-      date: today,
-      members: members.length,
-      activeMemberships: membershipStates.filter((status) => status === "active").length,
-      expiringMemberships: membershipStates.filter((status) => status === "warning").length,
-      expiredMemberships: membershipStates.filter((status) => status === "expired").length,
-      payments: paymentDocs.length,
-      revenueCrc: paymentDocs.reduce((sum, payment) => sum + Number(payment.amountCrc || 0), 0),
-      checkins,
-      notificationsSent: sent,
-      notificationsFailed: failed,
-      pendingInvites,
-      abandonedPayPalOrders,
-      openAlerts: openAlerts.length,
-      freeDayNudgesSent: freeDayNudges.sent,
-    });
-    if (!dailyEmail.ok) {
+    const emailsEnabled = emailEnabled();
+    const dailyEmail: SendEmailResult = emailsEnabled
+      ? await sendAdminDailySummary({
+          date: today,
+          members: members.length,
+          activeMemberships: membershipStates.filter((status) => status === "active").length,
+          expiringMemberships: membershipStates.filter((status) => status === "warning").length,
+          expiredMemberships: membershipStates.filter((status) => status === "expired").length,
+          payments: paymentDocs.length,
+          revenueCrc: paymentDocs.reduce((sum, payment) => sum + Number(payment.amountCrc || 0), 0),
+          checkins,
+          notificationsSent: sent,
+          notificationsFailed: failed,
+          pendingInvites,
+          abandonedPayPalOrders,
+          openAlerts: openAlerts.length,
+          freeDayNudgesSent: freeDayNudges.sent,
+        })
+      : { ok: false, skipped: true };
+    if (emailsEnabled && !dailyEmail.ok) {
       await recordOpsAlert(db, {
         fingerprint: "admin-daily-email-failed",
         kind: "admin_email",
@@ -241,6 +246,7 @@ export async function GET(req: NextRequest) {
       pendingInvites,
       abandonedPayPalOrders,
       openAlerts: openAlerts.length,
+      emailSendingEnabled: emailsEnabled,
       adminEmailSent: dailyEmail.ok,
       freeDayNudgesSent: freeDayNudges.sent,
       freeDayNudgesSkipped: freeDayNudges.skipped,
@@ -250,7 +256,7 @@ export async function GET(req: NextRequest) {
       { id: runId },
       {
         $set: {
-          status: failed || !dailyEmail.ok ? "completed_with_errors" : "completed",
+          status: failed || (emailsEnabled && !dailyEmail.ok) ? "completed_with_errors" : "completed",
           finishedAt: new Date(),
           summary,
         },

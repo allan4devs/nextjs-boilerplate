@@ -61,6 +61,19 @@ export function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+/**
+ * Correo usable para OTP, lifecycle y avisos sensibles.
+ * Los importados del Excel vienen con emailVerified=false (y muchos están
+ * traslapados); solo confiamos en correos confirmados por magic link / recepción.
+ */
+export function memberEmailIsTrusted(member: {
+  email?: string | null;
+  emailVerified?: boolean | null;
+} | null | undefined) {
+  const email = normalizeEmail(member?.email);
+  return Boolean(email && isValidEmail(email) && member?.emailVerified === true);
+}
+
 export function normalizeName(value: unknown) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }

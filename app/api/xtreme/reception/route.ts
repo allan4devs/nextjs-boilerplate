@@ -8,6 +8,10 @@ import { createRegistrationToken, hashRegistrationToken } from "@/lib/xtreme/reg
 import { recordOpsAlert } from "@/lib/xtreme/ops-alerts";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 import {
+  inviteBaseUrlFromRequest,
+  inviteExistingMemberToApp,
+} from "@/lib/xtreme/member-app-invite";
+import {
   CHECKINS_COLLECTION,
   MEMBERS_COLLECTION,
   PENDING_REGISTRATIONS_COLLECTION,
@@ -255,6 +259,43 @@ export async function POST(req: NextRequest) {
       const email = normalizeEmail(body.email);
       if (!email || !isValidEmail(email)) {
         return NextResponse.json({ error: "Ingresá un correo válido." }, { status: 400 });
+      }
+
+      // Si mandan socio (cédula / nombre / key), se liga la invitación a esa ficha.
+      const boundKey = normalizeKey(
+        String(body.normalizedName ?? "").trim() || normalizeName(body.memberName),
+      );
+      if (boundKey) {
+        const bound = await inviteExistingMemberToApp(db, {
+          memberKey: boundKey,
+          email,
+          source: "reception",
+          baseUrl: inviteBaseUrlFromRequest(req.url) || requestAppUrl(req.url),
+        });
+        if (!bound.ok) {
+          return NextResponse.json({ error: bound.error }, { status: bound.status });
+        }
+        await writeAudit(db, {
+          actorRole: role,
+          action: "registration.invite_app",
+          targetType: "member",
+          targetId: bound.memberKey,
+          summary: `Invitación ligada a ${bound.memberName}`,
+          meta: { email: bound.email, bound: true },
+        });
+        await recordEvent(db, {
+          type: "registration_invited",
+          source: "reception",
+          memberId: bound.memberKey,
+          entity: { type: "member", id: bound.memberKey },
+          properties: { emailSent: true, grantsFreeDay: false, bound: true },
+        }).catch(() => {});
+        return NextResponse.json({
+          ok: true,
+          message: `Invitación enviada a ${bound.email}. El enlace vence en ${bound.expiresHours} horas y queda unido a ${bound.memberName}.`,
+          sentTo: bound.email,
+          bound: true,
+        });
       }
 
       const existingMember = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ email });

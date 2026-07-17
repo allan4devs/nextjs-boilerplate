@@ -8,14 +8,17 @@ import {
   PINS_COLLECTION,
   type OtpDoc,
   hashPin,
+  memberEmailIsTrusted,
   normalizeKey,
   normalizeName,
 } from "@/lib/xtreme/shared";
 import {
   attachSessionCookie,
   createMemberSession,
+  resolveMemberSession,
   revokeAllMemberSessions,
 } from "@/lib/xtreme/session";
+import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
 
@@ -27,18 +30,15 @@ type MemberContact = {
   memberName?: string;
   phone?: string;
   email?: string;
+  emailVerified?: boolean;
 };
-
-function normalizePhone(value: unknown) {
-  return String(value ?? "").replace(/[^\d+]/g, "").slice(0, 24);
-}
 
 function normalizeEmail(value: unknown) {
   return String(value ?? "").trim().toLowerCase().slice(0, 80);
 }
 
-function hashOtp(code: string, normalizedName: string) {
-  return createHash("sha256").update(`otp|${normalizedName}|${code}|pin-recovery`).digest("hex");
+function hashOtp(code: string, normalizedName: string, purpose: OtpDoc["purpose"]) {
+  return createHash("sha256").update(`otp|${normalizedName}|${code}|${purpose}`).digest("hex");
 }
 
 function generateOtp() {
@@ -74,11 +74,17 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = await getDb();
-    const doc = await db
-      .collection(PINS_COLLECTION)
-      .findOne({ normalizedName: normalizeKey(memberName) }, { projection: { pinHash: 1 } });
-
-    return NextResponse.json({ hasPinSet: Boolean(doc?.pinHash) });
+    const normalizedName = normalizeKey(memberName);
+    const [doc, member] = await Promise.all([
+      db.collection(PINS_COLLECTION).findOne({ normalizedName }, { projection: { pinHash: 1 } }),
+      db
+        .collection<MemberContact>(MEMBERS_COLLECTION)
+        .findOne({ normalizedName }, { projection: { emailVerified: 1 } }),
+    ]);
+    const hasPinSet = Boolean(doc?.pinHash);
+    const emailVerified = Boolean(member?.emailVerified);
+    const pinGate = hasPinSet ? "verify" : emailVerified ? "setup_otp" : "needs_invite";
+    return NextResponse.json({ hasPinSet, emailVerified, pinGate });
   } catch (err) {
     console.error("XTREME PIN GET", err);
     return NextResponse.json({ error: "No se pudo verificar el PIN." }, { status: 500 });
@@ -106,8 +112,8 @@ export async function POST(req: NextRequest) {
     async function notifyPinEvent(kind: "set" | "changed" | "recovered") {
       const member = await db
         .collection<MemberContact>(MEMBERS_COLLECTION)
-        .findOne({ normalizedName }, { projection: { email: 1, memberName: 1 } });
-      if (member?.email) {
+        .findOne({ normalizedName }, { projection: { email: 1, emailVerified: 1, memberName: 1 } });
+      if (memberEmailIsTrusted(member) && member?.email) {
         await sendPinChangedEmail({
           to: member.email,
           memberName: member.memberName || memberName,
@@ -116,23 +122,57 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // --- Solicitar codigo OTP por correo (Fase 3) ---
+    async function consumeOtp(purpose: OtpDoc["purpose"], code: string) {
+      if (code.length !== 6) return { ok: false as const, error: "Código OTP de 6 dígitos requerido.", status: 400 };
+      const otp = await db.collection<OtpDoc>(OTPS_COLLECTION).findOne({
+        normalizedName,
+        purpose,
+      });
+      if (!otp || new Date(otp.expiresAt).getTime() < Date.now()) {
+        return {
+          ok: false as const,
+          error: "Codigo vencido o inexistente. Solicite uno nuevo.",
+          status: 401,
+        };
+      }
+      if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+        await db.collection(OTPS_COLLECTION).deleteMany({ normalizedName, purpose });
+        return {
+          ok: false as const,
+          error: "Demasiados intentos. Solicite un codigo nuevo.",
+          status: 429,
+        };
+      }
+      if (otp.codeHash !== hashOtp(code, normalizedName, purpose)) {
+        await db.collection(OTPS_COLLECTION).updateOne(
+          { normalizedName, purpose },
+          { $inc: { attempts: 1 } },
+        );
+        return { ok: false as const, error: "Codigo incorrecto.", status: 401 };
+      }
+      await db.collection(OTPS_COLLECTION).deleteMany({ normalizedName, purpose });
+      return { ok: true as const };
+    }
+
+    // --- OTP: recuperación (PIN ya existe) o primer setup (correo verificado, sin PIN) ---
     if (action === "requestOtp") {
       const member = await db.collection<MemberContact>(MEMBERS_COLLECTION).findOne({ normalizedName });
       if (!member) {
         return NextResponse.json({ error: "Perfil no encontrado." }, { status: 404 });
       }
-      if (!member.email) {
+      if (!memberEmailIsTrusted(member) || !member.email) {
         return NextResponse.json(
           {
             error:
-              "Este perfil no tiene correo. Agregá un correo en Perfil o pedí ayuda en recepción.",
+              "Este perfil no tiene un correo verificado. Usá el enlace de invitación/registro o pedí ayuda en recepción.",
           },
           { status: 400 },
         );
       }
 
-      // Si envian contacto, debe coincidir con el email del perfil.
+      const pinDoc = await col.findOne({ normalizedName }, { projection: { pinHash: 1 } });
+      const purpose: OtpDoc["purpose"] = pinDoc?.pinHash ? "pin_recovery" : "pin_setup";
+
       if (recoveryContact) {
         const contactEmail = normalizeEmail(recoveryContact);
         if (contactEmail && contactEmail !== normalizeEmail(member.email)) {
@@ -148,8 +188,8 @@ export async function POST(req: NextRequest) {
       const expiresAt = new Date(now.getTime() + OTP_TTL_MIN * 60 * 1000);
       const otpDoc: OtpDoc = {
         normalizedName,
-        purpose: "pin_recovery",
-        codeHash: hashOtp(code, normalizedName),
+        purpose,
+        codeHash: hashOtp(code, normalizedName, purpose),
         attempts: 0,
         expiresAt,
         createdAt: now,
@@ -157,7 +197,7 @@ export async function POST(req: NextRequest) {
 
       await db.collection<OtpDoc>(OTPS_COLLECTION).deleteMany({
         normalizedName,
-        purpose: "pin_recovery",
+        purpose,
       });
       await db.collection<OtpDoc>(OTPS_COLLECTION).insertOne(otpDoc);
 
@@ -172,7 +212,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error: sent.skipped
-              ? "Correo no configurado (RESEND_API_KEY). Use recuperacion por contacto o recepcion."
+              ? "Correo no configurado (RESEND_API_KEY). Pedí ayuda en recepción."
               : sent.error || "No se pudo enviar el código. Intentá de nuevo.",
           },
           { status: 502 },
@@ -183,6 +223,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         sent: true,
+        purpose,
         expiresInMin: OTP_TTL_MIN,
         maskedEmail: masked,
       });
@@ -196,6 +237,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PIN invalido." }, { status: 400 });
     }
 
+    // --- Primer PIN: solo dueño del enlace (sesión post-registro), OTP al correo verificado, o staff ---
     if (action === "set") {
       const existing = await col.findOne({ normalizedName });
       if (existing?.pinHash) {
@@ -205,13 +247,67 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const member = await db.collection<MemberContact>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      if (!member) {
+        return NextResponse.json(
+          {
+            error:
+              "Perfil no encontrado. Completá el registro con el enlace del correo o en recepción.",
+          },
+          { status: 404 },
+        );
+      }
+
+      const memberSession = await resolveMemberSession(req);
+      const staff = await resolveStaffSession(req, "reception");
+      const staffOk = Boolean(staff?.role);
+      const sessionOk = Boolean(memberSession && memberSession.memberKey === normalizedName);
+
+      let otpOk = false;
+      if (otpCode.length === 6) {
+        const consumed = await consumeOtp("pin_setup", otpCode);
+        if (!consumed.ok) {
+          return NextResponse.json({ error: consumed.error }, { status: consumed.status });
+        }
+        if (!memberEmailIsTrusted(member)) {
+          return NextResponse.json(
+            { error: "El correo del perfil no está verificado." },
+            { status: 403 },
+          );
+        }
+        otpOk = true;
+      }
+
+      if (!sessionOk && !otpOk && !staffOk) {
+        if (memberEmailIsTrusted(member)) {
+          return NextResponse.json(
+            {
+              error:
+                "Para crear el PIN pedí un código al correo verificado de la cuenta (botón Enviar código), o abrí el enlace de invitación.",
+              code: "pin_setup_otp_required",
+              pinGate: "setup_otp",
+            },
+            { status: 403 },
+          );
+        }
+        return NextResponse.json(
+          {
+            error:
+              "No se puede crear el PIN solo con la cédula. Usá el enlace de invitación/registro del correo o pedí el alta en recepción.",
+            code: "pin_setup_invite_required",
+            pinGate: "needs_invite",
+          },
+          { status: 403 },
+        );
+      }
+
       const now = new Date();
       await col.updateOne(
         { normalizedName },
         {
           $set: {
             normalizedName,
-            memberName,
+            memberName: member.memberName || memberName,
             pinHash: hashPin(pin, normalizedName),
             updatedAt: now,
           },
@@ -224,8 +320,9 @@ export async function POST(req: NextRequest) {
       return withMemberSession(
         db,
         req,
-        { memberKey: normalizedName, memberName },
-        { ok: true },
+        { memberKey: normalizedName, memberName: member.memberName || memberName },
+        { ok: true, hasPinSet: true },
+        { rotateAll: true },
       );
     }
 
@@ -244,7 +341,6 @@ export async function POST(req: NextRequest) {
         { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
       );
       await notifyPinEvent("changed");
-      // Rotate all sessions after PIN change (Strategy 2.0).
       return withMemberSession(
         db,
         req,
@@ -255,67 +351,31 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "recover") {
-      // Preferido: OTP de 6 digitos enviado al correo del perfil.
-      if (otpCode.length === 6) {
-        const otp = await db.collection<OtpDoc>(OTPS_COLLECTION).findOne({
-          normalizedName,
-          purpose: "pin_recovery",
-        });
-        if (!otp || new Date(otp.expiresAt).getTime() < Date.now()) {
-          return NextResponse.json(
-            { error: "Codigo vencido o inexistente. Solicite uno nuevo." },
-            { status: 401 },
-          );
-        }
-        if (otp.attempts >= OTP_MAX_ATTEMPTS) {
-          await db.collection(OTPS_COLLECTION).deleteMany({ normalizedName, purpose: "pin_recovery" });
-          return NextResponse.json(
-            { error: "Demasiados intentos. Solicite un codigo nuevo." },
-            { status: 429 },
-          );
-        }
-        if (otp.codeHash !== hashOtp(otpCode, normalizedName)) {
-          await db.collection(OTPS_COLLECTION).updateOne(
-            { normalizedName, purpose: "pin_recovery" },
-            { $inc: { attempts: 1 } },
-          );
-          return NextResponse.json({ error: "Codigo incorrecto." }, { status: 401 });
-        }
-
-        await col.updateOne(
-          { normalizedName },
-          { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
-        );
-        await db.collection(OTPS_COLLECTION).deleteMany({ normalizedName, purpose: "pin_recovery" });
-        await notifyPinEvent("recovered");
-        return withMemberSession(
-          db,
-          req,
-          { memberKey: normalizedName, memberName },
-          { ok: true, recovered: true, hasPinSet: true, method: "otp" },
-          { rotateAll: true },
-        );
-      }
-
-      // Fallback: contacto (telefono o correo) debe coincidir con el perfil.
-      const member = await db.collection<MemberContact>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      const contactPhone = normalizePhone(recoveryContact);
-      const contactEmail = normalizeEmail(recoveryContact);
-      const matchesPhone = Boolean(
-        contactPhone && member?.phone && normalizePhone(member.phone) === contactPhone,
-      );
-      const matchesEmail = Boolean(
-        contactEmail && member?.email && normalizeEmail(member.email) === contactEmail,
-      );
-
-      if (!matchesPhone && !matchesEmail) {
+      // Solo OTP al correo verificado. Ya no se acepta teléfono/correo “a ojo”
+      // (cualquiera que conociera el contacto reseteaba el PIN).
+      if (otpCode.length !== 6) {
         return NextResponse.json(
           {
             error:
-              "Usá el código del correo, o un contacto que coincida con el perfil. Recepción puede actualizarlo.",
+              "Para recuperar el PIN pedí un código al correo verificado de la cuenta. Recepción puede ayudar si no tenés acceso.",
+            code: "otp_required",
           },
           { status: 401 },
         );
+      }
+      const member = await db.collection<MemberContact>(MEMBERS_COLLECTION).findOne({ normalizedName });
+      if (!memberEmailIsTrusted(member)) {
+        return NextResponse.json(
+          {
+            error:
+              "Este perfil no tiene correo verificado. Pedí una invitación en recepción o al super admin.",
+          },
+          { status: 403 },
+        );
+      }
+      const consumed = await consumeOtp("pin_recovery", otpCode);
+      if (!consumed.ok) {
+        return NextResponse.json({ error: consumed.error }, { status: consumed.status });
       }
 
       await col.updateOne(
@@ -327,7 +387,7 @@ export async function POST(req: NextRequest) {
         db,
         req,
         { memberKey: normalizedName, memberName },
-        { ok: true, recovered: true, hasPinSet: true, method: "contact" },
+        { ok: true, recovered: true, hasPinSet: true, method: "otp" },
         { rotateAll: true },
       );
     }
