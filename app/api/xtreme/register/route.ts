@@ -48,13 +48,16 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
 
   const db = await getDb();
 
-  // Si ya existe un socio con este correo y ya confirmo, no reregistramos.
+  // Si el correo ya pertenece a un socio, no iniciamos otro registro ni enviamos correo.
   const existingMember = await db
     .collection<MemberDoc>(MEMBERS_COLLECTION)
     .findOne({ email });
-  if (existingMember?.emailVerified) {
+  if (existingMember) {
     return NextResponse.json(
-      { error: "Ese correo ya tiene una cuenta confirmada. Ingrese desde la app." },
+      {
+        error:
+          "Ese correo ya está registrado. No enviamos un nuevo enlace. Ingrese desde la app.",
+      },
       { status: 409 },
     );
   }
