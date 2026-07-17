@@ -26,7 +26,11 @@ import {
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { listOpenOpsAlerts, resolveOpsAlert } from "@/lib/xtreme/ops-alerts";
-import { sendMembershipReminderEmail, sendPaymentReceiptEmail } from "@/lib/helpers/email";
+import {
+  sendAdminGrantedPlanEmail,
+  sendMembershipReminderEmail,
+  sendPaymentReceiptEmail,
+} from "@/lib/helpers/email";
 import {
   addDaysIso,
   grantEntitlement,
@@ -364,12 +368,22 @@ export async function POST(req: NextRequest) {
         summary: `${option.label} otorgado a ${member.memberName || memberName} hasta ${endsOn}`,
         meta: { optionId, days: option.days, endsOn, entitlementId: entitlement.id },
       });
+      const emailResult = member.email
+        ? await sendAdminGrantedPlanEmail({
+            to: member.email,
+            memberName: member.memberName || memberName,
+            plan: option.label,
+            endsOn,
+          })
+        : { ok: false, skipped: true };
       return NextResponse.json({
         ok: true,
         entitlementId: entitlement.id,
         plan: option.label,
         days: option.days,
         endsOn,
+        emailSent: emailResult.ok,
+        emailAvailable: Boolean(member.email),
       });
     }
 

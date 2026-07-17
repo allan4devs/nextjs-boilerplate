@@ -2,10 +2,10 @@ import { absoluteAppUrl, absoluteRequestUrl } from "@/lib/constants/app-url";
 import { BUSINESS } from "@/lib/constants/business";
 import { getDb } from "@/lib/helpers/mongodb";
 import { emailPreferencesToken } from "@/lib/xtreme/email-preferences-token";
+import { EMAIL_SUPPRESSIONS_COLLECTION } from "@/lib/xtreme/shared/config";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const PREFERENCES_BLOCK = "__XTREME_EMAIL_PREFERENCES__";
-const SUPPRESSIONS_COLLECTION = "xtreme_gym_email_suppressions";
 
 export type SendEmailResult = { ok: boolean; skipped?: boolean; error?: string };
 
@@ -63,6 +63,7 @@ export async function sendEmail(args: {
   cc?: string[];
   optional?: boolean;
   managePreferences?: boolean;
+  idempotencyKey?: string;
 }): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.SMTP_FROM?.trim();
@@ -74,7 +75,7 @@ export async function sendEmail(args: {
     if (args.optional) {
       const db = await getDb();
       const suppressed = await db
-        .collection(SUPPRESSIONS_COLLECTION)
+        .collection(EMAIL_SUPPRESSIONS_COLLECTION)
         .countDocuments({ email: { $in: to } }, { limit: 1 });
       if (suppressed) return { ok: false, skipped: true };
     }
@@ -99,6 +100,7 @@ export async function sendEmail(args: {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        ...(args.idempotencyKey ? { "Idempotency-Key": args.idempotencyKey.slice(0, 256) } : {}),
       },
       body: JSON.stringify({
         from,
@@ -449,6 +451,59 @@ export async function sendMilestoneEmail(args: { to: string; memberName: string;
       <div style="background:#d8ff3e;color:#0b0b0b;padding:20px;text-align:center;font-size:32px;font-weight:900;margin:16px 0;">${args.streak} DÍAS 🔥</div>
       <p style="font-size:14px;line-height:1.6;">Celebralo, compartilo y seguí construyendo.</p>${appButton("Ver mi logro")}`,
     ),
+  });
+}
+
+/** Aviso transaccional: un administrador activó acceso para el socio. */
+export async function sendAdminGrantedPlanEmail(args: {
+  to: string;
+  memberName: string;
+  plan: string;
+  endsOn: string;
+}) {
+  return sendEmail({
+    to: args.to,
+    managePreferences: false,
+    subject: `Tu plan ${args.plan} ya está activo — Xtreme Gym`,
+    html: layout(
+      "Tu acceso está activo",
+      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. El equipo de Xtreme Gym activó para vos el plan <strong>${escapeHtml(args.plan)}</strong>.</p>
+      <table style="border-collapse:collapse;margin:12px 0;">
+        ${row("Plan", escapeHtml(args.plan))}
+        ${row("Acceso hasta", escapeHtml(args.endsOn))}
+      </table>
+      <p style="font-size:14px;line-height:1.6;">Ya podés entrar a la app, usar tu carné digital, reservar y seguir tu progreso.</p>
+      ${appButton("Abrir mi app")}`,
+    ),
+  });
+}
+
+/** Plantilla segura para campañas creadas desde Admin OS. */
+export async function sendCampaignEmail(args: {
+  to: string;
+  subject: string;
+  title: string;
+  message: string;
+  ctaLabel?: string;
+  ctaPath?: string;
+  idempotencyKey?: string;
+}) {
+  const paragraphs = args.message
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p style="font-size:14px;line-height:1.7;">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  const safePath = args.ctaPath?.startsWith("/") ? args.ctaPath : "/app";
+  const button = args.ctaLabel
+    ? `<a href="${escapeHtml(absoluteAppUrl(safePath))}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">${escapeHtml(args.ctaLabel)}</a>`
+    : "";
+  return sendEmail({
+    to: args.to,
+    optional: true,
+    idempotencyKey: args.idempotencyKey,
+    subject: args.subject,
+    html: layout(escapeHtml(args.title), `${paragraphs}${button}`),
   });
 }
 

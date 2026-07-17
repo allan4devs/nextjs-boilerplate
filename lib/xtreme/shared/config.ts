@@ -22,6 +22,10 @@ export const PAYPAL_ORDERS_COLLECTION = "xtreme_gym_paypal_orders";
 export const CHAT_SESSIONS_COLLECTION = "xtreme_gym_chat_sessions";
 export const CHAT_MESSAGES_COLLECTION = "xtreme_gym_chat_messages";
 export const MEMBER_LIFESTYLE_COLLECTION = "xtreme_gym_member_lifestyle";
+export const EMAIL_CONTACTS_COLLECTION = "xtreme_gym_email_contacts";
+export const EMAIL_CAMPAIGNS_COLLECTION = "xtreme_gym_email_campaigns";
+export const EMAIL_CAMPAIGN_DELIVERIES_COLLECTION = "xtreme_gym_email_campaign_deliveries";
+export const EMAIL_SUPPRESSIONS_COLLECTION = "xtreme_gym_email_suppressions";
 
 export const FREE_FIRST_DAY_OFFER_ID = "free-first-day";
 export const FREE_FIRST_DAY_PLAN_LABEL = "Primer día gratis";

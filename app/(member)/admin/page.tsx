@@ -43,6 +43,7 @@ import {
   GameHudPill,
   GameLabel,
 } from "../../components/GameOS";
+import EmailCampaignCenter from "../../components/admin/EmailCampaignCenter";
 
 type PlanItem = {
   id: string;
@@ -265,7 +266,7 @@ const QUICK_PLAN_OPTIONS: Array<{
   { id: "quarter", label: "Trimestral", days: 90, detail: "Acceso completo por 90 dias" },
 ];
 
-type Tab = "resumen" | "socios" | "accesos" | "ingresos" | "gamificacion";
+type Tab = "resumen" | "socios" | "accesos" | "ingresos" | "gamificacion" | "correos";
 
 type GamiBadge = {
   id: string;
@@ -441,6 +442,7 @@ const ADMIN_TABS = [
   { id: "socios" as const, label: "Socios", icon: Users },
   { id: "accesos" as const, label: "Accesos", icon: DoorOpen },
   { id: "gamificacion" as const, label: "Game", icon: Trophy },
+  { id: "correos" as const, label: "Correos", icon: Mail, superOnly: true },
   { id: "ingresos" as const, label: "Ingresos", icon: Banknote, superOnly: true },
 ];
 
@@ -506,7 +508,7 @@ export default function XtremeAdminPage() {
       setData(json);
       setCode(json.role);
       if (json.role !== "super") {
-        setTab((current) => (current === "ingresos" ? "resumen" : current));
+        setTab((current) => (current === "ingresos" || current === "correos" ? "resumen" : current));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de conexion.");
@@ -798,10 +800,17 @@ export default function XtremeAdminPage() {
         ok?: boolean;
         plan?: string;
         endsOn?: string;
+        emailSent?: boolean;
+        emailAvailable?: boolean;
         error?: string;
       };
       if (!response.ok || !json.ok) throw new Error(json.error ?? "No se pudo otorgar el plan.");
-      setMessage(`${json.plan} activado para ${quickPlanMember.memberName} hasta ${json.endsOn}.`);
+      const emailStatus = json.emailSent
+        ? " Le enviamos la confirmacion por correo."
+        : !json.emailAvailable
+          ? " El socio no tiene un correo disponible."
+          : " El plan quedó activo, pero el correo no pudo enviarse.";
+      setMessage(`${json.plan} activado para ${quickPlanMember.memberName} hasta ${json.endsOn}.${emailStatus}`);
       setQuickPlanMember(null);
       await load(code);
     } catch (err) {
@@ -2416,6 +2425,8 @@ export default function XtremeAdminPage() {
                 )}
               </div>
             )}
+
+            {tab === "correos" && isSuper && <EmailCampaignCenter />}
           </>
         ) : null}
       </section>

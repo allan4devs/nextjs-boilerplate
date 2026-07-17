@@ -4,6 +4,7 @@ import { businessDate } from "@/lib/xtreme/business-date";
 import { processClassReminders } from "@/lib/xtreme/class-reminders";
 import { pushEnabled } from "@/lib/helpers/push";
 import { processVisitCheckoutReminders } from "@/lib/xtreme/visit-reminders";
+import { processQueuedEmailCampaigns } from "@/lib/xtreme/email-campaigns";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
       processClassReminders(db, now),
       processVisitCheckoutReminders(db, now),
     ]);
+    const emailCampaigns = await processQueuedEmailCampaigns(db, 20);
     return NextResponse.json({
       ok: true,
       date: businessDate(now),
@@ -36,6 +38,7 @@ export async function GET(req: NextRequest) {
       window: "45-75 min before class",
       ...summary,
       visitReminders,
+      emailCampaigns,
     });
   } catch (error) {
     console.error("XTREME CLASS REMINDERS JOB", error);

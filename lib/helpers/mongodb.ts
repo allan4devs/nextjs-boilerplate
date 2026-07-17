@@ -55,6 +55,12 @@ async function ensureIndexes(db: Db) {
       .collection("xtreme_gym_pending_registrations")
       .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection("xtreme_gym_email_suppressions").createIndex({ email: 1 }, { unique: true }),
+    db.collection("xtreme_gym_email_contacts").createIndex({ email: 1 }, { unique: true }),
+    db.collection("xtreme_gym_email_contacts").createIndex({ status: 1, updatedAt: -1 }),
+    db.collection("xtreme_gym_email_campaigns").createIndex({ id: 1 }, { unique: true }),
+    db.collection("xtreme_gym_email_campaigns").createIndex({ status: 1, createdAt: 1 }),
+    db.collection("xtreme_gym_email_campaign_deliveries").createIndex({ deliveryKey: 1 }, { unique: true }),
+    db.collection("xtreme_gym_email_campaign_deliveries").createIndex({ campaignId: 1, status: 1 }),
     // Fase 3: OTP de recuperacion de PIN (TTL) + audit + badges admin
     db.collection("xtreme_gym_otps").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection("xtreme_gym_otps").createIndex({ normalizedName: 1, purpose: 1 }),
