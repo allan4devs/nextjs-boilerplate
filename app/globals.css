@@ -199,6 +199,29 @@ button,
   padding-top: max(0px, env(safe-area-inset-top, 0px));
 }
 
+/* Stable bottom surface for app navigation during mobile/PWA scrolling. */
+.xg-app-dock {
+  bottom: 0 !important;
+  isolation: isolate;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.32);
+}
+
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  .xg-app-dock,
+  .xg-member-chat-dock {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 /* OS access screens stay clear of the mobile keyboard instead of hugging it. */
 .xg-os-login-shell {
   box-sizing: border-box;

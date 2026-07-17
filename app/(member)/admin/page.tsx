@@ -1107,7 +1107,7 @@ export default function XtremeAdminPage() {
 
       {/* Mobile dock */}
       <nav
-        className="xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden"
+        className="xg-app-dock xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden"
         aria-label="Zonas admin"
       >
         {visibleTabs.map((item) => (
