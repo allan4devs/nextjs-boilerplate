@@ -363,12 +363,20 @@ export function useMemberOs() {
         cache: "no-store",
         credentials: "same-origin",
       });
-      if (!response.ok) throw new Error("Failed to fetch payments");
+      // El historial es complementario. La sesión puede vencer mientras el
+      // socio termina PayPal; el cobro ya quedó aplicado y un 401 acá no debe
+      // convertirse en un overlay ni hacer parecer que el pago falló.
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setPaymentHistory(null);
+        }
+        return;
+      }
       const data = (await response.json()) as PaymentHistoryResponse;
       setPaymentHistory(data);
-    } catch (err) {
-      console.error("Failed to fetch payment history", err);
-      // Silent failure - payment history is not critical for app function
+    } catch {
+      // Fallo de red silencioso: se conserva el historial anterior y la app
+      // sigue operando. La próxima carga vuelve a intentarlo.
     } finally {
       setIsLoadingPayments(false);
     }
