@@ -19,8 +19,10 @@ import {
   type MemberDoc,
   type PendingRegistrationDoc,
   addDays,
+  cedulaDigits,
   formatAccessCode,
   isValidEmail,
+  matchCedula,
   memberAccessCode,
   normalizeCedula,
   normalizeEmail,
@@ -179,18 +181,49 @@ export async function GET(req: NextRequest) {
         verified.pending.source === "reception" || verified.pending.source === "admin",
     });
   }
+  const boundKey = normalizeKey(verified.pending.expectedMemberKey || "");
+  const boundProfile = Boolean(boundKey);
+  let prefill = {
+    memberName: verified.pending.expectedMemberName || "",
+    cedula: "",
+    phone: "",
+    goal: "",
+  };
+  let neverRegistered = true;
+  if (boundKey) {
+    const bound = await verified.db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne(
+      { normalizedName: boundKey },
+      { projection: { memberName: 1, cedula: 1, phone: 1, goal: 1, emailVerified: 1 } },
+    );
+    if (bound) {
+      neverRegistered = bound.emailVerified !== true;
+      prefill = {
+        memberName: bound.memberName || prefill.memberName,
+        cedula: bound.cedula || "",
+        phone: bound.phone || "",
+        goal: bound.goal || "",
+      };
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     email: verified.pending.email,
     source: verified.pending.source,
-    memberName: verified.pending.expectedMemberName || "",
-    boundProfile: Boolean(verified.pending.expectedMemberKey),
+    boundProfile,
+    /** Primer claim: el import puede traer cédula/nombre/tel mal — se pueden corregir. */
+    neverRegistered,
+    canEditName: verified.pending.source !== "paypal",
+    canEditCedula: true,
+    canEditPhone: true,
+    ...prefill,
   });
 }
 
 /**
- * Paso 2b — con el token valido, el usuario completa nombre, cedula y telefono.
- * Aqui se crea (o completa) el perfil y se marca el correo como verificado.
+ * Paso 2b — con el token valido, el usuario completa (o corrige) nombre, cedula y telefono.
+ * Aqui se crea o reclama el perfil y se marca el correo como verificado.
+ * Import legacy: en el primer registro se permite corregir datos basura del Excel.
  */
 async function confirmRegistration(body: Record<string, unknown>) {
   const token = String(body.token ?? "").trim();
@@ -227,50 +260,94 @@ async function confirmRegistration(body: Record<string, unknown>) {
   const boundInvite = Boolean(boundKey);
   const paidInvite = pending.source === "paypal" && boundInvite;
   const staffInvite = pending.source === "reception" || pending.source === "admin";
-  const memberName = boundInvite
-    ? normalizeName(pending.expectedMemberName) || normalizeName(body.memberName)
-    : normalizeName(body.memberName);
-  const cedula = normalizeCedula(body.cedula);
-  const phone = normalizePhone(body.phone);
-  const goal = String(body.goal ?? "").trim().slice(0, 80);
-  const email = pending.email;
 
-  if (!memberName) {
-    return NextResponse.json({ error: "El nombre es requerido." }, { status: 400 });
-  }
-  if (!cedula) {
-    return NextResponse.json({ error: "La cedula es requerida." }, { status: 400 });
-  }
-  if (!phone) {
-    return NextResponse.json({ error: "El telefono es requerido." }, { status: 400 });
-  }
-
-  const normalizedName = boundInvite ? boundKey : normalizeKey(memberName);
-  const now = new Date();
-
-  // Chequear duplicados de contacto ligados a OTRO perfil.
-  const duplicate = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
-    normalizedName: { $ne: normalizedName },
-    $or: [{ phone }, { email }, { cedula }],
-  });
-  if (duplicate) {
-    return NextResponse.json(
-      {
-        error: `Ese contacto ya esta ligado a ${duplicate.memberName}. Hable con recepcion.`,
-      },
-      { status: 409 },
-    );
-  }
-
-  const existing = await db
-    .collection<MemberDoc>(MEMBERS_COLLECTION)
-    .findOne({ normalizedName });
+  const existing = boundInvite
+    ? await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: boundKey })
+    : null;
   if (boundInvite && !existing) {
     return NextResponse.json(
       {
         error: paidInvite
           ? "No encontramos el perfil asociado al pago. Contactá recepción."
           : "No encontramos el perfil asociado a la invitación. Contactá recepción.",
+      },
+      { status: 409 },
+    );
+  }
+
+  // Nunca registrado = aún no verificó correo: puede corregir nombre/cédula/tel del import.
+  const neverRegistered = !existing || existing.emailVerified !== true;
+
+  // PayPal: nombre queda atado al pago. Invitación/import: el socio corrige basura del Excel.
+  const memberName = paidInvite
+    ? normalizeName(pending.expectedMemberName) || normalizeName(existing?.memberName)
+    : normalizeName(body.memberName) ||
+      normalizeName(pending.expectedMemberName) ||
+      normalizeName(existing?.memberName);
+  const cedula = normalizeCedula(body.cedula);
+  const phone = normalizePhone(body.phone);
+  const goal = String(body.goal ?? "").trim().slice(0, 80);
+  const email = pending.email;
+  const digits = cedulaDigits(cedula);
+
+  if (!memberName) {
+    return NextResponse.json({ error: "El nombre es requerido." }, { status: 400 });
+  }
+  if (!cedula || digits.length < 6) {
+    return NextResponse.json(
+      { error: "La cédula es requerida (mínimo 6 dígitos). Revisá que esté bien." },
+      { status: 400 },
+    );
+  }
+  if (!phone || phone.replace(/\D/g, "").length < 8) {
+    return NextResponse.json(
+      { error: "El teléfono es requerido (mínimo 8 dígitos)." },
+      { status: 400 },
+    );
+  }
+
+  // Identidad estable: ficha importada/pago conserva su key; alta nueva usa el nombre.
+  const normalizedName = boundInvite ? boundKey : normalizeKey(memberName);
+  const now = new Date();
+
+  // Duplicados en OTRO perfil (no la ficha que estamos reclamando).
+  const contactCandidates = await db
+    .collection<MemberDoc>(MEMBERS_COLLECTION)
+    .find(
+      {
+        normalizedName: { $ne: normalizedName },
+        $or: [
+          { email },
+          { phone },
+          { cedula: { $exists: true, $type: "string", $ne: "" } },
+        ],
+      },
+      { projection: { memberName: 1, phone: 1, email: 1, cedula: 1, normalizedName: 1 } },
+    )
+    .limit(40)
+    .toArray();
+
+  const phoneDigits = phone.replace(/\D/g, "");
+  const duplicate = contactCandidates.find((doc) => {
+    if (doc.email && normalizeEmail(doc.email) === email) return true;
+    if (doc.phone && normalizePhone(doc.phone).replace(/\D/g, "") === phoneDigits) return true;
+    if (doc.cedula && matchCedula(doc.cedula, cedula)) return true;
+    return false;
+  });
+  if (duplicate) {
+    return NextResponse.json(
+      {
+        error: `Ese contacto o cédula ya está ligado a ${duplicate.memberName}. Hablá con recepción para unir las fichas.`,
+      },
+      { status: 409 },
+    );
+  }
+
+  // Si alguien ya reclamó este perfil con correo verificado, no reescribir con otro enlace suelto.
+  if (existing?.emailVerified === true && !neverRegistered) {
+    return NextResponse.json(
+      {
+        error: "Este perfil ya fue activado. Entrá a la app con tu cédula y PIN.",
       },
       { status: 409 },
     );
@@ -287,6 +364,21 @@ async function confirmRegistration(body: Record<string, unknown>) {
     updatedAt: now,
   };
   if (goal) set.goal = goal;
+
+  // Guardamos snapshot de lo que venía del import por si hay que auditar correcciones.
+  if (existing && neverRegistered) {
+    set.profileClaim = {
+      claimedAt: now,
+      source: pending.source,
+      previous: {
+        memberName: existing.memberName || "",
+        cedula: existing.cedula || "",
+        phone: existing.phone || "",
+        email: existing.email || "",
+      },
+    } as MemberDoc["profileClaim"];
+  }
+
   if (!existing) {
     // Solo los registros públicos reciben el primer día; staff crea cuenta sin plan.
     set.membership = staffInvite
@@ -345,6 +437,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
         paidRegistration: paidInvite,
         invitedRegistration: staffInvite,
         boundInvite,
+        correctedImport: Boolean(existing && neverRegistered),
       },
     }).catch(() => {});
   }
@@ -363,6 +456,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
     invitedRegistration: staffInvite,
     session: true,
     canSetPin: true,
+    profileCorrected: Boolean(existing && neverRegistered),
   });
   attachSessionCookie(res, sessionToken, sessionExpires);
   return res;

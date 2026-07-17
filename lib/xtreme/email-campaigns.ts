@@ -6,7 +6,23 @@ import {
   EMAIL_CAMPAIGNS_COLLECTION,
 } from "@/lib/xtreme/shared/config";
 
-export type EmailAudience = "imported" | "unregistered" | "pending" | "inactive" | "members" | "all";
+export type EmailAudience =
+  | "imported"
+  | "unregistered"
+  | "never_registered"
+  | "pending"
+  | "never_opened"
+  | "inactive"
+  | "members"
+  | "plan_week"
+  | "plan_fortnight"
+  | "plan_month"
+  | "plan_quarter"
+  | "plan_free_day"
+  | "plan_senior"
+  | "plan_other"
+  | "no_plan"
+  | "all";
 
 export type EmailCampaignDoc = {
   id: string;

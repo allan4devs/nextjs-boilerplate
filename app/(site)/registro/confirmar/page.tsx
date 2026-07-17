@@ -8,8 +8,22 @@ import { CheckCircle2, Dumbbell, Loader2, XCircle } from "lucide-react";
 type VerifyState =
   | { phase: "loading" }
   | { phase: "invalid"; error: string }
-  | { phase: "form"; email: string; source: string }
-  | { phase: "done"; memberName: string; accessCode: string; paidRegistration: boolean; invitedRegistration: boolean };
+  | {
+      phase: "form";
+      email: string;
+      source: string;
+      boundProfile: boolean;
+      neverRegistered: boolean;
+      canEditName: boolean;
+    }
+  | {
+      phase: "done";
+      memberName: string;
+      accessCode: string;
+      paidRegistration: boolean;
+      invitedRegistration: boolean;
+      profileCorrected?: boolean;
+    };
 
 function ConfirmInner() {
   const params = useSearchParams();
@@ -37,11 +51,17 @@ function ConfirmInner() {
         const json = (await res.json()) as {
           email?: string;
           memberName?: string;
+          cedula?: string;
+          phone?: string;
+          goal?: string;
           source?: string;
           completed?: boolean;
           accessCode?: string;
           paidRegistration?: boolean;
           invitedRegistration?: boolean;
+          boundProfile?: boolean;
+          neverRegistered?: boolean;
+          canEditName?: boolean;
           error?: string;
         };
         if (cancelled) return;
@@ -60,7 +80,17 @@ function ConfirmInner() {
           return;
         }
         if (json.memberName) setMemberName(json.memberName);
-        setState({ phase: "form", email: json.email, source: json.source || "app" });
+        if (json.cedula) setCedula(json.cedula);
+        if (json.phone) setPhone(json.phone);
+        if (json.goal) setGoal(json.goal);
+        setState({
+          phase: "form",
+          email: json.email,
+          source: json.source || "app",
+          boundProfile: Boolean(json.boundProfile),
+          neverRegistered: json.neverRegistered !== false,
+          canEditName: json.canEditName !== false,
+        });
       } catch {
         if (!cancelled) setState({ phase: "invalid", error: "Error de conexion." });
       }
@@ -82,6 +112,7 @@ function ConfirmInner() {
       const res = await fetch("/api/xtreme/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ action: "confirm", token, memberName, cedula, phone, goal }),
       });
       const json = (await res.json()) as {
@@ -90,6 +121,7 @@ function ConfirmInner() {
         accessCode?: string;
         paidRegistration?: boolean;
         invitedRegistration?: boolean;
+        profileCorrected?: boolean;
         error?: string;
       };
       if (!res.ok || !json.ok) {
@@ -102,6 +134,7 @@ function ConfirmInner() {
         accessCode: json.accessCode || "",
         paidRegistration: Boolean(json.paidRegistration),
         invitedRegistration: Boolean(json.invitedRegistration),
+        profileCorrected: Boolean(json.profileCorrected),
       });
     } catch {
       setError("Error de conexion.");
@@ -109,6 +142,17 @@ function ConfirmInner() {
       setSubmitting(false);
     }
   }
+
+  const sourceLabel =
+    state.phase === "form"
+      ? state.source === "paypal"
+        ? "Pago y correo confirmados"
+        : state.source === "reception"
+          ? "Invitación de recepción"
+          : state.source === "admin"
+            ? "Invitación del gimnasio"
+            : "Correo confirmado"
+      : "";
 
   return (
     <main className="grid min-h-screen place-items-center bg-[#0b0b0b] px-5 py-14 text-white">
@@ -146,16 +190,21 @@ function ConfirmInner() {
           <form onSubmit={submit} className="border border-white/10 bg-[#111] p-6">
             <div className="flex items-center gap-2 text-[#d8ff3e]">
               <CheckCircle2 className="h-5 w-5" />
-              <p className="text-xs font-black uppercase tracking-[0.18em]">
-                {state.source === "paypal"
-                  ? "Pago y correo confirmados"
-                  : state.source === "reception"
-                    ? "Invitación de recepción"
-                    : "Correo confirmado"}
-              </p>
+              <p className="text-xs font-black uppercase tracking-[0.18em]">{sourceLabel}</p>
             </div>
-            <h1 className="mt-3 text-3xl font-black uppercase leading-none">Completá tu perfil</h1>
+            <h1 className="mt-3 text-3xl font-black uppercase leading-none">
+              {state.boundProfile && state.neverRegistered
+                ? "Revisá y corregí tu perfil"
+                : "Completá tu perfil"}
+            </h1>
             <p className="mt-2 text-sm font-semibold text-white/60">{state.email}</p>
+
+            {state.boundProfile && state.neverRegistered ? (
+              <div className="mt-4 border border-orange-300/35 bg-orange-300/10 px-3 py-3 text-sm font-semibold text-orange-100">
+                Traemos datos del sistema viejo del gym: pueden venir mal (cédula, nombre o
+                teléfono). Corregilos acá — es tu primer registro y queda ligado a este correo.
+              </div>
+            ) : null}
 
             <label className="mt-6 block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
@@ -165,11 +214,11 @@ function ConfirmInner() {
                 autoComplete="name"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                readOnly={state.source === "paypal"}
+                readOnly={!state.canEditName}
                 className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e] read-only:cursor-not-allowed read-only:text-white/55"
                 placeholder="Nombre y apellidos"
               />
-              {state.source === "paypal" && (
+              {!state.canEditName && (
                 <span className="mt-2 block text-xs font-semibold text-white/40">
                   Usamos el nombre ligado al pago para evitar que el acceso se asigne a otra persona.
                 </span>
@@ -186,6 +235,9 @@ function ConfirmInner() {
                 className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
                 placeholder="1-2345-6789"
               />
+              <span className="mt-2 block text-xs font-semibold text-white/40">
+                Si el import la traía mal, poné la correcta. La usás después para entrar a la app.
+              </span>
             </label>
             <label className="mt-4 block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
@@ -223,7 +275,13 @@ function ConfirmInner() {
               disabled={submitting}
               className="mt-6 inline-flex w-full items-center justify-center gap-2 bg-[#d8ff3e] px-5 py-4 text-sm font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
             >
-              {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Crear mi cuenta"}
+              {submitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : state.boundProfile && state.neverRegistered ? (
+                "Confirmar mis datos y activar cuenta"
+              ) : (
+                "Crear mi cuenta"
+              )}
             </button>
           </form>
         )}
@@ -238,8 +296,10 @@ function ConfirmInner() {
               {state.paidRegistration
                 ? "Tu pago, correo y cédula quedaron unidos de forma segura. Ya podés entrar a la app y crear tu PIN."
                 : state.invitedRegistration
-                  ? "Tu cuenta quedó creada y ya podés entrar a la app. Esta invitación no activa un plan ni incluye el primer día gratis; podés elegir una membresía cuando querás."
-                : "Tu cuenta quedó creada. Tu primer día es gratis: presentate en recepción con tu nombre."}
+                  ? state.profileCorrected
+                    ? "Tus datos quedaron corregidos y el correo verificado. Ya podés entrar a la app y crear tu PIN."
+                    : "Tu cuenta quedó creada y ya podés entrar a la app. Esta invitación no activa un plan ni incluye el primer día gratis; podés elegir una membresía cuando querás."
+                  : "Tu cuenta quedó creada. Tu primer día es gratis: presentate en recepción con tu nombre."}
             </p>
             {state.accessCode && (
               <div className="mt-5 bg-[#0b0b0b] px-4 py-4">

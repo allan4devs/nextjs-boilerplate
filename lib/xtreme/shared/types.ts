@@ -145,6 +145,23 @@ export type MemberDoc = {
   referredBy?: string;
   referralCount?: number;
   seeded?: boolean;
+  /** Snapshot del primer claim por magic link (correcciones al import). */
+  profileClaim?: {
+    claimedAt: Date;
+    source?: string;
+    previous?: {
+      memberName?: string;
+      cedula?: string;
+      phone?: string;
+      email?: string;
+    };
+  };
+  emailQuarantine?: {
+    previousEmail?: string;
+    reason?: string;
+    at?: Date;
+    source?: string;
+  };
   createdAt?: Date;
   updatedAt?: Date;
 };

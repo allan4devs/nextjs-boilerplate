@@ -34,7 +34,24 @@ type ContactDoc = {
   updatedAt: Date;
 };
 
-const AUDIENCES = new Set<EmailAudience>(["imported", "unregistered", "pending", "inactive", "members", "all"]);
+const AUDIENCES = new Set<EmailAudience>([
+  "imported",
+  "unregistered",
+  "never_registered",
+  "pending",
+  "never_opened",
+  "inactive",
+  "members",
+  "plan_week",
+  "plan_fortnight",
+  "plan_month",
+  "plan_quarter",
+  "plan_free_day",
+  "plan_senior",
+  "plan_other",
+  "no_plan",
+  "all",
+]);
 
 function normalizeEmail(value: unknown) {
   const email = String(value ?? "").trim().toLowerCase();
@@ -46,17 +63,44 @@ async function requireSuper(req: NextRequest) {
   return session?.role === "super";
 }
 
+type PlanAudience =
+  | "plan_week"
+  | "plan_fortnight"
+  | "plan_month"
+  | "plan_quarter"
+  | "plan_free_day"
+  | "plan_senior"
+  | "plan_other"
+  | "no_plan";
+
+function planAudience(value: unknown): PlanAudience {
+  const plan = String(value ?? "")
+    .trim()
+    .toLocaleLowerCase("es-CR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!plan || plan === "—" || plan.includes("sin plan")) return "no_plan";
+  if (plan.includes("primer dia") || plan.includes("free day")) return "plan_free_day";
+  if (plan.includes("adulto") || plan.includes("senior")) return "plan_senior";
+  if (plan.includes("trimestr") || plan.includes("quarter")) return "plan_quarter";
+  if (plan.includes("quincen") || plan.includes("fortnight")) return "plan_fortnight";
+  if (plan.includes("seman") || plan.includes("week")) return "plan_week";
+  if (plan.includes("mensual") || plan.includes("monthly") || plan.includes("month")) return "plan_month";
+  return "plan_other";
+}
+
 async function audienceEmails(db: Awaited<ReturnType<typeof getDb>>) {
-  const [contacts, members, pending, suppressed, recentlyActive] = await Promise.all([
+  const [contacts, members, pending, suppressed, recentlyActive, everActive] = await Promise.all([
     db.collection<ContactDoc>(EMAIL_CONTACTS_COLLECTION).find({ status: "active" }).project({ email: 1 }).toArray(),
     // Solo correos verificados en audiencia de socios (import legacy está cruzado).
-    db.collection<MemberDoc>(MEMBERS_COLLECTION).find({ email: { $exists: true, $ne: "" }, emailVerified: true }).project({ email: 1, normalizedName: 1 }).toArray(),
+    db.collection<MemberDoc>(MEMBERS_COLLECTION).find({ email: { $exists: true, $ne: "" }, emailVerified: true }).project({ email: 1, normalizedName: 1, membership: 1 }).toArray(),
     db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION).find({ confirmedAt: null }).project({ email: 1 }).toArray(),
     db.collection(EMAIL_SUPPRESSIONS_COLLECTION).distinct<string>("email"),
     db.collection(EVENTS_COLLECTION).distinct<string>("memberId", {
       type: "app_opened",
       occurredAt: { $gte: new Date(Date.now() - 14 * 24 * 60 * 60_000) },
     }),
+    db.collection(EVENTS_COLLECTION).distinct<string>("memberId", { type: "app_opened" }),
   ]);
 
   const blocked = new Set(suppressed.map(normalizeEmail).filter(Boolean));
@@ -67,16 +111,40 @@ async function audienceEmails(db: Awaited<ReturnType<typeof getDb>>) {
   const registered = new Set(memberEmails);
   const waiting = new Set(pendingEmails);
   const activeKeys = new Set(recentlyActive);
+  const everActiveKeys = new Set(everActive);
   const inactive = clean(
     members.filter((row) => !row.normalizedName || !activeKeys.has(row.normalizedName)).map((row) => row.email),
   );
+  const neverOpened = clean(
+    members.filter((row) => !row.normalizedName || !everActiveKeys.has(row.normalizedName)).map((row) => row.email),
+  );
   const unregistered = imported.filter((email) => !registered.has(email) && !waiting.has(email));
+  const neverRegistered = clean([...imported, ...pendingEmails]).filter((email) => !registered.has(email));
+  const planBuckets: Record<PlanAudience, string[]> = {
+    plan_week: [],
+    plan_fortnight: [],
+    plan_month: [],
+    plan_quarter: [],
+    plan_free_day: [],
+    plan_senior: [],
+    plan_other: [],
+    no_plan: [],
+  };
+  for (const member of members) {
+    const email = normalizeEmail(member.email);
+    if (email && !blocked.has(email)) planBuckets[planAudience(member.membership?.plan)].push(email);
+  }
   return {
     imported,
     unregistered,
+    never_registered: neverRegistered,
     pending: pendingEmails,
+    never_opened: neverOpened,
     inactive,
     members: memberEmails,
+    ...(Object.fromEntries(
+      Object.entries(planBuckets).map(([key, emails]) => [key, clean(emails)]),
+    ) as Record<PlanAudience, string[]>),
     all: clean([...imported, ...pendingEmails, ...memberEmails]),
     suppressed: blocked.size,
   };
@@ -95,9 +163,19 @@ export async function GET(req: NextRequest) {
       audiences: {
         imported: audiences.imported.length,
         unregistered: audiences.unregistered.length,
+        never_registered: audiences.never_registered.length,
         pending: audiences.pending.length,
+        never_opened: audiences.never_opened.length,
         inactive: audiences.inactive.length,
         members: audiences.members.length,
+        plan_week: audiences.plan_week.length,
+        plan_fortnight: audiences.plan_fortnight.length,
+        plan_month: audiences.plan_month.length,
+        plan_quarter: audiences.plan_quarter.length,
+        plan_free_day: audiences.plan_free_day.length,
+        plan_senior: audiences.plan_senior.length,
+        plan_other: audiences.plan_other.length,
+        no_plan: audiences.no_plan.length,
         all: audiences.all.length,
         suppressed: audiences.suppressed,
       },
