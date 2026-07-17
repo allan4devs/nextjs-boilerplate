@@ -27,6 +27,7 @@ import ProgresoTab from "./components/member/tabs/ProgresoTab";
 import PerfilTab from "./components/member/tabs/PerfilTab";
 import { useResumenViewModel } from "./components/member/view-models/useResumenViewModel";
 import ReceptionChatWidget from "./components/ReceptionChatWidget";
+import PushOptInBanner from "./components/member/PushOptInBanner";
 
 export default function ExtremeGymSite() {
   const os = useMemberOs();
@@ -165,6 +166,11 @@ export default function ExtremeGymSite() {
             normalizedName: currentMember.normalizedName,
           }}
         />
+      )}
+
+      {/* Opt-in push de toda la app (entrenos, reservas, racha…) — no solo comunidad */}
+      {unlocked && memberName && !showPin && !showTour && (
+        <PushOptInBanner unlocked={unlocked} memberName={memberName} />
       )}
     </main>
   );

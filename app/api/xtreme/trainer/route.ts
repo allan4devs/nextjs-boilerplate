@@ -40,7 +40,15 @@ function trainerMemberView(member: MemberDoc) {
     photoUrl: member.photoUrl ?? "",
     membershipStatus: membership.status,
     trainingPlan: toAdminPlan(member.trainingPlan),
-    activePlanWorkout: member.activePlanWorkout ?? null,
+    activePlanWorkout: member.activePlanWorkout
+      ? {
+          id: member.activePlanWorkout.id,
+          planItemId: member.activePlanWorkout.planItemId,
+          planTitle: member.activePlanWorkout.planTitle,
+          trainingName: member.activePlanWorkout.trainingName,
+          startedAt: member.activePlanWorkout.startedAt,
+        }
+      : null,
     recentWorkouts: workouts,
     latestMetrics: [...(member.bodyMetrics ?? [])]
       .sort((a, b) => b.date.localeCompare(a.date))

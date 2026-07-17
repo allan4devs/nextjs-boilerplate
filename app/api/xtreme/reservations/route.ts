@@ -10,6 +10,7 @@ import {
 } from "@/lib/xtreme/shared";
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 import { bookSession, cancelBooking, sessionSnapshot } from "@/lib/xtreme/inventory";
+import { queuePushMemberEvent } from "@/lib/xtreme/member-push";
 
 export const dynamic = "force-dynamic";
 
@@ -126,10 +127,18 @@ export async function POST(req: NextRequest) {
     const member = await db
       .collection<{ email?: string; memberName?: string }>(MEMBERS_COLLECTION)
       .findOne({ normalizedName: sessionOrErr.memberKey }, { projection: { email: 1, memberName: 1 } });
+    // Correo (opcional) + push al dispositivo del socio (Member OS).
     if (member?.email) {
       await sendReservationEmail({
         to: member.email,
         memberName: member.memberName || sessionOrErr.memberName,
+        trainingName,
+        trainingDate,
+      });
+    }
+    if (!result.duplicate) {
+      queuePushMemberEvent(db, sessionOrErr.memberKey, {
+        type: "reservation_booked",
         trainingName,
         trainingDate,
       });
@@ -179,6 +188,13 @@ export async function DELETE(req: NextRequest) {
       },
       { $set: { status: "cancelled", updatedAt: new Date() } },
     );
+
+    const trainingName = String(body.trainingName ?? trainingId).trim() || trainingId;
+    queuePushMemberEvent(db, sessionOrErr.memberKey, {
+      type: "reservation_cancelled",
+      trainingName,
+      trainingDate,
+    });
 
     return NextResponse.json({
       ok: true,

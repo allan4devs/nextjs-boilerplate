@@ -1,4 +1,4 @@
-const CACHE_NAME = "xtreme-gym-pwa-v4";
+const CACHE_NAME = "xtreme-gym-pwa-v5";
 const OFFLINE_PAGE = "/offline.html";
 const APP_SHELL = ["/", "/app", "/recepcion", OFFLINE_PAGE, "/xtreme/logo.jpg", "/pwa-icon-192.png", "/pwa-icon-512.png"];
 
@@ -59,30 +59,82 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-self.addEventListener("push", (event) => {
-  if (!event.data) return;
+function parsePushData(event) {
+  if (!event.data) {
+    return {
+      title: "Xtreme Gym",
+      body: "Nuevo aviso de Xtreme Gym.",
+      icon: "/pwa-icon-192.png",
+      url: "/app",
+    };
+  }
+  try {
+    return event.data.json();
+  } catch {
+    const text = event.data.text();
+    return {
+      title: "Xtreme Gym",
+      body: text || "Nuevo aviso de Xtreme Gym.",
+      icon: "/pwa-icon-192.png",
+      url: "/app",
+    };
+  }
+}
 
-  const data = event.data.json();
-  event.waitUntil(
-    self.registration.showNotification(data.title || "Xtreme Gym", {
-      body: data.body || "Nuevo aviso de Xtreme Gym.",
-      icon: data.icon || "/pwa-icon-192.png",
-      badge: "/pwa-icon-192.png",
-      data: {
-        url: data.url || "/app",
-        deliveryKey: data.deliveryKey || "",
-        memberKey: data.memberKey || "",
-        clickToken: data.clickToken || "",
-      },
-    }),
-  );
+self.addEventListener("push", (event) => {
+  const data = parsePushData(event);
+  const title = data.title || "Xtreme Gym";
+  const options = {
+    body: data.body || "Nuevo aviso de Xtreme Gym.",
+    icon: data.icon || "/pwa-icon-192.png",
+    badge: data.badge || "/pwa-icon-192.png",
+    tag: data.tag || data.deliveryKey || "xtreme-push",
+    renotify: Boolean(data.renotify),
+    vibrate: data.vibrate || [120, 60, 120],
+    requireInteraction: Boolean(data.requireInteraction),
+    data: {
+      url: data.url || "/app",
+      deliveryKey: data.deliveryKey || "",
+      memberKey: data.memberKey || "",
+      clickToken: data.clickToken || "",
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/app";
+  const rawUrl = event.notification.data?.url || "/app";
+  const targetUrl = new URL(rawUrl, self.location.origin).href;
   const data = event.notification.data || {};
-  const tasks = [self.clients.openWindow(url)];
+
+  const openOrFocus = async () => {
+    const clientsList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of clientsList) {
+      try {
+        const clientUrl = new URL(client.url);
+        if (clientUrl.origin === self.location.origin && "focus" in client) {
+          await client.focus();
+          if ("navigate" in client && typeof client.navigate === "function") {
+            try {
+              await client.navigate(targetUrl);
+            } catch {
+              // Algunos browsers no permiten navigate; el focus basta.
+            }
+          }
+          return;
+        }
+      } catch {
+        // client.url inválido — seguir con el siguiente.
+      }
+    }
+    if (self.clients.openWindow) {
+      await self.clients.openWindow(targetUrl);
+    }
+  };
+
+  const tasks = [openOrFocus()];
   if (data.deliveryKey && data.memberKey && data.clickToken) {
     tasks.push(
       fetch("/api/xtreme/events/notification-click", {
@@ -97,4 +149,20 @@ self.addEventListener("notificationclick", (event) => {
     );
   }
   event.waitUntil(Promise.all(tasks));
+});
+
+// Permite al cliente pedir una notificación local (mensaje al SW).
+self.addEventListener("message", (event) => {
+  const data = event.data || {};
+  if (data?.type === "SHOW_LOCAL_NOTIFICATION") {
+    event.waitUntil(
+      self.registration.showNotification(data.title || "Xtreme Gym", {
+        body: data.body || "Aviso de Xtreme Gym.",
+        icon: data.icon || "/pwa-icon-192.png",
+        badge: "/pwa-icon-192.png",
+        tag: data.tag || "xtreme-local",
+        data: { url: data.url || "/app" },
+      }),
+    );
+  }
 });

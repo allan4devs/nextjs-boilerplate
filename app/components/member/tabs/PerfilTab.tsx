@@ -26,6 +26,7 @@ import Avatar from "../Avatar";
 import Barcode from "../Barcode";
 import PanelHub, { type HubPanel } from "../PanelHub";
 import PaymentHistory from "../PaymentHistory";
+import PushNotificationsCard from "../PushNotificationsCard";
 import { GOALS, REMINDERS, TRAININGS } from "../constants";
 import { formatCedulaInput } from "../utils";
 import type { MemberOs } from "../useMemberOs";
@@ -350,39 +351,58 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
     {
       id: "avisos",
       label: "Avisos",
-      hint: `${activeNotifs}/${NOTIF_LABELS.length} activos`,
+      hint: `${activeNotifs}/${NOTIF_LABELS.length} correo · push`,
       icon: Bell,
       tone: "yellow",
       badge: String(activeNotifs),
       content: (
-        <div className="space-y-4">
-          <div className="grid gap-2">
-            {NOTIF_LABELS.map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                disabled={!unlocked}
-                onClick={() => toggleNotifPref(key)}
-                className={`flex min-h-12 items-center justify-between border-[3px] px-3 py-3 text-left text-sm font-bold transition disabled:opacity-45 ${
-                  notifPrefs[key]
-                    ? "border-yellow-300/50 bg-yellow-300/10 text-yellow-100"
-                    : "border-white/10 bg-black/20 text-white/45"
-                }`}
-              >
-                <span>{label}</span>
-                <span className="text-[10px] font-black uppercase">
-                  {notifPrefs[key] ? "On" : "Off"}
-                </span>
-              </button>
-            ))}
+        <div className="space-y-5">
+          {/* Web Push del Member OS (entrenos, reservas, racha…) — no es solo comunidad */}
+          <div>
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-[#d8ff3e]">
+              Avisos de la app (este celular)
+            </p>
+            <p className="mb-3 text-xs font-semibold leading-relaxed text-white/45">
+              Esto es para todo el Member OS: check-in, reservas, badges, plan y rachas.
+              El correo de abajo es otro canal, por separado.
+            </p>
+            <PushNotificationsCard unlocked={unlocked} />
           </div>
-          <p className="text-xs font-semibold text-white/42">
-            Si querés dejar de recibir correos opcionales, usá el enlace de preferencias en
-            cualquier correo o pedilo en recepción.
-          </p>
+
+          <div className="border-t border-white/10 pt-4">
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-white/45">
+              Preferencias de correo
+            </p>
+            <div className="grid gap-2">
+              {NOTIF_LABELS.map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={!unlocked}
+                  onClick={() => toggleNotifPref(key)}
+                  className={`flex min-h-12 items-center justify-between border-[3px] px-3 py-3 text-left text-sm font-bold transition disabled:opacity-45 ${
+                    notifPrefs[key]
+                      ? "border-yellow-300/50 bg-yellow-300/10 text-yellow-100"
+                      : "border-white/10 bg-black/20 text-white/45"
+                  }`}
+                >
+                  <span>{label}</span>
+                  <span className="text-[10px] font-black uppercase">
+                    {notifPrefs[key] ? "On" : "Off"}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-xs font-semibold text-white/42">
+              Estos switches controlan el correo. El push del celular se activa arriba. Si querés
+              dejar de recibir correos opcionales, usá el enlace de preferencias o pedilo en
+              recepción.
+            </p>
+          </div>
+
           <div className="border-t border-white/10 pt-4">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">
-              Aviso rápido ahora
+              Aviso rápido por correo
             </p>
             <div className="mt-3 grid gap-2">
               {REMINDERS.map((reminder) => (

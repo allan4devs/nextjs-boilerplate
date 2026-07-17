@@ -881,6 +881,7 @@ export function useMemberOs() {
         body: JSON.stringify({
           memberName,
           trainingId: training.id,
+          trainingName: training.name,
           trainingDate: todayIso(),
         }),
       });

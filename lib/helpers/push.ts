@@ -9,6 +9,8 @@ export type StoredPushSubscription = {
   memberKey: string;
   createdAt: Date;
   updatedAt: Date;
+  /** User-Agent del dispositivo al suscribirse (debug / multi-device). */
+  userAgent?: string;
 };
 
 export function pushEnabled() {

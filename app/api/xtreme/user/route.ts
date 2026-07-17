@@ -41,8 +41,36 @@ import { toPublicMember } from "@/lib/xtreme/members/presenter";
 import { createMongoMemberRepository } from "@/lib/xtreme/members/repository";
 import type { BodyMetric, XtremeMemberDoc } from "@/lib/xtreme/members/types";
 import { completeTodayWorkout } from "@/lib/xtreme/members/complete-today-workout";
+import {
+  badgeNamesFromNewBadges,
+  queuePushMemberEvent,
+} from "@/lib/xtreme/member-push";
 
 export const dynamic = "force-dynamic";
+
+/** Push de Member OS tras un entreno (y badges si hubo). No bloquea la respuesta. */
+function queueWorkoutPush(
+  db: Awaited<ReturnType<typeof getDb>>,
+  memberKey: string,
+  args: {
+    trainingName: string;
+    minutes?: number;
+    plan?: boolean;
+    newBadges?: unknown;
+    streak?: number;
+  },
+) {
+  queuePushMemberEvent(db, memberKey, {
+    type: args.plan ? "plan_finished" : "workout_done",
+    trainingName: args.trainingName,
+    minutes: args.minutes,
+    streak: args.streak,
+  });
+  const names = badgeNamesFromNewBadges(args.newBadges);
+  if (names.length) {
+    queuePushMemberEvent(db, memberKey, { type: "badge_earned", badgeNames: names });
+  }
+}
 
 async function buildAuthenticatedMemberPayload(
   db: Awaited<ReturnType<typeof getDb>>,
@@ -672,7 +700,19 @@ export async function PATCH(req: NextRequest) {
         { arrayFilters: [{ "el.id": active.planItemId }] },
       );
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: toPublicMember(doc, today), newBadges, leaderboard: await getMemberLeaderboard(memberRepository, today) });
+      const publicMember = toPublicMember(doc, today);
+      queueWorkoutPush(db, normalizedName, {
+        trainingName: active.trainingName,
+        minutes: elapsedMinutes,
+        plan: true,
+        newBadges,
+        streak: publicMember.streak ?? publicMember.gamification?.streak,
+      });
+      return NextResponse.json({
+        member: publicMember,
+        newBadges,
+        leaderboard: await getMemberLeaderboard(memberRepository, today),
+      });
     }
 
     if (action === "planItem") {
@@ -759,6 +799,14 @@ export async function PATCH(req: NextRequest) {
         entity: { type: "body_metric", id: metric.id },
         properties: { date: completedDate },
       });
+      const names = badgeNamesFromNewBadges(newBadges);
+      queuePushMemberEvent(db, normalizedName, {
+        type: "metric_logged",
+        weightKg: weightKg,
+      });
+      if (names.length) {
+        queuePushMemberEvent(db, normalizedName, { type: "badge_earned", badgeNames: names });
+      }
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       return NextResponse.json({ member: toPublicMember(doc, today), newBadges, leaderboard: await getMemberLeaderboard(memberRepository, today) });
     }
@@ -801,8 +849,15 @@ export async function PATCH(req: NextRequest) {
         minutes,
       },
     );
+    const publicMember = toPublicMember(doc, today);
+    queueWorkoutPush(db, sessionOrErr.memberKey, {
+      trainingName,
+      minutes,
+      newBadges,
+      streak: publicMember.streak ?? publicMember.gamification?.streak,
+    });
     return NextResponse.json({
-      member: toPublicMember(doc, today),
+      member: publicMember,
       newBadges,
       leaderboard: await getMemberLeaderboard(memberRepository, today),
     });
