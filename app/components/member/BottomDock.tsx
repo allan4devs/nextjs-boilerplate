@@ -1,10 +1,16 @@
 "use client";
 
-/** Dock inferior (solo mobile) con los 5 tabs del Member OS. */
+/**
+ * Dock inferior (solo mobile).
+ * Perfil vive en el TopHud (arriba) para no chocar con el atajo de sistemas.
+ */
 
 import { GameDockItem } from "../GameOS";
 import { TABS } from "./constants";
 import type { MemberOs } from "./useMemberOs";
+
+/** Tabs del dock: sin perfil (ese va arriba). */
+const DOCK_TABS = TABS.filter((item) => item.id !== "perfil");
 
 export default function BottomDock({ os }: { os: MemberOs }) {
   const { tab, setTab, setOsModal } = os;
@@ -14,7 +20,7 @@ export default function BottomDock({ os }: { os: MemberOs }) {
       className="xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden"
       aria-label="Navegación principal"
     >
-      {TABS.map((item) => (
+      {DOCK_TABS.map((item) => (
         <GameDockItem
           key={item.id}
           label={item.label}

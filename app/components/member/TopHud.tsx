@@ -1,13 +1,27 @@
 "use client";
 
-/** HUD superior fijo: acciones rapidas del OS (todas abren su modal). */
+/** HUD superior fijo: stats, perfil (arriba) y acciones rápidas. */
 
-import { Flame, Menu, Star, Target, Zap } from "lucide-react";
+import { Flame, Menu, Star, Target, UserRound, Zap } from "lucide-react";
 import { GameButton, GameHudPill } from "../GameOS";
+import Avatar from "./Avatar";
 import type { MemberOs } from "./useMemberOs";
 
 export default function TopHud({ os }: { os: MemberOs }) {
-  const { setNavOpen, unlocked, trainedToday, effectiveStreak, level, weekDoneCount, weeklyGoal, setOsModal } = os;
+  const {
+    setNavOpen,
+    unlocked,
+    trainedToday,
+    effectiveStreak,
+    level,
+    weekDoneCount,
+    weeklyGoal,
+    setOsModal,
+    setTab,
+    tab,
+    memberName,
+    currentMember,
+  } = os;
 
   return (
     <header className="xg-safe-top sticky top-0 z-30 border-b-[3px] border-white/15 bg-[#050505]/95 backdrop-blur-md lg:pl-[84px]">
@@ -57,6 +71,41 @@ export default function TopHud({ os }: { os: MemberOs }) {
               tone="lime"
               onClick={() => setOsModal({ kind: "week" })}
             />
+            {/* Perfil arriba: evita pelear con el dock y con "Sistemas" */}
+            <button
+              type="button"
+              data-tour="tab-perfil"
+              onClick={() => {
+                setTab("perfil");
+                setOsModal(null);
+              }}
+              aria-label="Abrir perfil"
+              aria-pressed={tab === "perfil"}
+              title="Perfil"
+              className={`ml-0.5 grid h-10 w-10 shrink-0 place-items-center border-[3px] transition sm:h-11 sm:w-11 ${
+                tab === "perfil"
+                  ? "border-[#d8ff3e] bg-[#d8ff3e] text-black shadow-[0_0_16px_rgba(216,255,62,0.35)]"
+                  : "border-white/25 bg-black/50 text-white hover:border-[#d8ff3e]/60"
+              }`}
+            >
+              {memberName ? (
+                <Avatar
+                  name={memberName}
+                  photoUrl={currentMember.photoUrl}
+                  className="h-7 w-7 sm:h-8 sm:w-8"
+                  textClass="text-[10px]"
+                />
+              ) : (
+                <UserRound className="h-5 w-5" />
+              )}
+            </button>
+            {/* Espacio para el atajo global "Sistemas" (fixed top-right en layout) */}
+            <span className="w-11 shrink-0 sm:w-[5.5rem]" aria-hidden />
+          </div>
+        )}
+        {!unlocked && (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="w-11 shrink-0 sm:w-[5.5rem]" aria-hidden />
           </div>
         )}
       </div>

@@ -1,4 +1,9 @@
-import type { SavePlanResponse, TrainerMember, TrainerPlan } from "./types";
+import type {
+  SavePlanResponse,
+  TrainerDashboardResponse,
+  TrainerMember,
+  TrainerPlan,
+} from "./types";
 
 async function payload<T>(response: Response): Promise<T> {
   const data = (await response.json().catch(() => ({}))) as T & { error?: string };
@@ -25,9 +30,28 @@ export async function logoutTrainer() {
 
 export async function fetchTrainerMembers() {
   const response = await fetch("/api/xtreme/trainer", { cache: "no-store" });
-  if (response.status === 401) return { authenticated: false, members: [] as TrainerMember[] };
-  const data = await payload<{ members?: TrainerMember[] }>(response);
-  return { authenticated: true, members: data.members ?? [] };
+  if (response.status === 401) {
+    return {
+      authenticated: false,
+      date: "",
+      members: [] as TrainerMember[],
+      todayClasses: [] as TrainerDashboardResponse["todayClasses"],
+    };
+  }
+  const data = await payload<Partial<TrainerDashboardResponse>>(response);
+  return {
+    authenticated: true,
+    date: data.date ?? "",
+    members: data.members ?? [],
+    todayClasses: data.todayClasses ?? [],
+  };
+}
+
+export async function fetchTrainerClasses() {
+  const response = await fetch("/api/xtreme/trainer?view=classes", { cache: "no-store" });
+  if (response.status === 401) return null;
+  const data = await payload<Pick<TrainerDashboardResponse, "date" | "todayClasses">>(response);
+  return { date: data.date ?? "", todayClasses: data.todayClasses ?? [] };
 }
 
 export async function persistTrainerPlan(memberName: string, coachName: string, plan: TrainerPlan) {
@@ -37,4 +61,3 @@ export async function persistTrainerPlan(memberName: string, coachName: string, 
   });
   return payload<SavePlanResponse>(response);
 }
-

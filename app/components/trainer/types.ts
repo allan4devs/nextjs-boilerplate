@@ -56,6 +56,28 @@ export type TrainerMember = {
   latestMetrics: TrainerMetric[];
 };
 
+export type TrainerClassAttendee = {
+  bookingId: string;
+  memberKey: string;
+  memberName: string;
+  photoUrl: string;
+  goal: string;
+  membershipStatus: MembershipStatus;
+  bookingStatus: "reserved" | "attended";
+};
+
+export type TrainerTodayClass = {
+  id: string;
+  trainingId: string;
+  trainingName: string;
+  startAt: string;
+  endAt: string;
+  coach: string;
+  capacity: number;
+  status: "scheduled" | "cancelled" | "completed";
+  attendees: TrainerClassAttendee[];
+};
+
 export type TrainerFilter = "all" | "attention" | "active" | "without-plan" | "completed";
 export type TrainerTab = "overview" | "plan" | "history";
 
@@ -103,3 +125,8 @@ export type TrainerNotice = { tone: "success" | "error"; text: string } | null;
 
 export type SavePlanResponse = { ok?: boolean; member?: TrainerMember | null; error?: string };
 
+export type TrainerDashboardResponse = {
+  date: string;
+  members: TrainerMember[];
+  todayClasses: TrainerTodayClass[];
+};

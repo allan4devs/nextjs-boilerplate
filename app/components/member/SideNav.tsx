@@ -65,44 +65,23 @@ export default function SideNav({ os }: { os: MemberOs }) {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
-          {TABS.map((item) => {
-            const Icon = item.icon;
-            const active = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                data-tour={`tab-${item.id}`}
-                title={item.label}
-                onClick={() => {
-                  setTab(item.id);
-                  setNavOpen(false);
-                  setOsModal(null);
-                }}
-                className={`flex h-14 w-full items-center gap-3 border-[3px] px-3 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${
-                  active
-                    ? "border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#d8ff3e] shadow-[0_0_18px_rgba(216,255,62,0.18)]"
-                    : "border-transparent text-white/50 hover:border-white/15 hover:bg-white/[.05] hover:text-white"
-                }`}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className={navOpen ? "block" : "lg:hidden"}>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="border-t-[3px] border-white/15 p-2">
+        {/* Perfil arriba del menú (no abajo del todo) */}
+        <div className="border-b-[3px] border-white/15 p-2">
           {memberName ? (
             <button
               type="button"
               title="Ver perfil"
+              data-tour="tab-perfil"
               onClick={() => {
                 setTab("perfil");
                 setNavOpen(false);
+                setOsModal(null);
               }}
-              className="flex h-14 w-full items-center gap-3 border-[3px] border-white/10 px-2 text-left transition hover:border-[#d8ff3e]/40 hover:bg-white/[.05]"
+              className={`flex h-14 w-full items-center gap-3 border-[3px] px-2 text-left transition ${
+                tab === "perfil"
+                  ? "border-[#d8ff3e] bg-[#d8ff3e]/15"
+                  : "border-white/10 hover:border-[#d8ff3e]/40 hover:bg-white/[.05]"
+              }`}
             >
               <Avatar name={memberName} photoUrl={currentMember.photoUrl} className="h-11 w-11" textClass="text-xs" />
               <span className={`min-w-0 flex-1 ${navOpen ? "block" : "lg:hidden"}`}>
@@ -174,6 +153,37 @@ export default function SideNav({ os }: { os: MemberOs }) {
               </GameButton>
             </form>
           )}
+        </div>
+
+        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
+          {TABS.filter((item) => item.id !== "perfil").map((item) => {
+            const Icon = item.icon;
+            const active = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                data-tour={`tab-${item.id}`}
+                title={item.label}
+                onClick={() => {
+                  setTab(item.id);
+                  setNavOpen(false);
+                  setOsModal(null);
+                }}
+                className={`flex h-14 w-full items-center gap-3 border-[3px] px-3 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${
+                  active
+                    ? "border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#d8ff3e] shadow-[0_0_18px_rgba(216,255,62,0.18)]"
+                    : "border-transparent text-white/50 hover:border-white/15 hover:bg-white/[.05] hover:text-white"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className={navOpen ? "block" : "lg:hidden"}>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="border-t-[3px] border-white/15 p-2">
           {memberName && (
             <button
               type="button"

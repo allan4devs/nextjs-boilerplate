@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchTrainerMembers, loginTrainer, logoutTrainer, persistTrainerPlan, trainerSession } from "../api";
+import {
+  fetchTrainerClasses,
+  fetchTrainerMembers,
+  loginTrainer,
+  logoutTrainer,
+  persistTrainerPlan,
+  trainerSession,
+} from "../api";
 import { DEFAULT_COACH_NAME } from "../constants";
 import type {
   PlanExercisePrescription,
@@ -12,6 +19,7 @@ import type {
   TrainerNotice,
   TrainerPlan,
   TrainerTab,
+  TrainerTodayClass,
 } from "../types";
 import {
   clonePlan,
@@ -32,6 +40,8 @@ export function useTrainerOs() {
   const [authenticated, setAuthenticated] = useState(false);
   const [code, setCode] = useState("");
   const [members, setMembers] = useState<TrainerMember[]>([]);
+  const [todayClasses, setTodayClasses] = useState<TrainerTodayClass[]>([]);
+  const [agendaDate, setAgendaDate] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TrainerFilter>("attention");
@@ -69,9 +79,13 @@ export function useTrainerOs() {
       if (!result.authenticated) {
         setAuthenticated(false);
         setMembers([]);
+        setTodayClasses([]);
+        setAgendaDate("");
         return;
       }
       setMembers(result.members);
+      setTodayClasses(result.todayClasses);
+      setAgendaDate(result.date);
       const priorityMember = filterTrainerMembers(result.members, "", "attention")[0] ?? result.members[0];
       setSelectedKey((current) => preserveSelection && result.members.some((member) => member.normalizedName === current)
         ? current
@@ -98,6 +112,30 @@ export function useTrainerOs() {
       }
     })();
   }, [load]);
+
+  const refreshAgenda = useCallback(async () => {
+    try {
+      const result = await fetchTrainerClasses();
+      if (!result) return;
+      setTodayClasses(result.todayClasses);
+      setAgendaDate(result.date);
+    } catch {
+      // La actualización manual superior vuelve a intentar y muestra errores completos.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    const timer = window.setInterval(() => void refreshAgenda(), 60_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshAgenda();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [authenticated, refreshAgenda]);
 
   useEffect(() => {
     if (selected) resetWorkspace(selected);
@@ -131,6 +169,8 @@ export function useTrainerOs() {
     await logoutTrainer();
     setAuthenticated(false);
     setMembers([]);
+    setTodayClasses([]);
+    setAgendaDate("");
     setSelectedKey("");
     setDirty(false);
   }, [dirty]);
@@ -251,7 +291,8 @@ export function useTrainerOs() {
   }, [coachName, draft, selected]);
 
   return {
-    checking, authenticated, code, setCode, members, selected, selectedSignal, stats,
+    checking, authenticated, code, setCode, members, todayClasses, agendaDate,
+    selected, selectedSignal, stats,
     query, setQuery, filter, setFilter, filteredMembers, tab, setTab, draft, coachName,
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
     saving, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,

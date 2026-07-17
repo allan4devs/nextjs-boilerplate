@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
+import { businessDate } from "@/lib/xtreme/business-date";
+import { getTrainerClassesForDate } from "@/lib/xtreme/trainer-classes";
 import {
   MEMBERS_COLLECTION,
   membershipStatus,
@@ -61,11 +63,29 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Sesion de entrenador requerida." }, { status: 401 });
   }
   const db = await getDb();
-  const members = await db.collection<MemberDoc>(MEMBERS_COLLECTION)
-    .find({}, { projection: { memberName: 1, normalizedName: 1, goal: 1, coach: 1, photoUrl: 1, membership: 1, trainingPlan: 1, activePlanWorkout: 1, workouts: 1, bodyMetrics: 1 } })
-    .sort({ memberName: 1 })
-    .toArray();
-  return NextResponse.json({ role: "trainer", members: members.map(trainerMemberView) }, { headers: { "Cache-Control": "no-store" } });
+  const date = businessDate();
+  if (req.nextUrl.searchParams.get("view") === "classes") {
+    return NextResponse.json(
+      { date, todayClasses: await getTrainerClassesForDate(db, date) },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  const [members, todayClasses] = await Promise.all([
+    db.collection<MemberDoc>(MEMBERS_COLLECTION)
+      .find({}, { projection: { memberName: 1, normalizedName: 1, goal: 1, coach: 1, photoUrl: 1, membership: 1, trainingPlan: 1, activePlanWorkout: 1, workouts: 1, bodyMetrics: 1 } })
+      .sort({ memberName: 1 })
+      .toArray(),
+    getTrainerClassesForDate(db, date),
+  ]);
+  return NextResponse.json(
+    {
+      role: "trainer",
+      date,
+      todayClasses,
+      members: members.map(trainerMemberView),
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export async function POST(req: NextRequest) {

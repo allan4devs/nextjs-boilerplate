@@ -9,6 +9,7 @@ import { TrainerHistory } from "./ui/TrainerHistory";
 import { TrainerOverview } from "./ui/TrainerOverview";
 import { TrainerPlanEditor } from "./ui/TrainerPlanEditor";
 import { TrainerRoster } from "./ui/TrainerRoster";
+import { TrainerTodayClasses } from "./ui/TrainerTodayClasses";
 
 export default function TrainerOs() {
   const os = useTrainerOs();
@@ -33,6 +34,8 @@ export default function TrainerOs() {
         <Kpi icon={Target} label="Sin plan" value={os.stats.withoutPlan} hint="por prescribir" tone="red" />
         <Kpi icon={Gauge} label="Progreso promedio" value={`${os.stats.averageProgress}%`} hint="planes asignados" tone="lime" wide />
       </section>
+
+      <TrainerTodayClasses os={os} />
 
       <div className="grid min-h-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]">
         <TrainerRoster os={os} />
