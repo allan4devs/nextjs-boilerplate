@@ -1,4 +1,4 @@
-const CACHE_NAME = "xtreme-gym-pwa-v3";
+const CACHE_NAME = "xtreme-gym-pwa-v4";
 const OFFLINE_PAGE = "/offline.html";
 const APP_SHELL = ["/", "/app", "/recepcion", OFFLINE_PAGE, "/xtreme/logo.jpg", "/pwa-icon-192.png", "/pwa-icon-512.png"];
 

@@ -100,7 +100,12 @@ export function clearStaffSessionCookie(res: NextResponse, surface: StaffSurface
 }
 
 export function authenticateStaffCode(code: string, surface: StaffSurface) {
-  const role = resolveStaffRole(code);
+  const allowedRoles: readonly StaffRole[] = surface === "trainer"
+    ? ["trainer"]
+    : surface === "admin"
+      ? ["super", "admin"]
+      : ["super", "admin", "reception"];
+  const role = resolveStaffRole(code, allowedRoles);
   return role && roleCanUseSurface(role, surface) ? role : null;
 }
 

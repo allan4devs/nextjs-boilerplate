@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La Vieja Adventures | Propuesta para empresas y agencias</title>
+  <style>
+    :root {
+      --ink: #102a25;
+      --forest: #0b493b;
+      --emerald: #00b892;
+      --emerald-dark: #007b62;
+      --mint: #dff8ef;
+      --mist: #f4faf7;
+      --sand: #f3ead7;
+      --white: #ffffff;
+      --gold: #d5aa4b;
+      --muted: #55716a;
+    }
+
+    * { box-sizing: border-box; }
+
+    @page { size: A4; margin: 0; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #dce8e3;
+      font-family: "Segoe UI", Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body { counter-reset: page; }
+
+    .page {
+      position: relative;
+      width: 210mm;
+      height: 297mm;
+      margin: 0 auto 10mm;
+      overflow: hidden;
+      background: var(--mist);
+      page-break-after: always;
+      counter-increment: page;
+    }
+
+    .page:last-child { page-break-after: auto; }
+
+    .page::before,
+    .page::after {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      border-radius: 48% 52% 60% 40%;
+      border: 2px solid rgba(0, 184, 146, .22);
+      transform: rotate(22deg);
+    }
+
+    .page::before { width: 170mm; height: 52mm; left: -75mm; top: 10mm; }
+    .page::after { width: 155mm; height: 44mm; right: -70mm; bottom: 18mm; }
+
+    .leaf {
+      position: absolute;
+      z-index: 1;
+      width: 26mm;
+      height: 12mm;
+      border-radius: 100% 0 100% 0;
+      background: linear-gradient(135deg, rgba(0,184,146,.22), rgba(0,123,98,.04));
+      border: 1px solid rgba(0,123,98,.22);
+      transform: rotate(-28deg);
+    }
+
+    .leaf::after {
+      content: "";
+      position: absolute;
+      left: 2mm;
+      top: 5.5mm;
+      width: 21mm;
+      height: 1px;
+      background: rgba(0,123,98,.35);
+      transform: rotate(-12deg);
+      transform-origin: left;
+    }
+
+    .leaf.a { top: 22mm; right: -4mm; }
+    .leaf.b { bottom: 30mm; left: -5mm; transform: rotate(150deg); }
+
+    .content {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      padding: 12mm 17mm 11mm;
+    }
+
+    .topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8mm;
+      margin-bottom: 6mm;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 5mm;
+    }
+
+    .logo {
+      width: 27mm;
+      height: 27mm;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid var(--emerald);
+      box-shadow: 0 3mm 9mm rgba(11,73,59,.18);
+    }
+
+    .brand-name {
+      color: var(--forest);
+      font-size: 18pt;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: .4px;
+    }
+
+    .brand-sub {
+      margin-top: 2mm;
+      color: var(--muted);
+      font-size: 8.5pt;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2.5mm 4mm;
+      color: var(--emerald-dark);
+      background: var(--mint);
+      border: 1px solid rgba(0,123,98,.2);
+      border-radius: 99px;
+      font-size: 8pt;
+      font-weight: 800;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      max-width: 165mm;
+      margin-bottom: 3mm;
+      color: var(--forest);
+      font-size: 28pt;
+      line-height: 1.04;
+      letter-spacing: -1.2px;
+    }
+
+    h1 .accent { color: var(--emerald-dark); }
+
+    .lead {
+      max-width: 168mm;
+      margin-bottom: 5mm;
+      color: #345950;
+      font-size: 11.5pt;
+      line-height: 1.48;
+    }
+
+    h2 {
+      margin-bottom: 4mm;
+      color: var(--forest);
+      font-size: 20pt;
+      line-height: 1.12;
+    }
+
+    h3 {
+      margin-bottom: 2mm;
+      color: var(--forest);
+      font-size: 11.2pt;
+      line-height: 1.2;
+    }
+
+    p { line-height: 1.45; }
+
+    .hero-card {
+      position: relative;
+      margin-top: 5mm;
+      padding: 7mm;
+      color: var(--white);
+      background: linear-gradient(135deg, #083c32 0%, #0b6652 58%, #00a984 100%);
+      border-radius: 6mm 16mm 6mm 16mm;
+      box-shadow: 0 5mm 14mm rgba(11,73,59,.2);
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 90mm;
+      height: 90mm;
+      right: -38mm;
+      top: -38mm;
+      border: 12mm solid rgba(255,255,255,.06);
+      border-radius: 50%;
+    }
+
+    .hero-kicker {
+      margin-bottom: 3mm;
+      color: #aef6e4;
+      font-size: 9pt;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      max-width: 128mm;
+      margin-bottom: 3mm;
+      font-size: 20pt;
+      font-weight: 800;
+      line-height: 1.08;
+    }
+
+    .hero-copy {
+      max-width: 145mm;
+      margin: 0;
+      color: #dcfff5;
+      font-size: 9.5pt;
+      line-height: 1.48;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3mm;
+      margin: 5mm 0;
+    }
+
+    .stat {
+      min-height: 23mm;
+      padding: 4mm 3mm;
+      text-align: center;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(0,123,98,.17);
+      border-radius: 4mm;
+    }
+
+    .stat strong {
+      display: block;
+      color: var(--emerald-dark);
+      font-size: 18pt;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 2mm;
+      color: var(--muted);
+      font-size: 7.4pt;
+      font-weight: 700;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+
+    .card {
+      padding: 4mm;
+      background: rgba(255,255,255,.85);
+      border: 1px solid rgba(0,123,98,.16);
+      border-radius: 4mm;
+      box-shadow: 0 2mm 6mm rgba(16,42,37,.05);
+    }
+
+    .card p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 9pt;
+    }
+
+    .icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 9mm;
+      height: 9mm;
+      margin-bottom: 3mm;
+      color: var(--white);
+      background: var(--emerald-dark);
+      border-radius: 50%;
+      font-size: 12pt;
+      font-weight: 800;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 8mm;
+      margin-bottom: 5mm;
+    }
+
+    .section-head p {
+      max-width: 75mm;
+      margin: 0;
+      color: var(--muted);
+      font-size: 8.7pt;
+      text-align: right;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      background: var(--white);
+      border: 1px solid rgba(0,123,98,.2);
+      border-radius: 4mm;
+      font-size: 8.7pt;
+    }
+
+    th {
+      padding: 3.5mm 3mm;
+      color: var(--white);
+      background: var(--forest);
+      font-size: 7.4pt;
+      letter-spacing: .5px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    td {
+      padding: 4mm 3mm;
+      vertical-align: top;
+      border-top: 1px solid #dfece7;
+    }
+
+    tbody tr:first-child td { border-top: 0; }
+    tbody tr:nth-child(even) td { background: #f2faf6; }
+
+    td strong { color: var(--forest); }
+    .money { white-space: nowrap; font-weight: 800; color: var(--emerald-dark); }
+    .small { color: var(--muted); font-size: 7.7pt; line-height: 1.35; }
+
+    .note {
+      margin-top: 4mm;
+      padding: 4mm 5mm;
+      color: #375e54;
+      background: var(--mint);
+      border-left: 1.5mm solid var(--emerald);
+      border-radius: 0 3mm 3mm 0;
+      font-size: 8.5pt;
+      line-height: 1.45;
+    }
+
+    ul.clean {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    ul.clean li {
+      position: relative;
+      margin: 0 0 2.4mm;
+      padding-left: 6mm;
+      color: #345950;
+      font-size: 8.8pt;
+      line-height: 1.38;
+    }
+
+    ul.clean li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--emerald-dark);
+      font-weight: 900;
+    }
+
+    .band {
+      margin: 5mm 0;
+      padding: 4mm;
+      color: var(--white);
+      background: linear-gradient(105deg, var(--forest), #0b725b);
+      border-radius: 5mm;
+    }
+
+    .band h3 { margin-bottom: 2mm; color: var(--white); font-size: 14pt; }
+    .band p { margin: 0; color: #dffbf4; font-size: 9pt; }
+
+    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+
+    .step {
+      position: relative;
+      min-height: 18mm;
+      padding: 2.5mm;
+      background: var(--white);
+      border-radius: 4mm;
+      border: 1px solid rgba(0,123,98,.15);
+    }
+
+    .step b {
+      display: block;
+      margin-bottom: 1mm;
+      color: var(--emerald-dark);
+      font-size: 11pt;
+    }
+
+    .step span { color: var(--muted); font-size: 7.4pt; line-height: 1.25; }
+
+    .alert {
+      padding: 5mm;
+      color: #5f3c12;
+      background: #fff4dc;
+      border: 1px solid #ebca83;
+      border-radius: 4mm;
+    }
+
+    .alert h3 { color: #754817; }
+    .alert p { margin: 0; font-size: 8.7pt; line-height: 1.45; }
+
+    .contact {
+      margin-top: 6mm;
+      padding: 7mm;
+      color: var(--white);
+      background: #092f28;
+      border-radius: 5mm;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 7mm;
+      align-items: center;
+    }
+
+    .contact h2 { margin-bottom: 2mm; color: var(--white); }
+    .contact p { margin-bottom: 0; color: #c9e8df; font-size: 9pt; }
+
+    .links a {
+      display: block;
+      margin: 2mm 0;
+      color: #86f3d8;
+      font-size: 9pt;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .footer {
+      position: absolute;
+      left: 17mm;
+      right: 17mm;
+      bottom: 4mm;
+      z-index: 3;
+      display: flex;
+      justify-content: space-between;
+      color: #6b847d;
+      font-size: 7pt;
+    }
+
+    .footer .page-no::after { content: counter(page); }
+
+    @media print {
+      html, body { background: transparent; }
+      .page { margin: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <section class="page">
+    <span class="leaf a"></span><span class="leaf b"></span>
+    <div class="content">
+      <div class="topline">
+        <div class="brand">
+          <img class="logo" src="assets/la-vieja-logo.jpg" alt="Logo La Vieja Adventures">
+          <div>
+            <div class="brand-name">La Vieja Adventures</div>
+            <div class="brand-sub">Sucre · San Carlos · Costa Rica</div>
+          </div>
+        </div>
+        <span class="pill">Propuesta para empresas y agencias</span>
+      </div>
+
+      <h1>Una aventura auténtica en el corazón del <span class="accent">Cañón del Río La Vieja</span></h1>
+      <p class="lead">Conectá a tus colaboradores, clientes o viajeros con senderos naturales, paredes de roca, cascadas y pozas cristalinas, acompañados por guías locales y una atención cercana de principio a fin.</p>
+
+      <div class="hero-card">
+        <div class="hero-kicker">Experiencia insignia</div>
+        <div class="hero-title">Tour Ciudad Esmeralda</div>
+        <p class="hero-copy">Un recorrido guiado de 3 a 4 horas por bosque, río y formaciones naturales. Una experiencia de nivel intermedio y técnico para personas activas que buscan aventura real, naturaleza viva y recuerdos extraordinarios.</p>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><strong>4.9</strong><span>Valoración promedio</span></div>
+        <div class="stat"><strong>+500</strong><span>Aventureros al año</span></div>
+        <div class="stat"><strong>100%</strong><span>Guías locales</span></div>
+        <div class="stat"><strong>3–4 h</strong><span>Duración estimada</span></div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="icon">⌁</div>
+          <h3>Naturaleza excepcional</h3>
+          <p>Cañón, bosque, río, cascadas y pozas de tonos esmeralda en un mismo recorrido.</p>
+        </div>
+        <div class="card">
+          <div class="icon">✓</div>
+          <h3>Acompañamiento seguro</h3>
+          <p>Guía, equipo de seguridad y ruta ajustada al clima y a las condiciones del grupo.</p>
+        </div>
+        <div class="card">
+          <div class="icon">◇</div>
+          <h3>Operación local</h3>
+          <p>Proyecto familiar de Sucre con atención cálida y compromiso con turismo responsable.</p>
+        </div>
+      </div>
+
+      <div class="band">
+        <h3>Ideal para grupos corporativos y aliados turísticos</h3>
+        <p>Salidas privadas entre semana o grupos de fin de semana, con opciones con o sin almuerzo. Los horarios se coordinan según disponibilidad y logística de la empresa.</p>
+      </div>
+    </div>
+    <div class="footer"><span>La Vieja Adventures · Propuesta comercial 2026</span><span class="page-no">Página </span></div>
+  </section>
+
+  <section class="page">
+    <span class="leaf a"></span><span class="leaf b"></span>
+    <div class="content">
+      <div class="topline">
+        <div class="brand">
+          <img class="logo" src="assets/la-vieja-logo.jpg" alt="Logo La Vieja Adventures">
+          <div>
+            <div class="brand-name">Tarifas corporativas</div>
+            <div class="brand-sub">Tour Ciudad Esmeralda · Precio por persona</div>
+          </div>
+        </div>
+        <span class="pill">USD</span>
+      </div>
+
+      <div class="section-head">
+        <div>
+          <h2>Paquetes y tarifas netas</h2>
+          <span class="pill">Margen sugerido para agencia: 15%</span>
+        </div>
+        <p>Las tarifas netas son una propuesta para convenios con empresas, agencias, hoteles y operadores.</p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:24%">Paquete</th>
+            <th style="width:34%">Incluye</th>
+            <th style="width:14%">Público</th>
+            <th style="width:14%">Neto</th>
+            <th style="width:14%">Margen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Tour privado</strong><br><span class="small">Entre semana</span></td>
+            <td>Guía privado, equipo de seguridad, acceso a senderos, río y cascadas, parqueo, baños, vestidores y almuerzo.</td>
+            <td class="money">US$60</td>
+            <td class="money">US$51</td>
+            <td class="money">US$9</td>
+          </tr>
+          <tr>
+            <td><strong>Grupo con almuerzo</strong><br><span class="small">Sábado y domingo</span></td>
+            <td>Tour guiado grupal, equipo de seguridad, acceso a senderos, río y cascadas, parqueo, baños, vestidores y almuerzo.</td>
+            <td class="money">US$40</td>
+            <td class="money">US$34</td>
+            <td class="money">US$6</td>
+          </tr>
+          <tr>
+            <td><strong>Grupo sin almuerzo</strong><br><span class="small">Sábado y domingo</span></td>
+            <td>Tour guiado grupal, equipo de seguridad, acceso a senderos, río y cascadas, parqueo, baños y vestidores.</td>
+            <td class="money">US$30</td>
+            <td class="money">US$25.50</td>
+            <td class="money">US$4.50</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note"><strong>Condición comercial:</strong> tarifas netas sugeridas para venta por intermediarios. Su aplicación, vigencia, impuestos, forma de pago, tamaño del grupo y condiciones de facturación se confirman por escrito al formalizar cada convenio.</div>
+
+      <div class="band">
+        <h3>Todo el año, según condiciones climáticas</h3>
+        <p>La operación se mantiene abierta durante la temporada. Por seguridad, el recorrido puede ajustarse o reprogramarse ante lluvias fuertes, crecientes del río o terreno inestable.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>La experiencia incluye</h3>
+          <ul class="clean">
+            <li>Recepción y charla inicial de seguridad.</li>
+            <li>Guía local durante todo el recorrido.</li>
+            <li>Equipo de seguridad requerido.</li>
+            <li>Senderos, cañón, río, cascadas y pozas según clima.</li>
+            <li>Parqueo, baños y espacio para cambiarse.</li>
+            <li>Almuerzo en los paquetes que lo indican.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Logística para empresas</h3>
+          <ul class="clean">
+            <li>Horarios coordinados según fecha y operación.</li>
+            <li>Atención a grupos y salidas privadas.</li>
+            <li>Acceso cercano a carretera nacional.</li>
+            <li>Parqueo y llegada para todo tipo de vehículo.</li>
+            <li>Disponibilidad confirmada en calendario.</li>
+            <li>Adaptaciones razonables revisadas antes de reservar.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+    <div class="footer"><span>Tarifas en dólares estadounidenses por persona</span><span class="page-no">Página </span></div>
+  </section>
+
+  <section class="page">
+    <span class="leaf a"></span><span class="leaf b"></span>
+    <div class="content">
+      <div class="topline">
+        <div class="brand">
+          <img class="logo" src="assets/la-vieja-logo.jpg" alt="Logo La Vieja Adventures">
+          <div>
+            <div class="brand-name">Prepará la aventura</div>
+            <div class="brand-sub">Comodidad · seguridad · naturaleza</div>
+          </div>
+        </div>
+        <span class="pill">Información para participantes</span>
+      </div>
+
+      <h2>Qué recomendamos llevar</h2>
+      <div class="grid-2">
+        <div class="card">
+          <ul class="clean">
+            <li>Ropa cómoda que cubra la mayor parte del cuerpo.</li>
+            <li>Una mudada completa y abrigo seco ligero.</li>
+            <li>Zapatos de hiking o tenis con muy buen agarre; no suela lisa.</li>
+            <li>Jacket impermeable y guantes para cables y escaleras.</li>
+            <li>Agua reutilizable y snacks para el trayecto.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <ul class="clean">
+            <li>Bolsa impermeable para celular, documentos o cámara.</li>
+            <li>Bloqueador solar y repelente.</li>
+            <li>Toalla pequeña y medicamentos personales.</li>
+            <li>Cédula o documento de identidad: obligatorio.</li>
+            <li>Disposición para caminar, mojarse y disfrutar.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="band">
+        <h3>Perfil recomendado</h3>
+        <p>Personas de 18 a 65 años, con buena condición física y comodidad para desplazarse por terreno irregular, húmedo y técnico. El ritmo y la ruta se revisan con el grupo.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="alert">
+          <h3>Antes de reservar</h3>
+          <p>El recorrido principal no es adecuado para personas con problemas de movilidad, osteoporosis, limitaciones importantes asociadas al peso, cirugías recientes u otras condiciones que puedan comprometer su seguridad. Informanos cualquier condición médica o necesidad particular para orientar al grupo responsablemente.</p>
+        </div>
+        <div class="card">
+          <h3>Familias y niños</h3>
+          <p>El cañón técnico no se recomienda para niños. Podemos conversar sobre senderos cercanos, cortos y sencillos, con puntos donde es posible observar el cañón y acercarse al río, siempre según clima y evaluación del guía.</p>
+        </div>
+      </div>
+
+      <div class="note"><strong>Seguridad primero:</strong> las pozas, cruces y secciones del recorrido dependen del nivel del río y del estado del terreno. La decisión final sobre la ruta corresponde al equipo guía.</div>
+
+      <div class="contact">
+        <div class="contact-grid">
+          <div>
+            <h2>¿Coordinamos la próxima salida?</h2>
+            <p>Escribinos con la fecha, cantidad de participantes y paquete de interés. Revisamos el calendario y te ayudamos a cerrar la reserva.</p>
+          </div>
+          <div class="links">
+            <a href="https://wa.me/50662332535">WhatsApp de reservas: +506 6233-2535</a>
+            <a href="tel:+50686430807">Llamadas: +506 8643-0807</a>
+            <a href="mailto:ciudadesmeraldacr@gmail.com">ciudadesmeraldacr@gmail.com</a>
+            <a href="https://www.laviejaadventures.com/">www.laviejaadventures.com</a>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:4mm" class="grid-2">
+        <div class="card">
+          <h3>Ubicación</h3>
+          <p>Sucre de Ciudad Quesada, San Carlos, Alajuela. Aproximadamente 7 km antes de Ciudad Quesada, en la entrada de San Carlos y el límite con Zarcero.</p>
+        </div>
+        <div class="card">
+          <h3>Cómo encontrarnos</h3>
+          <p>Buscanos en Waze o Google Maps como “La Vieja Adventures Canyon Tour”. <a style="color:#007b62;font-weight:700" href="https://goo.gl/maps/ahcSaFXtoXhcX6uu6">Abrir ubicación</a></p>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>Sucre de Ciudad Quesada · San Carlos · Costa Rica</span><span class="page-no">Página </span></div>
+  </section>
+</body>
+</html>
