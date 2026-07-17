@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
     if (action === "invite_app") {
       const email = normalizeEmail(body.email);
       if (!email || !isValidEmail(email)) {
-        return NextResponse.json({ error: "Ingrese un correo válido." }, { status: 400 });
+        return NextResponse.json({ error: "Ingresá un correo válido." }, { status: 400 });
       }
 
       const existingMember = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ email });
@@ -364,7 +364,7 @@ export async function POST(req: NextRequest) {
 
       if (!checkinId && !normalizedName) {
         return NextResponse.json(
-          { error: "Seleccione una persona o ingrese una cedula valida." },
+          { error: "Seleccioná una persona o ingresá una cédula válida." },
           { status: 400 },
         );
       }
@@ -539,7 +539,7 @@ export async function POST(req: NextRequest) {
       if (duplicate) {
         return NextResponse.json(
           {
-            error: `Ese contacto ya esta ligado a ${duplicate.memberName}. Use el ingreso.`,
+            error: `Ese contacto ya está ligado a ${duplicate.memberName}. Usá el ingreso.`,
             member: toAdminMember(duplicate),
           },
           { status: 409 },

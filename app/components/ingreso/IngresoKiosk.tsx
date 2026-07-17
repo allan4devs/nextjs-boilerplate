@@ -281,22 +281,29 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
     }
   }, []);
 
-  const fetchMember = useCallback(async (opts: { q?: string; code?: string; faceHash?: string }) => {
-    const params = new URLSearchParams();
-    if (opts.faceHash) params.set("faceHash", opts.faceHash);
-    else if (opts.code) params.set("code", opts.code);
-    else if (opts.q) params.set("q", opts.q);
-    const res = await fetch(`/api/xtreme/checkin?${params}`, { cache: "no-store" });
-    const json = (await res.json()) as {
-      status?: GymStatus;
-      member?: MemberHit | null;
-      bestMatch?: MemberHit | null;
-      matches?: MemberHit[];
-      error?: string;
-    };
-    if (json.status) setStatus(json.status);
-    return json;
-  }, []);
+  const fetchMember = useCallback(
+    async (opts: { q?: string; code?: string; cedula?: string; faceHash?: string }) => {
+      const params = new URLSearchParams();
+      if (opts.faceHash) params.set("faceHash", opts.faceHash);
+      else {
+        // Se pueden combinar: el server prueba cédula → código → nombre.
+        if (opts.cedula) params.set("cedula", opts.cedula);
+        if (opts.code) params.set("code", opts.code);
+        if (opts.q) params.set("q", opts.q);
+      }
+      const res = await fetch(`/api/xtreme/checkin?${params}`, { cache: "no-store" });
+      const json = (await res.json()) as {
+        status?: GymStatus;
+        member?: MemberHit | null;
+        bestMatch?: MemberHit | null;
+        matches?: MemberHit[];
+        error?: string;
+      };
+      if (json.status) setStatus(json.status);
+      return json;
+    },
+    [],
+  );
 
   // Cargar el perfil recordado al abrir.
   useEffect(() => {
@@ -369,20 +376,44 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
     setIsSearching(true);
     setError("");
     try {
+      /**
+       * Antes: si solo había dígitos, se mandaba como "code" (acceso 8 dígitos).
+       * Eso rompía cédulas de 9–10 dígitos del lector de barras → "nunca encuentra".
+       */
       const digits = q.replace(/\D/g, "");
-      const useCode = digits.length >= 4 && digits.length === q.replace(/\s/g, "").length;
-      const json = await fetchMember(useCode ? { code: digits } : { q });
+      const compact = q.replace(/\s/g, "");
+      const hasLetters = /[A-Za-zÁÉÍÓÚáéíóúÑñÜü]/.test(q);
+      const looksLikeCedula =
+        !hasLetters && (digits.length >= 9 || (/-/.test(q) && digits.length >= 6));
+      const looksLikeAccessCode =
+        !hasLetters && digits.length === 8 && compact.replace(/-/g, "") === digits;
+
+      let json;
+      if (looksLikeCedula) {
+        json = await fetchMember({ cedula: digits, q });
+      } else if (looksLikeAccessCode) {
+        // 8 dígitos: probar código y también cédula corta por si acaso
+        json = await fetchMember({ code: digits, cedula: digits, q });
+      } else if (!hasLetters && digits.length >= 4 && compact === digits) {
+        json = await fetchMember({ code: digits, q, cedula: digits });
+      } else {
+        json = await fetchMember({ q });
+      }
+
       if (!json.member) {
-        setError(json.error || "Socio no encontrado.");
+        setError(
+          json.error ||
+            "Socio no encontrado. Probá cédula, nombre completo o el código de 8 dígitos de la app.",
+        );
         return;
       }
       setProfile(json.member);
       setRecent(saveRecent(json.member.memberName));
-      setCheckinMethod(useCode ? "code" : "name");
+      setCheckinMethod(looksLikeAccessCode && !looksLikeCedula ? "code" : "name");
       setMode("profile");
       setQuery("");
     } catch {
-      setError("Error de conexion.");
+      setError("Error de conexión. Revisá internet e intentá de nuevo.");
     } finally {
       setIsSearching(false);
     }
@@ -400,7 +431,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
       const member = target ?? profile;
       if (!member) return;
       if (!/^\d{4}$/.test(kioskPin)) {
-        setError("Ingrese su PIN de 4 digitos para registrar el ingreso.");
+        setError("Ingresá tu PIN de 4 dígitos para registrar el ingreso.");
         setMode("profile");
         return;
       }
@@ -498,7 +529,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
         setProfile(null);
         setError(
           json.error ||
-            "Sin coincidencias. Use búsqueda por nombre o enrole el rostro en recepción.",
+            "Sin coincidencias. Usá búsqueda por nombre o enrolá el rostro en recepción.",
         );
         armCooldown();
       }
@@ -792,8 +823,8 @@ function FaceCard({
           : "border-white/40";
 
   const statusCopy: Record<FaceGuideStatus, string> = {
-    waiting: "Coloque su rostro en el círculo",
-    detected: "Rostro detectado — mantenga la posición",
+    waiting: "Colocá tu rostro en el círculo",
+    detected: "Rostro detectado — mantené la posición",
     locking: "Perfecto… identificando",
     scanning: isCheckingIn ? "Registrando ingreso…" : "Analizando rostro…",
     cooldown: "Listo para el siguiente socio",
@@ -912,7 +943,7 @@ function FaceCard({
       {matches.length > 1 && (
         <div className="mt-5 w-full text-left">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-black/40">
-            Varias coincidencias — elija la suya
+            Varias coincidencias — elegí la tuya
           </p>
           <div className="mt-2 space-y-2">
             {matches.map((m) => (
@@ -1030,7 +1061,7 @@ function ProfileCard({
         />
         {profile.hasPin === false && (
           <span className="mt-1 block text-xs font-bold text-orange-700">
-            Sin PIN: configurelo en la app o pida ayuda en recepcion.
+            Sin PIN: configuralo en la app o pedí ayuda en recepción.
           </span>
         )}
       </label>
@@ -1105,7 +1136,7 @@ function SearchCard({
         </div>
         <h2 className="mt-4 text-2xl font-black uppercase tracking-tight">Inicia tu ingreso</h2>
         <p className="mt-1 text-sm font-bold text-black/45">
-          Escribe tu nombre, telefono, cedula o codigo de socio.
+          Escribí tu nombre, cédula (con o sin guiones), teléfono o el código de 8 dígitos de la app.
         </p>
       </div>
 

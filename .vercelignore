@@ -1,0 +1,18 @@
+# Material de trabajo que no participa en el build de Next.js.
+.agents
+.claude
+.codex
+.vscode
+cv
+flyers
+scripts
+
+# Documentación y residuos locales.
+*.md
+*.log
+*.tsbuildinfo
+.env
+.env.*
+
+# Asset de una ruta retirada; se conserva localmente, no en producción.
+public/dzcate

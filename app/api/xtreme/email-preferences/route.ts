@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     const email = String(member?.email ?? "").trim().toLowerCase();
     if (!email) {
       return NextResponse.json(
-        { error: "Agregue su correo en el perfil para administrar avisos." },
+        { error: "Agregá tu correo en el perfil para administrar avisos." },
         { status: 400 },
       );
     }
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("XTREME EMAIL PREFERENCES", error);
     return NextResponse.json(
-      { error: "No pudimos guardar la preferencia. Intenta de nuevo." },
+      { error: "No pudimos guardar la preferencia. Intentá de nuevo." },
       { status: 500 },
     );
   }

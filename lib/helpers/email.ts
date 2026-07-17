@@ -183,14 +183,14 @@ export async function sendRegistrationConfirmEmail(args: {
   );
   return sendEmail({
     to: args.to,
-    subject: "Completa tu acceso a la app — Xtreme Gym",
+    subject: "Completá tu acceso a la app — Xtreme Gym",
     html: layout(
-      "Confirma tu correo y entra a la app",
-      `<p style="font-size:14px;line-height:1.6;">Gracias por registrarte en Xtreme Gym. Confirma tu correo para continuar y completar tu perfil (nombre, cedula y telefono):</p>
+      "Confirmá tu correo y entrá a la app",
+      `<p style="font-size:14px;line-height:1.6;">Gracias por registrarte en Xtreme Gym. Confirmá tu correo para continuar y completar tu perfil (nombre, cédula y teléfono):</p>
       <p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>
       <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Completar mi perfil y entrar a la app</a>
-      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Si el boton no funciona, copia este enlace:<br><span style="word-break:break-all;">${escapeHtml(href)}</span></p>
-      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El enlace vence en ${args.expiresMinutes} minutos. Si no fuiste vos, ignora este correo.</p>`,
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Si el botón no funciona, copiá este enlace:<br><span style="word-break:break-all;">${escapeHtml(href)}</span></p>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El enlace vence en ${args.expiresMinutes} minutos. Si no fuiste vos, ignorá este correo.</p>`,
     ),
   });
 }
@@ -240,18 +240,18 @@ export async function sendPaymentAppInviteEmail(args: {
     ". Recibimos tu pago de <strong>" +
     escapeHtml(args.optionLabel) +
     "</strong> y conservamos el correo confirmado durante el pago para proteger tu acceso.</p>" +
-    '<p style="font-size:14px;line-height:1.6;">Ahora completa tu perfil de socio. La cedula se solicita solamente dentro del enlace seguro; nunca la pedimos en el correo ni antes de pagar.</p>' +
+    '<p style="font-size:14px;line-height:1.6;">Ahora completá tu perfil de socio. La cédula se solicita solamente dentro del enlace seguro; nunca la pedimos en el correo ni antes de pagar.</p>' +
     '<p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>' +
     '<a href="' +
     escapeHtml(href) +
     '" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Completar mi perfil y entrar a la app</a>' +
     '<p style="font-size:13px;line-height:1.6;color:#6b6b66;">Este enlace es personal, se usa una sola vez y vence en ' +
     args.expiresHours +
-    " horas. No lo compartas. Si no reconoces el pago, escribenos de inmediato.</p>";
+    " horas. No lo compartás. Si no reconocés el pago, escribinos de inmediato.</p>";
   return sendEmail({
     to: args.to,
-    subject: "Completa tu acceso a la app — Xtreme Gym",
-    html: layout("Tu pago ya esta ligado a este correo", body),
+    subject: "Completá tu acceso a la app — Xtreme Gym",
+    html: layout("Tu pago ya está ligado a este correo", body),
   });
 }
 
@@ -268,19 +268,19 @@ export async function sendWelcomeEmail(args: {
     </tr>`;
   return sendEmail({
     to: args.to,
-    subject: "Bienvenido a Xtreme Gym — su perfil quedo listo",
+    subject: "Bienvenido a Xtreme Gym — tu perfil quedó listo",
     html: layout(
       `Bienvenido, ${escapeHtml(args.memberName)}`,
-      `<p style="font-size:14px;line-height:1.6;">Su perfil de socio quedo creado. Con este codigo puede hacer check-in en recepcion o en la pantalla de ingreso:</p>
+      `<p style="font-size:14px;line-height:1.6;">Tu perfil de socio quedó creado. Con este código podés hacer check-in en recepción o en la pantalla de ingreso:</p>
       <div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:16px;font-size:26px;font-weight:900;letter-spacing:6px;margin:16px 0;">${escapeHtml(args.accessCode)}</div>
-      <p style="font-size:14px;line-height:1.6;font-weight:bold;text-transform:uppercase;">Como entrar a su app de socio</p>
+      <p style="font-size:14px;line-height:1.6;font-weight:bold;text-transform:uppercase;">Cómo entrar a tu app de socio</p>
       <table style="border-collapse:collapse;margin:4px 0 8px;">
-        ${step(1, `Abra la app con el boton de abajo (guardela en su pantalla de inicio para tenerla a mano).`)}
-        ${step(2, args.cedula ? `Digite su cedula <strong>${escapeHtml(args.cedula)}</strong> para entrar a su perfil.` : `Digite su cedula para entrar a su perfil.`)}
-        ${step(3, `Cree su PIN de 4 digitos la primera vez; con el protege su perfil.`)}
+        ${step(1, `Abrí la app con el botón de abajo (guardala en tu pantalla de inicio para tenerla a mano).`)}
+        ${step(2, args.cedula ? `Digitá tu cédula <strong>${escapeHtml(args.cedula)}</strong> para entrar a tu perfil.` : `Digitá tu cédula para entrar a tu perfil.`)}
+        ${step(3, `Creá tu PIN de 4 dígitos la primera vez; con él protegés tu perfil.`)}
       </table>
       ${appButton("Entrar a mi app")}
-      <p style="font-size:14px;line-height:1.6;margin-top:16px;">En la app puede reservar clases, marcar entrenos, cuidar su racha y seguir su progreso corporal. ¡Pura vida y nos vemos en el gym!</p>`,
+      <p style="font-size:14px;line-height:1.6;margin-top:16px;">En la app podés reservar clases, marcar entrenos, cuidar tu racha y seguir tu progreso corporal. ¡Pura vida y nos vemos en el gym!</p>`,
     ),
   });
 }
@@ -309,7 +309,7 @@ export async function sendPaymentReceiptEmail(args: {
     subject: `Recibo Xtreme Gym — ${args.optionLabel}`,
     html: layout(
       "Recibo de pago",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.customerName)}, gracias por su pago. Este es su comprobante:</p>
+      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.customerName)}, gracias por tu pago. Este es tu comprobante:</p>
       <table style="border-collapse:collapse;margin:12px 0;">
         ${row("Concepto", escapeHtml(args.optionLabel))}
         ${row("Monto", `CRC ${args.amountCrc.toLocaleString("es-CR")}${args.amountUsd ? ` (USD ${args.amountUsd.toFixed(2)})` : ""}`)}
@@ -335,12 +335,12 @@ export async function sendReservationEmail(args: {
     subject: `Reserva confirmada — ${args.trainingName} (${args.trainingDate})`,
     html: layout(
       "Reserva confirmada",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}, su cupo quedo reservado:</p>
+      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}, tu cupo quedó reservado:</p>
       <table style="border-collapse:collapse;margin:12px 0;">
         ${row("Clase", escapeHtml(args.trainingName))}
         ${row("Fecha", escapeHtml(args.trainingDate))}
       </table>
-      <p style="font-size:14px;line-height:1.6;">Llegue 5 minutos antes. Si no puede asistir, cancele desde la app para liberar el cupo.</p>`,
+      <p style="font-size:14px;line-height:1.6;">Llegá 5 minutos antes. Si no podés asistir, cancelá desde la app para liberar el cupo.</p>`,
     ),
   });
 }
@@ -352,17 +352,17 @@ export async function sendPinChangedEmail(args: {
 }) {
   const detail =
     args.kind === "set"
-      ? "Se creo un PIN para su perfil."
+      ? "Se creó un PIN para tu perfil."
       : args.kind === "changed"
-        ? "Su PIN fue cambiado."
-        : "Su PIN fue restablecido usando su contacto de recuperacion.";
+        ? "Tu PIN fue cambiado."
+        : "Tu PIN fue restablecido usando tu contacto de recuperación.";
   return sendEmail({
     to: args.to,
-    subject: "Aviso de seguridad — PIN de su perfil Xtreme",
+    subject: "Aviso de seguridad — PIN de tu perfil Xtreme",
     html: layout(
       "Aviso de seguridad",
       `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. ${detail}</p>
-      <p style="font-size:14px;line-height:1.6;">Si usted no hizo este cambio, aviselo de inmediato en recepcion para bloquear el perfil.</p>`,
+      <p style="font-size:14px;line-height:1.6;">Si no hiciste este cambio, avisá de inmediato en recepción para bloquear el perfil.</p>`,
     ),
   });
 }
@@ -376,20 +376,20 @@ export async function sendMembershipReminderEmail(args: {
 }) {
   const expired = args.daysRemaining < 0;
   const headline = expired
-    ? `Su membresia vencio el ${args.nextBillingDate}`
-    : `Su membresia vence en ${args.daysRemaining} dia${args.daysRemaining === 1 ? "" : "s"}`;
+    ? `Tu membresía venció el ${args.nextBillingDate}`
+    : `Tu membresía vence en ${args.daysRemaining} día${args.daysRemaining === 1 ? "" : "s"}`;
   return sendEmail({
     to: args.to,
     optional: true,
-    subject: expired ? "Xtreme Gym — membresia vencida" : "Xtreme Gym — su membresia vence pronto",
+    subject: expired ? "Xtreme Gym — membresía vencida" : "Xtreme Gym — tu membresía vence pronto",
     html: layout(
-      "Recordatorio de membresia",
+      "Recordatorio de membresía",
       `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}, ${escapeHtml(headline)}.</p>
       <table style="border-collapse:collapse;margin:12px 0;">
         ${row("Plan", escapeHtml(args.plan))}
-        ${row(expired ? "Vencio" : "Vence", escapeHtml(args.nextBillingDate))}
+        ${row(expired ? "Venció" : "Vence", escapeHtml(args.nextBillingDate))}
       </table>
-      <p style="font-size:14px;line-height:1.6;">Puede renovar directamente desde su app o en recepción. No pierda su racha.</p>
+      <p style="font-size:14px;line-height:1.6;">Podés renovar directamente desde tu app o en recepción. No pierdas tu racha.</p>
       ${appButton("Abrir mi membresía")}`,
     ),
   });
@@ -405,7 +405,7 @@ export async function sendCustomReminderEmail(args: {
     optional: true,
     subject: "Recordatorio Xtreme Gym",
     html: layout(
-      "Su recordatorio",
+      "Tu recordatorio",
       `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}:</p>
       <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:15px;font-weight:bold;margin:12px 0;">
         ${escapeHtml(args.message)}
@@ -547,12 +547,12 @@ export async function sendPinRecoveryOtpEmail(args: {
 }) {
   return sendEmail({
     to: args.to,
-    subject: "Codigo para recuperar su PIN — Xtreme Gym",
+    subject: "Código para recuperar tu PIN — Xtreme Gym",
     html: layout(
       "Recuperar PIN",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Use este codigo para restablecer su PIN de 4 digitos:</p>
+      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Usá este código para restablecer tu PIN de 4 dígitos:</p>
       <div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:16px;font-size:28px;font-weight:900;letter-spacing:8px;margin:16px 0;">${escapeHtml(args.code)}</div>
-      <p style="font-size:14px;line-height:1.6;">Vence en ${args.expiresMinutes} minutos. Si usted no lo pidio, ignore este correo y avise en recepcion.</p>`,
+      <p style="font-size:14px;line-height:1.6;">Vence en ${args.expiresMinutes} minutos. Si no lo pediste, ignorá este correo y avisá en recepción.</p>`,
     ),
   });
 }

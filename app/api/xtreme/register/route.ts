@@ -117,7 +117,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
       {
         error:
           result.error ||
-          "El correo de confirmacion no esta configurado. Contacte al administrador.",
+          "El correo de confirmación no está configurado. Contactá al administrador.",
       },
       { status: 502 },
     );
@@ -125,7 +125,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
 
   return NextResponse.json({
     ok: true,
-    message: "Le enviamos un correo para confirmar su cuenta.",
+    message: "Te enviamos un correo para confirmar tu cuenta.",
   });
 }
 
@@ -161,7 +161,7 @@ export async function GET(req: NextRequest) {
       : null;
     if (!member) {
       return NextResponse.json(
-        { error: "El perfil asociado a este enlace no esta disponible. Contacte recepcion." },
+        { error: "El perfil asociado a este enlace no esta disponible. Contactá recepción." },
         { status: 409 },
       );
     }
@@ -201,7 +201,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
       : null;
     if (!member) {
       return NextResponse.json(
-        { error: "El perfil asociado a este enlace no esta disponible. Contacte recepcion." },
+        { error: "El perfil asociado a este enlace no esta disponible. Contactá recepción." },
         { status: 409 },
       );
     }
@@ -260,7 +260,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
     .findOne({ normalizedName });
   if (paidInvite && !existing) {
     return NextResponse.json(
-      { error: "No encontramos el perfil asociado al pago. Contacte recepcion." },
+      { error: "No encontramos el perfil asociado al pago. Contactá recepción." },
       { status: 409 },
     );
   }

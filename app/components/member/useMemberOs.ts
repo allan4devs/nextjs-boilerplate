@@ -94,7 +94,7 @@ export function useMemberOs() {
     // Preferido: status/code estructurados del server; el regex queda de fallback.
     const sessionLost =
       (err instanceof ApiError && (err.status === 401 || err.code === "session_required")) ||
-      /sesion requerida|session_required|ingrese su pin/i.test(detail);
+      /sesion requerida|session_required|ingrese su pin|ingres[aá] tu pin/i.test(detail);
     if (sessionLost) {
       window.localStorage.removeItem(SESSION_KEY);
       setPinMode("verify");
@@ -1011,7 +1011,7 @@ export function useMemberOs() {
       setMessage("Entreno finalizado y sesion del plan completada.");
       return true;
     } catch (err) {
-      requirePinAgain(err, "No se pudo finalizar. Confirme que marco su ingreso al gym hoy.");
+      requirePinAgain(err, "No se pudo finalizar. Confirmá que marcaste tu ingreso al gym hoy.");
       return false;
     } finally {
       setSavingTrainingId("");
@@ -1073,7 +1073,7 @@ export function useMemberOs() {
         body: JSON.stringify({ memberName, message: selectedReminder }),
       });
       const data = await readJson<{ ok?: boolean; sentTo?: string }>(response);
-      setMessage(MSG.ok.reminderSent(data.sentTo ?? "su correo"));
+      setMessage(MSG.ok.reminderSent(data.sentTo ?? "tu correo"));
     } catch (err) {
       requirePinAgain(err, MSG.errors.sendReminder);
     } finally {

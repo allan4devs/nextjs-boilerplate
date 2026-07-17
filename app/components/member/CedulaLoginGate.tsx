@@ -52,10 +52,10 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           Member OS · Cedula
         </GameLabel>
         <h2 className="xg-text-glow mt-2 text-2xl font-black uppercase text-white">
-          Escanee su cédula
+          Escaneá tu cédula
         </h2>
         <p className="mt-2 text-sm font-bold text-white/55">
-          Pase el carnet por el lector o digite los números. Luego confirma con su PIN.
+          Pasá el carnet por el lector o digitá los números. Luego confirmá con tu PIN.
         </p>
 
         <div className="mt-6 grid gap-2 text-left">
@@ -85,7 +85,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           {needsRegistration && (
             <>
               <GameCallout tone="orange">
-                Primera vez: complete nombre y teléfono para ligar esta cédula a su perfil.
+                Primera vez: completá nombre y teléfono para ligar esta cédula a tu perfil.
               </GameCallout>
               <input
                 value={memberNameInput}
@@ -121,7 +121,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           {needsRegistration ? "Crear perfil y entrar" : "Entrar"} <ArrowRight className="h-4 w-4" />
         </GameButton>
         <p className="mt-3 px-1 text-xs font-semibold text-white/38">
-          Lector USB tipo teclado: escanee y el sistema recibe la cédula + Enter. Si es socio
+          Lector USB tipo teclado: escaneá y el sistema recibe la cédula + Enter. Si es socio
           nuevo, se pedirá nombre y teléfono.
         </p>
         <Link

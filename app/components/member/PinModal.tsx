@@ -74,8 +74,8 @@ export default function PinModal({
         expiresInMin?: number;
       };
       if (!response.ok) throw new Error(data.error ?? MSG.errors.pinSendOtp);
-      setOtpSentTo(data.maskedEmail ?? "su correo");
-      onDone?.(MSG.ok.otpSent(data.maskedEmail ?? "su correo", data.expiresInMin ?? 15));
+      setOtpSentTo(data.maskedEmail ?? "tu correo");
+      onDone?.(MSG.ok.otpSent(data.maskedEmail ?? "tu correo", data.expiresInMin ?? 15));
     } catch (err) {
       setError(errorText(err, MSG.errors.pinSendOtp));
     } finally {
@@ -218,27 +218,27 @@ export default function PinModal({
   const title =
     mode === "set"
       ? step === "enter"
-        ? "Cree su PIN"
-        : "Confirme su PIN"
+        ? "Creá tu PIN"
+        : "Confirmá tu PIN"
       : mode === "change"
         ? step === "enter"
           ? "PIN actual"
           : step === "new"
             ? "Nuevo PIN"
-            : "Confirme PIN"
+            : "Confirmá PIN"
         : mode === "recover"
           ? step === "enter"
             ? "Nuevo PIN"
-            : "Confirme PIN"
-          : "Ingrese su PIN";
+            : "Confirmá PIN"
+          : "Ingresá tu PIN";
   const subtitle =
     mode === "set"
-      ? "4 digitos para proteger su racha y entrenos"
+      ? "4 digitos para proteger tu racha y entrenos"
       : mode === "change"
         ? "Primero validamos el PIN actual"
         : mode === "recover"
           ? "Codigo al correo del perfil (o contacto registrado)"
-          : "Entramos a su perfil Xtreme";
+          : "Entramos a tu perfil Xtreme";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/90 p-0 backdrop-blur-md sm:items-center sm:p-4">

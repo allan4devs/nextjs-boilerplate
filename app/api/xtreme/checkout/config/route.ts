@@ -32,7 +32,7 @@ export async function GET() {
     return NextResponse.json({
       configured: false,
       message:
-        "El pago en línea no está listo. Configure las credenciales de checkout en el servidor.",
+        "El pago en línea no está listo. Configurá las credenciales de checkout en el servidor.",
       currency: PAYPAL_CURRENCY,
     });
   }

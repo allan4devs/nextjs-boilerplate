@@ -3,6 +3,14 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Oculta el indicador flotante de Next en dev (logo "N").
   devIndicators: false,
+  compress: true,
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+  experimental: {
+    // Vercel restaura .next/cache entre builds; Turbopack reutiliza el grafo
+    // compilado y reduce de forma importante los builds consecutivos.
+    turbopackFileSystemCacheForBuild: true,
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [360, 640, 750, 828, 1080, 1200, 1600, 1920],

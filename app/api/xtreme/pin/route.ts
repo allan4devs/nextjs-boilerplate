@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "Este perfil no tiene correo. Agregue un correo en Perfil o pida ayuda en recepcion.",
+              "Este perfil no tiene correo. Agregá un correo en Perfil o pedí ayuda en recepción.",
           },
           { status: 400 },
         );
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
           {
             error: sent.skipped
               ? "Correo no configurado (RESEND_API_KEY). Use recuperacion por contacto o recepcion."
-              : sent.error || "No se pudo enviar el codigo. Intente de nuevo.",
+              : sent.error || "No se pudo enviar el código. Intentá de nuevo.",
           },
           { status: 502 },
         );
@@ -312,7 +312,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "Use el codigo del correo, o un contacto que coincida con el perfil. Recepcion puede actualizarlo.",
+              "Usá el código del correo, o un contacto que coincida con el perfil. Recepción puede actualizarlo.",
           },
           { status: 401 },
         );

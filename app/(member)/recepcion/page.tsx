@@ -148,7 +148,7 @@ export default function RecepcionPage() {
   } = useUserCamera({
     idealWidth: 1280,
     idealHeight: 720,
-    permissionErrorMessage: "No se pudo abrir la camara. Revise permisos del navegador.",
+    permissionErrorMessage: "No se pudo abrir la cámara. Revisá permisos del navegador.",
   });
   const [isScanning, setIsScanning] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
@@ -336,9 +336,10 @@ export default function RecepcionPage() {
       setError("");
       try {
         const params = new URLSearchParams();
+        // Combinar criterios: el server prueba cédula → código → nombre.
         if (opts.cedula) params.set("cedula", opts.cedula);
-        else if (opts.code) params.set("code", opts.code);
-        else if (opts.q) params.set("q", opts.q);
+        if (opts.code) params.set("code", opts.code);
+        if (opts.q) params.set("q", opts.q);
         const res = await fetch(`/api/xtreme/checkin?${params}`, {
           cache: "no-store",
         });
@@ -350,13 +351,16 @@ export default function RecepcionPage() {
         if (json.status) setStatus(json.status);
         if (!json.member) {
           setMember(null);
-          setError(json.error || "Socio no encontrado.");
+          setError(
+            json.error ||
+              "Socio no encontrado. Probá cédula, nombre completo o el código de 8 dígitos.",
+          );
           return null;
         }
         setMember(json.member);
         return json.member;
       } catch {
-        setError("Error de conexion.");
+        setError("Error de conexión.");
         setMember(null);
         return null;
       } finally {
@@ -414,7 +418,7 @@ export default function RecepcionPage() {
                 const found = await lookupMember({ cedula: candidate });
                 if (found) {
                   setCedula(candidate);
-                  setCedulaScanStatus("Cédula detectada. Confirme el ingreso.");
+                  setCedulaScanStatus("Cédula detectada. Confirmá el ingreso.");
                   setCedulaCameraMode(false);
                   stopCamera();
                   return;
@@ -422,7 +426,7 @@ export default function RecepcionPage() {
               }
               setCedula(candidates[0]);
               setCedulaScanStatus(
-                "Código leído, pero no encontramos al socio. Revise el número.",
+                "Código leído, pero no encontramos al socio. Revisá el número.",
               );
             }
           }
@@ -552,8 +556,24 @@ export default function RecepcionPage() {
     const q = query.trim();
     if (!q) return;
     const digits = q.replace(/\D/g, "");
-    const useCode = digits.length >= 4 && digits.length === q.replace(/\s/g, "").length;
-    const hit = await lookupMember(useCode ? { code: digits } : { q });
+    const compact = q.replace(/\s/g, "");
+    const hasLetters = /[A-Za-zÁÉÍÓÚáéíóúÑñÜü]/.test(q);
+    const looksLikeCedula =
+      !hasLetters && (digits.length >= 9 || (/-/.test(q) && digits.length >= 6));
+    const looksLikeAccessCode =
+      !hasLetters && digits.length === 8 && compact.replace(/-/g, "") === digits;
+
+    // Misma lógica que Ingreso OS: no tratar cédulas de 9+ dígitos como "código".
+    let hit: MemberHit | null = null;
+    if (looksLikeCedula) {
+      hit = await lookupMember({ cedula: digits, q });
+    } else if (looksLikeAccessCode) {
+      hit = await lookupMember({ code: digits, cedula: digits, q });
+    } else if (!hasLetters && digits.length >= 4 && compact === digits) {
+      hit = await lookupMember({ code: digits, cedula: digits, q });
+    } else {
+      hit = await lookupMember({ q });
+    }
     if (hit) setMember(hit);
   }
 
@@ -611,7 +631,7 @@ export default function RecepcionPage() {
 
   async function enrollCurrentFace() {
     if (!member) {
-      setError("Busque al socio primero (cedula) para enrolar su rostro.");
+      setError("Buscá al socio primero (cédula) para enrolar el rostro.");
       return;
     }
     const video = videoRef.current;
@@ -946,7 +966,7 @@ export default function RecepcionPage() {
                   <div>
                     <GameLabel tone="lime">Turno activo · herramientas de recepción</GameLabel>
                     <h1 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">¿Qué necesita hacer?</h1>
-                    <p className="mt-2 max-w-2xl text-sm font-bold text-white/45">Todo lo del mostrador está acá. Administración, reportes y configuración viven en su panel separado.</p>
+                    <p className="mt-2 max-w-2xl text-sm font-bold text-white/45">Todo lo del mostrador está acá. Administración, reportes y configuración viven en tu panel separado.</p>
                   </div>
                   {chatUnread > 0 && (
                     <button type="button" onClick={() => setTab("chat")} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-red-400 bg-red-500/15 px-4 text-xs font-black uppercase text-red-200">
@@ -955,13 +975,13 @@ export default function RecepcionPage() {
                   )}
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <ReceptionAction icon={LogOut} eyebrow={`${inside.length} dentro`} title="Registrar salida" description="Busque por nombre o cédula y marque la salida con un toque." tone="orange" onClick={() => setTab("inside")} />
-                  <ReceptionAction icon={IdCard} eyebrow="Acceso rápido" title="Ingresar socio" description="Escanee o digite la cédula y confirme el ingreso." tone="lime" onClick={() => setTab("cedula")} />
+                  <ReceptionAction icon={LogOut} eyebrow={`${inside.length} dentro`} title="Registrar salida" description="Buscá por nombre o cédula y marcá la salida con un toque." tone="orange" onClick={() => setTab("inside")} />
+                  <ReceptionAction icon={IdCard} eyebrow="Acceso rápido" title="Ingresar socio" description="Escaneá o digitá la cédula y confirmá el ingreso." tone="lime" onClick={() => setTab("cedula")} />
                   <ReceptionAction icon={UserPlus} eyebrow="Persona nueva" title="Registrar persona" description="Nombre, cédula, teléfono, correo, plan, foto e ingreso inmediato." tone="cyan" onClick={() => setTab("register")} />
                   <ReceptionAction icon={Mail} eyebrow="Solo necesita correo" title="Invitar a la app" description="Envíe un enlace para crear la cuenta, sin primer día gratis ni plan automático." tone="violet" onClick={() => setTab("invite")} />
                   <ReceptionAction icon={MessageCircle} eyebrow={chatUnread > 0 ? String(chatUnread) + " por atender" : "Atención en vivo"} title="Responder chat" description="Lea conversaciones, responda consultas y cierre casos resueltos." tone="orange" onClick={() => setTab("chat")} />
                   {FACE_RECOGNITION_ENABLED ? (
-                    <ReceptionAction icon={ScanFace} eyebrow="Cámara" title="Ingreso por rostro" description="Reconozca socios enrolados o agregue su rostro al perfil." tone="violet" onClick={() => setTab("face")} />
+                    <ReceptionAction icon={ScanFace} eyebrow="Cámara" title="Ingreso por rostro" description="Reconocé socios enrolados o agregá el rostro al perfil." tone="violet" onClick={() => setTab("face")} />
                   ) : (
                     <div className="border-[3px] border-white/10 bg-white/[0.025] p-5 text-white/35 sm:p-6">
                       <ShieldAlert className="h-7 w-7" />
@@ -1077,7 +1097,7 @@ export default function RecepcionPage() {
                 <div className="text-center">
                   <GameLabel tone="lime">Via mas rapida · toca teclas grandes</GameLabel>
                   <h2 className="mt-2 text-2xl font-black uppercase tracking-tight sm:text-3xl">
-                    Digite o escanee la cedula
+                    Digitá o escaneá la cédula
                   </h2>
                   <p className="mt-2 text-sm font-bold text-white/45">
                     Use la cámara, el lector de barras o el teclado. Enter confirma el ingreso.
@@ -1631,7 +1651,7 @@ function InsideRoster({
             Personas dentro · {visits.length}
           </h2>
           <p className="mt-2 text-sm font-bold text-white/45">
-            Busque por nombre o cédula y marque la salida desde la lista.
+            Buscá por nombre o cédula y marcá la salida desde la lista.
           </p>
         </div>
       </div>
@@ -1873,7 +1893,7 @@ function MemberPreview({
       {expired && (
         <div className="mt-3">
           <GameCallout tone="orange" icon={ShieldAlert}>
-            Membresia vencida — puede ingresar, cobrar renovacion.
+            Membresía vencida — podés ingresar, cobrá renovación.
           </GameCallout>
         </div>
       )}

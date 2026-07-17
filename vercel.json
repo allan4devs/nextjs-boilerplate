@@ -1,4 +1,7 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "npm ci --prefer-offline --no-audit --no-fund",
   "crons": [
     {
       "path": "/api/xtreme/jobs/lifecycle",

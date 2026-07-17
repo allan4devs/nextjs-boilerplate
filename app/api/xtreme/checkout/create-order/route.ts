@@ -113,13 +113,13 @@ export async function POST(req: NextRequest) {
     let authenticatedMemberKey = "";
 
     if (!option) {
-      return NextResponse.json({ success: false, message: "Seleccione un plan o clase válido." }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Seleccioná un plan o clase válido." }, { status: 400 });
     }
 
     // All catalog options are paid; reject zero-price ids if any slip through.
     if (isFreeOption(option)) {
       return NextResponse.json(
-        { success: false, message: "Esta opción no admite pago. Elija un plan o clase de pago." },
+        { success: false, message: "Esta opción no admite pago. Elegí un plan o clase de pago." },
         { status: 400 },
       );
     }

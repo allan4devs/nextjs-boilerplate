@@ -832,7 +832,7 @@ export default function XtremeAdminPage() {
     const weight = parseFloat(newMetric.weightKg);
     const waist = parseFloat(newMetric.waistCm);
     if (!weight || !waist) {
-      setError("Ingresa peso y medida de cintura validos.");
+      setError("Ingresá peso y medida de cintura válidos.");
       return;
     }
     setSavingMetric(true);
@@ -902,7 +902,7 @@ export default function XtremeAdminPage() {
   async function savePayment() {
     if (!code) return;
     if (!selectedPaymentMember) {
-      setError("Seleccione un socio registrado antes de guardar el pago.");
+      setError("Seleccioná un socio registrado antes de guardar el pago.");
       return;
     }
     setBusy("payment");
@@ -1382,7 +1382,7 @@ export default function XtremeAdminPage() {
                       />
                     </div>
                     <p className="mt-3 text-xs font-semibold text-white/45">
-                      Check-ins registrados por dia (kiosk + panel). Pase el cursor para el detalle.
+                      Check-ins registrados por día (kiosk + panel). Pasá el cursor para el detalle.
                     </p>
                   </div>
 

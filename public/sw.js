@@ -1,6 +1,6 @@
-const CACHE_NAME = "xtreme-gym-pwa-v5";
+const CACHE_NAME = "xtreme-gym-pwa-v6";
 const OFFLINE_PAGE = "/offline.html";
-const APP_SHELL = ["/", "/app", "/recepcion", OFFLINE_PAGE, "/xtreme/logo.jpg", "/pwa-icon-192.png", "/pwa-icon-512.png"];
+const APP_SHELL = ["/", "/app", "/recepcion", OFFLINE_PAGE, "/xtreme/logo.webp", "/pwa-icon-192.png", "/pwa-icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

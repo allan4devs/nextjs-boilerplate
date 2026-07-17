@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
         id = idRaw || `manual-${slugify(name) || Date.now()}`;
         if (BADGE_MAP.has(id)) {
           return NextResponse.json(
-            { error: "Ese id pertenece al catalogo. Elija otro." },
+            { error: "Ese id pertenece al catálogo. Elegí otro." },
             { status: 400 },
           );
         }
@@ -284,7 +284,7 @@ export async function POST(req: NextRequest) {
       if (!id) return NextResponse.json({ error: "Badge id requerido." }, { status: 400 });
       if (BADGE_MAP.has(id)) {
         return NextResponse.json(
-          { error: "No se puede borrar un badge del catalogo. Desactivelo." },
+          { error: "No se puede borrar un badge del catálogo. Desactivalo." },
           { status: 400 },
         );
       }

@@ -168,11 +168,11 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
             </div>
           ) : (
             <div className="mt-5 grid h-40 place-items-center border border-white/10 bg-black/25 text-sm font-semibold text-white/40">
-              Guarde su primera medida para ver evolucion.
+              Guardá tu primera medida para ver evolución.
             </div>
           )}
           <p className="mt-3 text-sm font-semibold text-white/45">
-            Peso y cintura por fecha. Pase el cursor para ver cada registro.
+            Peso y cintura por fecha. Pasá el cursor para ver cada registro.
           </p>
         </div>
       </div>

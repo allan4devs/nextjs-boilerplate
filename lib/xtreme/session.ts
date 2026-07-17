@@ -152,7 +152,7 @@ export async function renewMemberSession(db: Db, session: MemberSession): Promis
   return expiresAt;
 }
 
-export function unauthorizedMember(message = "Sesion requerida. Ingrese su PIN.") {
+export function unauthorizedMember(message = "Sesión requerida. Ingresá tu PIN.") {
   return NextResponse.json({ error: message, code: "session_required" }, { status: 401 });
 }
 

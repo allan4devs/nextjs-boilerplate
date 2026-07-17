@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
     });
     if (!pending) {
       return NextResponse.json(
-        { success: false, message: "Orden no encontrada. Vuelva a iniciar el pago." },
+        { success: false, message: "Orden no encontrada. Volvé a iniciar el pago." },
         { status: 400 },
       );
     }
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
     const option = getXtremeCheckoutOption(pending.optionId);
     if (!option) {
       return NextResponse.json(
-        { success: false, message: "Plan de la orden invalido. Contacte recepcion." },
+        { success: false, message: "Plan de la orden invalido. Contactá recepción." },
         { status: 400 },
       );
     }
@@ -242,7 +242,7 @@ export async function POST(req: NextRequest) {
         expected: pending.amountUsd,
       });
       return NextResponse.json(
-        { success: false, message: "Monto del pago no coincide. Contacte recepcion." },
+        { success: false, message: "Monto del pago no coincide. Contactá recepción." },
         { status: 400 },
       );
     }

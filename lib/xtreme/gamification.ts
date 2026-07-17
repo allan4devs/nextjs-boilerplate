@@ -413,11 +413,11 @@ export const BADGES: BadgeDef[] = [
     progress: (v) => ({ current: Math.min(10, count(v, "xtreme-core")), target: 10 }), test: (v) => count(v, "xtreme-core") >= 10 },
 
   // — Progreso —
-  { id: "primera-medida", name: "Punto de Partida", desc: "Registro su primera medida", icon: "Ruler", tier: "bronze",
+  { id: "primera-medida", name: "Punto de Partida", desc: "Registraste tu primera medida", icon: "Ruler", tier: "bronze",
     progress: (v) => ({ current: Math.min(1, v.metricsCount), target: 1 }), test: (v) => v.metricsCount >= 1 },
   { id: "medidas-12", name: "Cientifico del Progreso", desc: "12 medidas registradas", icon: "TrendingUp", tier: "gold",
     progress: (v) => ({ current: Math.min(12, v.metricsCount), target: 12 }), test: (v) => v.metricsCount >= 12 },
-  { id: "plan-completado", name: "Plan Cumplido", desc: "Completo el plan de su coach", icon: "ClipboardCheck", tier: "gold",
+  { id: "plan-completado", name: "Plan Cumplido", desc: "Completaste el plan de tu coach", icon: "ClipboardCheck", tier: "gold",
     progress: (v) => ({ current: v.planProgressPct, target: 100 }), test: (v) => v.planProgressPct >= 100 },
 
   // — Secretos —

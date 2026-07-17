@@ -53,8 +53,8 @@ export default function FreeDayRegisterForm({
           <div>
             <h2 className="text-xl font-black uppercase text-white">Revisá tu correo</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-white/65">
-              Le enviamos un enlace para confirmar su cuenta y activar el{" "}
-              <strong className="text-white">primer día gratis</strong>. Después configure su PIN
+              Te enviamos un enlace para confirmar tu cuenta y activar el{" "}
+              <strong className="text-white">primer día gratis</strong>. Después configurá tu PIN
               en la app.
             </p>
             <Link

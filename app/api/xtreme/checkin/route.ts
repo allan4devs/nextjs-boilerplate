@@ -139,29 +139,69 @@ export async function GET(req: NextRequest) {
     const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
     let match: MemberDoc | undefined;
 
+    // 1) Cédula explícita
     if (cedula) {
       match = findByCedula(docs, cedula);
     }
 
-    if (!match && codeDigits.length >= 4) {
-      match = docs.find((d) => {
-        const key = d.normalizedName || normalizeKey(d.memberName || "");
-        const code = memberAccessCode(key);
-        return code.includes(codeDigits) || code === codeDigits.padStart(8, "0");
-      });
+    // 2) Si mandan "code" con 9+ dígitos, casi seguro es cédula (lector/barcode), no código de 8.
+    if (!match && codeDigits.length >= 9) {
+      match = findByCedula(docs, codeDigits);
     }
 
-    if (!match && q) {
-      const key = normalizeKey(q);
+    // 3) Código de acceso del socio (8 dígitos canónicos; también parcial 4–8)
+    if (!match && codeDigits.length >= 4 && codeDigits.length <= 8) {
+      const padded = codeDigits.padStart(8, "0");
       match =
-        docs.find((d) => (d.normalizedName || "") === key) ||
-        docs.find((d) => (d.memberName || "").toUpperCase().includes(key)) ||
-        docs.find((d) => (d.phone || "").includes(q)) ||
-        findByCedula(docs, q);
+        docs.find((d) => {
+          const key = d.normalizedName || normalizeKey(d.memberName || "");
+          return memberAccessCode(key) === padded;
+        }) ||
+        (codeDigits.length < 8
+          ? docs.find((d) => {
+              const key = d.normalizedName || normalizeKey(d.memberName || "");
+              return memberAccessCode(key).includes(codeDigits);
+            })
+          : undefined);
+    }
+
+    // 4) Texto libre: nombre, teléfono o cédula embebida en q
+    if (!match && q) {
+      const qDigits = q.replace(/\D/g, "");
+      // Dígitos puros o con guiones → cédula primero (antes de nombre)
+      if (qDigits.length >= 6) {
+        match = findByCedula(docs, q) || findByCedula(docs, qDigits);
+      }
+      if (!match) {
+        const key = normalizeKey(q);
+        match =
+          docs.find((d) => (d.normalizedName || "") === key) ||
+          docs.find((d) => (d.memberName || "").toUpperCase().includes(key)) ||
+          docs.find((d) => {
+            const phone = String(d.phone || "").replace(/\D/g, "");
+            return Boolean(qDigits && phone && (phone.includes(qDigits) || qDigits.includes(phone)));
+          }) ||
+          findByCedula(docs, q);
+      }
+      // Código de 8 dígitos escrito en q
+      if (!match && qDigits.length === 8) {
+        match = docs.find((d) => {
+          const key = d.normalizedName || normalizeKey(d.memberName || "");
+          return memberAccessCode(key) === qDigits;
+        });
+      }
     }
 
     if (!match) {
-      return NextResponse.json({ status, member: null, error: "Socio no encontrado." }, { status: 404 });
+      return NextResponse.json(
+        {
+          status,
+          member: null,
+          error:
+            "Socio no encontrado. Probá cédula completa, nombre y apellido, o el código de 8 dígitos de la app.",
+        },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({
@@ -200,21 +240,40 @@ export async function POST(req: NextRequest) {
     let member: MemberDoc | undefined;
     if (memberName) {
       const key = normalizeKey(memberName);
-      member = docs.find((d) => (d.normalizedName || "") === key);
+      member =
+        docs.find((d) => (d.normalizedName || "") === key) ||
+        docs.find((d) => normalizeKey(d.memberName || "") === key);
     }
     if (!member && cedula) {
       member = findByCedula(docs, cedula);
     }
-    if (!member && codeDigits.length >= 4) {
-      member = docs.find((d) => {
-        const key = d.normalizedName || normalizeKey(d.memberName || "");
-        const code = memberAccessCode(key);
-        return code === codeDigits.padStart(8, "0") || code.includes(codeDigits);
-      });
+    // Lector/barcode a veces manda la cédula en "code"
+    if (!member && codeDigits.length >= 9) {
+      member = findByCedula(docs, codeDigits);
+    }
+    if (!member && codeDigits.length >= 4 && codeDigits.length <= 8) {
+      const padded = codeDigits.padStart(8, "0");
+      member =
+        docs.find((d) => {
+          const key = d.normalizedName || normalizeKey(d.memberName || "");
+          return memberAccessCode(key) === padded;
+        }) ||
+        (codeDigits.length < 8
+          ? docs.find((d) => {
+              const key = d.normalizedName || normalizeKey(d.memberName || "");
+              return memberAccessCode(key).includes(codeDigits);
+            })
+          : undefined);
     }
 
     if (!member?.memberName) {
-      return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+      return NextResponse.json(
+        {
+          error:
+            "Socio no encontrado. Revisá cédula, nombre o el código de 8 dígitos de la app.",
+        },
+        { status: 404 },
+      );
     }
 
     const normalizedName = member.normalizedName || normalizeKey(member.memberName);
@@ -224,7 +283,7 @@ export async function POST(req: NextRequest) {
     if (!staffRole) {
       if (!/^\d{4}$/.test(pin)) {
         return NextResponse.json(
-          { error: "Ingrese su PIN de 4 digitos para registrar el ingreso." },
+          { error: "Ingresá tu PIN de 4 dígitos para registrar el ingreso." },
           { status: 401 },
         );
       }
@@ -235,7 +294,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "Este socio no tiene PIN. Configurelo en la app o registre el ingreso en recepcion.",
+              "Este socio no tiene PIN. Configuralo en la app o registrá el ingreso en recepción.",
           },
           { status: 400 },
         );

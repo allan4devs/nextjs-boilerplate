@@ -123,7 +123,7 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
             onClick={() =>
               void saveProfileField(
                 { cedula: memberCedulaInput },
-                "Cedula guardada. Ya puede usarla con el lector.",
+                "Cédula guardada. Ya podés usarla con el lector.",
               ).then(closeAfterSave)
             }
           >

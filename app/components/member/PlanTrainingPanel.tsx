@@ -206,7 +206,7 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
             </button>
           </div>
           <p className="text-xs font-semibold text-white/40">
-            Para finalizar debe existir un ingreso registrado hoy. El tiempo, maquinas y repeticiones quedaran en su historial.
+            Para finalizar tiene que haber un ingreso registrado hoy. El tiempo, máquinas y repeticiones quedarán en tu historial.
           </p>
         </div>
       </section>

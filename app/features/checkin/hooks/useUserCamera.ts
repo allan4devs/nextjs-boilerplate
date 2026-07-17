@@ -42,7 +42,7 @@ export function useUserCamera({
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError(
-        "Este navegador no permite usar la cámara aquí. Abra la recepción con HTTPS o use el lector/teclado.",
+        "Este navegador no permite usar la cámara aquí. Abrí la recepción con HTTPS o usá el lector/teclado.",
       );
       return false;
     }
@@ -70,11 +70,11 @@ export function useUserCamera({
       const name = cause instanceof DOMException ? cause.name : "";
       const message =
         name === "NotAllowedError" || name === "SecurityError"
-          ? "La cámara está bloqueada. Permítala en la configuración del navegador e intente de nuevo."
+          ? "La cámara está bloqueada. Permitila en la configuración del navegador e intentá de nuevo."
           : name === "NotFoundError" || name === "OverconstrainedError"
             ? "No encontramos una cámara disponible en este dispositivo."
             : name === "NotReadableError"
-              ? "La cámara está siendo usada por otra aplicación. Ciérrela e intente de nuevo."
+              ? "La cámara está siendo usada por otra aplicación. Cerrala e intentá de nuevo."
               : permissionErrorMessage;
       setCameraError(message);
       setCameraOn(false);

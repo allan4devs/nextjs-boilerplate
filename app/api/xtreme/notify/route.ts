@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
     if (!member.email) {
       return NextResponse.json(
-        { error: "Agregue su correo en el perfil para recibir avisos." },
+        { error: "Agregá tu correo en el perfil para recibir avisos." },
         { status: 400 },
       );
     }

@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   const attempt = await db.collection<AttemptDoc>(STAFF_AUTH_ATTEMPTS_COLLECTION).findOne({ key });
   if (attempt?.blockedUntil && new Date(attempt.blockedUntil).getTime() > Date.now()) {
     return NextResponse.json(
-      { error: "Demasiados intentos. Espere 15 minutos." },
+      { error: "Demasiados intentos. Esperá 15 minutos." },
       { status: 429, headers: { "Retry-After": "900" } },
     );
   }

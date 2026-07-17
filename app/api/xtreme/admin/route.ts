@@ -469,7 +469,7 @@ export async function POST(req: NextRequest) {
       const memberKey = normalizeKey(normalizeName(body.memberKey));
       if (!memberKey) {
         return NextResponse.json(
-          { error: "Seleccione un socio registrado para asignar el pago." },
+          { error: "Seleccioná un socio registrado para asignar el pago." },
           { status: 400 },
         );
       }
@@ -480,7 +480,7 @@ export async function POST(req: NextRequest) {
         .findOne({ normalizedName: memberKey });
       if (!member?.memberName) {
         return NextResponse.json(
-          { error: "El socio seleccionado ya no existe. Actualice la lista." },
+          { error: "El socio seleccionado ya no existe. Actualizá la lista." },
           { status: 404 },
         );
       }

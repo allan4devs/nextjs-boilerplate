@@ -593,7 +593,7 @@ export async function PATCH(req: NextRequest) {
       if (item.done) return NextResponse.json({ error: "Esta sesion ya fue completada." }, { status: 409 });
       if (member.activePlanWorkout) {
         if (member.activePlanWorkout.planItemId !== itemId) {
-          return NextResponse.json({ error: "Finalice o cancele el entreno activo primero." }, { status: 409 });
+          return NextResponse.json({ error: "Finalizá o cancelá el entreno activo primero." }, { status: 409 });
         }
         return NextResponse.json({ member: toPublicMember(member, today) });
       }
@@ -725,7 +725,7 @@ export async function PATCH(req: NextRequest) {
       const done = Boolean(body.done);
       if (done) {
         return NextResponse.json(
-          { error: "Inicie y finalice la sesion para marcarla completada." },
+          { error: "Iniciá y finalizá la sesión para marcarla completada." },
           { status: 409 },
         );
       }

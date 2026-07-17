@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
   if (!existing) return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
   if (existing.activePlanWorkout) {
     return NextResponse.json(
-      { error: "El socio tiene un entreno activo. Espere a que lo finalice o cancele." },
+      { error: "El socio tiene un entreno activo. Esperá a que lo finalice o cancele." },
       { status: 409 },
     );
   }
