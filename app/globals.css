@@ -4,6 +4,8 @@
   --background: #ffffff;
   --foreground: #171717;
   --xg-viewport-height: 100vh;
+  --xg-visual-viewport-height: var(--xg-viewport-height);
+  --xg-visual-viewport-offset: 0px;
 }
 
 @theme inline {
@@ -199,20 +201,45 @@ button,
 
 /* OS access screens stay clear of the mobile keyboard instead of hugging it. */
 .xg-os-login-shell {
-  min-height: 100vh;
-  min-height: 100dvh;
-  align-items: center;
+  box-sizing: border-box;
+  height: var(--xg-visual-viewport-height);
+  min-height: var(--xg-visual-viewport-height);
+  max-height: var(--xg-visual-viewport-height);
+  align-items: start;
   justify-items: center;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scroll-padding-block: 1rem 40%;
+  -webkit-overflow-scrolling: touch;
   padding: max(1rem, env(safe-area-inset-top, 0px)) 1rem
     max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
+.xg-os-login-shell.fixed {
+  inset-block-start: var(--xg-visual-viewport-offset);
+  inset-block-end: auto;
+}
+
+/* Auto-margins center a card only while it fits; otherwise it starts at the top
+   and the shell remains fully scrollable. */
+.xg-os-login-shell > :not(.xg-atmosphere) {
+  margin-block: auto;
+}
+
+html[data-xg-keyboard="open"] .xg-os-login-shell {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+  padding-bottom: 0.75rem;
+  scroll-behavior: smooth;
+}
+
+html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
+  margin-block-start: 0;
+  margin-block-end: 0.75rem;
+}
+
 @media (max-height: 700px) {
-  .xg-os-login-shell {
-    align-items: start;
-    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  .xg-os-login-shell > :not(.xg-atmosphere) {
+    margin-block-start: 0;
   }
 }
 

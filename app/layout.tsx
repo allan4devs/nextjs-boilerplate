@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import PwaRuntime from "./components/PwaRuntime";
+import MobileViewportRuntime from "./components/MobileViewportRuntime";
 import { SITE_URL } from "./lib/seo";
 import "./globals.css";
 
@@ -96,6 +97,7 @@ export default function RootLayout({
           {"window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-18319195306');"}
         </Script>
         <PwaRuntime />
+        <MobileViewportRuntime />
         {children}
         <Analytics />
       </body>
