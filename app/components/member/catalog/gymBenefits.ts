@@ -35,7 +35,7 @@ export type GymServiceBenefit = {
   icon: LucideIcon;
   highlights: string[];
   /** Tab del Member OS al que conviene ir. */
-  ctaTab?: "entrenar" | "maquinas" | "progreso" | "perfil";
+  ctaTab?: "entrenar" | "maquinas" | "progreso" | "perfil" | "vida";
   ctaLabel?: string;
   badge?: string;
   tone: "lime" | "cyan" | "orange" | "yellow";

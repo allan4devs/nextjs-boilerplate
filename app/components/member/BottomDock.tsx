@@ -10,7 +10,7 @@ import { TABS } from "./constants";
 import type { MemberOs } from "./useMemberOs";
 
 /** Tabs del dock: sin perfil (ese va arriba). */
-const DOCK_TABS = TABS.filter((item) => item.id !== "perfil");
+const DOCK_TABS = TABS.filter((item) => item.id !== "perfil" && item.id !== "maquinas");
 
 export default function BottomDock({ os, showChat = false }: { os: MemberOs; showChat?: boolean }) {
   const { tab, setTab, setOsModal } = os;

@@ -27,6 +27,8 @@ type Props = {
   onGoTab?: (tab: TabId) => void;
 };
 
+type BenefitTab = Extract<TabId, "entrenar" | "maquinas" | "progreso" | "perfil" | "vida">;
+
 const TONE_BORDER: Record<string, string> = {
   lime: "border-[#d8ff3e]/40",
   cyan: "border-cyan-300/40",

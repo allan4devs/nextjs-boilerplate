@@ -38,7 +38,7 @@ import {
   WEEKLY_GOAL_MAX,
   WEEKLY_GOAL_MIN,
 } from "@/lib/xtreme/gamification";
-import { findMachineGuide, TRAININGS } from "./constants";
+import { findMachineGuide, FREE_WORKOUT } from "./constants";
 import { dayLabel, membershipPlanDays, membershipRemainingPct, todayIso } from "./utils";
 import type { MemberOs } from "./useMemberOs";
 
@@ -535,8 +535,8 @@ export default function OsModals({ os }: { os: MemberOs }) {
       <GameModal
         open={osModal?.kind === "quick-train" || osModal?.kind === "training"}
         onClose={closeOsModal}
-        title={selectedTraining?.name ?? "Marcar entreno"}
-        subtitle="Check-in de hoy"
+        title="Marcar entreno"
+        subtitle="Racha y XP del día"
         icon={Dumbbell}
         tone="orange"
         size="md"
@@ -550,8 +550,8 @@ export default function OsModals({ os }: { os: MemberOs }) {
               variant="lime"
               disabled={!unlocked || trainedToday || Boolean(savingTrainingId)}
               onClick={() => {
-                const t = selectedTraining ?? quickTraining;
-                if (!trainedToday) void completeTraining(t);
+                // Entreno libre: no es check-in de clase. Clases = Entrenar → Clases.
+                if (!trainedToday) void completeTraining(FREE_WORKOUT);
                 closeOsModal();
               }}
             >
@@ -562,46 +562,31 @@ export default function OsModals({ os }: { os: MemberOs }) {
               ) : (
                 <Flame className="h-4 w-4" />
               )}
-              {trainedToday ? "Ya marcado" : "Marcar entreno"}
+              {trainedToday ? "Ya marcado" : "Marcar entreno libre"}
             </GameButton>
           </div>
         }
       >
         <div className="space-y-3">
           <GameCallout tone="lime" icon={Flame}>
-            Un toque y sumás racha + XP. Elegí el entreno o usá el rápido del día.
+            Sumás racha + XP por tu sesión de hoy. Si venís a una clase grupal, reservá y hacé
+            check-in en Entrenar → Clases.
           </GameCallout>
-          <div className="grid gap-2">
-            {TRAININGS.map((training) => {
-              const Icon = training.icon;
-              const done = completedToday.has(training.id);
-              return (
-                <button
-                  key={training.id}
-                  type="button"
-                  onClick={() => setOsModal({ kind: "training", trainingId: training.id })}
-                  className={`flex items-center gap-3 border-[3px] p-3 text-left transition ${
-                    selectedTraining?.id === training.id ||
-                    (osModal?.kind === "quick-train" && training.id === quickTraining.id)
-                      ? "border-[#d8ff3e] bg-[#d8ff3e]/10"
-                      : "border-white/15 bg-black/30"
-                  }`}
-                >
-                  <span
-                    className={`grid h-11 w-11 place-items-center bg-gradient-to-br ${training.color} text-black`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black uppercase">{training.name}</p>
-                    <p className="text-[11px] font-bold text-white/45">
-                      {training.time} · {training.minutes} min · {training.intensity}
-                    </p>
-                  </div>
-                  {done && <Check className="h-5 w-5 text-[#d8ff3e]" />}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-3 border-[3px] border-[#d8ff3e]/40 bg-[#d8ff3e]/10 p-3">
+            <span
+              className={`grid h-11 w-11 place-items-center bg-gradient-to-br ${FREE_WORKOUT.color} text-black`}
+            >
+              <FREE_WORKOUT.icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black uppercase">{FREE_WORKOUT.name}</p>
+              <p className="text-[11px] font-bold text-white/45">
+                {FREE_WORKOUT.time} · {FREE_WORKOUT.minutes} min
+              </p>
+            </div>
+            {completedToday.has(FREE_WORKOUT.id) && (
+              <Check className="h-5 w-5 text-[#d8ff3e]" />
+            )}
           </div>
         </div>
       </GameModal>

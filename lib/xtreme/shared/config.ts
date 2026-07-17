@@ -21,6 +21,7 @@ export const WAITLIST_COLLECTION = "xtreme_gym_waitlist";
 export const PAYPAL_ORDERS_COLLECTION = "xtreme_gym_paypal_orders";
 export const CHAT_SESSIONS_COLLECTION = "xtreme_gym_chat_sessions";
 export const CHAT_MESSAGES_COLLECTION = "xtreme_gym_chat_messages";
+export const MEMBER_LIFESTYLE_COLLECTION = "xtreme_gym_member_lifestyle";
 
 export const FREE_FIRST_DAY_OFFER_ID = "free-first-day";
 export const FREE_FIRST_DAY_PLAN_LABEL = "Primer día gratis";

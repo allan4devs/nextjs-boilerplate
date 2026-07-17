@@ -1,6 +1,24 @@
-import { Activity, Dumbbell, Goal, Zap } from "lucide-react";
+import { Activity, Dumbbell, Goal, Sparkles, Zap } from "lucide-react";
 import type { Training } from "../domain/training";
 
+/**
+ * Entreno de piso libre (sin cupo ni horario de clase).
+ * Sirve para marcar la racha del día sin pretender check-in a una clase grupal.
+ */
+export const FREE_WORKOUT: Training = {
+  id: "open-floor",
+  name: "Entreno libre",
+  coach: "Piso libre",
+  time: "Cuando quieras",
+  minutes: 45,
+  intensity: "Variable",
+  slots: 0,
+  focus: "Tu sesión en el gym",
+  color: "from-zinc-200 to-white",
+  icon: Sparkles,
+};
+
+/** Clases grupales con horario y cupo (requieren reserva + ventana de check-in). */
 export const TRAININGS: Training[] = [
   {
     id: "fuerza-total",
@@ -51,3 +69,6 @@ export const TRAININGS: Training[] = [
     icon: Goal,
   },
 ];
+
+/** Opciones al marcar entreno libre / modal de training (libre + clases). */
+export const WORKOUT_OPTIONS: Training[] = [FREE_WORKOUT, ...TRAININGS];

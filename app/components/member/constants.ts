@@ -6,10 +6,12 @@
 export {
   ACHIEVEMENTS,
   findMachineGuide,
+  FREE_WORKOUT,
   GUIDE_WORKOUTS,
   MACHINE_GUIDE,
   ROUTINES,
   TRAININGS,
+  WORKOUT_OPTIONS,
 } from "./catalog";
 export type { Achievement } from "./catalog";
 export {

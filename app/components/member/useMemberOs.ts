@@ -35,6 +35,7 @@ import {
   todayIso,
 } from "./utils";
 import { useMemberDerivedState } from "./hooks/useMemberDerivedState";
+import { useMemberLifestyle } from "./hooks/useMemberLifestyle";
 import type {
   ActiveVisit,
   GymStatus,
@@ -161,6 +162,12 @@ export function useMemberOs() {
     quickTraining,
     selectedTraining,
   } = useMemberDerivedState({ member, memberName, osModal, showPin });
+  const lifestyle = useMemberLifestyle({
+    unlocked,
+    memberName,
+    setMessage,
+    setError,
+  });
 
   // --- Gamificacion: celebraciones ante cambios del servidor ---
 
@@ -1263,6 +1270,7 @@ export function useMemberOs() {
     closeOsModal,
     celebration,
     setCelebration,
+    ...lifestyle,
     // derivados
     unlocked,
     currentMember,

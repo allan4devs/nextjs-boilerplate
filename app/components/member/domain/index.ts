@@ -16,3 +16,13 @@ export type { NextBestAction, NextBestActionKind } from "./nextBestAction";
 export type { EntitlementRecord, PaymentHistoryResponse, PaymentRecord } from "./payment";
 export type { Reservation, ReservationState } from "./reservation";
 export type { GuideWorkout, MachineGuide, Routine, Training } from "./training";
+export { HABIT_IDS } from "./lifestyle";
+export type {
+  HabitId,
+  LifestyleChallengeId,
+  LifestyleGoal,
+  MemberLifestyle,
+  PersonalRecord,
+  VisitFeedback,
+  WellnessEntry,
+} from "./lifestyle";

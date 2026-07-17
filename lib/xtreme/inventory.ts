@@ -10,7 +10,7 @@ import {
   TRAININGS,
   todayIso,
 } from "./shared";
-import { classStartAt } from "./class-schedule";
+import { classDurationMin, classStartAt } from "./class-schedule";
 import {
   consumeBookingEntitlement,
   decideBooking,
@@ -136,7 +136,9 @@ export async function ensureClassSession(
   const capacity = args.capacity ?? template?.capacity ?? 12;
   const scheduledStart = classStartAt(args.trainingId, args.date);
   const startAt = scheduledStart ?? new Date(`${args.date}T12:00:00.000Z`);
-  const endAt = new Date(startAt.getTime() + (template?.durationMin ?? 55) * 60_000);
+  const durationMin =
+    template?.durationMin ?? classDurationMin(args.trainingId, 55);
+  const endAt = new Date(startAt.getTime() + durationMin * 60_000);
   const now = new Date();
   const doc: ClassSessionDoc = {
     id,

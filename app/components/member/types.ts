@@ -31,6 +31,15 @@ export type {
   WorkoutExerciseDetail,
 } from "./domain";
 export type {
+  HabitId,
+  LifestyleChallengeId,
+  LifestyleGoal,
+  MemberLifestyle,
+  PersonalRecord,
+  VisitFeedback,
+  WellnessEntry,
+} from "./domain";
+export type {
   GymStatus,
   MemberLookupResponse,
   MemberProfilePatch,

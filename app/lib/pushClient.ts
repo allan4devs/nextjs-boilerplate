@@ -83,15 +83,23 @@ async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
   return navigator.serviceWorker.ready;
 }
 
-export async function fetchPushConfig(): Promise<{ configured: boolean; publicKey: string }> {
+export async function fetchPushConfig(): Promise<{
+  configured: boolean;
+  publicKey: string;
+  missingKeys: string[];
+}> {
   const response = await fetch("/api/xtreme/push", { cache: "no-store", credentials: "same-origin" });
   const data = (await response.json().catch(() => ({}))) as {
     configured?: boolean;
     publicKey?: string;
+    missingKeys?: string[];
   };
+  const publicKey = String(data.publicKey ?? "").trim();
+  const missingKeys = Array.isArray(data.missingKeys) ? data.missingKeys.map(String) : [];
   return {
-    configured: Boolean(data.configured && data.publicKey),
-    publicKey: String(data.publicKey ?? ""),
+    configured: Boolean(data.configured && publicKey),
+    publicKey,
+    missingKeys,
   };
 }
 
@@ -166,7 +174,7 @@ export async function getPushCapability(): Promise<PushCapability> {
     };
   }
 
-  let config = { configured: false, publicKey: "" };
+  let config = { configured: false, publicKey: "", missingKeys: [] as string[] };
   try {
     config = await fetchPushConfig();
   } catch {
@@ -174,11 +182,18 @@ export async function getPushCapability(): Promise<PushCapability> {
   }
 
   if (!config.configured || !config.publicKey) {
+    const missing =
+      config.missingKeys.length > 0
+        ? ` Faltan: ${config.missingKeys.join(", ")}.`
+        : " Faltan NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY y/o VAPID_SUBJECT.";
     return {
       supported: true,
       canSubscribe: false,
       reason: "not-configured",
-      message: "Push todavía no está configurado en el servidor (faltan llaves VAPID).",
+      message:
+        "Push todavía no está configurado en el servidor." +
+        missing +
+        " En local: ponelas en .env.local y reiniciá el server. En Vercel: Project → Settings → Environment Variables → Redeploy.",
       isIos,
       isStandalone: standalone,
       permission,

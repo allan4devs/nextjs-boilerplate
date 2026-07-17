@@ -8,4 +8,4 @@ export {
 export type { GymServiceBenefit, GymZoneBenefit } from "./gymBenefits";
 export { findMachineGuide, GUIDE_WORKOUTS, MACHINE_GUIDE } from "./machines";
 export { ROUTINES } from "./routines";
-export { TRAININGS } from "./trainings";
+export { FREE_WORKOUT, TRAININGS, WORKOUT_OPTIONS } from "./trainings";

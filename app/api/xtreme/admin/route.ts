@@ -27,6 +27,11 @@ import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { listOpenOpsAlerts, resolveOpsAlert } from "@/lib/xtreme/ops-alerts";
 import { sendMembershipReminderEmail, sendPaymentReceiptEmail } from "@/lib/helpers/email";
+import {
+  addDaysIso,
+  grantEntitlement,
+  newEntitlementId,
+} from "@/lib/xtreme/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -300,6 +305,72 @@ export async function POST(req: NextRequest) {
         summary: `Alerta operativa resuelta: ${fingerprint}`,
       });
       return NextResponse.json({ ok: true });
+    }
+
+    // Acceso rapido a membresia: solo super admin, con entitlement real y auditoria.
+    if (action === "quickPlan") {
+      if (role !== "super") return forbidden();
+      const memberName = normalizeName(body.memberName);
+      const optionId = String(body.optionId ?? "month").trim();
+      const options: Record<string, { label: string; days: number }> = {
+        week: { label: "Xtreme Semanal", days: 7 },
+        fortnight: { label: "Xtreme Quincenal", days: 15 },
+        month: { label: "Xtreme Mensual", days: 30 },
+        quarter: { label: "Xtreme Trimestral", days: 90 },
+      };
+      const option = options[optionId];
+      if (!memberName || !option) {
+        return NextResponse.json({ error: "Socio o plan invalido." }, { status: 400 });
+      }
+
+      const db = await getDb();
+      const memberKey = normalizeKey(memberName);
+      const member = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+        normalizedName: memberKey,
+      });
+      if (!member) {
+        return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+      }
+
+      const today = todayIso();
+      const currentEnd = member.membership?.nextBillingDate;
+      const extensionBase = currentEnd && currentEnd >= today ? currentEnd : today;
+      const endsOn = addDaysIso(extensionBase, option.days);
+      const entitlement = await grantEntitlement(db, {
+        id: newEntitlementId("admin-plan"),
+        memberKey,
+        kind: "plan",
+        offerId: optionId,
+        label: option.label,
+        startsOn: today,
+        endsOn,
+        remainingBookings: null,
+        source: { type: "admin", id: `quick-plan-${Date.now()}` },
+      });
+      await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName: memberKey },
+        {
+          $set: {
+            "membership.startedAt": member.membership?.startedAt || today,
+            updatedAt: new Date(),
+          },
+        },
+      );
+      await writeAudit(db, {
+        actorRole: role,
+        action: "member.quick_plan_grant",
+        targetType: "member",
+        targetId: memberKey,
+        summary: `${option.label} otorgado a ${member.memberName || memberName} hasta ${endsOn}`,
+        meta: { optionId, days: option.days, endsOn, entitlementId: entitlement.id },
+      });
+      return NextResponse.json({
+        ok: true,
+        entitlementId: entitlement.id,
+        plan: option.label,
+        days: option.days,
+        endsOn,
+      });
     }
 
     // Plan personalizado

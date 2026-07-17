@@ -41,6 +41,10 @@ import { createMongoMemberRepository } from "@/lib/xtreme/members/repository";
 import type { BodyMetric, XtremeMemberDoc } from "@/lib/xtreme/members/types";
 import { completeTodayWorkout } from "@/lib/xtreme/members/complete-today-workout";
 import {
+  assertClassCheckInAllowed,
+  markClassBookingAttended,
+} from "@/lib/xtreme/class-checkin";
+import {
   badgeNamesFromNewBadges,
   queuePushMemberEvent,
 } from "@/lib/xtreme/member-push";
@@ -820,6 +824,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Faltan datos del entreno." }, { status: 400 });
     }
 
+    // Clases grupales: requieren reserva previa y ventana horaria (no check-in a clases pasadas).
+    const classGate = await assertClassCheckInAllowed(db, {
+      memberKey: sessionOrErr.memberKey,
+      trainingId,
+      date: today,
+    });
+
     const { member: doc, newBadges } = await completeTodayWorkout(
       {
         repository: memberRepository,
@@ -842,6 +853,7 @@ export async function PATCH(req: NextRequest) {
               completedDate: workout.completedDate,
               checkinId,
               memberName: persistedMemberName,
+              ...(classGate.kind === "ok" ? { bookingId: classGate.booking.id } : {}),
             },
           });
         },
@@ -854,6 +866,15 @@ export async function PATCH(req: NextRequest) {
         minutes,
       },
     );
+
+    if (classGate.kind === "ok") {
+      try {
+        await markClassBookingAttended(db, classGate.booking);
+      } catch (attendanceErr) {
+        console.error("XTREME CLASS ATTENDANCE", attendanceErr);
+      }
+    }
+
     const publicMember = toPublicMember(doc, today);
     queueWorkoutPush(db, sessionOrErr.memberKey, {
       trainingName,

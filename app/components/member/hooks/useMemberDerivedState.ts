@@ -7,7 +7,8 @@ import { nextBadgeUp, phraseContextFor } from "../../gamification";
 import {
   ACHIEVEMENTS,
   DEFAULT_NOTIF_PREFS,
-  TRAININGS,
+  FREE_WORKOUT,
+  WORKOUT_OPTIONS,
 } from "../constants";
 import type { Member, OsModal } from "../types";
 import {
@@ -107,12 +108,12 @@ export function useMemberDerivedState({
     { streak: effectiveStreak },
   );
   const nextBadge = nextBadgeUp(serverBadges);
-  const quickTraining =
-    TRAININGS.find((training) => training.name === currentMember.favoriteTraining) ??
-    TRAININGS[0];
+  // Marcar racha del día = entreno libre (no check-in de clase grupal).
+  // Las clases se marcan desde Entrenar → Clases, con reserva + ventana.
+  const quickTraining = FREE_WORKOUT;
   const selectedTraining =
     osModal?.kind === "training"
-      ? TRAININGS.find((training) => training.id === osModal.trainingId) ?? null
+      ? WORKOUT_OPTIONS.find((training) => training.id === osModal.trainingId) ?? FREE_WORKOUT
       : null;
 
   return {

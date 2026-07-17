@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import {
   PUSH_SUBSCRIPTIONS_COLLECTION,
+  missingVapidKeys,
   pushEnabled,
   sendMemberPush,
   type StoredPushSubscription,
@@ -28,10 +29,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  const missing = missingVapidKeys();
   return NextResponse.json({
-    configured: pushEnabled(),
-    publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "",
+    configured: missing.length === 0,
+    publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() || "",
     deviceCount,
+    // Solo nombres de env, nunca secretos — para depurar en el cliente/UI.
+    missingKeys: missing,
   });
 }
 

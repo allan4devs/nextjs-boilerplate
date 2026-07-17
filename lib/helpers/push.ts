@@ -13,12 +13,17 @@ export type StoredPushSubscription = {
   userAgent?: string;
 };
 
+/** Qué llaves VAPID faltan (solo nombres, nunca valores). */
+export function missingVapidKeys(): string[] {
+  const missing: string[] = [];
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim()) missing.push("NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+  if (!process.env.VAPID_PRIVATE_KEY?.trim()) missing.push("VAPID_PRIVATE_KEY");
+  if (!process.env.VAPID_SUBJECT?.trim()) missing.push("VAPID_SUBJECT");
+  return missing;
+}
+
 export function pushEnabled() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() &&
-      process.env.VAPID_PRIVATE_KEY?.trim() &&
-      process.env.VAPID_SUBJECT?.trim(),
-  );
+  return missingVapidKeys().length === 0;
 }
 
 function configure() {

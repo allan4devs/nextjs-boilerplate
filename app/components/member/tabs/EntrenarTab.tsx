@@ -18,6 +18,7 @@ import {
   Target,
   Video,
 } from "lucide-react";
+import { classCheckInWindow } from "@/lib/xtreme/class-schedule";
 import { GameLabel } from "../../GameOS";
 import { GOALS, ROUTINES, TRAININGS } from "../constants";
 import { todayIso } from "../utils";
@@ -26,6 +27,71 @@ import type { Training } from "../domain/training";
 import PanelHub, { type HubPanel } from "../PanelHub";
 import PlanTrainingPanel from "../PlanTrainingPanel";
 
+function classCheckInHint(
+  trainingId: string,
+  date: string,
+  isMine: boolean,
+  done: boolean,
+): { canCheckIn: boolean; canReserve: boolean; label: string; hint: string; ended: boolean } {
+  if (done) {
+    return {
+      canCheckIn: false,
+      canReserve: false,
+      label: "Hecho",
+      hint: "",
+      ended: false,
+    };
+  }
+  const window = classCheckInWindow(trainingId, date);
+  if (window.status === "not_today" || window.status === "not_a_class") {
+    return {
+      canCheckIn: false,
+      canReserve: false,
+      label: "No hoy",
+      hint: "Esta clase no se imparte hoy.",
+      ended: false,
+    };
+  }
+  if (window.status === "ended") {
+    return {
+      canCheckIn: false,
+      canReserve: false,
+      label: "Ya pasó",
+      hint: "La clase ya terminó. No se puede hacer check-in.",
+      ended: true,
+    };
+  }
+  // Reserva solo antes del inicio (el server cierra al start).
+  const canReserve = Date.now() < window.startAt.getTime();
+  if (!isMine) {
+    return {
+      canCheckIn: false,
+      canReserve,
+      label: "Check-in",
+      hint: canReserve
+        ? "Reservá la clase primero para poder hacer check-in."
+        : "La clase ya inició. Solo quien reservó puede hacer check-in.",
+      ended: false,
+    };
+  }
+  if (window.status === "too_early") {
+    return {
+      canCheckIn: false,
+      canReserve: true,
+      label: "Pronto",
+      hint: "El check-in se abre 30 min antes de la clase.",
+      ended: false,
+    };
+  }
+  return {
+    canCheckIn: true,
+    canReserve,
+    label: "Check-in",
+    hint: "Confirmá tu asistencia a la clase.",
+    ended: false,
+  };
+}
+
 function TrainingCard({
   training,
   unlocked,
@@ -33,6 +99,7 @@ function TrainingCard({
   reservation,
   reservingTrainingId,
   savingTrainingId,
+  date,
   expanded,
   onToggle,
   onReserve,
@@ -44,6 +111,7 @@ function TrainingCard({
   reservation: { reserved: number; capacity: number; remaining: number; isMine: boolean };
   reservingTrainingId: string;
   savingTrainingId: string;
+  date: string;
   expanded: boolean;
   onToggle: () => void;
   onReserve: () => void;
@@ -55,6 +123,13 @@ function TrainingCard({
     100,
     Math.round((reservation.reserved / reservation.capacity) * 100),
   );
+  const checkIn = classCheckInHint(training.id, date, reservation.isMine, done);
+  const reserveDisabled =
+    !unlocked ||
+    Boolean(reservingTrainingId) ||
+    (reservation.isMine ? false : isFull || !checkIn.canReserve);
+  const checkInDisabled =
+    !unlocked || Boolean(savingTrainingId) || done || !checkIn.canCheckIn;
 
   return (
     <div
@@ -88,6 +163,11 @@ function TrainingCard({
                 Reservado
               </span>
             )}
+            {!done && checkIn.ended && (
+              <span className="border border-white/20 bg-white/5 px-1.5 py-0.5 text-[9px] font-black uppercase text-white/45">
+                Ya pasó
+              </span>
+            )}
           </span>
           <span className="mt-1 block text-xs font-semibold text-white/50 sm:text-sm">
             {training.time} · {training.minutes} min
@@ -114,11 +194,14 @@ function TrainingCard({
           <p className="text-sm text-white/64">
             {training.focus} · {training.intensity} · Coach {training.coach}
           </p>
+          {checkIn.hint && !done && (
+            <p className="text-xs font-semibold text-white/40">{checkIn.hint}</p>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={onReserve}
-              disabled={!unlocked || Boolean(reservingTrainingId) || isFull}
+              disabled={reserveDisabled}
               className={`inline-flex min-h-12 items-center justify-center gap-2 px-3 py-3 text-xs font-black uppercase transition sm:text-sm ${
                 reservation.isMine
                   ? "border-[3px] border-[#d8ff3e] bg-[#d8ff3e]/10 text-[#eaff93] hover:bg-[#d8ff3e] hover:text-black"
@@ -137,7 +220,7 @@ function TrainingCard({
             <button
               type="button"
               onClick={onComplete}
-              disabled={!unlocked || Boolean(savingTrainingId) || done}
+              disabled={checkInDisabled}
               className={`inline-flex min-h-12 items-center justify-center gap-2 px-3 py-3 text-xs font-black uppercase transition sm:text-sm ${
                 done
                   ? "bg-[#d8ff3e] text-black"
@@ -151,7 +234,7 @@ function TrainingCard({
               ) : (
                 <Dumbbell className="h-4 w-4" />
               )}
-              {done ? "Hecho" : "Check-in"}
+              {checkIn.label}
             </button>
           </div>
         </div>
@@ -182,12 +265,13 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
   const doneCount = TRAININGS.filter((t) => completedToday.has(t.id)).length;
   const hasPlan = Boolean(currentMember.trainingPlan);
   const activeWorkout = Boolean(currentMember.activePlanWorkout);
+  const today = todayIso();
 
   const clasesContent = (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">
-          Hoy · {todayIso()}
+          Hoy · {today}
         </p>
         <p className="text-xs font-bold text-white/40">
           {doneCount}/{TRAININGS.length} hechos
@@ -210,6 +294,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
               reservation={reservation}
               reservingTrainingId={reservingTrainingId}
               savingTrainingId={savingTrainingId}
+              date={today}
               expanded={openTrainingId === training.id}
               onToggle={() =>
                 setOpenTrainingId((id) => (id === training.id ? null : training.id))

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { classStartAt, classTimeLabel } from "@/lib/xtreme/class-schedule";
-import { TRAININGS } from "../constants";
+import { TRAININGS, type TabId } from "../constants";
 import type { MemberOs } from "../useMemberOs";
 import { dayLabel, membershipPlanDays, membershipRemainingPct, todayIso } from "../utils";
 
@@ -114,7 +114,7 @@ export type ResumenActions = {
   reserveClass: (trainingId: string) => void;
   cancelClass: (trainingId: string) => void;
   /** Navegar a otro tab del Member OS (beneficios → progreso/máquinas/etc.). */
-  goTab: (tab: "resumen" | "entrenar" | "maquinas" | "progreso" | "perfil") => void;
+  goTab: (tab: TabId) => void;
 };
 
 async function trackMemberEvent(
@@ -500,7 +500,7 @@ export function useResumenViewModel(os: MemberOs): {
     [cancelReservation],
   );
   const goTab = useCallback(
-    (tab: "resumen" | "entrenar" | "maquinas" | "progreso" | "perfil") => setTab(tab),
+    (tab: TabId) => setTab(tab),
     [setTab],
   );
   const confirmCheckout = useCallback(() => {
