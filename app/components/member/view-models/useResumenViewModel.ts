@@ -14,6 +14,13 @@ type SummaryStat = {
 };
 
 export type ResumenViewModel = {
+  activeVisit: {
+    checkedInAtLabel: string;
+    elapsedMinutes: number;
+    reminderAfterMinutes: number;
+    reminderDue: boolean;
+    busy: boolean;
+  } | null;
   streak: {
     value: number;
     phrase: string;
@@ -90,6 +97,7 @@ export type ResumenViewModel = {
 };
 
 export type ResumenActions = {
+  registerCheckout: () => void;
   openStreak: () => void;
   openLevel: () => void;
   markTodayTraining: () => void;
@@ -159,6 +167,9 @@ export function useResumenViewModel(os: MemberOs): {
     reservingTrainingId,
     reserveTraining,
     cancelReservation,
+    activeVisit,
+    isRegisteringCheckout,
+    registerCheckout,
   } = os;
 
   const model = useMemo<ResumenViewModel>(() => {
@@ -205,8 +216,28 @@ export function useResumenViewModel(os: MemberOs): {
       date,
       value: currentMember.workouts.filter((workout) => workout.completedDate === date).length,
     }));
+    const visitElapsedMinutes = activeVisit
+      ? Math.max(
+          activeVisit.elapsedMinutes,
+          Math.floor((now - new Date(activeVisit.checkedInAt).getTime()) / 60_000),
+        )
+      : 0;
 
     return {
+      activeVisit: activeVisit
+        ? {
+            checkedInAtLabel: new Intl.DateTimeFormat("es-CR", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+              timeZone: "America/Costa_Rica",
+            }).format(new Date(activeVisit.checkedInAt)),
+            elapsedMinutes: visitElapsedMinutes,
+            reminderAfterMinutes: activeVisit.reminderAfterMinutes,
+            reminderDue: visitElapsedMinutes >= activeVisit.reminderAfterMinutes,
+            busy: isRegisteringCheckout,
+          }
+        : null,
       streak: gami
         ? {
             value: gami.streak,
@@ -351,6 +382,7 @@ export function useResumenViewModel(os: MemberOs): {
     };
   }, [
     currentMember,
+    activeVisit,
     dayPhrase,
     effectiveStreak,
     gami,
@@ -365,6 +397,7 @@ export function useResumenViewModel(os: MemberOs): {
     paymentHistory,
     reservations,
     reservingTrainingId,
+    isRegisteringCheckout,
     savingTrainingId,
     trainedToday,
     unlocked,
@@ -464,10 +497,16 @@ export function useResumenViewModel(os: MemberOs): {
     },
     [cancelReservation],
   );
+  const confirmCheckout = useCallback(() => {
+    if (!activeVisit || isRegisteringCheckout) return;
+    if (!window.confirm("¿Confirmás que ya saliste de Xtreme Gym?")) return;
+    void registerCheckout();
+  }, [activeVisit, isRegisteringCheckout, registerCheckout]);
 
   return {
     model,
     actions: {
+      registerCheckout: confirmCheckout,
       openStreak,
       openLevel,
       markTodayTraining,

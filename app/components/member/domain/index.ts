@@ -1,6 +1,7 @@
 export type { Gamification, PublicBadge } from "./gamification";
 export type {
   BodyMetric,
+  ActiveVisit,
   ActivePlanWorkout,
   Member,
   MemberPlan,

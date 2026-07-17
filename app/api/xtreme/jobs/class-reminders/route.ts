@@ -3,6 +3,7 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { businessDate } from "@/lib/xtreme/business-date";
 import { processClassReminders } from "@/lib/xtreme/class-reminders";
 import { pushEnabled } from "@/lib/helpers/push";
+import { processVisitCheckoutReminders } from "@/lib/xtreme/visit-reminders";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -13,7 +14,7 @@ function authorized(req: NextRequest) {
 }
 
 /**
- * Cron frecuente (~cada 15 min): avisa por push a quien tiene clase en ~1 h.
+ * Cron frecuente (~cada 15 min): recuerda clases próximas y visitas sin salida.
  * Auth: Authorization: Bearer $CRON_SECRET
  */
 export async function GET(req: NextRequest) {
@@ -24,13 +25,17 @@ export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const now = new Date();
-    const summary = await processClassReminders(db, now);
+    const [summary, visitReminders] = await Promise.all([
+      processClassReminders(db, now),
+      processVisitCheckoutReminders(db, now),
+    ]);
     return NextResponse.json({
       ok: true,
       date: businessDate(now),
       pushConfigured: pushEnabled(),
       window: "45-75 min before class",
       ...summary,
+      visitReminders,
     });
   } catch (error) {
     console.error("XTREME CLASS REMINDERS JOB", error);

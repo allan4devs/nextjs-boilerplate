@@ -23,6 +23,10 @@ import {
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
+import {
+  classifyMemberSearchInput,
+  memberLookupToSearchParams,
+} from "@/app/lib/memberLookup";
 import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 
@@ -283,14 +287,9 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
 
   const fetchMember = useCallback(
     async (opts: { q?: string; code?: string; cedula?: string; faceHash?: string }) => {
-      const params = new URLSearchParams();
-      if (opts.faceHash) params.set("faceHash", opts.faceHash);
-      else {
-        // Se pueden combinar: el server prueba cédula → código → nombre.
-        if (opts.cedula) params.set("cedula", opts.cedula);
-        if (opts.code) params.set("code", opts.code);
-        if (opts.q) params.set("q", opts.q);
-      }
+      const params = opts.faceHash
+        ? new URLSearchParams({ faceHash: opts.faceHash })
+        : memberLookupToSearchParams(opts);
       const res = await fetch(`/api/xtreme/checkin?${params}`, { cache: "no-store" });
       const json = (await res.json()) as {
         status?: GymStatus;
@@ -298,6 +297,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
         bestMatch?: MemberHit | null;
         matches?: MemberHit[];
         error?: string;
+        resolvedBy?: string;
       };
       if (json.status) setStatus(json.status);
       return json;
@@ -376,40 +376,35 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
     setIsSearching(true);
     setError("");
     try {
-      /**
-       * Antes: si solo había dígitos, se mandaba como "code" (acceso 8 dígitos).
-       * Eso rompía cédulas de 9–10 dígitos del lector de barras → "nunca encuentra".
-       */
-      const digits = q.replace(/\D/g, "");
-      const compact = q.replace(/\s/g, "");
-      const hasLetters = /[A-Za-zÁÉÍÓÚáéíóúÑñÜü]/.test(q);
-      const looksLikeCedula =
-        !hasLetters && (digits.length >= 9 || (/-/.test(q) && digits.length >= 6));
-      const looksLikeAccessCode =
-        !hasLetters && digits.length === 8 && compact.replace(/-/g, "") === digits;
+      // Fuente única de clasificación (cédula > código > nombre)
+      const classified = classifyMemberSearchInput(q);
+      const lookup =
+        classified.kind === "empty"
+          ? { q }
+          : classified.kind === "cedula"
+            ? { cedula: classified.cedula, q: classified.q }
+            : classified.kind === "code"
+              ? { code: classified.code, cedula: classified.cedula, q: classified.q }
+              : {
+                  q: classified.q,
+                  cedula: classified.cedula,
+                  code: classified.code,
+                };
 
-      let json;
-      if (looksLikeCedula) {
-        json = await fetchMember({ cedula: digits, q });
-      } else if (looksLikeAccessCode) {
-        // 8 dígitos: probar código y también cédula corta por si acaso
-        json = await fetchMember({ code: digits, cedula: digits, q });
-      } else if (!hasLetters && digits.length >= 4 && compact === digits) {
-        json = await fetchMember({ code: digits, q, cedula: digits });
-      } else {
-        json = await fetchMember({ q });
-      }
+      const json = await fetchMember(lookup);
 
       if (!json.member) {
         setError(
           json.error ||
-            "Socio no encontrado. Probá cédula, nombre completo o el código de 8 dígitos de la app.",
+            "Socio no encontrado. La cédula es la clave principal; también sirve nombre o código de 8 dígitos.",
         );
         return;
       }
       setProfile(json.member);
       setRecent(saveRecent(json.member.memberName));
-      setCheckinMethod(looksLikeAccessCode && !looksLikeCedula ? "code" : "name");
+      setCheckinMethod(
+        json.resolvedBy === "code" || classified.kind === "code" ? "code" : "name",
+      );
       setMode("profile");
       setQuery("");
     } catch {

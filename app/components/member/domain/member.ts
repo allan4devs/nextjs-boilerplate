@@ -97,6 +97,13 @@ export type Membership = {
   daysRemaining: number;
 };
 
+export type ActiveVisit = {
+  id: string;
+  checkedInAt: string;
+  elapsedMinutes: number;
+  reminderAfterMinutes: number;
+};
+
 export type Member = {
   memberName: string;
   normalizedName: string;

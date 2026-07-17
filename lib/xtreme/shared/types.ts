@@ -230,7 +230,7 @@ export type CheckinDoc = {
   date: string;
   checkedInAt: Date;
   checkedOutAt?: Date | null;
-  checkedOutBy?: StaffRole;
+  checkedOutBy?: StaffRole | "member";
   by: "kiosk" | "admin" | "reception";
   note?: string;
 };

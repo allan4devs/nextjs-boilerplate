@@ -7,7 +7,6 @@ import { grantFreeFirstDayIfEligible } from "@/lib/xtreme/entitlements";
 import {
   cedulaDigits,
   clampPinnedBadges,
-  findMemberByCedula,
   formatAccessCode,
   matchCedula,
   memberAccessCode,
@@ -45,6 +44,11 @@ import {
   badgeNamesFromNewBadges,
   queuePushMemberEvent,
 } from "@/lib/xtreme/member-push";
+import { resolveMember } from "@/lib/xtreme/members/resolve-member";
+import {
+  findActiveMemberVisit,
+  presentActiveMemberVisit,
+} from "@/lib/xtreme/member-visit";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +82,7 @@ async function buildAuthenticatedMemberPayload(
   today: string,
   extra: Record<string, unknown> = {},
 ) {
+  const now = new Date();
   const memberRepository = createMongoMemberRepository(db);
   const newBadges = await syncMemberGamification(memberRepository, normalizedName, { today });
   const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
@@ -111,9 +116,11 @@ async function buildAuthenticatedMemberPayload(
       : null,
     buddyInviteAvailable: (doc?.buddies?.length ?? 0) < 3 && member.totalWorkouts >= 3,
   });
+  const activeVisit = await findActiveMemberVisit(db, normalizedName, now);
 
   return {
     member,
+    activeVisit: presentActiveMemberVisit(activeVisit, now),
     exists: Boolean(doc),
     newBadges,
     leaderboard: await getMemberLeaderboard(memberRepository, today),
@@ -174,33 +181,32 @@ export async function GET(req: NextRequest) {
     const session = await resolveMemberSession(req);
 
     // Authenticated: full profile for the session member (optional lookup must match).
+    // Cédula es la mayor key: si viene, se usa para confirmar o cambiar de cuenta.
     if (session) {
       let normalizedName = session.memberKey;
       let resolvedBy: "name" | "cedula" | "session" = "session";
 
-      if (digits.length >= 6) {
-        const candidates = await db
-          .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
-          .find(
-            { cedula: { $exists: true, $type: "string", $ne: "" } },
-            { projection: { memberName: 1, normalizedName: 1, cedula: 1 } },
-          )
-          .toArray();
-        const hit = findMemberByCedula(candidates, digits);
-        if (hit?.normalizedName && hit.normalizedName !== session.memberKey) {
-          // Different cédula than session → bootstrap only (switch account flow)
-          return NextResponse.json(await bootstrapLookup(db, hit.normalizedName, "cedula", digits));
+      if (digits.length >= 6 || memberNameParam) {
+        const hit = await resolveMember(db, {
+          cedula: digits.length >= 6 ? digits : undefined,
+          memberName: memberNameParam || undefined,
+          q: memberNameParam || undefined,
+        });
+        if (hit) {
+          if (hit.memberKey !== session.memberKey) {
+            // Otra cédula/nombre que la sesión → bootstrap (cambio de cuenta)
+            return NextResponse.json(
+              await bootstrapLookup(
+                db,
+                hit.memberKey,
+                hit.resolvedBy === "cedula" ? "cedula" : "name",
+                digits,
+              ),
+            );
+          }
+          normalizedName = hit.memberKey;
+          resolvedBy = hit.resolvedBy === "cedula" ? "cedula" : hit.resolvedBy === "name" ? "name" : "session";
         }
-        if (hit?.normalizedName) {
-          normalizedName = hit.normalizedName;
-          resolvedBy = "cedula";
-        }
-      } else if (memberNameParam) {
-        const key = normalizeMemberKey(memberNameParam);
-        if (key !== session.memberKey) {
-          return NextResponse.json(await bootstrapLookup(db, key, "name", digits));
-        }
-        resolvedBy = "name";
       }
 
       const payload = await buildAuthenticatedMemberPayload(db, normalizedName, today, {
@@ -220,34 +226,33 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    let normalizedName = memberNameParam ? normalizeMemberKey(memberNameParam) : "";
-    let resolvedBy: "name" | "cedula" = "name";
+    // Login Member OS: cédula primero (fuente única resolveMember)
+    const hit = await resolveMember(db, {
+      cedula: digits.length >= 6 ? digits : undefined,
+      memberName: memberNameParam || undefined,
+      q: memberNameParam || digits || undefined,
+    });
 
-    if (!normalizedName && digits.length >= 6) {
-      const candidates = await db
-        .collection<XtremeMemberDoc>(MEMBERS_COLLECTION)
-        .find(
-          { cedula: { $exists: true, $type: "string", $ne: "" } },
-          { projection: { memberName: 1, normalizedName: 1, cedula: 1 } },
-        )
-        .toArray();
-      const hit = findMemberByCedula(candidates, digits);
-      if (!hit?.normalizedName) {
-        return NextResponse.json({
-          member: null,
-          exists: false,
-          lookup: "cedula" as const,
-          cedula: digits,
-          hasPinSet: false,
-          leaderboard: [],
-          nextBestAction: null,
-        });
-      }
-      normalizedName = hit.normalizedName;
-      resolvedBy = "cedula";
+    if (!hit?.memberKey) {
+      return NextResponse.json({
+        member: null,
+        exists: false,
+        lookup: (digits.length >= 6 ? "cedula" : "name") as "cedula" | "name",
+        cedula: digits || undefined,
+        hasPinSet: false,
+        leaderboard: [],
+        nextBestAction: null,
+      });
     }
 
-    return NextResponse.json(await bootstrapLookup(db, normalizedName, resolvedBy, digits));
+    return NextResponse.json(
+      await bootstrapLookup(
+        db,
+        hit.memberKey,
+        hit.resolvedBy === "cedula" ? "cedula" : "name",
+        digits,
+      ),
+    );
   } catch (err) {
     console.error("XTREME USER GET", err);
     return NextResponse.json({ error: "No se pudo cargar Xtreme Gym." }, { status: 500 });

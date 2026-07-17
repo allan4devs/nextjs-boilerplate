@@ -1,4 +1,4 @@
-import type { Member, NotificationPrefs } from "../domain/member";
+import type { ActiveVisit, Member, NotificationPrefs } from "../domain/member";
 import type { NextBestAction } from "../domain/nextBestAction";
 
 export type MemberProfilePatch = {
@@ -14,6 +14,7 @@ export type MemberProfilePatch = {
 
 export type MembersResponse = {
   member: Member | null;
+  activeVisit?: ActiveVisit | null;
   leaderboard: Member[];
   exists?: boolean;
   nextBestAction?: NextBestAction | null;

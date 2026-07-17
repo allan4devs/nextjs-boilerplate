@@ -36,6 +36,7 @@ import {
 } from "./utils";
 import { useMemberDerivedState } from "./hooks/useMemberDerivedState";
 import type {
+  ActiveVisit,
   GymStatus,
   Member,
   MemberProfilePatch,
@@ -88,6 +89,9 @@ export function useMemberOs() {
   const closeOsModal = useCallback(() => setOsModal(null), []);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryResponse | null>(null);
   const [isLoadingPayments, setIsLoadingPayments] = useState(false);
+  const [activeVisit, setActiveVisit] = useState<ActiveVisit | null>(null);
+  const [isRegisteringCheckout, setIsRegisteringCheckout] = useState(false);
+  const visitReminderShownRef = useRef("");
 
   const requirePinAgain = useCallback((err: unknown, fallback: string) => {
     const detail = errorText(err, fallback);
@@ -355,6 +359,92 @@ export function useMemberOs() {
     setGymStatus(data);
   }, []);
 
+  const loadActiveVisit = useCallback(async () => {
+    if (!unlocked) return;
+    try {
+      const response = await fetch("/api/xtreme/visit", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (response.status === 401 || response.status === 403) return;
+      const data = await readJson<{ activeVisit: ActiveVisit | null }>(response);
+      setActiveVisit(data.activeVisit);
+    } catch {
+      // Estado complementario: el siguiente poll o reload vuelve a intentar.
+    }
+  }, [unlocked]);
+
+  useEffect(() => {
+    if (!unlocked) {
+      setActiveVisit(null);
+      return;
+    }
+    void loadActiveVisit();
+    const timer = window.setInterval(() => void loadActiveVisit(), 60_000);
+    const refreshVisibleVisit = () => {
+      if (document.visibilityState === "visible") void loadActiveVisit();
+    };
+    document.addEventListener("visibilitychange", refreshVisibleVisit);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshVisibleVisit);
+    };
+  }, [loadActiveVisit, unlocked]);
+
+  useEffect(() => {
+    if (!activeVisit) {
+      visitReminderShownRef.current = "";
+      return;
+    }
+    const remindAt =
+      new Date(activeVisit.checkedInAt).getTime() +
+      activeVisit.reminderAfterMinutes * 60_000;
+    const delay = Math.max(500, remindAt - Date.now());
+    const timer = window.setTimeout(() => {
+      if (visitReminderShownRef.current === activeVisit.id) return;
+      visitReminderShownRef.current = activeVisit.id;
+      setMessage("¿Ya terminaste? Recordá registrar tu salida desde el resumen.");
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [activeVisit]);
+
+  const registerCheckout = useCallback(async () => {
+    if (!unlocked || !activeVisit || isRegisteringCheckout) return;
+    setError("");
+    setMessage("");
+    setIsRegisteringCheckout(true);
+    try {
+      const response = await fetch("/api/xtreme/visit", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = await readJson<{
+        durationMinutes: number;
+        activeVisit: null;
+        status?: GymStatus;
+      }>(response);
+      setActiveVisit(null);
+      if (data.status) setGymStatus(data.status);
+      const duration = Math.max(0, Number(data.durationMinutes) || 0);
+      setMessage(
+        duration > 0
+          ? `Salida registrada. Estuviste ${duration} min en Xtreme. ¡Pura vida!`
+          : "Salida registrada. ¡Pura vida!",
+      );
+    } catch (err) {
+      requirePinAgain(err, "No se pudo registrar tu salida.");
+      void loadActiveVisit();
+    } finally {
+      setIsRegisteringCheckout(false);
+    }
+  }, [
+    activeVisit,
+    isRegisteringCheckout,
+    loadActiveVisit,
+    requirePinAgain,
+    unlocked,
+  ]);
+
   const fetchPayments = useCallback(async () => {
     if (!unlocked) return;
     setIsLoadingPayments(true);
@@ -387,6 +477,7 @@ export function useMemberOs() {
       const resolved = memberData.member ?? initialMember(fallbackName);
       const name = resolved.memberName || fallbackName;
       setMember(resolved);
+      setActiveVisit(memberData.activeVisit ?? null);
       setMemberName(name);
       setMemberNameInput(name);
       setGoal(resolved.goal || GOALS[0]);
@@ -1105,6 +1196,8 @@ export function useMemberOs() {
     setLeaderboard([]);
     setReservations({});
     setNextBestAction(null);
+    setActiveVisit(null);
+    setIsRegisteringCheckout(false);
     setCelebration(null);
     prevGamiRef.current = null;
     setTab("resumen");
@@ -1198,6 +1291,8 @@ export function useMemberOs() {
     nextBadge,
     quickTraining,
     selectedTraining,
+    activeVisit,
+    isRegisteringCheckout,
     // acciones
     finishTour,
     updateWeeklyGoal,
@@ -1220,6 +1315,8 @@ export function useMemberOs() {
     cancelPlanWorkout,
     uploadPhoto,
     activateReminder,
+    loadActiveVisit,
+    registerCheckout,
     resetMember,
     // payment history
     paymentHistory,

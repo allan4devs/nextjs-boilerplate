@@ -37,6 +37,7 @@ import {
   cedulaCandidates,
   decodeCedulaBarcode,
 } from "@/app/features/checkin/cedula/decodeCedulaBarcode";
+import { memberLookupToSearchParams } from "@/app/lib/memberLookup";
 import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 
@@ -335,11 +336,8 @@ export default function RecepcionPage() {
       setIsLooking(true);
       setError("");
       try {
-        const params = new URLSearchParams();
-        // Combinar criterios: el server prueba cédula → código → nombre.
-        if (opts.cedula) params.set("cedula", opts.cedula);
-        if (opts.code) params.set("code", opts.code);
-        if (opts.q) params.set("q", opts.q);
+        // Misma fuente de verdad que Ingreso / Member (cédula primero).
+        const params = memberLookupToSearchParams(opts);
         const res = await fetch(`/api/xtreme/checkin?${params}`, {
           cache: "no-store",
         });
@@ -353,7 +351,7 @@ export default function RecepcionPage() {
           setMember(null);
           setError(
             json.error ||
-              "Socio no encontrado. Probá cédula, nombre completo o el código de 8 dígitos.",
+              "Socio no encontrado. La cédula es la clave principal; también nombre o código de 8 dígitos.",
           );
           return null;
         }
@@ -555,25 +553,8 @@ export default function RecepcionPage() {
     e?.preventDefault();
     const q = query.trim();
     if (!q) return;
-    const digits = q.replace(/\D/g, "");
-    const compact = q.replace(/\s/g, "");
-    const hasLetters = /[A-Za-zÁÉÍÓÚáéíóúÑñÜü]/.test(q);
-    const looksLikeCedula =
-      !hasLetters && (digits.length >= 9 || (/-/.test(q) && digits.length >= 6));
-    const looksLikeAccessCode =
-      !hasLetters && digits.length === 8 && compact.replace(/-/g, "") === digits;
-
-    // Misma lógica que Ingreso OS: no tratar cédulas de 9+ dígitos como "código".
-    let hit: MemberHit | null = null;
-    if (looksLikeCedula) {
-      hit = await lookupMember({ cedula: digits, q });
-    } else if (looksLikeAccessCode) {
-      hit = await lookupMember({ code: digits, cedula: digits, q });
-    } else if (!hasLetters && digits.length >= 4 && compact === digits) {
-      hit = await lookupMember({ code: digits, cedula: digits, q });
-    } else {
-      hit = await lookupMember({ q });
-    }
+    // classify + params viven en memberLookup (cédula > código > nombre)
+    const hit = await lookupMember({ q });
     if (hit) setMember(hit);
   }
 

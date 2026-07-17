@@ -29,6 +29,7 @@ import type {
   ResumenActions,
   ResumenViewModel,
 } from "../../view-models/useResumenViewModel";
+import ActiveVisitPanel from "./ActiveVisitPanel";
 
 type Props = {
   model: ResumenViewModel;
@@ -332,13 +333,14 @@ function Metric({ label, value, icon: Icon }: { label: string; value: string; ic
 }
 
 function MemberHomeDashboardComponent({ model, actions }: Props) {
-  type PanelId = "membership" | "training" | "classes" | "week" | "momentum" | "progress" | "occupancy";
+  type PanelId = "visit" | "membership" | "training" | "classes" | "week" | "momentum" | "progress" | "occupancy";
   type PanelOption = {
     id: PanelId;
     label: string;
     hint: string;
     icon: typeof Activity;
     content: React.ReactNode;
+    dismissible?: boolean;
   };
 
   const relevantClasses = model.classes.filter(
@@ -357,6 +359,22 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
 
   const panels = useMemo<PanelOption[]>(() => {
     const options: PanelOption[] = [];
+
+    if (model.activeVisit) {
+      options.push({
+        id: "visit",
+        label: "Estoy dentro",
+        hint: `${model.activeVisit.elapsedMinutes} min · salida`,
+        icon: Clock3,
+        dismissible: false,
+        content: (
+          <ActiveVisitPanel
+            visit={model.activeVisit}
+            onCheckout={actions.registerCheckout}
+          />
+        ),
+      });
+    }
 
     if (membershipNeedsAttention && model.membership) {
       options.push({
@@ -521,15 +539,17 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
 
       {activePanel ? (
         <div className="relative xg-tab-in">
-          <button
-            type="button"
-            onClick={() => dismissPanel(activePanel.id)}
-            aria-label={`Ocultar ${activePanel.label} por hoy`}
-            title="Ocultar por hoy"
-            className="absolute right-2 top-2 z-20 grid h-9 w-9 place-items-center border-2 border-white/20 bg-black/80 text-white transition hover:border-[#d8ff3e] hover:text-[#d8ff3e] sm:right-3 sm:top-3"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {activePanel.dismissible !== false && (
+            <button
+              type="button"
+              onClick={() => dismissPanel(activePanel.id)}
+              aria-label={`Ocultar ${activePanel.label} por hoy`}
+              title="Ocultar por hoy"
+              className="absolute right-2 top-2 z-20 grid h-9 w-9 place-items-center border-2 border-white/20 bg-black/80 text-white transition hover:border-[#d8ff3e] hover:text-[#d8ff3e] sm:right-3 sm:top-3"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
           {activePanel.content}
         </div>
       ) : (

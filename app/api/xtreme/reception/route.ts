@@ -32,6 +32,7 @@ import {
   toAdminMember,
 } from "@/lib/xtreme/shared";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
+import { resolveMember } from "@/lib/xtreme/members/resolve-member";
 
 export const dynamic = "force-dynamic";
 
@@ -353,13 +354,13 @@ export async function POST(req: NextRequest) {
       const cedula = String(body.cedula ?? "").trim();
       let normalizedName = normalizeKey(normalizeName(body.memberName));
 
-      if (!normalizedName && cedula) {
-        const memberDocs = await db
-          .collection<MemberDoc>(MEMBERS_COLLECTION)
-          .find({ cedula: { $exists: true, $ne: "" } })
-          .project({ memberName: 1, normalizedName: 1, cedula: 1 })
-          .toArray();
-        normalizedName = findMemberByCedula(memberDocs, cedula)?.normalizedName || "";
+      if (!normalizedName || cedula) {
+        const hit = await resolveMember(db, {
+          cedula: cedula || undefined,
+          memberName: String(body.memberName ?? "") || undefined,
+          q: String(body.memberName ?? "") || undefined,
+        });
+        if (hit) normalizedName = hit.memberKey;
       }
 
       if (!checkinId && !normalizedName) {
