@@ -241,7 +241,7 @@ export default function PinModal({
           : "Entramos a tu perfil Xtreme";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/90 p-0 backdrop-blur-md sm:items-center sm:p-4">
+    <div className="xg-os-login-shell fixed inset-0 z-50 grid bg-black/90 backdrop-blur-md">
       <div className="w-full max-w-[360px] border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-5 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-6">
         <div className="mx-auto grid h-16 w-16 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
           {mode === "set" ? <ShieldCheck className="h-8 w-8" /> : <Lock className="h-8 w-8" />}

@@ -31,7 +31,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
   } = os;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/90 p-0 backdrop-blur-md sm:items-center sm:p-4">
+    <div className="xg-os-login-shell fixed inset-0 z-50 grid bg-black/90 backdrop-blur-md">
       <div aria-hidden className="xg-atmosphere" />
       <form
         className="xg-corners relative w-full max-w-[400px] overflow-hidden border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-5 text-center shadow-[6px_6px_0_rgba(216,255,62,0.25),0_0_70px_rgba(216,255,62,0.18)] sm:p-6"

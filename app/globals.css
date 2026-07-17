@@ -197,6 +197,25 @@ button,
   padding-top: max(0px, env(safe-area-inset-top, 0px));
 }
 
+/* OS access screens stay clear of the mobile keyboard instead of hugging it. */
+.xg-os-login-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  align-items: center;
+  justify-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(1rem, env(safe-area-inset-top, 0px)) 1rem
+    max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-height: 700px) {
+  .xg-os-login-shell {
+    align-items: start;
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  }
+}
+
 /* Header de marketing fuera de la isla dinámica/status bar en iPhone. */
 .xg-site-header {
   padding-top: env(safe-area-inset-top, 0px);

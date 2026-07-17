@@ -966,7 +966,7 @@ export default function XtremeAdminPage() {
 
   if (!code) {
     return (
-      <main className="grid min-h-screen place-items-end bg-[#050505] px-0 text-white sm:place-items-center sm:px-5">
+      <main className="xg-os-login-shell grid bg-[#050505] text-white">
         <form
           onSubmit={(event) => {
             event.preventDefault();

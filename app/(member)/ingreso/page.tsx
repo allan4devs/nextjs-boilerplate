@@ -63,7 +63,7 @@ export default function IngresoPage() {
 
   if (!unlocked) {
     return (
-      <main className="grid min-h-screen place-items-end bg-[#050505] text-white sm:place-items-center sm:p-4">
+      <main className="xg-os-login-shell grid bg-[#050505] text-white">
         <form
           onSubmit={(event) => void unlock(event)}
           className="w-full max-w-md border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-8"

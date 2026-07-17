@@ -779,7 +779,7 @@ export default function RecepcionPage() {
 
   if (!unlocked) {
     return (
-      <main className="grid min-h-screen place-items-end bg-[#050505] text-white sm:place-items-center sm:p-4">
+      <main className="xg-os-login-shell grid bg-[#050505] text-white">
         <div className="w-full max-w-md">
             <form
               onSubmit={(e) => void unlock(e)}
