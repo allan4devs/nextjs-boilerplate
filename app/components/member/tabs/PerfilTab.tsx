@@ -363,8 +363,8 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
               Avisos de la app (este celular)
             </p>
             <p className="mb-3 text-xs font-semibold leading-relaxed text-white/45">
-              Esto es para todo el Member OS: check-in, reservas, badges, plan y rachas.
-              El correo de abajo es otro canal, por separado.
+              Todo el Member OS: check-in, reservas, recordatorio ~1 h antes de clase, badges,
+              plan y rachas. El correo de abajo es otro canal, por separado.
             </p>
             <PushNotificationsCard unlocked={unlocked} />
           </div>

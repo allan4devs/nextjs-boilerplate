@@ -1,61 +1,61 @@
 /**
  * Mensajes de cara al socio del Member OS.
- * Todo el feedback (errores y confirmaciones) vive aqui para mantener
- * el tono en un solo lugar. Convencion: sin tildes, igual que el resto
- * de los textos del OS.
+ * Tono: tico sancarleno, profesional, voseo natural (podés, tenés, elegí).
+ * Cálido sin exagerar; claro y directo.
  */
 
 export const MSG = {
   errors: {
-    /** Fetch fallido (sin internet o servidor caido): nunca mostrar "Failed to fetch". */
-    offline: "Sin conexion, mae. Revise su internet y vuelva a intentar en un toque.",
-    /** El servidor respondio con error pero sin mensaje utilizable. */
-    server: "El servidor anda fallando. Intente de nuevo en un momento.",
-    sessionExpired: "Su sesion vencio. Ingrese el PIN para continuar.",
-    loadApp: "No pude cargar Xtreme Gym. Intente de nuevo.",
-    cedulaTooShort: (minDigits: number) => `Digite o escanee la cedula (minimo ${minDigits} digitos).`,
+    /** Fetch fallido (sin internet o servidor caído): nunca mostrar "Failed to fetch". */
+    offline: "Sin conexión. Revisá tu internet y volvé a intentar en un toque.",
+    /** El servidor respondió con error pero sin mensaje utilizable. */
+    server: "El servidor anda fallando. Intentá de nuevo en un momento.",
+    sessionExpired: "Tu sesión venció. Ingresá el PIN para continuar.",
+    loadApp: "No pude cargar Xtreme Gym. Intentá de nuevo.",
+    cedulaTooShort: (minDigits: number) =>
+      `Digitá o escaneá la cédula (mínimo ${minDigits} dígitos).`,
     cedulaNotRegistered:
-      "Cedula no registrada. Escriba su nombre y telefono para crear el perfil, o pida el alta en recepcion.",
-    cedulaNoProfile: "No se pudo resolver el perfil de esa cedula.",
-    profileNotFound: "Perfil no encontrado. Inicie sesion con su cedula.",
+      "Cédula no registrada. Escribí tu nombre y teléfono para crear el perfil, o pedí el alta en recepción.",
+    cedulaNoProfile: "No se pudo resolver el perfil de esa cédula.",
+    profileNotFound: "Perfil no encontrado. Iniciá sesión con tu cédula.",
     saveGoal: "No se pudo guardar la meta.",
     saveProfile: "No se pudo guardar.",
-    badgeNotEarned: "Solo puede fijar badges que ya gano.",
-    badgeShowcaseFull: "Maximo 3 badges en el showcase.",
+    badgeNotEarned: "Solo podés fijar badges que ya ganaste.",
+    badgeShowcaseFull: "Máximo 3 badges en el showcase.",
     logTraining: "No se pudo registrar el entreno.",
     reserve: "No se pudo reservar.",
     planRequired:
-      "Necesita un plan activo o su primer dia gratis. Registrese en Primer dia o elija un plan en Precios.",
+      "Necesitás un plan activo o tu primer día gratis. Registrate en Primer día o elegí un plan en Precios.",
     cancelReservation: "No se pudo cancelar.",
     saveMetrics: "No se pudieron guardar las medidas.",
     updatePlan: "No se pudo actualizar el plan.",
     uploadPhoto: "No se pudo subir la foto.",
-    processImage: "No se pudo procesar la imagen. Intente con otra foto.",
+    processImage: "No se pudo procesar la imagen. Intentá con otra foto.",
     sendReminder: "No se pudo enviar el aviso.",
-    pinSendOtp: "No se pudo enviar el codigo.",
-    pinOtpMissing: "Pida el codigo al correo, o escriba su telefono/correo registrado.",
+    pinSendOtp: "No se pudo enviar el código.",
+    pinOtpMissing: "Pedí el código al correo, o escribí tu teléfono/correo registrado.",
     pinMismatch: "Los PIN no coinciden.",
-    pinAlreadySet: "Ya existe PIN. Ingreselo para entrar.",
-    pinNotSet: "Este perfil no tiene PIN. Cree uno de 4 digitos.",
+    pinAlreadySet: "Ya existe PIN. Ingresalo para entrar.",
+    pinNotSet: "Este perfil no tiene PIN. Creá uno de 4 dígitos.",
     pinWrong: "PIN incorrecto.",
     pinValidate: "No se pudo validar el PIN.",
   },
   ok: {
-    weeklyGoal: (days: number) => `Meta semanal: ${days} dias. A cumplirla.`,
-    profileSaved: "Perfil actualizado. Ahora si, a meterle.",
+    weeklyGoal: (days: number) => `Meta semanal: ${days} días. A cumplirla.`,
+    profileSaved: "Perfil actualizado. Ahora sí, a meterle.",
     badgeShowcaseSaved: "Showcase de badges actualizado.",
     emailPrefsSaved: "Preferencias de correo guardadas.",
-    trainingLogged: (name: string) => `Registrado: ${name}. Racha viva, mae.`,
-    reserved: (name: string) => `Reservado: ${name}. Llegue 5 minutos antes, pura vida.`,
+    trainingLogged: (name: string) => `Registrado: ${name}. Racha viva.`,
+    reserved: (name: string) => `Reservado: ${name}. Llegá 5 minutos antes.`,
     reservationCanceled: (name: string) => `Reserva cancelada: ${name}.`,
     metricsSaved: "Medidas guardadas. Progreso visible, sin cuentos.",
-    planItemDone: "Sesion del plan completada. Sigalo asi.",
-    planItemPending: "Sesion marcada como pendiente.",
+    planItemDone: "Sesión del plan completada. Seguí así.",
+    planItemPending: "Sesión marcada como pendiente.",
     photoSaved: "Foto de perfil actualizada.",
-    reminderSent: (sentTo: string) => `Aviso enviado a ${sentTo}. Revise su correo.`,
+    reminderSent: (sentTo: string) => `Aviso enviado a ${sentTo}. Revisá tu correo.`,
     otpSent: (maskedEmail: string, expiresInMin: number) =>
-      `Codigo enviado a ${maskedEmail} (vence en ${expiresInMin} min).`,
-    pinChanged: "PIN actualizado. Sesion protegida.",
-    pinRecovered: "PIN recuperado. Guardelo bien para la proxima.",
+      `Código enviado a ${maskedEmail} (vence en ${expiresInMin} min).`,
+    pinChanged: "PIN actualizado. Sesión protegida.",
+    pinRecovered: "PIN recuperado. Guardalo bien para la próxima.",
   },
 } as const;

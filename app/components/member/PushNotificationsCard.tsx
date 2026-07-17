@@ -136,8 +136,8 @@ export default function PushNotificationsCard({ unlocked, compact = false }: Pro
             {active ? "Member OS en este celular" : "Activar avisos del Member OS"}
           </p>
           <p className="mt-1 text-xs font-semibold leading-relaxed text-white/50">
-            Entrenos, reservas, badges, plan del coach, racha y renovación — aunque la app
-            esté cerrada. Separado del correo.
+            Entrenos, reservas, recordatorio ~1 h antes de tu clase, badges, plan, racha y
+            renovación — aunque la app esté cerrada. Separado del correo.
             {capability?.isStandalone ? " · App instalada ✓" : ""}
           </p>
         </div>

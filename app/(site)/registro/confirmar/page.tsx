@@ -73,7 +73,7 @@ function ConfirmInner() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!memberName.trim() || !cedula.trim() || !phone.trim()) {
-      setError("Complete nombre, cedula y telefono.");
+      setError("Completá nombre, cédula y teléfono.");
       return;
     }
     setSubmitting(true);

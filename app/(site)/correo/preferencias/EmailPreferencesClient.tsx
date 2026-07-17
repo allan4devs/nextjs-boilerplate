@@ -53,11 +53,11 @@ export default function EmailPreferencesClient({ token }: { token: string }) {
               Sentimos que te vayas.
             </h1>
             <p className="mt-5 font-semibold leading-7 text-white/65">
-              Ya desactivamos los recordatorios, novedades y mensajes de motivacion. Aun podras
+              Ya desactivamos los recordatorios, novedades y mensajes de motivación. Aún podés
               recibir recibos, confirmaciones y avisos de seguridad cuando sean necesarios.
             </p>
             <p className="mt-4 font-semibold leading-7 text-white/65">
-              Gracias por haber sido parte de Xtreme. Si decides volver, siempre seras bienvenido.
+              Gracias por haber sido parte de Xtreme. Si decidís volver, siempre serás bienvenido.
             </p>
           </>
         ) : (
@@ -66,8 +66,8 @@ export default function EmailPreferencesClient({ token }: { token: string }) {
               Lo sentimos si te vas.
             </h1>
             <p className="mt-5 font-semibold leading-7 text-white/65">
-              Puedes dejar de recibir todos los avisos opcionales. Antes de hacerlo, cuentanos
-              brevemente por que; tu respuesta nos ayuda a mejorar el gimnasio.
+              Podés dejar de recibir todos los avisos opcionales. Antes de hacerlo, contanos
+              brevemente por qué; tu respuesta nos ayuda a mejorar el gimnasio.
             </p>
             <div className="mt-7 grid gap-2">
               {REASONS.map(([value, label]) => (

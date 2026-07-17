@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
     const { orderID } = body;
 
     if (!orderID?.trim()) {
-      return NextResponse.json({ success: false, message: "Falta el número de orden PayPal." }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Falta el número de orden del pago en línea." }, { status: 400 });
     }
 
     const db = await getDb();
@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
     const captureStatus = (capture?.status || data.status || "").toUpperCase();
     if (captureStatus && captureStatus !== "COMPLETED" && data.status !== "COMPLETED") {
       return NextResponse.json(
-        { success: false, message: "El pago no se completo en PayPal." },
+        { success: false, message: "El pago en línea no se completó." },
         { status: 402 },
       );
     }
@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
     const submittedCustomerName =
       normalizeName(pending.customer.name || body.customer?.name) ||
       [data.payer?.name?.given_name, data.payer?.name?.surname].filter(Boolean).join(" ") ||
-      "Cliente PayPal";
+      "Cliente en línea";
     const amountUsd = Number(pending.amountUsd);
     const amountCrc = option.priceCrc;
     const now = new Date();
@@ -472,7 +472,7 @@ export async function POST(req: NextRequest) {
           fingerprint: `paypal-persist:${payment.paypalCaptureId || orderID}`,
           kind: "paypal_persist",
           severity: "critical",
-          title: "Pago PayPal capturado pero no aplicado",
+          title: "Pago en línea capturado pero no aplicado",
           detail,
           context: {
             orderID,
@@ -484,8 +484,8 @@ export async function POST(req: NextRequest) {
         });
         await sendAdminOperationalAlert({
           severity: "critical",
-          title: "Pago PayPal capturado pero no aplicado",
-          detail: "PayPal cobró el dinero, pero el sistema no pudo completar todos los cambios de membresía. Revisar de inmediato en Admin.",
+          title: "Pago en línea capturado pero no aplicado",
+          detail: "El cobro en línea se registró, pero el sistema no pudo completar todos los cambios de membresía. Revisar de inmediato en Admin.",
           context: {
             orderID,
             captureID: payment.paypalCaptureId,

@@ -43,7 +43,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
   const source = body.source === "app" ? "app" : "primer-dia";
 
   if (!email || !isValidEmail(email)) {
-    return NextResponse.json({ error: "Ingrese un correo valido." }, { status: 400 });
+    return NextResponse.json({ error: "Ingresá un correo válido." }, { status: 400 });
   }
 
   const db = await getDb();
@@ -56,7 +56,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     return NextResponse.json(
       {
         error:
-          "Ese correo ya está registrado. No enviamos un nuevo enlace. Ingrese desde la app.",
+          "Ese correo ya está registrado. No enviamos un nuevo enlace. Ingresá desde la app.",
       },
       { status: 409 },
     );

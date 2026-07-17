@@ -297,7 +297,7 @@ export async function sendPaymentReceiptEmail(args: {
   nextBillingDate?: string;
 }) {
   const methodLabel: Record<string, string> = {
-    paypal: "PayPal",
+    paypal: "En línea",
     cash: "Efectivo",
     transfer: "Transferencia",
     sinpe: "SINPE Movil",
@@ -617,7 +617,7 @@ export async function sendAdminDailySummary(args: {
         ${row("Ingresos del día", String(args.checkins))}
         ${row("Avisos automáticos", `${args.notificationsSent} enviados · ${args.notificationsFailed} fallidos`)}
         ${row("Invitaciones pendientes", String(args.pendingInvites))}
-        ${row("Órdenes PayPal abandonadas", String(args.abandonedPayPalOrders))}
+        ${row("Órdenes en línea abandonadas", String(args.abandonedPayPalOrders))}
         ${row("Recordatorios primer día (48 h)", String(args.freeDayNudgesSent ?? 0))}
         ${row("Alertas abiertas", String(args.openAlerts))}
       </table>

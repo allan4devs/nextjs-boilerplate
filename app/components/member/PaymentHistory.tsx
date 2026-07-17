@@ -21,7 +21,7 @@ function formatDate(isoDate: string) {
 }
 
 const METHOD_LABELS: Record<string, string> = {
-  paypal: "PayPal",
+  paypal: "En línea",
   cash: "Efectivo",
   transfer: "Transferencia",
   sinpe: "SINPE Móvil",

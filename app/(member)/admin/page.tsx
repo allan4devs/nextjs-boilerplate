@@ -1832,7 +1832,7 @@ export default function XtremeAdminPage() {
                         <option value="cash">Efectivo</option>
                         <option value="sinpe">SINPE</option>
                         <option value="transfer">Transferencia</option>
-                        <option value="paypal">PayPal</option>
+                        <option value="paypal">En línea</option>
                         <option value="other">Otro</option>
                       </select>
                       <input

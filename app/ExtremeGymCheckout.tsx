@@ -222,16 +222,16 @@ export default function ExtremeGymCheckout({
     fetch("/api/xtreme/checkout/config", { cache: "no-store" })
       .then(async (response) => {
         const data = (await response.json()) as PayPalConfig & { message?: string };
-        if (!response.ok) throw new Error(data.message || "No se pudo cargar PayPal.");
+        if (!response.ok) throw new Error(data.message || "No se pudo cargar el pago en línea.");
         if (!cancelled) {
           setPaypalConfig(data);
           if (!data.configured) {
-            setError(data.message || "PayPal no está disponible en este momento.");
+            setError(data.message || "El pago en línea no está disponible en este momento.");
           }
         }
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "PayPal no está disponible.");
+        if (!cancelled) setError(err instanceof Error ? err.message : "El pago en línea no está disponible.");
       });
 
     return () => {
@@ -259,13 +259,13 @@ export default function ExtremeGymCheckout({
               activeClientId,
             )}&currency=${encodeURIComponent(activePayPalConfig.currency)}&intent=capture`;
             script.onload = () => resolve();
-            script.onerror = () => reject(new Error("No se pudo cargar el SDK de PayPal."));
+            script.onerror = () => reject(new Error("No se pudo cargar el pago en línea."));
             document.body.appendChild(script);
           });
         } else if (existing && !window.paypal) {
           await new Promise<void>((resolve, reject) => {
             existing.addEventListener("load", () => resolve(), { once: true });
-            existing.addEventListener("error", () => reject(new Error("No se pudo cargar PayPal.")), {
+            existing.addEventListener("error", () => reject(new Error("No se pudo cargar el pago en línea.")), {
               once: true,
             });
           });
@@ -287,7 +287,7 @@ export default function ExtremeGymCheckout({
               setStatus("Creando orden segura...");
 
               if (!currentCheckout?.formReady) {
-                throw new Error("Complete nombre, teléfono y correo antes de pagar.");
+                throw new Error("Completá nombre, teléfono y correo antes de pagar.");
               }
 
               const response = await fetch("/api/xtreme/checkout/create-order", {
@@ -301,18 +301,18 @@ export default function ExtremeGymCheckout({
               });
               const data = (await response.json()) as { orderID?: string; message?: string };
               if (!response.ok || !data.orderID) throw new Error(data.message || "No se pudo crear la orden.");
-              setStatus("Orden lista. Complete el pago en PayPal...");
+              setStatus("Orden lista. Completá el pago en línea...");
               return data.orderID;
             },
             onApprove: async (data: { orderID?: string }) => {
               const currentCheckout = checkoutRef.current;
-              if (!data.orderID) throw new Error("PayPal no devolvió número de orden.");
+              if (!data.orderID) throw new Error("No se recibió el número de orden del pago en línea.");
 
               if (!currentCheckout?.formReady) {
-                throw new Error("Complete nombre, teléfono y correo antes de confirmar.");
+                throw new Error("Completá nombre, teléfono y correo antes de confirmar.");
               }
 
-              setStatus("Confirmando pago...");
+              setStatus("Confirmando el pago...");
               const response = await fetch("/api/xtreme/checkout/capture-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -359,16 +359,16 @@ export default function ExtremeGymCheckout({
               if (result.appInviteSent) params.set("registro", "correo");
               window.location.assign(`/gracias?${params.toString()}`);
             },
-            onCancel: () => setStatus("Pago cancelado. Puede intentar de nuevo cuando quiera."),
+            onCancel: () => setStatus("Pago cancelado. Podés intentar de nuevo cuando quieras."),
             onError: (err: unknown) => {
-              setError(err instanceof Error ? err.message : "Hubo un error con PayPal.");
+              setError(err instanceof Error ? err.message : "Hubo un error con el pago en línea.");
               setStatus("");
             },
           } satisfies Record<string, unknown>)
           .render(container);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "PayPal no está disponible.");
+          setError(err instanceof Error ? err.message : "El pago en línea no está disponible.");
           setStatus("");
         }
       }
@@ -390,12 +390,12 @@ export default function ExtremeGymCheckout({
 
   const TRUST_POINTS = english
     ? [
-        { icon: ShieldCheck, text: "Secure PayPal checkout" },
+        { icon: ShieldCheck, text: "Secure online checkout" },
         { icon: Zap, text: "Access active right after payment" },
         { icon: CheckCircle2, text: "No contracts or hidden fees" },
       ]
     : [
-        { icon: ShieldCheck, text: "Pago seguro con PayPal" },
+        { icon: ShieldCheck, text: "Pago seguro en línea" },
         { icon: Zap, text: "Acceso activo al confirmar el pago" },
         { icon: CheckCircle2, text: "Sin contratos ni cargos ocultos" },
       ];
@@ -421,8 +421,8 @@ export default function ExtremeGymCheckout({
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm font-bold text-black/60 sm:text-base">
             {english
-              ? "Pick a plan, add your details and pay with PayPal. Prefer to try first? Your first day is free."
-              : "Elegí un plan, completá tus datos y pagá con PayPal. ¿Querés probar primero? Tu primer día es gratis."}
+              ? "Pick a plan, add your details and pay online. Prefer to try first? Your first day is free."
+              : "Elegí un plan, completá tus datos y pagá en línea. ¿Querés probar primero? Tu primer día es gratis."}
           </p>
           <div className="mx-auto mt-5 flex max-w-2xl flex-wrap items-center justify-center gap-3">
             {TRUST_POINTS.map((point) => (
@@ -441,7 +441,7 @@ export default function ExtremeGymCheckout({
           {[
             english ? "1. Choose plan" : "1. Elegí plan",
             english ? "2. Your details" : "2. Tus datos",
-            english ? "3. Pay with PayPal" : "3. Pagá con PayPal",
+            english ? "3. Pay online" : "3. Pagá en línea",
           ].map((label, index) => {
             const step = index + 1;
             const active = checkoutStep >= step;
@@ -611,7 +611,7 @@ export default function ExtremeGymCheckout({
               </p>
               <h3 className="mt-2 text-2xl font-black uppercase">{optionText(selected).label}</h3>
               <p className="mt-1 text-sm font-bold text-black/55">
-                {selected.priceLabel} · {english ? "PayPal charges USD" : "PayPal cobra USD"} {selected.usdAmount}
+                {selected.priceLabel} · {english ? "Charged in USD" : "Cobro en USD"} {selected.usdAmount}
               </p>
               <p className="mt-1 text-sm font-semibold text-black/45">{optionText(selected).note}</p>
             </div>
@@ -679,7 +679,7 @@ export default function ExtremeGymCheckout({
           <div className="mt-6 border-t border-black/10 pt-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
               <CreditCard className="h-4 w-4" />
-              {english ? "Pay with PayPal" : "Pagar con PayPal"}
+              {english ? "Pay online" : "Pagar en línea"}
             </div>
 
             {completed ? (
@@ -694,7 +694,11 @@ export default function ExtremeGymCheckout({
               </div>
             ) : <>{!formReady && (
               <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
-                {memberCheckout ? "No pudimos identificar el socio de esta sesión." : english ? "Complete your name, phone and email to enable payment." : "Complete nombre, teléfono y correo para activar el botón de pago."}
+                {memberCheckout
+                  ? "No pudimos identificar el socio de esta sesión."
+                  : english
+                    ? "Enter your name, phone and email to enable payment."
+                    : "Completá nombre, teléfono y correo para activar el botón de pago."}
               </p>
             )}
             {error && (
@@ -713,11 +717,15 @@ export default function ExtremeGymCheckout({
             </div>
 
             {!paypalConfig?.clientId && !error && (
-              <p className="mt-2 text-sm font-bold text-black/50">{english ? "Loading PayPal..." : "Cargando PayPal..."}</p>
+              <p className="mt-2 text-sm font-bold text-black/50">
+                {english ? "Loading online payment..." : "Cargando pago en línea..."}
+              </p>
             )}
 
             <p className="mt-3 text-xs font-bold leading-5 text-black/52">
-              {english ? "Your access is activated automatically as soon as PayPal approves the payment." : "Tu acceso se activa automáticamente apenas PayPal aprueba el pago."}
+              {english
+                ? "Your access is activated automatically as soon as the online payment is approved."
+                : "Tu acceso se activa automáticamente apenas se confirma el pago en línea."}
             </p>
             </>}
           </div>

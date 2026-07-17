@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import PageHero from "../../components/PageHero";
 import CtaBand from "../../components/CtaBand";
 import ImageTile from "../../components/ImageTile";
@@ -22,7 +23,7 @@ export default function ZonasPage() {
         title="Todo el equipo."
         highlight="Cero excusas."
         text="Máquinas excelentes de todo tipo y zonas completas para quien decidió tomarse su entrenamiento en serio."
-        image="/xtreme/piso-pesas-panoramica.jpg"
+        image="/xtreme/piso-pesas-panoramica.webp"
         imageAlt="Piso de fuerza en Xtreme Gym"
       />
 
@@ -31,11 +32,13 @@ export default function ZonasPage() {
           {ZONES.map((zone) => (
             <article key={zone.title} className="group overflow-hidden border border-white/10 bg-black">
               <div className="relative aspect-[4/5] overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={zone.image}
                   alt={zone.title}
-                  className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                  quality={74}
+                  className="object-cover transition duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                 <zone.icon className="absolute left-5 top-5 h-8 w-8 text-[#f6c400]" />

@@ -251,7 +251,7 @@ export function XpBar({ xp, level }: { xp: number; level: LevelPayload }) {
       <p className="mt-2 text-xs font-semibold text-white/45">
         {level.nextXp !== null
           ? `${(level.nextXp - xp).toLocaleString()} XP para el siguiente nivel.`
-          : "Nivel maximo. Usted ES el gym."}
+          : "Nivel máximo. Sos Xtreme."}
       </p>
     </div>
   );

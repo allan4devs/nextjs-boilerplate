@@ -186,7 +186,7 @@ export function useResumenViewModel(os: MemberOs): {
         ? "week"
         : "month";
     const methodLabels: Record<string, string> = {
-      paypal: "PayPal",
+      paypal: "En línea",
       cash: "Efectivo",
       transfer: "Transferencia",
       sinpe: "SINPE Móvil",

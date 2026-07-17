@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     if (!response.ok || !data.id) {
       console.error("Xtreme PayPal create order error:", { status: response.status, data });
       return NextResponse.json(
-        { success: false, message: data.message || "No se pudo crear la orden de PayPal." },
+        { success: false, message: data.message || "No se pudo crear la orden de pago en línea." },
         { status: response.status || 500 },
       );
     }

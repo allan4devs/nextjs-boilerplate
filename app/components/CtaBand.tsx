@@ -24,7 +24,7 @@ export default function CtaBand({
           <p className="text-xs font-black uppercase tracking-[0.22em] text-black/55">{eyebrow}</p>
           <h2 className="mt-3 max-w-4xl text-4xl font-black uppercase leading-none sm:text-6xl">{title}</h2>
           <p className="mt-4 max-w-2xl text-sm font-bold leading-6 text-black/58">
-            Probá sin compromiso o inscribite hoy y activá tu acceso al instante con PayPal.
+            Probá sin compromiso o inscribite hoy y activá tu acceso al instante con pago en línea.
           </p>
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">

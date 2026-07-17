@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 
 export default function PageHero({
@@ -21,8 +22,7 @@ export default function PageHero({
   return (
     <section className="relative overflow-hidden border-b border-white/10">
       <div className="absolute inset-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt={imageAlt} className="h-full w-full object-cover opacity-40" />
+        <Image src={image} alt={imageAlt} fill priority sizes="100vw" quality={78} className="object-cover opacity-40" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,#070707_0%,rgba(7,7,7,.92)_45%,rgba(7,7,7,.55)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#070707] to-transparent" />
       </div>

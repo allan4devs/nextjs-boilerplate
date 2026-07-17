@@ -51,7 +51,7 @@ export default function FreeDayRegisterForm({
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-[#d8ff3e]" />
           <div>
-            <h2 className="text-xl font-black uppercase text-white">Revise su correo</h2>
+            <h2 className="text-xl font-black uppercase text-white">Revisá tu correo</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-white/65">
               Le enviamos un enlace para confirmar su cuenta y activar el{" "}
               <strong className="text-white">primer día gratis</strong>. Después configure su PIN

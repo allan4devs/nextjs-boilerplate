@@ -787,7 +787,7 @@ export function useMemberOs() {
     ) {
       setTab("entrenar");
       setError("");
-      setMessage("Complete primero la sesion asignada en su plan.");
+      setMessage("Completá primero la sesión asignada en tu plan.");
       return;
     }
     setError("");

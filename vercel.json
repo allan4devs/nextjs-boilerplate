@@ -3,6 +3,10 @@
     {
       "path": "/api/xtreme/jobs/lifecycle",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/xtreme/jobs/class-reminders",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

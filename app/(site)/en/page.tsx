@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import CtaBand from "../../components/CtaBand";
 import ImageTile from "../../components/ImageTile";
 import JsonLd from "../../components/JsonLd";
@@ -36,13 +37,13 @@ const STEPS = [
 ];
 
 const EXPLORE = [
-  { href: "/en/prices", label: "Prices and plans", text: "Day, weekly, fortnightly and monthly options with online payment.", image: "/xtreme/piso-maquinas-panoramica.jpg" },
-  { href: "/en/training", label: "Training areas", text: "Strength, functional, cardio and lower-body equipment.", image: "/xtreme/zona-mancuernas.jpg" },
-  { href: "/en/benefits", label: "Member benefits", text: "Instructor support, body assessments, parking, kids area and more.", image: "/xtreme/area-infantil.jpg" },
-  { href: "/en/seniors", label: "Senior fitness", text: "Three guided classes per week for mobility, strength and confidence.", image: "/xtreme/zona-funcional-clases.jpg" },
-  { href: "/app", label: "Member app", text: "Reservations, streaks, digital membership card and progress in one place.", image: "/xtreme/maquinas-y-entrenador-xtreme.png" },
-  { href: "/en/faq", label: "Frequently asked questions", text: "Useful information before your first workout.", image: "/xtreme/recepcion-sala-espera.jpg" },
-  { href: "/en/contact", label: "Hours and location", text: "Find us in Barrio San Pablo, Ciudad Quesada.", image: "/xtreme/fachada-xtreme-gym.jpg" },
+  { href: "/en/prices", label: "Prices and plans", text: "Day, weekly, fortnightly and monthly options with online payment.", image: "/xtreme/piso-maquinas-panoramica.webp" },
+  { href: "/en/training", label: "Training areas", text: "Strength, functional, cardio and lower-body equipment.", image: "/xtreme/zona-mancuernas.webp" },
+  { href: "/en/benefits", label: "Member benefits", text: "Instructor support, body assessments, parking, kids area and more.", image: "/xtreme/area-infantil.webp" },
+  { href: "/en/seniors", label: "Senior fitness", text: "Three guided classes per week for mobility, strength and confidence.", image: "/xtreme/zona-funcional-clases.webp" },
+  { href: "/app", label: "Member app", text: "Reservations, streaks, digital membership card and progress in one place.", image: "/xtreme/maquinas-y-entrenador-xtreme.webp" },
+  { href: "/en/faq", label: "Frequently asked questions", text: "Useful information before your first workout.", image: "/xtreme/recepcion-sala-espera.webp" },
+  { href: "/en/contact", label: "Hours and location", text: "Find us in Barrio San Pablo, Ciudad Quesada.", image: "/xtreme/fachada-xtreme-gym.webp" },
 ];
 
 export default function EnglishLandingPage() {
@@ -53,14 +54,14 @@ export default function EnglishLandingPage() {
 
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/xtreme/piso-pesas-panoramica.jpg"
+          <Image
+            src="/xtreme/piso-pesas-panoramica.webp"
+            fill
             sizes="100vw"
-            fetchPriority="high"
-            decoding="async"
+            priority
+            quality={78}
             alt="Modern gym interior"
-            className="h-full w-full object-cover opacity-44"
+            className="object-cover opacity-44"
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#070707_0%,rgba(7,7,7,.94)_38%,rgba(7,7,7,.62)_72%,rgba(7,7,7,.34)_100%)]" />
           <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:72px_72px]" />
@@ -145,7 +146,7 @@ export default function EnglishLandingPage() {
           <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {EXPLORE.map((item) => (
               <Link key={item.href} href={item.href} className="group overflow-hidden border border-white/10 bg-black transition hover:border-[#f6c400]/55">
-                <div className="aspect-[16/10] overflow-hidden"><img src={item.image} alt={item.label} loading="lazy" decoding="async" className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105" /></div>
+                <div className="relative aspect-[16/10] overflow-hidden"><Image src={item.image} alt={item.label} fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" quality={72} className="object-cover opacity-70 transition duration-500 group-hover:scale-105" /></div>
                 <div className="p-5"><div className="flex justify-between gap-3"><h3 className="text-xl font-black uppercase">{item.label}</h3><ArrowRight className="h-5 w-5 text-[#f6c400]" /></div><p className="mt-2 text-sm font-semibold leading-6 text-white/55">{item.text}</p></div>
               </Link>
             ))}

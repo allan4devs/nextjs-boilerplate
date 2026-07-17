@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { BUSINESS, SCHEDULE, telLink, waLink } from "../../lib/site";
 import { gymJsonLd, pageMetadata } from "../../lib/seo";
 import JsonLd from "../../components/JsonLd";
@@ -144,12 +145,13 @@ export default function ContactoPage() {
 
           <div className="grid content-start gap-3">
             <div className="relative aspect-[16/7] overflow-hidden border border-white/10">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/xtreme/fachada-xtreme-gym.jpg"
+              <Image
+                src="/xtreme/fachada-xtreme-gym.webp"
                 alt="Fachada y entrada de Xtreme Gym"
-                loading="lazy"
-                className="h-full w-full object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 40vw"
+                quality={74}
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
               <span className="absolute bottom-3 left-3 text-xs font-black uppercase tracking-[0.16em] text-[#f6c400]">

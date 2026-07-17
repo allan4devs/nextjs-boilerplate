@@ -40,6 +40,12 @@ export type MemberPushEvent =
       type: "weekly_goal_hit";
       weekCount: number;
       weeklyGoal: number;
+    }
+  | {
+      type: "class_reminder";
+      trainingName: string;
+      minutesUntil: number;
+      startLabel: string;
     };
 
 function payloadFor(event: MemberPushEvent): {
@@ -107,6 +113,13 @@ function payloadFor(event: MemberPushEvent): {
         body: `${event.weekCount}/${event.weeklyGoal} días esta semana. Sos una máquina.`,
         url: "/app",
         tag: "xtreme-weekly",
+      };
+    case "class_reminder":
+      return {
+        title: "Tu clase empieza pronto ⏰",
+        body: `${event.trainingName} a las ${event.startLabel} (en ~${event.minutesUntil} min). ¡Nos vemos en Xtreme!`,
+        url: "/app",
+        tag: "xtreme-class-reminder",
       };
     default:
       return {

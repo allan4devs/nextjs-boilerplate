@@ -67,7 +67,7 @@ const FAQ = [
   ["What member benefits are available?", "Members have instructor support, free body assessments, customer parking, a snack area, equipment variety and a kids area, subject to availability and gym policies."],
   ["Does the kids area include childcare?", "No. It is a space designed for children, but they must remain supervised by their responsible adult."],
   ["Can I try the gym for one day?", "Yes. Your first day is free after registration, so you can experience the gym before choosing a plan."],
-  ["Can I pay online?", "Yes. Weekly, fortnightly and monthly plans can be paid online through PayPal from our prices page."],
+  ["Can I pay online?", "Yes. Weekly, fortnightly and monthly plans can be paid online from our prices page."],
   ["Do I need previous experience?", "No. Beginners are welcome and our team can guide you through the equipment and training areas."],
   ["What should I bring?", "Comfortable workout clothes, training shoes, a towel and a water bottle."],
   ["Are senior classes beginner-friendly?", "Yes. Classes focus on safe mobility, gradual strength, balance and confidence."],
@@ -77,7 +77,7 @@ const FAQ = [
 function TrainingPage() {
   return (
     <>
-      <PageHero eyebrow="Training areas" title="A place for every" highlight="training goal." text="Train strength, functional fitness, cardio and lower body with dedicated equipment and a clear purpose." image="/xtreme/piso-pesas-panoramica.jpg" imageAlt="Strength training area" />
+      <PageHero eyebrow="Training areas" title="A place for every" highlight="training goal." text="Train strength, functional fitness, cardio and lower body with dedicated equipment and a clear purpose." image="/xtreme/piso-pesas-panoramica.webp" imageAlt="Strength training area" />
       <section className="px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-2">{TRAINING_AREAS.map(({ icon: Icon, ...area }) => <article key={area.title} className="border border-white/10 bg-white/[0.04] p-6"><Icon className="h-8 w-8 text-[#f6c400]" /><p className="mt-6 text-xs font-black uppercase tracking-[.18em] text-white/40">{area.label}</p><h2 className="mt-2 text-3xl font-black uppercase">{area.title}</h2><p className="mt-3 font-semibold leading-7 text-white/58">{area.text}</p></article>)}</div></section>
       <CtaBand eyebrow="Start training" title="Choose your plan and make today count." cta="Join now" href="/en/prices#inscripcion" />
     </>
@@ -87,7 +87,7 @@ function TrainingPage() {
 function PricesPage() {
   return (
     <>
-      <PageHero eyebrow="Memberships" title="Flexible plans." highlight="No guesswork." text="Choose the amount of time that works for you. Pay online or speak with reception if you need help." image="/xtreme/piso-maquinas-panoramica.jpg" imageAlt="Gym training floor" />
+      <PageHero eyebrow="Memberships" title="Flexible plans." highlight="No guesswork." text="Choose the amount of time that works for you. Pay online or speak with reception if you need help." image="/xtreme/piso-maquinas-panoramica.webp" imageAlt="Gym training floor" />
       <section className="px-5 py-16 sm:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -95,7 +95,7 @@ function PricesPage() {
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Prices</p>
               <h2 className="mt-2 text-3xl font-black uppercase leading-none sm:text-4xl">Current options.</h2>
               <p className="mt-2 max-w-2xl text-sm font-semibold text-white/58">
-                Start free, then choose a week, fortnight or month. Paid plans are activated securely through PayPal.
+                Start free, then choose a week, fortnight or month. Paid plans are activated securely with online checkout.
               </p>
             </div>
             <a href="#inscripcion" className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white">
@@ -146,7 +146,7 @@ function PricesPage() {
           <div className="mt-8 flex items-start gap-3 border border-[#f6c400]/40 bg-[#f6c400]/10 p-5">
             <ShieldCheck className="h-6 w-6 shrink-0 text-[#f6c400]" />
             <p className="font-bold text-white/70">
-              Online checkout is securely processed through PayPal. Your first free day stays outside the payment flow.
+              Online checkout is processed securely. Your first free day stays outside the payment flow.
             </p>
           </div>
         </div>
@@ -156,7 +156,7 @@ function PricesPage() {
       </Suspense>
       <CtaBand
         eyebrow="Find your plan"
-        title="Try your first day free or join today with instant PayPal checkout."
+        title="Try your first day free or join today with instant online checkout."
         cta="View plans and pay"
         href="#inscripcion"
         secondaryCta="First day free"
@@ -168,7 +168,7 @@ function PricesPage() {
 
 function SeniorsPage() {
   const benefits = [["Mobility", "Improve joint movement and everyday comfort."], ["Safe strength", "Gentle, progressive resistance helps maintain muscle and prevent falls."], ["Balance", "Build stability and confidence for walking and stairs."], ["Community", "Small groups and friendly guidance in every session."]];
-  return <><PageHero eyebrow="Senior fitness" title="It is never too late" highlight="to feel better." text="Three guided classes every week for mobility, strength, balance and confidence in a welcoming community." image="/xtreme/zona-funcional-clases.jpg" imageAlt="Functional area used for guided classes at Xtreme Gym" /><section className="px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2"><div className="border border-[#f6c400]/40 bg-white/[.04] p-6"><p className="text-xs font-black uppercase tracking-[.2em] text-[#f6c400]">Schedule and price</p><h2 className="mt-3 text-4xl font-black uppercase">Three classes per week</h2><p className="mt-6 text-3xl font-black text-[#f6c400]">CRC 16,000</p><p className="mt-3 font-semibold text-white/60">Morning groups run from 9:00–10:00 AM and 10:00–11:00 AM. Contact reception to confirm availability.</p><a href={waLink("Hello Xtreme Gym, I would like information about senior fitness classes.")} className="mt-6 inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black"><MessageCircle className="h-4 w-4" />Ask about classes</a></div><div className="grid gap-4 sm:grid-cols-2">{benefits.map(([title,text])=><article key={title} className="border border-white/10 bg-white/[.04] p-5"><CheckCircle2 className="h-5 w-5 text-[#f6c400]"/><h3 className="mt-4 text-xl font-black uppercase">{title}</h3><p className="mt-2 text-sm font-semibold leading-6 text-white/55">{text}</p></article>)}</div></div></section></>;
+  return <><PageHero eyebrow="Senior fitness" title="It is never too late" highlight="to feel better." text="Three guided classes every week for mobility, strength, balance and confidence in a welcoming community." image="/xtreme/zona-funcional-clases.webp" imageAlt="Functional area used for guided classes at Xtreme Gym" /><section className="px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2"><div className="border border-[#f6c400]/40 bg-white/[.04] p-6"><p className="text-xs font-black uppercase tracking-[.2em] text-[#f6c400]">Schedule and price</p><h2 className="mt-3 text-4xl font-black uppercase">Three classes per week</h2><p className="mt-6 text-3xl font-black text-[#f6c400]">CRC 16,000</p><p className="mt-3 font-semibold text-white/60">Morning groups run from 9:00–10:00 AM and 10:00–11:00 AM. Contact reception to confirm availability.</p><a href={waLink("Hello Xtreme Gym, I would like information about senior fitness classes.")} className="mt-6 inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black"><MessageCircle className="h-4 w-4" />Ask about classes</a></div><div className="grid gap-4 sm:grid-cols-2">{benefits.map(([title,text])=><article key={title} className="border border-white/10 bg-white/[.04] p-5"><CheckCircle2 className="h-5 w-5 text-[#f6c400]"/><h3 className="mt-4 text-xl font-black uppercase">{title}</h3><p className="mt-2 text-sm font-semibold leading-6 text-white/55">{text}</p></article>)}</div></div></section></>;
 }
 
 function BenefitsPage() {
@@ -179,7 +179,7 @@ function BenefitsPage() {
         title="More than equipment."
         highlight="Everything supports consistency."
         text="Training is easier to sustain when you have guidance, convenient access and spaces designed around your visit."
-        image="/xtreme/piso-maquinas-panoramica.jpg"
+        image="/xtreme/piso-maquinas-panoramica.webp"
         imageAlt="Training floor with a variety of gym equipment"
       />
       <section className="px-5 py-16 sm:px-8 lg:py-20">
@@ -204,7 +204,7 @@ function BenefitsPage() {
 }
 
 function FaqPage() {
-  return <><PageHero eyebrow="FAQ" title="Answers before" highlight="your first visit." text="If your question is not here, message reception and we will be happy to help." image="/xtreme/recepcion-sala-espera.jpg" imageAlt="Xtreme Gym reception and waiting area" /><section className="px-5 py-16 sm:px-8"><div className="mx-auto max-w-4xl divide-y divide-white/10 border-y border-white/10">{FAQ.map(([question,answer])=><details key={question} className="group py-5"><summary className="flex cursor-pointer list-none justify-between gap-4 text-lg font-black uppercase">{question}<span className="grid h-8 w-8 shrink-0 place-items-center bg-white text-black group-open:bg-[#f6c400]">+</span></summary><p className="mt-3 max-w-2xl font-semibold leading-8 text-white/58">{answer}</p></details>)}</div></section></>;
+  return <><PageHero eyebrow="FAQ" title="Answers before" highlight="your first visit." text="If your question is not here, message reception and we will be happy to help." image="/xtreme/recepcion-sala-espera.webp" imageAlt="Xtreme Gym reception and waiting area" /><section className="px-5 py-16 sm:px-8"><div className="mx-auto max-w-4xl divide-y divide-white/10 border-y border-white/10">{FAQ.map(([question,answer])=><details key={question} className="group py-5"><summary className="flex cursor-pointer list-none justify-between gap-4 text-lg font-black uppercase">{question}<span className="grid h-8 w-8 shrink-0 place-items-center bg-white text-black group-open:bg-[#f6c400]">+</span></summary><p className="mt-3 max-w-2xl font-semibold leading-8 text-white/58">{answer}</p></details>)}</div></section></>;
 }
 
 function ContactPage() {
@@ -213,7 +213,7 @@ function ContactPage() {
 }
 
 function FirstDayPage() {
-  return <><PageHero eyebrow="First visit" title="Your first day" highlight="is free." text="Experience the gym, explore the equipment and decide which membership fits your routine." image="/xtreme/zona-funcional-amplia.jpg" imageAlt="Xtreme Gym functional training area"/><section className="px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-3">{[["1","Contact us","Tell reception when you would like to visit."],["2","Bring the basics","Workout clothes, training shoes, towel and water."],["3","Start training","Our team will show you where to begin."]].map(([n,title,text])=><article key={n} className="border border-white/10 bg-white/[.04] p-5"><span className="grid h-10 w-10 place-items-center bg-[#f6c400] font-black text-black">{n}</span><h2 className="mt-5 text-xl font-black uppercase">{title}</h2><p className="mt-2 text-sm font-semibold leading-6 text-white/55">{text}</p></article>)}</div><div className="mx-auto mt-8 max-w-5xl"><a href={waLink("Hello Xtreme Gym, I would like to schedule my free first day.")} className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black"><MessageCircle className="h-5 w-5"/>Schedule your free day</a></div></section></>;
+  return <><PageHero eyebrow="First visit" title="Your first day" highlight="is free." text="Experience the gym, explore the equipment and decide which membership fits your routine." image="/xtreme/zona-funcional-amplia.webp" imageAlt="Xtreme Gym functional training area"/><section className="px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-3">{[["1","Contact us","Tell reception when you would like to visit."],["2","Bring the basics","Workout clothes, training shoes, towel and water."],["3","Start training","Our team will show you where to begin."]].map(([n,title,text])=><article key={n} className="border border-white/10 bg-white/[.04] p-5"><span className="grid h-10 w-10 place-items-center bg-[#f6c400] font-black text-black">{n}</span><h2 className="mt-5 text-xl font-black uppercase">{title}</h2><p className="mt-2 text-sm font-semibold leading-6 text-white/55">{text}</p></article>)}</div><div className="mx-auto mt-8 max-w-5xl"><a href={waLink("Hello Xtreme Gym, I would like to schedule my free first day.")} className="inline-flex min-h-14 items-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black"><MessageCircle className="h-5 w-5"/>Schedule your free day</a></div></section></>;
 }
 
 export default async function EnglishSectionPage({ params }: { params: Promise<{ section: string }> }) {

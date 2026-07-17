@@ -22,7 +22,7 @@ export default function PreguntasPage() {
         title="Lo que la gente"
         highlight="pregunta antes de llegar."
         text="Revisá las respuestas y conocé los planes disponibles para empezar a tu ritmo."
-        image="/xtreme/recepcion-sala-espera.jpg"
+        image="/xtreme/recepcion-sala-espera.webp"
         imageAlt="Recepción y sala de espera de Xtreme Gym"
       />
 

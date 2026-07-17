@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ArrowRight, ChevronRight, CreditCard, Languages, MessageCircle, X } from "lucide-react";
 import { NAV_LINKS, waLink } from "../lib/site";
@@ -76,8 +77,7 @@ export default function SiteHeader() {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
         <Link href={english ? "/en" : "/"} className="group flex min-w-0 items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden border border-[#f6c400]/50 bg-[#f6c400] text-black shadow-[0_0_28px_-12px_rgba(246,196,0,.9)] transition group-hover:shadow-[0_0_28px_-6px_rgba(246,196,0,.9)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/xtreme/logo.jpg" alt="Xtreme Gym" className="h-full w-full object-cover" />
+            <Image src="/xtreme/logo.webp" alt="Xtreme Gym" width={44} height={44} quality={82} className="h-full w-full object-cover" />
           </span>
           <span className="min-w-0 text-lg font-black uppercase tracking-tight">
             Xtreme<span className="text-[#f6c400]">Gym</span>

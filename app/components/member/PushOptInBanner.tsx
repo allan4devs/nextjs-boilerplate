@@ -102,8 +102,8 @@ export default function PushOptInBanner({ unlocked, memberName }: Props) {
             Activá notificaciones en este celular
           </p>
           <p className="mt-1.5 text-xs font-semibold leading-relaxed text-white/50">
-            Racha, reservas, badges, plan del coach y renovación — aunque no tengas la app
-            abierta. Separado del correo.
+            Te avisamos ~1 h antes de tu clase, más racha, reservas, badges y renovación —
+            aunque no tengas la app abierta. Separado del correo.
           </p>
           {error && (
             <p className="mt-2 text-[11px] font-bold leading-snug text-orange-200">{error}</p>

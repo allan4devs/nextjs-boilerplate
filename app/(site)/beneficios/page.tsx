@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import CtaBand from "../../components/CtaBand";
 import GymBenefitsGrid from "../../components/GymBenefitsGrid";
@@ -14,13 +15,13 @@ export const metadata: Metadata = pageMetadata({
 });
 
 const BENEFIT_IMAGES = [
-  { src: "/xtreme/consultorio-medicion-corporal.jpg", alt: "Consultorio de medición corporal", label: "Medición corporal" },
-  { src: "/xtreme/parqueo-clientes.jpg", alt: "Parqueo para clientes de Xtreme Gym", label: "Parqueo para clientes" },
-  { src: "/xtreme/parqueo-amplio.jpg", alt: "Parqueo amplio junto a Xtreme Gym", label: "Parqueo amplio" },
-  { src: "/xtreme/area-infantil.jpg", alt: "Área infantil de Xtreme Gym", label: "Área infantil" },
-  { src: "/xtreme/vestidores-lavamanos.jpg", alt: "Vestidores y lavamanos de Xtreme Gym", label: "Vestidores" },
-  { src: "/xtreme/vestidores-duchas.jpg", alt: "Duchas disponibles en Xtreme Gym", label: "Duchas" },
-  { src: "/xtreme/consultorio-valoracion.jpg", alt: "Espacio privado para valoración física", label: "Valoración privada" },
+  { src: "/xtreme/consultorio-medicion-corporal.webp", alt: "Consultorio de medición corporal", label: "Medición corporal" },
+  { src: "/xtreme/parqueo-clientes.webp", alt: "Parqueo para clientes de Xtreme Gym", label: "Parqueo para clientes" },
+  { src: "/xtreme/parqueo-amplio.webp", alt: "Parqueo amplio junto a Xtreme Gym", label: "Parqueo amplio" },
+  { src: "/xtreme/area-infantil.webp", alt: "Área infantil de Xtreme Gym", label: "Área infantil" },
+  { src: "/xtreme/vestidores-lavamanos.webp", alt: "Vestidores y lavamanos de Xtreme Gym", label: "Vestidores" },
+  { src: "/xtreme/vestidores-duchas.webp", alt: "Duchas disponibles en Xtreme Gym", label: "Duchas" },
+  { src: "/xtreme/consultorio-valoracion.webp", alt: "Espacio privado para valoración física", label: "Valoración privada" },
 ];
 
 export default function BeneficiosPage() {
@@ -31,7 +32,7 @@ export default function BeneficiosPage() {
         title="Más que máquinas."
         highlight="Todo suma a tu constancia."
         text="Entrenar mejor también depende de sentirse acompañado, llegar con facilidad y contar con espacios que hacen más simple sostener el hábito."
-        image="/xtreme/area-infantil-estantes.jpg"
+        image="/xtreme/area-infantil-estantes.webp"
         imageAlt="Área infantil disponible para las familias de Xtreme Gym"
       >
         <Link
@@ -60,13 +61,13 @@ export default function BeneficiosPage() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {BENEFIT_IMAGES.map((item) => (
               <figure key={item.src} className="group relative aspect-[4/3] overflow-hidden border border-white/10 bg-black">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={item.src}
                   alt={item.alt}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-cover opacity-75 transition duration-500 group-hover:scale-105 group-hover:opacity-95"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  quality={72}
+                  className="object-cover opacity-75 transition duration-500 group-hover:scale-105 group-hover:opacity-95"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                 <figcaption className="absolute bottom-4 left-4 text-sm font-black uppercase tracking-[0.14em] text-[#f6c400]">

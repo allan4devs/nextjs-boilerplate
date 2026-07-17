@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      message: "Ya no recibiras avisos opcionales por correo.",
+      message: "Ya no recibirás avisos opcionales por correo.",
     });
   } catch (error) {
     console.error("XTREME EMAIL PREFERENCES", error);

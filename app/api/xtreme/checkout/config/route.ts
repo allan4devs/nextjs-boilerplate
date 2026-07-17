@@ -32,7 +32,7 @@ export async function GET() {
     return NextResponse.json({
       configured: false,
       message:
-        "PayPal no está listo. Configure NEXT_PUBLIC_PAYPAL_CLIENT_ID (o SANDBOX) y el secret en el servidor.",
+        "El pago en línea no está listo. Configure las credenciales de checkout en el servidor.",
       currency: PAYPAL_CURRENCY,
     });
   }

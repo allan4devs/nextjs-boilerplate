@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import ImageTile from "../components/ImageTile";
 import CtaBand from "../components/CtaBand";
 import LandingTrack from "../components/LandingTrack";
@@ -27,43 +28,43 @@ const EXPLORE = [
     href: "/precios",
     label: "Precios y planes",
     text: "Día, semana, quincena o mes. Inscríbase y pague en línea.",
-    image: "/xtreme/piso-maquinas-panoramica.jpg",
+    image: "/xtreme/piso-maquinas-panoramica.webp",
   },
   {
     href: "/zonas",
     label: "Zonas de entrenamiento",
     text: "Calistenia, peso libre, cardio, pierna y tren superior con equipo completo.",
-    image: "/xtreme/zona-mancuernas.jpg",
+    image: "/xtreme/zona-mancuernas.webp",
   },
   {
     href: "/beneficios",
     label: "Beneficios para socios",
     text: "Instructores, medición corporal, parqueo, área infantil y más.",
-    image: "/xtreme/area-infantil.jpg",
+    image: "/xtreme/area-infantil.webp",
   },
   {
     href: "/adultos-mayores",
     label: "Adultos mayores",
     text: "Tres clases por semana para movilidad, fuerza y confianza.",
-    image: "/xtreme/zona-funcional-clases.jpg",
+    image: "/xtreme/zona-funcional-clases.webp",
   },
   {
     href: "/app",
     label: "App de socios",
     text: "Reservas, rachas, carné digital y progreso en un solo lugar.",
-    image: "/xtreme/maquinas-y-entrenador-xtreme.png",
+    image: "/xtreme/maquinas-y-entrenador-xtreme.webp",
   },
   {
     href: "/preguntas",
     label: "Preguntas frecuentes",
     text: "Lo que la gente consulta antes de su primera sesión.",
-    image: "/xtreme/recepcion-sala-espera.jpg",
+    image: "/xtreme/recepcion-sala-espera.webp",
   },
   {
     href: "/contacto",
     label: "Horario y ubicación",
     text: "Barrio San Pablo. Vea horarios, mapa y cómo llegar.",
-    image: "/xtreme/fachada-xtreme-gym.jpg",
+    image: "/xtreme/fachada-xtreme-gym.webp",
   },
 ];
 
@@ -74,14 +75,14 @@ export default function ExtremeGymLandingPage() {
       <LandingTrack surface="home" />
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/xtreme/piso-pesas-panoramica.jpg"
+          <Image
+            src="/xtreme/piso-pesas-panoramica.webp"
+            fill
             sizes="100vw"
-            fetchPriority="high"
-            decoding="async"
+            priority
+            quality={78}
             alt="Interior de gimnasio con máquinas"
-            className="h-full w-full object-cover opacity-44"
+            className="object-cover opacity-44"
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#070707_0%,rgba(7,7,7,.94)_38%,rgba(7,7,7,.62)_72%,rgba(7,7,7,.34)_100%)]" />
           <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:72px_72px]" />
@@ -130,7 +131,7 @@ export default function ExtremeGymLandingPage() {
             <div className="min-w-0">
               <div className="hidden gap-3 lg:grid lg:grid-cols-[1fr_230px]">
                 <div className="relative border border-white/12 bg-black/70 p-3 shadow-2xl backdrop-blur">
-                  <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" />
+                  <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" sizes="(min-width: 1024px) 440px, 1px" />
                   <div className="absolute left-6 top-6 max-w-[210px] bg-[#f6c400] px-4 py-3 text-black">
                     <p className="text-xs font-black uppercase tracking-[0.18em]">Movimiento Xtreme</p>
                     <p className="text-2xl font-black uppercase leading-none">Compromiso que se nota</p>
@@ -138,7 +139,7 @@ export default function ExtremeGymLandingPage() {
                 </div>
 
                 <div className="grid content-start gap-3">
-                  <ImageTile src={HERO_IMAGES[1].src} alt={HERO_IMAGES[1].alt} className="aspect-[4/3]" />
+                  <ImageTile src={HERO_IMAGES[1].src} alt={HERO_IMAGES[1].alt} className="aspect-[4/3]" sizes="(min-width: 1024px) 230px, 1px" />
                   <div className="border border-[#f6c400]/45 bg-[#f6c400] p-4 text-black shadow-[0_0_36px_-18px_rgba(246,196,0,.9)]">
                     <p className="text-xs font-black uppercase tracking-[0.2em]">Entrená en serio</p>
                     <h2 className="mt-2 text-2xl font-black uppercase leading-none">Todo el equipo para superarte</h2>
@@ -260,13 +261,13 @@ export default function ExtremeGymLandingPage() {
                 className="group relative overflow-hidden border border-white/10 bg-black transition hover:border-[#f6c400]/55"
               >
                 <div className="relative aspect-[16/10] overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={item.image}
                     alt={item.label}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    quality={72}
+                    className="object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
                 </div>

@@ -410,7 +410,7 @@ export default function OsModals({ os }: { os: MemberOs }) {
         open={osModal?.kind === "checkout"}
         onClose={closeOsModal}
         title="Renovar membresía"
-        subtitle="PayPal · sin salir del Member OS"
+        subtitle="Pago en línea · sin salir del Member OS"
         icon={CreditCard}
         tone="lime"
         size="full"

@@ -90,7 +90,7 @@ function MembershipHero({ model, actions }: Props) {
           <p className="mt-2 text-sm font-bold opacity-70">Activo hasta {membership.nextBillingDate}</p>
           <div className="mt-4 max-w-2xl">
             <div className="flex justify-between text-[9px] font-black uppercase tracking-[.15em] opacity-70">
-              <span>{urgent ? "Renová para no perder continuidad" : "Tiempo restante"}</span>
+              <span>{urgent ? "Renová a tiempo y no perdás continuidad" : "Tiempo restante"}</span>
               <span>{membership.progressPct}%</span>
             </div>
             <div className="mt-2 h-4 border-[3px] border-current/25 bg-black/25">
@@ -114,7 +114,7 @@ function MembershipHero({ model, actions }: Props) {
             className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-black px-4 text-xs font-black uppercase text-white transition hover:bg-white hover:text-black sm:text-sm"
           >
             <CreditCard className="h-5 w-5" />
-            Renovar con PayPal
+            Renovar en línea
             <ArrowRight className="h-4 w-4" />
           </button>
           <button

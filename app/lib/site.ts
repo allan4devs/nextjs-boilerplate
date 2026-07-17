@@ -33,15 +33,15 @@ export const NAV_LINKS = [
 
 export const HERO_IMAGES = [
   {
-    src: "/xtreme/piso-pesas-panoramica.jpg",
+    src: "/xtreme/piso-pesas-panoramica.webp",
     alt: "Piso de pesas y máquinas de Xtreme Gym",
   },
   {
-    src: "/xtreme/maquinas-xtreme-amarillas.png",
+    src: "/xtreme/maquinas-xtreme-amarillas.webp",
     alt: "Máquinas amarillas de fuerza de Xtreme Gym",
   },
   {
-    src: "/xtreme/zona-funcional-clases.jpg",
+    src: "/xtreme/zona-funcional-clases.webp",
     alt: "Clase en la zona funcional de Xtreme Gym",
   },
 ];
@@ -52,7 +52,7 @@ export const ZONES = [
     title: "Calistenia",
     eyebrow: "Barras / funcional",
     text: "Un espacio para dominar tu cuerpo, mejorar la movilidad y desarrollar fuerza funcional.",
-    image: "/xtreme/zona-funcional-turf.jpg",
+    image: "/xtreme/zona-funcional-turf.webp",
     details: [
       "Barras funcionales y ejercicios con peso corporal",
       "Trabajo de core, coordinación y control",
@@ -64,7 +64,7 @@ export const ZONES = [
     title: "Peso libre",
     eyebrow: "Pesas / mancuernas",
     text: "Todo lo necesario para trabajar fuerza, masa muscular y progresión de cargas en serio.",
-    image: "/xtreme/zona-mancuernas.jpg",
+    image: "/xtreme/zona-mancuernas.webp",
     details: [
       "Mancuernas, barras, discos y bancos",
       "Opciones para principiantes y avanzados",
@@ -76,7 +76,7 @@ export const ZONES = [
     title: "Cardio",
     eyebrow: "Condición / salud",
     text: "Trabajo cardiovascular para respirar mejor, rendir más y cuidar su salud todos los días.",
-    image: "/xtreme/zona-cardio.jpg",
+    image: "/xtreme/zona-cardio.webp",
     details: [
       "Fajas, elípticas, bicicletas y escaladores",
       "Sesiones continuas o por intervalos",
@@ -88,7 +88,7 @@ export const ZONES = [
     title: "Pierna",
     eyebrow: "Pierna / glúteo",
     text: "Máquinas y estaciones para desarrollar pierna, glúteo, estabilidad y potencia.",
-    image: "/xtreme/maquinas-fuerza-xtreme.png",
+    image: "/xtreme/maquinas-fuerza-xtreme.webp",
     details: [
       "Sentadilla, peso muerto, hip thrust y accesorios",
       "Estabilidad de cadera, rodilla y tobillo",
@@ -100,7 +100,7 @@ export const ZONES = [
     title: "Tren superior",
     eyebrow: "Pecho / espalda / brazos",
     text: "Máquinas excelentes y opciones variadas para trabajar cada grupo muscular con intención.",
-    image: "/xtreme/maquinas-y-entrenador-xtreme.png",
+    image: "/xtreme/maquinas-y-entrenador-xtreme.webp",
     details: [
       "Equipos para pecho, espalda, hombros y brazos",
       "Máquinas guiadas y trabajo con peso libre",
@@ -141,15 +141,15 @@ export const PLAN_DETAILS = [
 
 export const GALLERY = [
   {
-    src: "/xtreme/piso-maquinas-panoramica.jpg",
+    src: "/xtreme/piso-maquinas-panoramica.webp",
     label: "Piso de máquinas de Xtreme Gym",
   },
   {
-    src: "/xtreme/zona-entrenamiento-vip.jpg",
+    src: "/xtreme/zona-entrenamiento-vip.webp",
     label: "Zona de entrenamiento VIP",
   },
   {
-    src: "/xtreme/zona-funcional-amplia.jpg",
+    src: "/xtreme/zona-funcional-amplia.webp",
     label: "Zona funcional amplia",
   },
 ];
@@ -235,7 +235,7 @@ export const FAQS = [
   {
     question: "¿Cómo pago mi plan?",
     answer:
-      "En línea con PayPal desde la página de precios: elegís día, semana, quincena o mes, pagás con tarjeta o tu cuenta PayPal y el acceso se activa apenas se confirma el cobro.",
+      "En línea desde la página de precios: elegís día, semana, quincena o mes, pagás de forma segura y el acceso se activa apenas se confirma el cobro.",
   },
   {
     question: "¿La clase de adultos mayores es para principiantes?",
@@ -250,17 +250,17 @@ export const FAQS = [
   {
     question: "¿Necesito experiencia previa para entrenar?",
     answer:
-      "No. Puede empezar desde cero: las zonas están separadas por objetivo y siempre hay alguien para orientarle con el uso del equipo.",
+      "No. Podés empezar desde cero: las zonas están separadas por objetivo y siempre hay alguien para orientarte con el uso del equipo.",
   },
   {
     question: "¿Qué debo llevar el primer día?",
     answer:
-      "Ropa cómoda, tenis de entrenamiento, toalla y botella de agua. Con eso ya puede hacer su primera sesión sin problema.",
+      "Ropa cómoda, tenis de entrenamiento, toalla y botella de agua. Con eso ya podés hacer tu primera sesión sin problema.",
   },
   {
     question: "¿Puedo pagar en línea?",
     answer:
-      "Sí. Entrá a la página de precios, elegí el plan que mejor te funcione y completá la inscripción con PayPal.",
+      "Sí. Entrá a la página de precios, elegí el plan que mejor te funcione y completá la inscripción con pago en línea.",
   },
   {
     question: "¿Cuál es el horario del gimnasio?",
