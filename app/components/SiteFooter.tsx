@@ -93,23 +93,14 @@ export default function SiteFooter() {
       </footer>
 
       {showMobileCta && (
-        <div className="xg-mobile-cta fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/92 backdrop-blur md:hidden">
-          <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
-            <Link
-              href={english ? "/en/prices" : "/precios#inscripcion"}
-              className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#f6c400] px-3 text-xs font-black uppercase text-black"
-            >
-              {english ? "Join now" : "Inscribirme"}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <a
-              href={waLink("Hola Xtreme Gym, quiero conocer los planes y recibir ayuda para inscribirme.")}
-              className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/15 bg-white/[0.06] px-3 text-xs font-black uppercase text-white"
-            >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp
-            </a>
-          </div>
+        <div className="xg-mobile-cta fixed z-40 md:hidden">
+          <Link
+            href={english ? "/en/prices" : "/precios#inscripcion"}
+            className="inline-flex min-h-14 w-full items-center justify-center gap-2 border-[2px] border-[#f6c400] bg-[#f6c400] px-5 text-xs font-black uppercase text-black shadow-[4px_4px_0_rgba(0,0,0,.55)] transition active:translate-y-px active:shadow-[2px_2px_0_rgba(0,0,0,.55)]"
+          >
+            {english ? "See plans" : "Ver planes"}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       )}
     </>

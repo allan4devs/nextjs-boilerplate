@@ -5,7 +5,8 @@
  * tabs del OS, perfil del socio y mini-login por cedula.
  */
 
-import { ArrowRight, UserRound, X } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, House, UserRound, X } from "lucide-react";
 import { GameButton } from "../GameOS";
 import Avatar from "./Avatar";
 import { TABS } from "./constants";
@@ -184,6 +185,15 @@ export default function SideNav({ os }: { os: MemberOs }) {
         </nav>
 
         <div className="border-t-[3px] border-white/15 p-2">
+          <Link
+            href="/"
+            title="Ir al sitio Xtreme Gym"
+            onClick={() => setNavOpen(false)}
+            className="flex min-h-12 w-full items-center justify-center gap-3 border-[3px] border-white/10 px-2 text-xs font-black uppercase tracking-[.1em] text-white/50 transition hover:border-[#d8ff3e]/40 hover:text-white"
+          >
+            <House className="h-4 w-4 shrink-0" />
+            <span className={navOpen ? "block" : "lg:hidden"}>Sitio web</span>
+          </Link>
           {memberName && (
             <button
               type="button"

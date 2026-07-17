@@ -82,7 +82,9 @@ export default function ReceptionChatWidget({ memberContext = null }: Props) {
   const hidden = HIDDEN_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
-  const mobileCtaVisible = !pathname.startsWith("/gracias") && !pathname.startsWith("/registro");
+  const memberDock = Boolean(memberContext) && (pathname === "/app" || pathname.startsWith("/app/"));
+  const mobileCtaVisible =
+    !memberDock && !pathname.startsWith("/gracias") && !pathname.startsWith("/registro");
 
   const [open, setOpen] = useState(false);
   const [visitorName, setVisitorName] = useState("");
@@ -292,12 +294,14 @@ export default function ReceptionChatWidget({ memberContext = null }: Props) {
 
   return (
     <div
-      className={`pointer-events-none fixed right-3 z-[60] flex flex-col items-end gap-3 sm:right-6 ${
-        mobileCtaVisible ? "xg-chat-above-mobile-cta" : "xg-chat-safe-bottom"
+      className={`pointer-events-none fixed z-[60] flex flex-col items-end gap-3 ${
+        memberDock
+          ? "xg-member-chat-dock"
+          : `right-3 sm:right-6 ${mobileCtaVisible ? "xg-chat-above-mobile-cta" : "xg-chat-safe-bottom"}`
       }`}
     >
       {open && (
-        <div className="xg-keyboard-panel pointer-events-auto flex w-[min(100vw-2rem,380px)] flex-col overflow-hidden border-[3px] border-[#d8ff3e] bg-[#0c0c0c] shadow-[6px_6px_0_rgba(0,0,0,.65)]">
+        <div className={`xg-keyboard-panel pointer-events-auto flex w-[min(100vw-2rem,380px)] flex-col overflow-hidden border-[3px] border-[#d8ff3e] bg-[#0c0c0c] shadow-[6px_6px_0_rgba(0,0,0,.65)] ${memberDock ? "mr-3 lg:mr-0" : ""}`}>
           <div className="flex items-center justify-between gap-2 border-b-[3px] border-white/15 bg-[#d8ff3e] px-3 py-2.5 text-black">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">
@@ -416,12 +420,25 @@ export default function ReceptionChatWidget({ memberContext = null }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="pointer-events-auto relative inline-flex h-14 w-14 items-center justify-center border-[3px] border-black/30 bg-[#d8ff3e] text-black shadow-[4px_4px_0_rgba(0,0,0,.55)] transition hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_rgba(0,0,0,.55)]"
+        className={`pointer-events-auto relative transition ${
+          memberDock
+            ? `flex min-h-[58px] w-1/5 flex-col items-center justify-center gap-0.5 border-t-[3px] ${
+                open
+                  ? "border-t-[#d8ff3e] bg-gradient-to-b from-[#d8ff3e]/20 to-transparent text-[#d8ff3e]"
+                  : "border-t-transparent text-white/45 active:bg-white/[0.06] active:text-white"
+              } lg:inline-flex lg:h-14 lg:min-h-0 lg:w-14 lg:flex-row lg:border-[3px] lg:border-black/30 lg:bg-[#d8ff3e] lg:text-black lg:shadow-[4px_4px_0_rgba(0,0,0,.55)]`
+            : "inline-flex h-14 w-14 items-center justify-center border-[3px] border-black/30 bg-[#d8ff3e] text-black shadow-[4px_4px_0_rgba(0,0,0,.55)] hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_rgba(0,0,0,.55)]"
+        }`}
         aria-label={open ? (english ? "Close chat" : "Cerrar chat") : (english ? "Open reception chat" : "Abrir chat con recepción")}
       >
-        {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+        {open ? <X className="h-5 w-5 lg:h-6 lg:w-6" /> : <MessageCircle className="h-5 w-5 lg:h-6 lg:w-6" />}
+        {memberDock && (
+          <span className="max-w-full truncate text-[9px] font-black uppercase tracking-[0.08em] lg:hidden">
+            Chat
+          </span>
+        )}
         {!open && unread > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center bg-red-500 px-1 text-[10px] font-black text-white">
+          <span className={`absolute grid h-5 min-w-5 place-items-center bg-red-500 px-1 text-[10px] font-black text-white ${memberDock ? "right-2 top-1" : "-right-1.5 -top-1.5"}`}>
             {unread > 9 ? "9+" : unread}
           </span>
         )}

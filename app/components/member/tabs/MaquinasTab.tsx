@@ -222,7 +222,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
         activeId={activeId}
         onActiveChange={setActiveId}
         title="Guía de máquinas"
-        subtitle="Cuadros grandes: elegí zona, tocá la máquina y abrí la guía."
+        subtitle="Pierna, pecho, espalda y full body — tocá y abrí la guía."
         header={
           <div className="border-[3px] border-[#d8ff3e]/35 bg-[#d8ff3e]/[0.07] p-3 sm:p-3.5">
             <div className="flex items-start gap-3">
@@ -232,7 +232,8 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
               <div>
                 <p className="text-sm font-black uppercase">Entrená fuerte con técnica</p>
                 <p className="mt-1 text-xs font-bold text-white/45">
-                  Tocá una tarjeta para ver ajuste, tips y errores comunes.
+                  Beneficio de socio: guías de cada equipo (ajuste, tips y errores). Combiná con
+                  peso libre, cardio, VIP y zona funcional en el piso.
                 </p>
               </div>
             </div>

@@ -113,6 +113,8 @@ export type ResumenActions = {
   renewMembership: () => void;
   reserveClass: (trainingId: string) => void;
   cancelClass: (trainingId: string) => void;
+  /** Navegar a otro tab del Member OS (beneficios → progreso/máquinas/etc.). */
+  goTab: (tab: "resumen" | "entrenar" | "maquinas" | "progreso" | "perfil") => void;
 };
 
 async function trackMemberEvent(
@@ -497,6 +499,10 @@ export function useResumenViewModel(os: MemberOs): {
     },
     [cancelReservation],
   );
+  const goTab = useCallback(
+    (tab: "resumen" | "entrenar" | "maquinas" | "progreso" | "perfil") => setTab(tab),
+    [setTab],
+  );
   const confirmCheckout = useCallback(() => {
     if (!activeVisit || isRegisteringCheckout) return;
     if (!window.confirm("¿Confirmás que ya saliste de Xtreme Gym?")) return;
@@ -522,6 +528,7 @@ export function useResumenViewModel(os: MemberOs): {
       renewMembership,
       reserveClass,
       cancelClass,
+      goTab,
     },
   };
 }

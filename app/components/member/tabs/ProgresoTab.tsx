@@ -34,6 +34,24 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
 
   return (
     <div className="xg-tab-in space-y-3 sm:space-y-4">
+      <div className="border-[3px] border-[#d8ff3e]/35 bg-gradient-to-br from-[#d8ff3e]/[0.1] to-transparent p-3.5 sm:p-4">
+        <div className="flex items-start gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center bg-[#d8ff3e] text-black">
+            <Ruler className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <GameLabel tone="lime">Beneficio de socio</GameLabel>
+            <p className="mt-1 text-sm font-black uppercase leading-tight">
+              Medición corporal + curva en la app
+            </p>
+            <p className="mt-1.5 text-xs font-semibold leading-relaxed text-white/50">
+              Medite en el consultorio sin costo y cargá peso y cintura acá. Tu historial queda
+              ligado a la racha y a tu meta — no se pierde en un papel.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={() => setOsModal({ kind: "badges" })}

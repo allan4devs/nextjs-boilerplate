@@ -12,6 +12,7 @@ import {
   Gauge,
   Loader2,
   LockKeyhole,
+  MapPin,
   Medal,
   Ruler,
   Sparkles,
@@ -30,6 +31,7 @@ import type {
   ResumenViewModel,
 } from "../../view-models/useResumenViewModel";
 import ActiveVisitPanel from "./ActiveVisitPanel";
+import GymBenefitsShowcase from "./GymBenefitsShowcase";
 
 type Props = {
   model: ResumenViewModel;
@@ -333,7 +335,16 @@ function Metric({ label, value, icon: Icon }: { label: string; value: string; ic
 }
 
 function MemberHomeDashboardComponent({ model, actions }: Props) {
-  type PanelId = "visit" | "membership" | "training" | "classes" | "week" | "momentum" | "progress" | "occupancy";
+  type PanelId =
+    | "visit"
+    | "membership"
+    | "training"
+    | "classes"
+    | "week"
+    | "momentum"
+    | "progress"
+    | "occupancy"
+    | "gym";
   type PanelOption = {
     id: PanelId;
     label: string;
@@ -447,6 +458,17 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
         </button>
       ),
     });
+
+    // Siempre visible: vitrina de zonas, VIP, grupal, medición y comodidades
+    options.push({
+      id: "gym",
+      label: "Tu gym",
+      hint: "Zonas · VIP · medición",
+      icon: MapPin,
+      dismissible: false,
+      content: <GymBenefitsShowcase onGoTab={actions.goTab} />,
+    });
+
     return options;
   }, [actions, membershipNeedsAttention, model, relevantClasses, weekIsComplete]);
 

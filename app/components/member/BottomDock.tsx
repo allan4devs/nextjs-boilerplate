@@ -12,12 +12,12 @@ import type { MemberOs } from "./useMemberOs";
 /** Tabs del dock: sin perfil (ese va arriba). */
 const DOCK_TABS = TABS.filter((item) => item.id !== "perfil");
 
-export default function BottomDock({ os }: { os: MemberOs }) {
+export default function BottomDock({ os, showChat = false }: { os: MemberOs; showChat?: boolean }) {
   const { tab, setTab, setOsModal } = os;
 
   return (
     <nav
-      className="xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden"
+      className={`xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden ${showChat ? "pr-[20%]" : ""}`}
       aria-label="Navegación principal"
     >
       {DOCK_TABS.map((item) => (
