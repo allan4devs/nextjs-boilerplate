@@ -5,7 +5,8 @@
  * membresia, ocupacion, logros y check-in rapido de entreno.
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import ExtremeGymCheckout from "@/app/ExtremeGymCheckout";
 import {
   Award,
   Check,
@@ -69,6 +70,9 @@ export default function OsModals({ os }: { os: MemberOs }) {
     savingTrainingId,
     completeTraining,
     completedToday,
+    memberName,
+    reloadFullMember,
+    fetchPayments,
   } = os;
   const [savingGoal, setSavingGoal] = useState<number | null>(null);
   const selectedMachine =
@@ -82,6 +86,12 @@ export default function OsModals({ os }: { os: MemberOs }) {
   const membershipTotalDays = membershipPlanDays(currentMember.membership.plan);
   const membershipDaysRemaining = Math.max(0, currentMember.membership.daysRemaining);
   const membershipProgress = membershipRemainingPct(membershipDaysRemaining, membershipTotalDays);
+  const handleCheckoutSuccess = useCallback(async () => {
+    await Promise.all([
+      reloadFullMember(memberName, currentMember.cedula),
+      fetchPayments(),
+    ]);
+  }, [currentMember.cedula, fetchPayments, memberName, reloadFullMember]);
 
   return (
     <>
@@ -394,6 +404,31 @@ export default function OsModals({ os }: { os: MemberOs }) {
             </p>
           </div>
         </div>
+      </GameModal>
+
+      <GameModal
+        open={osModal?.kind === "checkout"}
+        onClose={closeOsModal}
+        title="Renovar membresía"
+        subtitle="PayPal · sin salir del Member OS"
+        icon={CreditCard}
+        tone="lime"
+        size="full"
+      >
+        {osModal?.kind === "checkout" && (
+          <ExtremeGymCheckout
+            key={osModal.planId}
+            initialOption={osModal.planId}
+            compact
+            memberCheckout
+            memberCustomer={{
+              name: currentMember.memberName,
+              phone: currentMember.phone,
+              email: currentMember.email,
+            }}
+            onSuccess={handleCheckoutSuccess}
+          />
+        )}
       </GameModal>
 
       <GameModal

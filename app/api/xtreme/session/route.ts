@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 /** Current session + active entitlements for the member app shell. */
 export async function GET(req: NextRequest) {
-  const session = await resolveMemberSession(req);
+  const session = await resolveMemberSession(req, true);
   if (!session) {
     return NextResponse.json({ authenticated: false, member: null, entitlements: [] });
   }

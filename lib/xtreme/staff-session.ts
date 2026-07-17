@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { STAFF_SESSIONS_COLLECTION, resolveStaffRole, type StaffRole } from "./shared";
+import { SESSION_IDLE_TIMEOUT_MS } from "./session-policy";
 
 export type StaffSurface = "reception" | "ingreso" | "trainer" | "admin";
 
@@ -112,21 +113,24 @@ export function authenticateStaffCode(code: string, surface: StaffSurface) {
 export async function resolveStaffSession(
   req: NextRequest,
   surface: StaffSurface,
+  touchActivity = false,
 ): Promise<StaffSession | null> {
   const token = req.cookies.get(COOKIE_BY_SURFACE[surface])?.value?.trim() ?? "";
   if (!token) return null;
 
   const db = await getDb();
   const now = new Date();
+  const idleCutoff = new Date(now.getTime() - SESSION_IDLE_TIMEOUT_MS);
   const doc = await db.collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION).findOne({
     tokenHash: hashToken(token),
     surface,
     revokedAt: null,
     expiresAt: { $gt: now },
+    lastSeenAt: { $gt: idleCutoff },
   });
   if (!doc || !roleCanUseSurface(doc.role, surface)) return null;
 
-  if (!doc.lastSeenAt || now.getTime() - new Date(doc.lastSeenAt).getTime() > 10 * 60_000) {
+  if (touchActivity) {
     await db.collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION).updateOne(
       { tokenHash: doc.tokenHash, surface, revokedAt: null },
       { $set: { lastSeenAt: now } },

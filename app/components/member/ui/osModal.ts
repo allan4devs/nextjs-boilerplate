@@ -4,6 +4,7 @@ export type OsModal =
   | null
   | { kind: "machine"; machineId: MachineGuide["id"] }
   | { kind: "membership" }
+  | { kind: "checkout"; planId: "week" | "fortnight" | "month" }
   | { kind: "occupancy" }
   | { kind: "streak" }
   | { kind: "level" }

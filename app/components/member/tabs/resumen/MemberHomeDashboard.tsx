@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Users,
   WalletCards,
+  X,
 } from "lucide-react";
 import { BarTrendChart, CHART_LIME } from "../../../charts";
 import { GameLabel } from "../../../GameOS";
@@ -67,9 +68,9 @@ function MembershipHero({ model, actions }: Props) {
   const urgent = membership.daysRemaining <= 5;
 
   return (
-    <section className={`relative overflow-hidden border-[3px] p-4 shadow-[6px_6px_0_rgba(0,0,0,.55)] sm:p-6 ${membership.tone}`}>
+    <section className={`relative overflow-hidden border-[3px] p-4 shadow-[6px_6px_0_rgba(0,0,0,.55)] sm:p-5 ${membership.tone}`}>
       <div aria-hidden className="absolute -right-10 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-      <div className="relative grid gap-5 lg:grid-cols-[1.2fr_.8fr] lg:items-stretch">
+      <div className="relative grid gap-4 lg:grid-cols-[1.2fr_.8fr] lg:items-stretch">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <GameLabel tone="white">Tu membresía</GameLabel>
@@ -78,16 +79,16 @@ function MembershipHero({ model, actions }: Props) {
             </span>
           </div>
           <div className="mt-4 flex items-end gap-3">
-            <strong className="text-7xl font-black leading-[.78] tracking-[-.07em] sm:text-8xl">
+            <strong className="text-5xl font-black leading-[.78] tracking-[-.07em] sm:text-7xl">
               {membership.daysRemaining}
             </strong>
             <span className="pb-1 text-sm font-black uppercase tracking-[.18em] opacity-70">
               días<br />disponibles
             </span>
           </div>
-          <h1 className="mt-5 text-2xl font-black uppercase sm:text-4xl">{membership.plan}</h1>
+          <h1 className="mt-4 text-xl font-black uppercase sm:text-3xl">{membership.plan}</h1>
           <p className="mt-2 text-sm font-bold opacity-70">Activo hasta {membership.nextBillingDate}</p>
-          <div className="mt-5 max-w-2xl">
+          <div className="mt-4 max-w-2xl">
             <div className="flex justify-between text-[9px] font-black uppercase tracking-[.15em] opacity-70">
               <span>{urgent ? "Renová para no perder continuidad" : "Tiempo restante"}</span>
               <span>{membership.progressPct}%</span>
@@ -98,19 +99,19 @@ function MembershipHero({ model, actions }: Props) {
           </div>
         </div>
 
-        <div className="flex flex-col border-[3px] border-current/25 bg-black/20 p-4 sm:p-5">
+        <div className="flex flex-col border-[3px] border-current/25 bg-black/20 p-3 sm:p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[9px] font-black uppercase tracking-[.18em] opacity-55">Última forma de pago</p>
-              <p className="mt-2 text-xl font-black uppercase">{membership.lastPaymentMethod}</p>
+              <p className="mt-1 text-lg font-black uppercase">{membership.lastPaymentMethod}</p>
               <p className="mt-1 text-xs font-bold opacity-60">{membership.lastPlanLabel}</p>
             </div>
-            <WalletCards className="h-8 w-8" />
+            <WalletCards className="h-7 w-7" />
           </div>
           <button
             type="button"
             onClick={actions.renewMembership}
-            className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 bg-black px-4 text-sm font-black uppercase text-white transition hover:bg-white hover:text-black"
+            className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-black px-4 text-xs font-black uppercase text-white transition hover:bg-white hover:text-black sm:text-sm"
           >
             <CreditCard className="h-5 w-5" />
             Renovar con PayPal
@@ -256,11 +257,15 @@ function TrainerPlan({ model, actions }: Props) {
 }
 
 function ClassesPanel({ model, actions }: Props) {
+  const relevantClasses = model.classes.filter(
+    (classItem) => classItem.isMine || (classItem.isToday && !classItem.hasStarted),
+  );
+
   return (
     <section className="border-[3px] border-orange-300/35 bg-[#0b0b0b] p-4 shadow-[5px_5px_0_rgba(251,146,60,.12)] sm:p-5">
       <SectionHeading eyebrow="Suscripciones por separado" title="Clases de hoy" icon={Sparkles} />
       <div className="grid gap-3 lg:grid-cols-2">
-        {model.classes.map((classItem) => {
+        {relevantClasses.map((classItem) => {
           const unavailable = !classItem.isToday || classItem.hasStarted;
           const disabled = unavailable || classItem.isFull || classItem.busy;
           return (
@@ -296,11 +301,11 @@ function ClassesPanel({ model, actions }: Props) {
   );
 }
 
-function ProgressAndOccupancy({ model, actions }: Props) {
+function ProgressPanel({ model, actions }: Props) {
   const change = model.progress.weightChange;
   return (
-    <section className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
-      <button type="button" onClick={actions.openProgress} className="border-[3px] border-cyan-300/35 bg-[#0b0b0b] p-4 text-left shadow-[5px_5px_0_rgba(34,211,238,.12)] sm:p-5">
+    <section>
+      <button type="button" onClick={actions.openProgress} className="w-full border-[3px] border-cyan-300/35 bg-[#0b0b0b] p-4 text-left shadow-[5px_5px_0_rgba(34,211,238,.12)] sm:p-5">
         <SectionHeading eyebrow="Datos que sí se sienten" title="Tu progreso" icon={Activity} aside={<span className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-300">Abrir progreso →</span>} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Metric label="Entrenos este mes" value={String(model.progress.workoutsThisMonth)} icon={Dumbbell} />
@@ -311,22 +316,6 @@ function ProgressAndOccupancy({ model, actions }: Props) {
         <div className="mt-4 border-[3px] border-white/10 bg-black/35 p-2">
           <BarTrendChart data={model.progress.weeklyWorkouts} unit="entrenos" color={CHART_LIME} height={135} />
         </div>
-      </button>
-
-      <button type="button" onClick={actions.openOccupancy} className="relative overflow-hidden border-[3px] border-cyan-300/45 bg-gradient-to-br from-cyan-300/[.1] to-[#0b0b0b] p-4 text-left shadow-[5px_5px_0_rgba(34,211,238,.15)] sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <GameLabel tone="cyan">Gym en vivo</GameLabel>
-            <h2 className="mt-3 text-4xl font-black uppercase sm:text-5xl">{model.occupancy.level}</h2>
-          </div>
-          <span className="relative flex h-4 w-4"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300/60" /><span className="relative inline-flex h-4 w-4 rounded-full bg-cyan-300" /></span>
-        </div>
-        <div className="mt-7 flex items-end justify-between gap-3">
-          <strong className="text-6xl font-black tracking-[-.06em]">{model.occupancy.percentage}%</strong>
-          <Gauge className="mb-2 h-10 w-10 text-cyan-300" />
-        </div>
-        <div className="mt-3 h-4 border-[3px] border-white/15 bg-black/45"><div className="xg-stripes h-full bg-cyan-300" style={{ width: `${model.occupancy.percentage}%` }} /></div>
-        <p className="mt-4 flex items-center gap-2 text-xs font-bold text-white/50"><Users className="h-4 w-4" /> {model.occupancy.detail}</p>
       </button>
     </section>
   );
@@ -343,14 +332,213 @@ function Metric({ label, value, icon: Icon }: { label: string; value: string; ic
 }
 
 function MemberHomeDashboardComponent({ model, actions }: Props) {
+  type PanelId = "membership" | "training" | "classes" | "week" | "momentum" | "progress" | "occupancy";
+  type PanelOption = {
+    id: PanelId;
+    label: string;
+    hint: string;
+    icon: typeof Activity;
+    content: React.ReactNode;
+  };
+
+  const relevantClasses = model.classes.filter(
+    (classItem) => classItem.isMine || (classItem.isToday && !classItem.hasStarted),
+  );
+  const membershipNeedsAttention = Boolean(
+    model.membership &&
+      (model.membership.daysRemaining <= 7 ||
+        !model.membership.status.toLowerCase().includes("activ")),
+  );
+  const weekIsComplete = Boolean(
+    model.gamification &&
+      model.streak &&
+      model.gamification.days.filter((day) => day.done).length >= model.streak.weeklyGoal,
+  );
+
+  const panels = useMemo<PanelOption[]>(() => {
+    const options: PanelOption[] = [];
+
+    if (membershipNeedsAttention && model.membership) {
+      options.push({
+        id: "membership",
+        label: "Renovar",
+        hint: `${model.membership.daysRemaining} días`,
+        icon: CreditCard,
+        content: <MembershipHero model={model} actions={actions} />,
+      });
+    }
+    if (model.trainingPlan && model.trainingPlan.pendingCount > 0) {
+      options.push({
+        id: "training",
+        label: "Mi entreno",
+        hint: `${model.trainingPlan.pendingCount} pendiente${model.trainingPlan.pendingCount === 1 ? "" : "s"}`,
+        icon: Dumbbell,
+        content: <TrainerPlan model={model} actions={actions} />,
+      });
+    }
+    if (relevantClasses.length > 0) {
+      options.push({
+        id: "classes",
+        label: "Clases hoy",
+        hint: relevantClasses.some((classItem) => classItem.isMine) ? "Tenés reserva" : "Ver cupos",
+        icon: Sparkles,
+        content: <ClassesPanel model={model} actions={actions} />,
+      });
+    }
+    if (model.gamification && !weekIsComplete) {
+      options.push({
+        id: "week",
+        label: "Meta semanal",
+        hint: model.gamification.weekLabel.replace("Esta semana — ", ""),
+        icon: CalendarDays,
+        content: <WeekCard model={model} actions={actions} />,
+      });
+    }
+    if (model.streak && model.gamification && (model.streak.value > 0 || model.gamification.xp > 0)) {
+      options.push({
+        id: "momentum",
+        label: "Racha y nivel",
+        hint: `${model.streak.value} días`,
+        icon: Medal,
+        content: <LevelAndStreak model={model} actions={actions} />,
+      });
+    }
+    if (model.progress.workoutsThisMonth > 0 || model.progress.latestWeight !== null) {
+      options.push({
+        id: "progress",
+        label: "Mi progreso",
+        hint: `${model.progress.workoutsThisMonth} este mes`,
+        icon: Activity,
+        content: <ProgressPanel model={model} actions={actions} />,
+      });
+    }
+
+    options.push({
+      id: "occupancy",
+      label: "Gym en vivo",
+      hint: `${model.occupancy.percentage}% ocupado`,
+      icon: Gauge,
+      content: (
+        <button type="button" onClick={actions.openOccupancy} className="relative w-full overflow-hidden border-[3px] border-cyan-300/45 bg-gradient-to-br from-cyan-300/[.1] to-[#0b0b0b] p-4 text-left shadow-[5px_5px_0_rgba(34,211,238,.15)] sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div><GameLabel tone="cyan">Gym en vivo</GameLabel><h2 className="mt-3 text-4xl font-black uppercase">{model.occupancy.level}</h2></div>
+            <span className="relative flex h-4 w-4"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300/60" /><span className="relative inline-flex h-4 w-4 rounded-full bg-cyan-300" /></span>
+          </div>
+          <div className="mt-6 flex items-end justify-between gap-3"><strong className="text-5xl font-black tracking-[-.06em]">{model.occupancy.percentage}%</strong><Gauge className="mb-1 h-9 w-9 text-cyan-300" /></div>
+          <p className="mt-4 flex items-center gap-2 text-xs font-bold text-white/50"><Users className="h-4 w-4" /> {model.occupancy.detail}</p>
+        </button>
+      ),
+    });
+    return options;
+  }, [actions, membershipNeedsAttention, model, relevantClasses, weekIsComplete]);
+
+  const storageKey = "xg-member-home-dismissed-v1";
+  const [dismissed, setDismissed] = useState<PanelId[]>([]);
+  const [selectedPanel, setSelectedPanel] = useState<PanelId | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(storageKey) ?? "{}") as {
+        date?: string;
+        panels?: PanelId[];
+      };
+      const today = new Date().toISOString().slice(0, 10);
+      if (saved.date === today && Array.isArray(saved.panels)) setDismissed(saved.panels);
+    } catch {
+      // Una preferencia dañada no debe bloquear el dashboard.
+    }
+  }, []);
+
+  const visiblePanels = panels.filter((panel) => !dismissed.includes(panel.id));
+  const activePanel = visiblePanels.find((panel) => panel.id === selectedPanel) ?? visiblePanels[0] ?? null;
+
+  function dismissPanel(panelId: PanelId) {
+    const next = Array.from(new Set([...dismissed, panelId]));
+    setDismissed(next);
+    setSelectedPanel(null);
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({ date: new Date().toISOString().slice(0, 10), panels: next }),
+      );
+    } catch {
+      // El modo privado puede impedir localStorage; el estado actual sigue funcionando.
+    }
+  }
+
+  function restorePanels() {
+    setDismissed([]);
+    setSelectedPanel(null);
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // El dashboard puede restaurarse en memoria aunque localStorage no esté disponible.
+    }
+  }
+
   return (
-    <div className="space-y-4 sm:space-y-5">
-      <MembershipHero model={model} actions={actions} />
-      <LevelAndStreak model={model} actions={actions} />
-      <WeekCard model={model} actions={actions} />
-      <TrainerPlan model={model} actions={actions} />
-      <ClassesPanel model={model} actions={actions} />
-      <ProgressAndOccupancy model={model} actions={actions} />
+    <div className="space-y-3 sm:space-y-4">
+      <header className="border-[3px] border-white/10 bg-[#0b0b0b] p-3 sm:p-4">
+        <p className="text-[9px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">Tu siguiente movimiento</p>
+        <div className="mt-1 flex items-end justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-black uppercase sm:text-2xl">Elegí qué querés hacer</h1>
+            <p className="mt-1 text-xs font-bold text-white/40">Una acción a la vez. Sin paneles estorbando.</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <span className="block text-[10px] font-black uppercase text-white/35">{visiblePanels.length} activas</span>
+            {dismissed.length > 0 && (
+              <button
+                type="button"
+                onClick={restorePanels}
+                className="mt-1 text-[9px] font-black uppercase text-[#d8ff3e] underline decoration-[#d8ff3e]/40 underline-offset-2"
+              >
+                Mostrar ocultas
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {visiblePanels.map((panel) => {
+            const Icon = panel.icon;
+            const active = panel.id === activePanel?.id;
+            return (
+              <button
+                key={panel.id}
+                type="button"
+                onClick={() => setSelectedPanel(panel.id)}
+                aria-pressed={active}
+                className={`min-w-[132px] border-[3px] p-3 text-left transition ${active ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/10 bg-white/[.03] text-white hover:border-white/30"}`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="mt-3 block text-xs font-black uppercase">{panel.label}</span>
+                <span className={`mt-1 block text-[9px] font-bold ${active ? "text-black/55" : "text-white/35"}`}>{panel.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+      </header>
+
+      {activePanel ? (
+        <div className="relative xg-tab-in">
+          <button
+            type="button"
+            onClick={() => dismissPanel(activePanel.id)}
+            aria-label={`Ocultar ${activePanel.label} por hoy`}
+            title="Ocultar por hoy"
+            className="absolute right-2 top-2 z-20 grid h-9 w-9 place-items-center border-2 border-white/20 bg-black/80 text-white transition hover:border-[#d8ff3e] hover:text-[#d8ff3e] sm:right-3 sm:top-3"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          {activePanel.content}
+        </div>
+      ) : (
+        <div className="border-[3px] border-dashed border-white/15 bg-white/[.02] p-8 text-center">
+          <Check className="mx-auto h-8 w-8 text-[#d8ff3e]" />
+          <p className="mt-3 text-lg font-black uppercase">Todo listo por hoy</p>
+          <p className="mt-1 text-xs font-bold text-white/40">Mañana vuelven tus acciones relevantes.</p>
+        </div>
+      )}
     </div>
   );
 }

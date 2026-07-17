@@ -6,6 +6,7 @@ import {
   authenticateStaffCode,
   clearStaffSessionCookie,
   createStaffSession,
+  roleCanUseSurface,
   resolveStaffSession,
   revokeStaffSession,
   staffSessionTtlSeconds,
@@ -62,7 +63,7 @@ async function recordFailedAttempt(db: Awaited<ReturnType<typeof getDb>>, key: s
 export async function GET(req: NextRequest) {
   const surface = parseSurface(req.nextUrl.searchParams.get("surface"));
   if (!surface) return NextResponse.json({ error: "Superficie invalida." }, { status: 400 });
-  const session = await resolveStaffSession(req, surface);
+  const session = await resolveStaffSession(req, surface, true);
   return NextResponse.json(
     session
       ? { authenticated: true, surface, role: session.role, expiresAt: session.expiresAt }
@@ -107,6 +108,49 @@ export async function POST(req: NextRequest) {
     ttlSeconds: staffSessionTtlSeconds(surface),
   });
   return attachStaffSessionCookie(res, surface, token, expiresAt);
+}
+
+/**
+ * SSO interno: una sesión de staff ya autenticada puede abrir otra superficie
+ * permitida por su rol sin volver a pedir el código.
+ */
+export async function PUT(req: NextRequest) {
+  const body = (await req.json().catch(() => ({}))) as { targetSurface?: unknown };
+  const targetSurface = parseSurface(body.targetSurface);
+  if (!targetSurface) {
+    return NextResponse.json({ error: "Superficie destino invalida." }, { status: 400 });
+  }
+
+  const sourceSurfaces: StaffSurface[] = ["admin", "reception", "ingreso", "trainer"];
+  let sourceSession: Awaited<ReturnType<typeof resolveStaffSession>> = null;
+  for (const sourceSurface of sourceSurfaces) {
+    const candidate = await resolveStaffSession(req, sourceSurface, true);
+    if (candidate && roleCanUseSurface(candidate.role, targetSurface)) {
+      sourceSession = candidate;
+      break;
+    }
+  }
+  if (!sourceSession) {
+    return NextResponse.json(
+      { error: "Tu sesión actual no permite entrar a esta área." },
+      { status: 403 },
+    );
+  }
+
+  const db = await getDb();
+  await revokeStaffSession(req, targetSurface);
+  const { token, expiresAt } = await createStaffSession(db, {
+    surface: targetSurface,
+    role: sourceSession.role,
+    userAgent: req.headers.get("user-agent") ?? undefined,
+  });
+  const res = NextResponse.json({
+    authenticated: true,
+    surface: targetSurface,
+    role: sourceSession.role,
+    expiresAt,
+  });
+  return attachStaffSessionCookie(res, targetSurface, token, expiresAt);
 }
 
 export async function DELETE(req: NextRequest) {

@@ -1,24 +1,164 @@
 "use client";
 
 /**
- * Tab Entrenar — plan del coach, perfil rapido de meta,
- * clases del dia (reserva + check-in) y rutinas guiadas.
+ * Tab Entrenar — hub dinámico: plan, clases, meta y rutinas.
+ * Cada bloque se abre con un cuadro grande; las clases se expanden
+ * al tocar para reservar / check-in sin saturar la pantalla.
  */
 
+import { useState } from "react";
 import {
   CalendarClock,
   Check,
   ChevronRight,
+  ClipboardList,
   Dumbbell,
   Loader2,
   Sparkles,
+  Target,
   Video,
 } from "lucide-react";
-import { GameLabel, GamePanel } from "../../GameOS";
+import { GameLabel } from "../../GameOS";
 import { GOALS, ROUTINES, TRAININGS } from "../constants";
 import { todayIso } from "../utils";
 import type { MemberOs } from "../useMemberOs";
+import type { Training } from "../domain/training";
+import PanelHub, { type HubPanel } from "../PanelHub";
 import PlanTrainingPanel from "../PlanTrainingPanel";
+
+function TrainingCard({
+  training,
+  unlocked,
+  done,
+  reservation,
+  reservingTrainingId,
+  savingTrainingId,
+  expanded,
+  onToggle,
+  onReserve,
+  onComplete,
+}: {
+  training: Training;
+  unlocked: boolean;
+  done: boolean;
+  reservation: { reserved: number; capacity: number; remaining: number; isMine: boolean };
+  reservingTrainingId: string;
+  savingTrainingId: string;
+  expanded: boolean;
+  onToggle: () => void;
+  onReserve: () => void;
+  onComplete: () => void;
+}) {
+  const Icon = training.icon;
+  const isFull = reservation.remaining <= 0 && !reservation.isMine;
+  const fillPct = Math.min(
+    100,
+    Math.round((reservation.reserved / reservation.capacity) * 100),
+  );
+
+  return (
+    <div
+      className={`overflow-hidden border-[3px] bg-[#0c0c0c] shadow-[4px_4px_0_rgba(0,0,0,.45)] transition ${
+        expanded ? "border-[#d8ff3e]/55" : "border-white/20"
+      } ${done ? "ring-2 ring-[#d8ff3e]/30" : ""}`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-start gap-3 p-3 text-left transition hover:bg-white/[0.03] sm:p-4"
+        aria-expanded={expanded}
+      >
+        <span
+          className={`grid h-14 w-14 shrink-0 place-items-center bg-gradient-to-br ${training.color} text-black shadow-[2px_2px_0_rgba(0,0,0,.35)] sm:h-16 sm:w-16`}
+        >
+          <Icon className="h-7 w-7 sm:h-8 sm:w-8" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-base font-black uppercase leading-tight sm:text-lg">
+              {training.name}
+            </span>
+            {done && (
+              <span className="border border-[#d8ff3e]/50 bg-[#d8ff3e]/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-[#eaff93]">
+                Hecho
+              </span>
+            )}
+            {reservation.isMine && !done && (
+              <span className="border border-orange-300/50 bg-orange-300/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-orange-200">
+                Reservado
+              </span>
+            )}
+          </span>
+          <span className="mt-1 block text-xs font-semibold text-white/50 sm:text-sm">
+            {training.time} · {training.minutes} min
+          </span>
+          <span className="mt-1 block text-[11px] font-bold text-white/35">
+            Cupos {reservation.remaining}/{reservation.capacity}
+          </span>
+          <span className="mt-2 block h-1.5 border border-white/10 bg-black/35">
+            <span
+              className="block h-full bg-[#d8ff3e] transition-all"
+              style={{ width: `${fillPct}%` }}
+            />
+          </span>
+        </span>
+        <ChevronRight
+          className={`mt-1 h-5 w-5 shrink-0 text-white/35 transition ${
+            expanded ? "rotate-90 text-[#d8ff3e]" : ""
+          }`}
+        />
+      </button>
+
+      {expanded && (
+        <div className="space-y-3 border-t-[3px] border-white/10 p-3 sm:p-4">
+          <p className="text-sm text-white/64">
+            {training.focus} · {training.intensity} · Coach {training.coach}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onReserve}
+              disabled={!unlocked || Boolean(reservingTrainingId) || isFull}
+              className={`inline-flex min-h-12 items-center justify-center gap-2 px-3 py-3 text-xs font-black uppercase transition sm:text-sm ${
+                reservation.isMine
+                  ? "border-[3px] border-[#d8ff3e] bg-[#d8ff3e]/10 text-[#eaff93] hover:bg-[#d8ff3e] hover:text-black"
+                  : "bg-orange-300 text-black hover:bg-white"
+              } disabled:cursor-not-allowed disabled:opacity-45`}
+            >
+              {reservingTrainingId === training.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : reservation.isMine ? (
+                <CalendarClock className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              {reservation.isMine ? "Cancelar" : isFull ? "Lleno" : "Reservar"}
+            </button>
+            <button
+              type="button"
+              onClick={onComplete}
+              disabled={!unlocked || Boolean(savingTrainingId) || done}
+              className={`inline-flex min-h-12 items-center justify-center gap-2 px-3 py-3 text-xs font-black uppercase transition sm:text-sm ${
+                done
+                  ? "bg-[#d8ff3e] text-black"
+                  : "bg-white text-black hover:bg-[#d8ff3e]"
+              } disabled:cursor-not-allowed disabled:opacity-45`}
+            >
+              {savingTrainingId === training.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : done ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Dumbbell className="h-4 w-4" />
+              )}
+              {done ? "Hecho" : "Check-in"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EntrenarTab({ os }: { os: MemberOs }) {
   const {
@@ -36,173 +176,208 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
     cancelReservation,
   } = os;
 
-  return (
-    <div className="xg-tab-in space-y-3 sm:space-y-4">
-      <PlanTrainingPanel os={os} />
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [openTrainingId, setOpenTrainingId] = useState<string | null>(null);
 
-      <div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
-        <div className="border border-white/10 bg-white/[0.04] p-5">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-[#d8ff3e]" />
-            <h2 className="text-lg font-black uppercase">Perfil Xtreme</h2>
-          </div>
-          <label className="mt-5 block text-xs font-black uppercase tracking-[0.16em] text-white/45">
-            Meta actual
-          </label>
-          <div className="mt-3 grid gap-2">
-            {GOALS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setGoal(option)}
-                disabled={!unlocked}
-                className={`flex items-center justify-between border px-4 py-3 text-left font-bold transition ${
-                  goal === option
-                    ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
-                    : "border-white/10 bg-black/20 text-white/70 hover:border-white/30"
-                } disabled:opacity-50`}
-              >
-                {option}
-                {goal === option && <Check className="h-4 w-4" />}
-              </button>
+  const doneCount = TRAININGS.filter((t) => completedToday.has(t.id)).length;
+  const hasPlan = Boolean(currentMember.trainingPlan);
+  const activeWorkout = Boolean(currentMember.activePlanWorkout);
+
+  const clasesContent = (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">
+          Hoy · {todayIso()}
+        </p>
+        <p className="text-xs font-bold text-white/40">
+          {doneCount}/{TRAININGS.length} hechos
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+        {TRAININGS.map((training) => {
+          const reservation = reservations[training.id] ?? {
+            reserved: 0,
+            capacity: training.slots,
+            remaining: training.slots,
+            isMine: false,
+          };
+          return (
+            <TrainingCard
+              key={training.id}
+              training={training}
+              unlocked={unlocked}
+              done={completedToday.has(training.id)}
+              reservation={reservation}
+              reservingTrainingId={reservingTrainingId}
+              savingTrainingId={savingTrainingId}
+              expanded={openTrainingId === training.id}
+              onToggle={() =>
+                setOpenTrainingId((id) => (id === training.id ? null : training.id))
+              }
+              onReserve={() =>
+                reservation.isMine
+                  ? cancelReservation(training)
+                  : reserveTraining(training)
+              }
+              onComplete={() => completeTraining(training)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const metaContent = (
+    <div className="space-y-4">
+      <p className="text-sm font-semibold text-white/50">
+        Favorito: {currentMember.favoriteTraining || "todavía en blanco"}
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {GOALS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setGoal(option)}
+            disabled={!unlocked}
+            className={`flex min-h-12 items-center justify-between border-[3px] px-4 py-3 text-left text-sm font-bold transition ${
+              goal === option
+                ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                : "border-white/10 bg-black/20 text-white/70 hover:border-white/30"
+            } disabled:opacity-50`}
+          >
+            {option}
+            {goal === option && <Check className="h-4 w-4" />}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={saveProfile}
+        disabled={!unlocked}
+        className="min-h-12 w-full bg-white px-4 py-3 font-black uppercase text-black transition hover:bg-[#d8ff3e] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Guardar meta
+      </button>
+    </div>
+  );
+
+  const rutinasContent = (
+    <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+      {ROUTINES.map((routine) => (
+        <div
+          key={routine.name}
+          className="border-[3px] border-white/15 bg-black/30 p-3.5 shadow-[3px_3px_0_rgba(0,0,0,.4)]"
+        >
+          <GameLabel tone="orange">{routine.level}</GameLabel>
+          <h3 className="mt-2 text-base font-black uppercase">{routine.name}</h3>
+          <ul className="mt-3 space-y-1.5 text-sm font-bold text-white/55">
+            {routine.exercises.map((exercise) => (
+              <li key={exercise} className="border-l-[3px] border-white/20 pl-2">
+                {exercise}
+              </li>
             ))}
-          </div>
+          </ul>
           <button
             type="button"
-            onClick={saveProfile}
-            disabled={!unlocked}
-            className="mt-5 w-full bg-white px-4 py-3 font-black uppercase text-black transition hover:bg-[#d8ff3e] disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 border-[3px] border-white/15 px-3 py-2 text-xs font-black uppercase text-white/65 transition hover:border-orange-300 hover:text-orange-200"
           >
-            Guardar perfil
+            <Video className="h-4 w-4" />
+            {routine.video}
           </button>
-          <p className="mt-4 text-sm font-semibold text-white/45">
-            Favorito: {currentMember.favoriteTraining || "todavia en blanco"}
-          </p>
         </div>
+      ))}
+    </div>
+  );
 
-        <div className="border border-white/10 bg-white/[0.04] p-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-300">Hoy disponible</p>
-              <h2 className="mt-1 text-2xl font-black uppercase">Entrenamientos</h2>
-            </div>
-            <p className="text-sm font-semibold text-white/45">{todayIso()}</p>
-          </div>
+  const panels: HubPanel[] = [
+    {
+      id: "plan",
+      label: "Plan coach",
+      hint: activeWorkout ? "En curso" : hasPlan ? "Listo para arrancar" : "Sin plan aún",
+      icon: ClipboardList,
+      tone: activeWorkout ? "lime" : hasPlan ? "orange" : "white",
+      badge: activeWorkout ? "LIVE" : hasPlan ? "OK" : undefined,
+      content: <PlanTrainingPanel os={os} />,
+    },
+    {
+      id: "clases",
+      label: "Clases hoy",
+      hint: `${doneCount} hechas · ${TRAININGS.length} disponibles`,
+      icon: Dumbbell,
+      tone: "orange",
+      badge: doneCount > 0 ? `${doneCount}` : undefined,
+      content: clasesContent,
+    },
+    {
+      id: "meta",
+      label: "Mi meta",
+      hint: goal || "Elegí tu foco",
+      icon: Target,
+      tone: "lime",
+      content: metaContent,
+    },
+    {
+      id: "rutinas",
+      label: "Rutinas",
+      hint: `${ROUTINES.length} guiadas`,
+      icon: Video,
+      tone: "cyan",
+      content: rutinasContent,
+    },
+  ];
 
-          <div className="mt-5 grid gap-3">
-            {TRAININGS.map((training) => {
-              const Icon = training.icon;
-              const done = completedToday.has(training.id);
-              const reservation = reservations[training.id] ?? {
-                reserved: 0,
-                capacity: training.slots,
-                remaining: training.slots,
-                isMine: false,
-              };
-              const isFull = reservation.remaining <= 0 && !reservation.isMine;
+  return (
+    <div className="xg-tab-in">
+      <PanelHub
+        panels={panels}
+        activeId={activeId}
+        onActiveChange={(id) => {
+          setActiveId(id);
+          if (id !== "clases") setOpenTrainingId(null);
+        }}
+        title="Entrenar"
+        subtitle="Tocá un cuadro grande. Reservá, hacé check-in o seguí tu plan."
+        header={
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              {
+                label: "Hoy",
+                value: `${doneCount}/${TRAININGS.length}`,
+                icon: Check,
+                tone: "text-[#d8ff3e]",
+              },
+              {
+                label: "Meta",
+                value: goal.split(" ")[0] || "—",
+                icon: Sparkles,
+                tone: "text-orange-300",
+              },
+              {
+                label: "Plan",
+                value: activeWorkout ? "LIVE" : hasPlan ? "Listo" : "—",
+                icon: ClipboardList,
+                tone: "text-cyan-300",
+              },
+            ].map((stat) => {
+              const Icon = stat.icon;
               return (
-                <div key={training.id} className="grid gap-3 border-[3px] border-white/20 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:gap-4 sm:p-4 md:grid-cols-[1fr_auto] md:items-center">
-                  <div className="flex gap-4">
-                    <span className={`grid h-14 w-14 shrink-0 place-items-center bg-gradient-to-br ${training.color} text-black`}>
-                      <Icon className="h-7 w-7" />
-                    </span>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-black uppercase">{training.name}</h3>
-                        <span className="bg-white/10 px-2 py-1 text-[11px] font-black uppercase text-white/55">
-                          {training.intensity}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm font-semibold text-white/50">
-                        {training.time} - {training.minutes} min - {training.coach}
-                      </p>
-                      <p className="mt-2 text-sm text-white/64">
-                        {training.focus} - Cupos: {reservation.remaining}/{reservation.capacity}
-                      </p>
-                      <div className="mt-3 h-2 border border-white/10 bg-black/35">
-                        <div
-                          className="h-full bg-[#d8ff3e] transition-all"
-                          style={{ width: `${Math.min(100, Math.round((reservation.reserved / reservation.capacity) * 100))}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-2 md:min-w-[310px]">
-                    <button
-                      type="button"
-                      onClick={() => reservation.isMine ? cancelReservation(training) : reserveTraining(training)}
-                      disabled={!unlocked || Boolean(reservingTrainingId) || isFull}
-                      className={`inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-black uppercase transition ${
-                        reservation.isMine
-                          ? "border border-[#d8ff3e] bg-[#d8ff3e]/10 text-[#eaff93] hover:bg-[#d8ff3e] hover:text-black"
-                          : "bg-orange-300 text-black hover:bg-white"
-                      } disabled:cursor-not-allowed disabled:opacity-45`}
-                    >
-                      {reservingTrainingId === training.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : reservation.isMine ? (
-                        <CalendarClock className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                      {reservation.isMine ? "Cancelar" : isFull ? "Lleno" : "Reservar"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => completeTraining(training)}
-                      disabled={!unlocked || Boolean(savingTrainingId) || done}
-                      className={`inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-black uppercase transition ${
-                        done
-                          ? "bg-[#d8ff3e] text-black"
-                          : "bg-white text-black hover:bg-[#d8ff3e]"
-                      } disabled:cursor-not-allowed disabled:opacity-45`}
-                    >
-                      {savingTrainingId === training.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : done ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Dumbbell className="h-4 w-4" />
-                      )}
-                      {done ? "Hecho" : "Check-in"}
-                    </button>
-                  </div>
+                <div
+                  key={stat.label}
+                  className="border-[3px] border-white/15 bg-[#0c0c0c] p-2.5 text-center shadow-[3px_3px_0_rgba(0,0,0,.4)] sm:p-3"
+                >
+                  <Icon className={`mx-auto h-5 w-5 ${stat.tone}`} />
+                  <p className="mt-1.5 truncate text-sm font-black uppercase sm:text-base">
+                    {stat.value}
+                  </p>
+                  <p className="text-[9px] font-black uppercase tracking-wide text-white/35">
+                    {stat.label}
+                  </p>
                 </div>
               );
             })}
           </div>
-        </div>
-      </div>
-
-      <GamePanel title="Rutinas guiadas" icon={Video} tone="orange">
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 sm:gap-3">
-          {ROUTINES.map((routine) => (
-            <div
-              key={routine.name}
-              className="border-[3px] border-white/15 bg-black/30 p-3 shadow-[3px_3px_0_rgba(0,0,0,.4)]"
-            >
-              <GameLabel tone="orange">{routine.level}</GameLabel>
-              <h3 className="mt-2 font-black uppercase">{routine.name}</h3>
-              <ul className="mt-3 space-y-1.5 text-sm font-bold text-white/55">
-                {routine.exercises.map((exercise) => (
-                  <li key={exercise} className="border-l-[3px] border-white/20 pl-2">
-                    {exercise}
-                  </li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                className="mt-3 inline-flex min-h-10 items-center gap-2 border-[3px] border-white/15 px-3 py-2 text-xs font-black uppercase text-white/65 transition hover:border-orange-300 hover:text-orange-200"
-              >
-                <Video className="h-4 w-4" />
-                {routine.video}
-              </button>
-            </div>
-          ))}
-        </div>
-      </GamePanel>
+        }
+      />
     </div>
   );
 }

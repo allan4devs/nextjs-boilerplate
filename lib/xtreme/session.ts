@@ -7,6 +7,7 @@ import type { Db } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { SESSIONS_COLLECTION } from "./shared";
+import { SESSION_IDLE_TIMEOUT_MS } from "./session-policy";
 
 export const MEMBER_SESSION_COOKIE = "xtreme_member_session";
 export const SESSION_TTL_DAYS = 30;
@@ -98,24 +99,27 @@ export async function revokeAllMemberSessions(db: Db, memberKey: string) {
  * Resolve the current member from the session cookie.
  * Returns null if missing, expired or revoked.
  */
-export async function resolveMemberSession(req: NextRequest): Promise<MemberSession | null> {
+export async function resolveMemberSession(
+  req: NextRequest,
+  touchActivity = false,
+): Promise<MemberSession | null> {
   const token = req.cookies.get(MEMBER_SESSION_COOKIE)?.value?.trim() ?? "";
   if (!token) return null;
 
   const db = await getDb();
   const now = new Date();
+  const idleCutoff = new Date(now.getTime() - SESSION_IDLE_TIMEOUT_MS);
   const doc = await db.collection<MemberSessionDoc>(SESSIONS_COLLECTION).findOne({
     tokenHash: hashToken(token),
     revokedAt: null,
     expiresAt: { $gt: now },
+    lastSeenAt: { $gt: idleCutoff },
   });
   if (!doc) return null;
 
-  // Touch lastSeen occasionally (throttle to 10 min). Await: in serverless,
-  // floating promises can be frozen before they commit.
-  if (!doc.lastSeenAt || now.getTime() - new Date(doc.lastSeenAt).getTime() > 10 * 60_000) {
+  if (touchActivity) {
     await db.collection(SESSIONS_COLLECTION).updateOne(
-      { tokenHash: doc.tokenHash },
+      { tokenHash: doc.tokenHash, revokedAt: null },
       { $set: { lastSeenAt: now } },
     );
   }

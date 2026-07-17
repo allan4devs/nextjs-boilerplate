@@ -402,6 +402,10 @@ export function useResumenViewModel(os: MemberOs): {
     void trackMemberEvent("recommendation_acted", memberName, {
       kind: nextBestAction.kind,
     }).catch(() => {});
+    if (nextBestAction.kind === "renew_plan") {
+      setOsModal({ kind: "checkout", planId: model.membership?.renewPlanId ?? "month" });
+      return;
+    }
     if (
       nextBestAction.kind === "train_today" ||
       nextBestAction.kind === "protect_streak" ||
@@ -427,7 +431,7 @@ export function useResumenViewModel(os: MemberOs): {
       return;
     }
     window.location.href = nextBestAction.href;
-  }, [completeTraining, currentMember.activePlanWorkout, currentMember.trainingPlan, memberName, nextBestAction, quickTraining, setTab, trainedToday]);
+  }, [completeTraining, currentMember.activePlanWorkout, currentMember.trainingPlan, memberName, model.membership?.renewPlanId, nextBestAction, quickTraining, setOsModal, setTab, trainedToday]);
   const openBadges = useCallback(
     () => setOsModal({ kind: "badges" }),
     [setOsModal],
@@ -442,8 +446,8 @@ export function useResumenViewModel(os: MemberOs): {
   );
   const renewMembership = useCallback(() => {
     const plan = model.membership?.renewPlanId ?? "month";
-    window.location.href = `/precios?plan=${plan}#checkout-form`;
-  }, [model.membership?.renewPlanId]);
+    setOsModal({ kind: "checkout", planId: plan });
+  }, [model.membership?.renewPlanId, setOsModal]);
   const reserveClass = useCallback(
     (trainingId: string) => {
       const training = TRAININGS.find((entry) => entry.id === trainingId);

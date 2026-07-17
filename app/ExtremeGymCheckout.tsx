@@ -75,6 +75,13 @@ type FormState = {
   email: string;
 };
 
+export type CheckoutSuccess = {
+  captureID?: string;
+  membershipUntil?: string | null;
+  optionId: string;
+  optionLabel: string;
+};
+
 const initialForm: FormState = {
   name: "",
   phone: "",
@@ -85,10 +92,16 @@ export default function ExtremeGymCheckout({
   initialOption = "month",
   locale = "es",
   compact = false,
+  memberCheckout = false,
+  memberCustomer,
+  onSuccess,
 }: {
   initialOption?: string;
   locale?: "es" | "en";
   compact?: boolean;
+  memberCheckout?: boolean;
+  memberCustomer?: Partial<FormState>;
+  onSuccess?: (result: CheckoutSuccess) => void | Promise<void>;
 }) {
   const english = locale === "en";
   const englishOptions: Record<string, { label: string; category: string; note: string }> = {
@@ -106,10 +119,15 @@ export default function ExtremeGymCheckout({
       ? initialOption
       : "month";
   const [selectedId, setSelectedId] = useState(resolvedInitialOption);
-  const [form, setForm] = useState<FormState>(initialForm);
+  const [form, setForm] = useState<FormState>(() => ({
+    name: memberCustomer?.name ?? "",
+    phone: memberCustomer?.phone ?? "",
+    email: memberCustomer?.email ?? "",
+  }));
   const [paypalConfig, setPaypalConfig] = useState<PayPalConfig | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [completed, setCompleted] = useState<CheckoutSuccess | null>(null);
   const paypalRef = useRef<HTMLDivElement>(null);
   const formSectionRef = useRef<HTMLDivElement>(null);
   const checkoutRef = useRef<{
@@ -123,7 +141,9 @@ export default function ExtremeGymCheckout({
     [selectedId],
   );
 
-  const formReady = Boolean(form.name.trim() && form.phone.trim() && form.email.trim());
+  const formReady = memberCheckout
+    ? Boolean(form.name.trim())
+    : Boolean(form.name.trim() && form.phone.trim() && form.email.trim());
   const checkoutStep = formReady ? 3 : 2;
   const monthSavingsPct = Math.round((1 - 23000 / 30 / (8000 / 7)) * 100);
 
@@ -137,6 +157,7 @@ export default function ExtremeGymCheckout({
   }, [planFromUrl]);
 
   useEffect(() => {
+    if (memberCheckout) return;
     try {
       const raw = window.sessionStorage.getItem(CHECKOUT_FORM_KEY);
       if (!raw) return;
@@ -149,9 +170,10 @@ export default function ExtremeGymCheckout({
     } catch {
       // ignore corrupt cache
     }
-  }, []);
+  }, [memberCheckout]);
 
   useEffect(() => {
+    if (memberCheckout) return;
     try {
       if (!form.name && !form.phone && !form.email) {
         window.sessionStorage.removeItem(CHECKOUT_FORM_KEY);
@@ -161,7 +183,7 @@ export default function ExtremeGymCheckout({
     } catch {
       // ignore storage failures
     }
-  }, [form]);
+  }, [form, memberCheckout]);
 
   function selectPlan(optionId: string) {
     setSelectedId(optionId);
@@ -187,12 +209,12 @@ export default function ExtremeGymCheckout({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "landing_viewed",
-        source: "site",
+        source: memberCheckout ? "member_app" : "site",
         anonymousId: anon,
         properties: { surface: "checkout", optionId: resolvedInitialOption },
       }),
     }).catch(() => {});
-  }, [resolvedInitialOption]);
+  }, [memberCheckout, resolvedInitialOption]);
 
   useEffect(() => {
     let cancelled = false;
@@ -274,6 +296,7 @@ export default function ExtremeGymCheckout({
                 body: JSON.stringify({
                   optionId: currentCheckout.selected.id,
                   customer: currentCheckout.form,
+                  memberCheckout,
                 }),
               });
               const data = (await response.json()) as { orderID?: string; message?: string };
@@ -308,8 +331,25 @@ export default function ExtremeGymCheckout({
               };
               if (!response.ok || !result.success) throw new Error(result.message || "No se pudo confirmar el pago.");
 
-              setStatus("Pago confirmado. Redirigiendo...");
+              setStatus(memberCheckout ? "Pago confirmado. Actualizando tu membresía..." : "Pago confirmado. Redirigiendo...");
               setError("");
+
+              if (memberCheckout) {
+                const completedCheckout = {
+                  captureID: result.captureID,
+                  membershipUntil: result.membershipUntil,
+                  optionId: currentCheckout.selected.id,
+                  optionLabel: currentCheckout.selected.label,
+                } satisfies CheckoutSuccess;
+                setCompleted(completedCheckout);
+                try {
+                  await onSuccess?.(completedCheckout);
+                  setStatus("Pago confirmado. Tu membresía ya está actualizada.");
+                } catch {
+                  setStatus("Pago confirmado. La membresía se actualizará al volver a abrir la app.");
+                }
+                return;
+              }
 
               const params = new URLSearchParams();
               params.set("plan", currentCheckout.selected.label);
@@ -340,7 +380,7 @@ export default function ExtremeGymCheckout({
       cancelled = true;
       container.innerHTML = "";
     };
-  }, [paypalConfig]);
+  }, [memberCheckout, onSuccess, paypalConfig]);
 
   function updateForm(field: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -363,13 +403,13 @@ export default function ExtremeGymCheckout({
   return (
     <section
       id="inscripcion"
-      className={compact ? "relative scroll-mt-20 overflow-hidden border-y border-white/10 bg-[#080808] px-5 py-8 text-white sm:px-8 lg:py-10" : "relative scroll-mt-20 overflow-hidden border-y border-black/20 bg-[#f6c400] px-5 py-14 text-black sm:px-8 lg:py-20"}
+      className={memberCheckout ? "relative text-white" : compact ? "relative scroll-mt-20 overflow-hidden border-y border-white/10 bg-[#080808] px-5 py-8 text-white sm:px-8 lg:py-10" : "relative scroll-mt-20 overflow-hidden border-y border-black/20 bg-[#f6c400] px-5 py-14 text-black sm:px-8 lg:py-20"}
       style={{
         backgroundImage: "linear-gradient(90deg, rgba(0,0,0,.18) 1px, transparent 1px)",
         backgroundSize: "54px 100%",
       }}
     >
-      <div className={compact ? "relative mx-auto max-w-7xl" : "relative mx-auto max-w-5xl"}>
+      <div className={memberCheckout ? "relative" : compact ? "relative mx-auto max-w-7xl" : "relative mx-auto max-w-5xl"}>
         {!compact ? (
           <>
         <div className="text-center">
@@ -421,7 +461,7 @@ export default function ExtremeGymCheckout({
           </>
         ) : null}
 
-        <div className={compact ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-4" : "mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"}>
+        <div className={memberCheckout ? "grid gap-3 sm:grid-cols-3" : compact ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-4" : "mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"}>
           {CHECKOUT_OPTIONS.filter((option) => MAIN_OPTION_IDS.has(option.id)).map((option) => {
             const active = selected.id === option.id;
             const featured = option.id === "month";
@@ -434,10 +474,11 @@ export default function ExtremeGymCheckout({
               <button
                 key={option.id}
                 type="button"
+                disabled={Boolean(completed)}
                 onClick={() => selectPlan(option.id)}
                 aria-pressed={active}
                 className={[
-                  "relative flex min-h-[15rem] flex-col border-2 p-5 text-left transition focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-[#f6c400]",
+                  `relative flex ${memberCheckout ? "min-h-[11rem]" : "min-h-[15rem]"} flex-col border-2 p-5 text-left transition focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-[#f6c400]`,
                   featured
                     ? "border-[#f6c400] bg-[#f6c400] text-black"
                     : active
@@ -479,7 +520,7 @@ export default function ExtremeGymCheckout({
             );
           })}
 
-          <a
+          {!memberCheckout && <a
             href={GROUP_CLASS_LINK}
             target="_blank"
             rel="noreferrer"
@@ -505,10 +546,10 @@ export default function ExtremeGymCheckout({
               {english ? "Check availability" : "Consultar cupo"}
               <ArrowRight className="h-4 w-4" />
             </span>
-          </a>
+          </a>}
         </div>
 
-        <div className="mx-auto mt-8 flex max-w-5xl items-center gap-4" aria-hidden="true">
+        {!memberCheckout && <><div className="mx-auto mt-8 flex max-w-5xl items-center gap-4" aria-hidden="true">
           <span className={compact ? "h-px flex-1 bg-white/15" : "h-px flex-1 bg-black/25"} />
           <span className={compact ? "text-[10px] font-black uppercase tracking-[.2em] text-white/40" : "text-[10px] font-black uppercase tracking-[.2em] text-black/50"}>
             {english ? "Other ways to start" : "Otras formas de empezar"}
@@ -557,7 +598,7 @@ export default function ExtremeGymCheckout({
               <span className="block text-2xl font-black text-[#f6c400]">16.000</span>
             </div>
           </button>
-        </div>
+        </div></>}
         <div
           id="checkout-form"
           ref={formSectionRef}
@@ -577,7 +618,15 @@ export default function ExtremeGymCheckout({
             <ShieldCheck className="h-8 w-8 text-[#bd9300]" />
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {memberCheckout ? (
+            <div className="mt-5 border border-black/10 bg-black/[0.04] p-4">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-black/50">Pago ligado a tu sesión</p>
+              <p className="mt-2 font-black uppercase">{form.name}</p>
+              <p className="mt-1 text-sm font-semibold text-black/55">
+                {[form.email, form.phone].filter(Boolean).join(" · ") || "Usaremos los datos verificados de tu perfil."}
+              </p>
+            </div>
+          ) : <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-black/50">
                 {english ? "Name" : "Nombre"}
@@ -625,7 +674,7 @@ export default function ExtremeGymCheckout({
                   : "Después del pago enviaremos a este correo un enlace privado para completar la cédula y crear el acceso a la app. No pedimos la cédula antes de pagar."}
               </span>
             </label>
-          </div>
+          </div>}
 
           <div className="mt-6 border-t border-black/10 pt-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase text-black/65">
@@ -633,9 +682,19 @@ export default function ExtremeGymCheckout({
               {english ? "Pay with PayPal" : "Pagar con PayPal"}
             </div>
 
-            {!formReady && (
+            {completed ? (
+              <div className="border-2 border-emerald-600 bg-emerald-50 p-5 text-emerald-900">
+                <CheckCircle2 className="h-8 w-8" />
+                <p className="mt-3 text-lg font-black uppercase">Pago confirmado</p>
+                <p className="mt-1 text-sm font-bold">
+                  {completed.optionLabel}
+                  {completed.membershipUntil ? ` · activo hasta ${completed.membershipUntil}` : ""}
+                </p>
+                <p className="mt-2 text-sm font-semibold">{status}</p>
+              </div>
+            ) : <>{!formReady && (
               <p className="mb-3 border border-black/10 bg-black/[0.04] px-3 py-2 text-sm font-bold text-black/60">
-                {english ? "Complete your name, phone and email to enable payment." : "Complete nombre, teléfono y correo para activar el botón de pago."}
+                {memberCheckout ? "No pudimos identificar el socio de esta sesión." : english ? "Complete your name, phone and email to enable payment." : "Complete nombre, teléfono y correo para activar el botón de pago."}
               </p>
             )}
             {error && (
@@ -660,9 +719,10 @@ export default function ExtremeGymCheckout({
             <p className="mt-3 text-xs font-bold leading-5 text-black/52">
               {english ? "Your access is activated automatically as soon as PayPal approves the payment." : "Tu acceso se activa automáticamente apenas PayPal aprueba el pago."}
             </p>
+            </>}
           </div>
 
-          <button
+          {!memberCheckout && <button
             type="button"
             onClick={() => {
               setForm(initialForm);
@@ -678,7 +738,7 @@ export default function ExtremeGymCheckout({
           >
             <Send className="h-4 w-4" />
             {english ? "Clear form" : "Limpiar formulario"}
-          </button>
+          </button>}
         </div>
       </div>
     </section>

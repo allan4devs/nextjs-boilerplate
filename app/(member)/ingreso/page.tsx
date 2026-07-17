@@ -74,7 +74,7 @@ export default function IngresoPage() {
           <GameLabel tone="lime" className="mt-4">Ingreso OS</GameLabel>
           <h1 className="mt-2 text-3xl font-black uppercase tracking-tight">Puerta de ingreso</h1>
           <p className="mt-2 text-sm font-bold text-white/50">
-            Sesion exclusiva del dispositivo de la puerta. Permanece activa durante 24 horas.
+            Sesión exclusiva del dispositivo de la puerta. Se cierra tras 10 minutos sin actividad.
           </p>
           <label className="mt-6 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
             Codigo de staff

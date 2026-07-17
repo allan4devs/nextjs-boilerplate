@@ -11,6 +11,8 @@ function isOsSurface(pathname: string) {
   if (pathname === "/recepcion" || pathname.startsWith("/recepcion/")) return true;
   if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) return true;
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return true;
+  if (pathname === "/entrenador" || pathname.startsWith("/entrenador/")) return true;
+  if (pathname === "/acceso") return true;
   return false;
 }
 
