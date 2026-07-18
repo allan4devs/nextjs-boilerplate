@@ -100,12 +100,12 @@ export default function TopHud({ os }: { os: MemberOs }) {
               )}
             </button>
             {/* Espacio para el atajo global "Sistemas" (fixed top-right en layout) */}
-            <span className="w-11 shrink-0 sm:w-[5.5rem]" aria-hidden />
+            <span className="w-11 shrink-0 sm:w-36" aria-hidden />
           </div>
         )}
         {!unlocked && (
           <div className="ml-auto flex items-center gap-2">
-            <span className="w-11 shrink-0 sm:w-[5.5rem]" aria-hidden />
+            <span className="w-11 shrink-0 sm:w-36" aria-hidden />
           </div>
         )}
       </div>

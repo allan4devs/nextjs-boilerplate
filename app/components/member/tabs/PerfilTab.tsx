@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { GameButton } from "../../GameOS";
 import Avatar from "../Avatar";
-import Barcode from "../Barcode";
+import MemberQrCode from "../MemberQrCode";
 import PanelHub, { type HubPanel } from "../PanelHub";
 import PaymentHistory from "../PaymentHistory";
 import PushNotificationsCard from "../PushNotificationsCard";
@@ -445,7 +445,7 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
       tone: "lime",
       content: memberName ? (
         <div>
-          <div className="border border-white/10 bg-black/40 p-4">
+          <div className="border-[3px] border-[#d8ff3e]/35 bg-gradient-to-b from-[#141414] to-black p-4 shadow-[4px_4px_0_rgba(216,255,62,0.18)]">
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar
@@ -482,15 +482,18 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
                 })}
               </div>
             )}
-            <div className="mt-4">
-              <Barcode value={accessCode} />
+            <div className="mt-5 flex flex-col items-center">
+              <MemberQrCode value={accessCode} size={220} label={accessCode} />
+              <p className="mt-3 font-mono text-base font-black tracking-[0.35em] text-white">
+                {accessCode}
+              </p>
+              <p className="mt-1 text-[10px] font-black uppercase tracking-[0.22em] text-white/40">
+                Código de acceso
+              </p>
             </div>
-            <p className="mt-2 text-center text-sm font-black tracking-[0.3em] text-white/70">
-              {accessCode}
-            </p>
           </div>
           <p className="mt-3 text-xs font-semibold text-white/45">
-            Mostrá este código en recepción para tu check-in. Pase de invitado: XT-
+            Mostrá este QR en recepción para tu check-in. Pase de invitado: XT-
             {accessCode.replace(/\s/g, "").slice(0, 5)}
           </p>
         </div>
