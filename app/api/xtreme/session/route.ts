@@ -17,7 +17,11 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await resolveMemberSession(req, true);
   if (!session) {
-    return NextResponse.json({ authenticated: false, member: null, entitlements: [] });
+    const res = NextResponse.json({ authenticated: false, member: null, entitlements: [] });
+    // Elimina del navegador cookies revocadas, vencidas o de una versión
+    // anterior de Member OS. No afecta ninguna cookie de admin/staff.
+    clearSessionCookie(res);
+    return res;
   }
 
   const db = await getDb();

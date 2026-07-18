@@ -14,6 +14,11 @@ const ALLOWED = new Set([
   "recommendation_shown",
   "recommendation_acted",
   "share_created",
+  // Bitácora Member OS (eventos de producto puntuales; el detalle va a /events/session)
+  "tab_viewed",
+  "member_action",
+  "pin_verified",
+  "tour_completed",
 ]);
 
 export async function POST(req: NextRequest) {

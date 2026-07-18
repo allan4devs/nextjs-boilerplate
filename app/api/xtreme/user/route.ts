@@ -209,6 +209,7 @@ export async function GET(req: NextRequest) {
           cedula: digits.length >= 6 ? digits : undefined,
           memberName: memberNameParam || undefined,
           q: memberNameParam || undefined,
+          strictCedula: digits.length >= 6,
         });
         if (hit) {
           if (hit.memberKey !== session.memberKey) {
@@ -224,6 +225,18 @@ export async function GET(req: NextRequest) {
           }
           normalizedName = hit.memberKey;
           resolvedBy = hit.resolvedBy === "cedula" ? "cedula" : hit.resolvedBy === "name" ? "name" : "session";
+        } else if (digits.length >= 6) {
+          // Una cookie de otro socio no puede convertir una cédula inexistente
+          // en acceso al perfil que quedó abierto en este navegador.
+          return NextResponse.json({
+            member: null,
+            exists: false,
+            lookup: "cedula" as const,
+            cedula: digits,
+            hasPinSet: false,
+            leaderboard: [],
+            nextBestAction: null,
+          });
         }
       }
 
@@ -249,6 +262,7 @@ export async function GET(req: NextRequest) {
       cedula: digits.length >= 6 ? digits : undefined,
       memberName: memberNameParam || undefined,
       q: memberNameParam || digits || undefined,
+      strictCedula: digits.length >= 6,
     });
 
     if (!hit?.memberKey) {

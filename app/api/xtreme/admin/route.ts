@@ -268,6 +268,15 @@ export async function GET(req: NextRequest) {
       payload.growth = null;
     }
 
+    // Bitácora de uso (páginas, tabs, acciones por sesión de navegador)
+    try {
+      const { computeUsageBitacora } = await import("@/lib/xtreme/session-analytics");
+      payload.usage = await computeUsageBitacora(db, 14);
+    } catch (usageErr) {
+      console.error("XTREME ADMIN USAGE BITACORA", usageErr);
+      payload.usage = null;
+    }
+
     // System health card
     try {
       const lifecycle = await db.collection("xtreme_gym_job_runs").findOne(

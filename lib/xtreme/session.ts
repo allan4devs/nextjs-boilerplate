@@ -11,6 +11,12 @@ import { SESSION_IDLE_TIMEOUT_MS } from "./session-policy";
 
 export const MEMBER_SESSION_COOKIE = "xtreme_member_session";
 export const SESSION_TTL_DAYS = 30;
+/**
+ * Rotación de seguridad global de sesiones de socios.
+ * Cambiar esta versión invalida todas las cookies Member OS emitidas antes,
+ * sin tocar las sesiones independientes de admin/staff.
+ */
+const MEMBER_SESSION_TOKEN_VERSION = "v2";
 
 export type MemberSessionDoc = {
   tokenHash: string;
@@ -31,7 +37,9 @@ export type MemberSession = {
 };
 
 function hashToken(token: string) {
-  return createHash("sha256").update(`sess|${token}|v1`).digest("hex");
+  return createHash("sha256")
+    .update(`sess|${token}|${MEMBER_SESSION_TOKEN_VERSION}`)
+    .digest("hex");
 }
 
 function cookieSecure() {
@@ -42,7 +50,7 @@ export function sessionCookieOptions(maxAgeSec: number) {
   return {
     httpOnly: true,
     secure: cookieSecure(),
-    sameSite: "lax" as const,
+    sameSite: "strict" as const,
     path: "/",
     maxAge: maxAgeSec,
   };

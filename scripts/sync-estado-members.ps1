@@ -1,7 +1,7 @@
 param(
   [switch]$Apply,
   [string]$Workbook = (Join-Path $PSScriptRoot "estado.xlsx"),
-  [string]$EmailReport = (Join-Path $PSScriptRoot "email-alignment-report.json")
+  [string]$Report = (Join-Path $PSScriptRoot "estado-sync-report.json")
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +21,7 @@ function Get-CellValue {
 }
 
 $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Workbook))
-$tempJson = Join-Path ([System.IO.Path]::GetTempPath()) ("xtreme-estado-{0}.json" -f [guid]::NewGuid())
+$tempJson = Join-Path ([System.IO.Path]::GetTempPath()) ("xtreme-estado-sync-{0}.json" -f [guid]::NewGuid())
 
 try {
   $sharedStrings = @()
@@ -40,12 +40,17 @@ try {
   try { [xml]$sheetXml = $reader.ReadToEnd() } finally { $reader.Dispose() }
 
   $rows = @($sheetXml.worksheet.sheetData.row)
-  if ($rows.Count -lt 3) { throw "La hoja no contiene filas para importar." }
+  if ($rows.Count -lt 3) { throw "La hoja no contiene filas para sincronizar." }
 
   $headers = @{}
   foreach ($cell in @($rows[1].c)) {
     $column = ([regex]::Match([string]$cell.r, "^[A-Z]+")).Value
     $headers[$column] = Get-CellValue $cell $sharedStrings
+  }
+
+  $required = @("Nombre", "Apellidos", "Plan", "Cedula", "Fecha vence")
+  foreach ($name in $required) {
+    if ($headers.Values -notcontains $name) { throw "Falta la columna requerida: $name" }
   }
 
   $records = foreach ($row in $rows | Select-Object -Skip 2) {
@@ -69,13 +74,13 @@ try {
 try {
   $arguments = @(
     "--env-file=.env",
-    (Join-Path $PSScriptRoot "import-estado.mjs"),
+    (Join-Path $PSScriptRoot "sync-estado-members.mjs"),
     "--input", $tempJson,
-    "--report", $EmailReport
+    "--report", $Report
   )
   if ($Apply) { $arguments += "--apply" }
   & node @arguments
-  if ($LASTEXITCODE -ne 0) { throw "La importacion termino con codigo $LASTEXITCODE." }
+  if ($LASTEXITCODE -ne 0) { throw "La sincronizacion termino con codigo $LASTEXITCODE." }
 } finally {
   Remove-Item -LiteralPath $tempJson -Force -ErrorAction SilentlyContinue
 }

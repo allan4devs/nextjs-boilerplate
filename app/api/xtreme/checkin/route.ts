@@ -140,6 +140,7 @@ export async function GET(req: NextRequest) {
       cedula: cedula || undefined,
       code: codeDigits || undefined,
       q: q || undefined,
+      strictCedula: Boolean(cedula),
     });
 
     if (!resolved) {
@@ -187,6 +188,7 @@ export async function POST(req: NextRequest) {
       code: codeDigits || undefined,
       memberName: memberName || undefined,
       q: memberName || cedula || codeDigits || undefined,
+      strictCedula: Boolean(cedula),
     });
 
     if (!resolved?.member.memberName) {

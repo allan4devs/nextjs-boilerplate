@@ -23,6 +23,8 @@ export type MemberLookupParams = {
   memberKey?: string;
   /** Nombre exacto o casi exacto. */
   memberName?: string;
+  /** Si se envió una cédula, no continuar con nombre, teléfono o código al fallar. */
+  strictCedula?: boolean;
 };
 
 export function digitsOnly(value: unknown) {

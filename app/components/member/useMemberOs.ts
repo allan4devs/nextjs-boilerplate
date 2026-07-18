@@ -9,6 +9,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { STREAK_MILESTONES } from "@/lib/xtreme/gamification";
+import {
+  identifyUsageMember,
+  trackAction,
+  trackTabView,
+} from "@/app/lib/analytics/session-client";
 import type { CelebrationData } from "../gamification";
 import {
   CEDULA_KEY,
@@ -307,19 +312,43 @@ export function useMemberOs() {
     // Optimista: aunque el PATCH tarde, no reaparece en esta sesion.
     setMember((prev) => (prev ? { ...prev, tourDone: true } : prev));
     void persistTourDone(memberName);
+    trackAction("tour_completed", { tab: "resumen" });
+    void fetch("/api/xtreme/events/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "tour_completed",
+        memberName,
+        source: "member_app",
+        properties: {},
+      }),
+    }).catch(() => {});
   }, [memberName, markTourSeenLocally, persistTourDone]);
 
-  // Analytics: registrar la entrada al app (una vez por carga, al quedar desbloqueado).
+  // Analytics: entrada al app + identidad en bitácora de sesión.
   const appOpenTrackedRef = useRef(false);
   useEffect(() => {
     if (!unlocked || !memberName || appOpenTrackedRef.current) return;
     appOpenTrackedRef.current = true;
+    identifyUsageMember(memberName);
+    trackAction("app_unlocked", { label: memberName });
     void fetch("/api/xtreme/events/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "app_opened", memberName, source: "member_app" }),
     }).catch(() => {});
   }, [unlocked, memberName]);
+
+  // Bitácora: tab activo del Member OS (va al session log, no al ledger de producto)
+  useEffect(() => {
+    if (!unlocked) return;
+    trackTabView(tab, "/app");
+  }, [tab, unlocked]);
+
+  // Asociar bitácora al socio apenas conozcamos el nombre (aunque aún no haya PIN)
+  useEffect(() => {
+    if (memberName) identifyUsageMember(memberName);
+  }, [memberName]);
 
   async function updateWeeklyGoal(goalDays: number) {
     if (!unlocked) return;
@@ -438,6 +467,10 @@ export function useMemberOs() {
           ? `Salida registrada. Estuviste ${duration} min en Xtreme. ¡Pura vida!`
           : "Salida registrada. ¡Pura vida!",
       );
+      trackAction("visit_checkout", {
+        tab: "resumen",
+        label: duration > 0 ? `${duration}min` : "ok",
+      });
     } catch (err) {
       requirePinAgain(err, "No se pudo registrar tu salida.");
       void loadActiveVisit();
@@ -533,8 +566,23 @@ export function useMemberOs() {
       setMessage("");
       setIsLoading(true);
       setMemberCedulaInput(formatCedulaInput(cedulaRaw));
+      // No mostrar ni considerar autenticado el perfil anterior mientras se
+      // resuelve una nueva cédula (especialmente en dispositivos compartidos).
+      setShowPin(false);
+      setMemberName("");
+      setMemberNameInput("");
+      setMember(null);
 
       try {
+        if (!allowSession) {
+          // Un ingreso manual siempre empieza sin heredar la identidad del
+          // socio anterior. El admin/staff usa cookies distintas y no se toca.
+          await fetch("/api/xtreme/session", {
+            method: "DELETE",
+            credentials: "same-origin",
+          });
+          window.localStorage.removeItem(SESSION_KEY);
+        }
         const lookupParams = new URLSearchParams({ cedula: digits });
         const lookupResponse = await fetch(`/api/xtreme/user?${lookupParams}`, {
           cache: "no-store",
@@ -568,9 +616,6 @@ export function useMemberOs() {
           setError(MSG.errors.cedulaNoProfile);
           return;
         }
-        setMemberName(name);
-        setMemberNameInput(name);
-        setMember(initialMember(name));
         setNeedsRegistration(false);
         await loadGymStatus();
 
@@ -579,6 +624,9 @@ export function useMemberOs() {
           // para este socio, no hay que pedir PIN de nuevo (aunque localStorage
           // se haya borrado). Si no, se limpia el rastro local y va al PIN.
           if (await hasServerSession(name)) {
+            setMemberName(name);
+            setMemberNameInput(name);
+            setMember(initialMember(name));
             storeSession(name, digits);
             await reloadFullMember(name, digits);
             await Promise.all([loadReservations(name), fetchPayments()]);
@@ -609,11 +657,17 @@ export function useMemberOs() {
 
         if (!hasPin && pinGate === "needs_invite") {
           setShowPin(false);
+          setMemberName("");
+          setMemberNameInput("");
+          setMember(null);
           setError(MSG.errors.cedulaNeedsInvite);
           return;
         }
 
         setPinMode(hasPin ? "verify" : "set");
+        setMemberName(name);
+        setMemberNameInput(name);
+        setMember(initialMember(name));
         setShowPin(true);
       } catch (err) {
         setError(errorText(err, MSG.errors.loadApp));
@@ -860,6 +914,10 @@ export function useMemberOs() {
       setLeaderboard(data.leaderboard ?? []);
       await loadGymStatus();
       setMessage(MSG.ok.trainingLogged(training.name));
+      trackAction("training_logged", {
+        tab: "entrenar",
+        label: training.name,
+      });
     } catch (err) {
       requirePinAgain(err, MSG.errors.logTraining);
     } finally {
@@ -908,6 +966,10 @@ export function useMemberOs() {
       setReservations(data.reservations ?? {});
       await loadGymStatus();
       setMessage(MSG.ok.reserved(training.name));
+      trackAction("class_reserved", {
+        tab: "entrenar",
+        label: training.name,
+      });
     } catch (err) {
       requirePinAgain(err, MSG.errors.reserve);
     } finally {
@@ -967,6 +1029,7 @@ export function useMemberOs() {
       setLeaderboard(data.leaderboard ?? []);
       setMetricNote("");
       setMessage(MSG.ok.metricsSaved);
+      trackAction("body_metric_saved", { tab: "progreso" });
     } catch (err) {
       requirePinAgain(err, MSG.errors.saveMetrics);
     }

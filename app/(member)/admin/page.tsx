@@ -225,6 +225,49 @@ type AdminData = {
       properties: Record<string, string | number | boolean | null>;
     }>;
   } | null;
+  usage?: {
+    windowDays: number;
+    fromDate: string;
+    toDate: string;
+    sessions: number;
+    memberSessions: number;
+    anonSessions: number;
+    uniqueMembers: number;
+    avgDurationMs: number;
+    medianDurationMs: number;
+    totalPageViews: number;
+    totalClicks: number;
+    totalActions: number;
+    topPages: Array<{ path: string; views: number; sessions: number }>;
+    topTabs: Array<{ tab: string; views: number }>;
+    topActions: Array<{ action: string; count: number }>;
+    bySource: Array<{ source: string; sessions: number }>;
+    recentSessions: Array<{
+      id: string;
+      source: string;
+      memberName?: string;
+      memberId?: string;
+      startedAt: string;
+      lastSeenAt: string;
+      durationMs: number;
+      pageViews: number;
+      clicks: number;
+      actions: number;
+      entryPath?: string;
+      exitPath?: string;
+      topPaths: Array<{ path: string; count: number }>;
+      topTabs: Array<{ tab: string; count: number }>;
+      topActions: Array<{ action: string; count: number }>;
+      timeline: Array<{
+        at: string;
+        type: string;
+        path?: string;
+        tab?: string;
+        action?: string;
+        label?: string;
+      }>;
+    }>;
+  } | null;
   system?: {
     lifecycle: { status: string; startedAt: Date; finishedAt?: Date; summary?: unknown } | null;
     lifecycleStale?: boolean;
@@ -281,7 +324,7 @@ const QUICK_PLAN_OPTIONS: Array<{
   { id: "quarter", label: "Trimestral", days: 90, detail: "Acceso completo por 90 dias" },
 ];
 
-type Tab = "resumen" | "socios" | "accesos" | "ingresos" | "gamificacion" | "correos";
+type Tab = "resumen" | "socios" | "accesos" | "ingresos" | "gamificacion" | "correos" | "bitacora";
 
 type GamiBadge = {
   id: string;
@@ -456,10 +499,23 @@ const ADMIN_TABS = [
   { id: "resumen" as const, label: "Resumen", icon: Activity },
   { id: "socios" as const, label: "Socios", icon: Users },
   { id: "accesos" as const, label: "Accesos", icon: DoorOpen },
+  { id: "bitacora" as const, label: "Bitácora", icon: ClipboardList },
   { id: "gamificacion" as const, label: "Game", icon: Trophy },
   { id: "correos" as const, label: "Correos", icon: Mail, superOnly: true },
   { id: "ingresos" as const, label: "Ingresos", icon: Banknote, superOnly: true },
 ];
+
+function formatDurationMs(ms: number) {
+  if (!ms || ms < 0) return "0s";
+  const totalSec = Math.round(ms / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  if (min < 60) return sec ? `${min}m ${sec}s` : `${min}m`;
+  const h = Math.floor(min / 60);
+  const rem = min % 60;
+  return rem ? `${h}h ${rem}m` : `${h}h`;
+}
 
 function SortableMemberHeader({
   label,
@@ -509,6 +565,8 @@ export default function XtremeAdminPage() {
   const [tab, setTab] = useState<Tab>("resumen");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "warning" | "expired">("all");
+  const [memberPage, setMemberPage] = useState(1);
+  const [memberPageSize, setMemberPageSize] = useState(25);
   const [memberSort, setMemberSort] = useState<{
     key: MemberSortKey;
     direction: SortDirection;
@@ -526,6 +584,7 @@ export default function XtremeAdminPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [detailMember, setDetailMember] = useState<AdminMember | null>(null);
+  const [usageSessionId, setUsageSessionId] = useState<string | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
   const [newMetric, setNewMetric] = useState({ date: "", weightKg: "", waistCm: "", note: "" });
   const [paymentForm, setPaymentForm] = useState({
@@ -723,11 +782,45 @@ export default function XtremeAdminPage() {
     });
   }, [filteredMembers, memberSort]);
 
+  const memberTotalPages = Math.max(1, Math.ceil(sortedMembers.length / memberPageSize));
+  const safeMemberPage = Math.min(memberPage, memberTotalPages);
+  const pagedMembers = useMemo(() => {
+    const page = Math.min(memberPage, Math.max(1, Math.ceil(sortedMembers.length / memberPageSize) || 1));
+    const start = (page - 1) * memberPageSize;
+    return sortedMembers.slice(start, start + memberPageSize);
+  }, [sortedMembers, memberPage, memberPageSize]);
+
+  // Al filtrar / ordenar / cambiar page size, volver a la página 1
+  useEffect(() => {
+    setMemberPage(1);
+  }, [query, statusFilter, memberSort, memberPageSize]);
+
+  // Si la página actual queda fuera de rango (p. ej. tras borrar), ajustar
+  useEffect(() => {
+    if (memberPage > memberTotalPages) setMemberPage(memberTotalPages);
+  }, [memberPage, memberTotalPages]);
+
   function toggleMemberSort(key: MemberSortKey) {
     setMemberSort((current) => ({
       key,
       direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
     }));
+  }
+
+  function memberPageWindow(current: number, total: number): number[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = new Set<number>([1, total, current, current - 1, current + 1]);
+    if (current <= 3) {
+      pages.add(2);
+      pages.add(3);
+      pages.add(4);
+    }
+    if (current >= total - 2) {
+      pages.add(total - 1);
+      pages.add(total - 2);
+      pages.add(total - 3);
+    }
+    return [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
   }
 
   const paymentMemberMatches = useMemo(() => {
@@ -1682,12 +1775,36 @@ export default function XtremeAdminPage() {
                 </div>
 
                 <div className="border border-white/10 bg-white/[0.04]">
-                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+                  <div className="flex flex-col gap-3 border-b border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
                       <Users className="h-5 w-5 text-orange-300" />
                       <h2 className="text-lg font-black uppercase">
                         Socios ({filteredMembers.length}/{data.members.length})
                       </h2>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="flex items-center gap-2 text-[11px] font-black uppercase text-white/45">
+                        Por página
+                        <select
+                          value={memberPageSize}
+                          onChange={(e) => setMemberPageSize(Number(e.target.value) || 25)}
+                          className="border border-white/15 bg-black/40 px-2 py-1.5 text-xs font-black text-white outline-none focus:border-lime-300"
+                        >
+                          {[10, 25, 50, 100].map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <span className="text-[11px] font-semibold text-white/40">
+                        {filteredMembers.length === 0
+                          ? "0 resultados"
+                          : `${(safeMemberPage - 1) * memberPageSize + 1}–${Math.min(
+                              safeMemberPage * memberPageSize,
+                              filteredMembers.length,
+                            )} de ${filteredMembers.length}`}
+                      </span>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
@@ -1748,7 +1865,7 @@ export default function XtremeAdminPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedMembers.map((m) => (
+                        {pagedMembers.map((m) => (
                           <tr key={m.normalizedName} className="border-b border-white/[0.06] hover:bg-white/[0.02]">
                             <td
                               className="px-5 py-3 cursor-pointer"
@@ -1917,7 +2034,346 @@ export default function XtremeAdminPage() {
                       </tbody>
                     </table>
                   </div>
+                  {filteredMembers.length > 0 && (
+                    <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                      <p className="text-[11px] font-semibold text-white/40">
+                        Página {safeMemberPage} de {memberTotalPages}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={safeMemberPage <= 1}
+                          onClick={() => setMemberPage(1)}
+                          className="min-h-9 border border-white/15 px-2.5 text-[11px] font-black uppercase text-white/70 transition hover:border-lime-300 hover:text-lime-200 disabled:opacity-35"
+                        >
+                          «
+                        </button>
+                        <button
+                          type="button"
+                          disabled={safeMemberPage <= 1}
+                          onClick={() => setMemberPage((p) => Math.max(1, p - 1))}
+                          className="min-h-9 border border-white/15 px-3 text-[11px] font-black uppercase text-white/70 transition hover:border-lime-300 hover:text-lime-200 disabled:opacity-35"
+                        >
+                          Anterior
+                        </button>
+                        {memberPageWindow(safeMemberPage, memberTotalPages).map((page, idx, arr) => {
+                          const prev = arr[idx - 1];
+                          const showGap = prev != null && page - prev > 1;
+                          return (
+                            <span key={page} className="inline-flex items-center gap-1.5">
+                              {showGap && (
+                                <span className="px-1 text-[11px] font-black text-white/30">…</span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setMemberPage(page)}
+                                className={`min-h-9 min-w-9 border px-2 text-[11px] font-black transition ${
+                                  page === safeMemberPage
+                                    ? "border-lime-300 bg-lime-300 text-black"
+                                    : "border-white/15 text-white/70 hover:border-lime-300 hover:text-lime-200"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            </span>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          disabled={safeMemberPage >= memberTotalPages}
+                          onClick={() => setMemberPage((p) => Math.min(memberTotalPages, p + 1))}
+                          className="min-h-9 border border-white/15 px-3 text-[11px] font-black uppercase text-white/70 transition hover:border-lime-300 hover:text-lime-200 disabled:opacity-35"
+                        >
+                          Siguiente
+                        </button>
+                        <button
+                          type="button"
+                          disabled={safeMemberPage >= memberTotalPages}
+                          onClick={() => setMemberPage(memberTotalPages)}
+                          className="min-h-9 border border-white/15 px-2.5 text-[11px] font-black uppercase text-white/70 transition hover:border-lime-300 hover:text-lime-200 disabled:opacity-35"
+                        >
+                          »
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </>
+            )}
+
+            {tab === "bitacora" && (
+              <>
+                {data.usage ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
+                      <Kpi
+                        icon={Smartphone}
+                        label="Sesiones"
+                        value={`${data.usage.sessions}`}
+                        accent="from-lime-300 to-emerald-400"
+                      />
+                      <Kpi
+                        icon={Users}
+                        label="Socios únicos"
+                        value={`${data.usage.uniqueMembers}`}
+                        accent="from-cyan-300 to-sky-500"
+                      />
+                      <Kpi
+                        icon={Timer}
+                        label="Duración prom."
+                        value={formatDurationMs(data.usage.avgDurationMs)}
+                        accent="from-orange-400 to-amber-500"
+                      />
+                      <Kpi
+                        icon={Activity}
+                        label="Page views"
+                        value={`${data.usage.totalPageViews}`}
+                        accent="from-fuchsia-400 to-rose-400"
+                      />
+                      <Kpi
+                        icon={Zap}
+                        label="Clicks"
+                        value={`${data.usage.totalClicks}`}
+                        accent="from-sky-300 to-blue-400"
+                      />
+                      <Kpi
+                        icon={ClipboardList}
+                        label="Acciones"
+                        value={`${data.usage.totalActions}`}
+                        accent="from-lime-300 to-cyan-300"
+                      />
+                    </div>
+
+                    <p className="text-xs font-semibold text-white/45">
+                      Ventana {data.usage.fromDate} → {data.usage.toDate} ·{" "}
+                      {data.usage.memberSessions} con socio · {data.usage.anonSessions} anónimas ·
+                      mediana {formatDurationMs(data.usage.medianDurationMs)}
+                    </p>
+
+                    <div className="grid gap-4 lg:grid-cols-3">
+                      <div className="border border-white/10 bg-white/[0.04] p-5 lg:col-span-1">
+                        <h2 className="text-lg font-black uppercase">Páginas más usadas</h2>
+                        <ul className="mt-3 space-y-2">
+                          {data.usage.topPages.length === 0 && (
+                            <li className="text-sm text-white/40">Aún no hay datos. Navegá el sitio y el app.</li>
+                          )}
+                          {data.usage.topPages.map((p) => (
+                            <li
+                              key={p.path}
+                              className="flex items-center justify-between gap-2 border border-white/10 bg-black/25 px-3 py-2"
+                            >
+                              <span className="truncate font-mono text-xs text-cyan-200">{p.path}</span>
+                              <span className="shrink-0 text-xs font-black text-lime-200">
+                                {p.views} · {p.sessions} ses
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="border border-white/10 bg-white/[0.04] p-5">
+                        <h2 className="text-lg font-black uppercase">Tabs Member OS</h2>
+                        <ul className="mt-3 space-y-2">
+                          {data.usage.topTabs.length === 0 && (
+                            <li className="text-sm text-white/40">Sin tabs todavía.</li>
+                          )}
+                          {data.usage.topTabs.map((t) => (
+                            <li
+                              key={t.tab}
+                              className="flex items-center justify-between gap-2 border border-white/10 bg-black/25 px-3 py-2"
+                            >
+                              <span className="text-sm font-black uppercase text-white/80">{t.tab}</span>
+                              <span className="text-xs font-black text-lime-200">{t.views}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <h3 className="mt-5 text-xs font-black uppercase tracking-wide text-white/45">
+                          Fuentes
+                        </h3>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {data.usage.bySource.map((s) => (
+                            <span
+                              key={s.source}
+                              className="border border-white/15 bg-black/30 px-2 py-1 text-[10px] font-black uppercase text-white/70"
+                            >
+                              {s.source}: {s.sessions}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border border-white/10 bg-white/[0.04] p-5">
+                        <h2 className="text-lg font-black uppercase">Acciones / toques</h2>
+                        <ul className="mt-3 max-h-[360px] space-y-2 overflow-y-auto">
+                          {data.usage.topActions.length === 0 && (
+                            <li className="text-sm text-white/40">Sin acciones todavía.</li>
+                          )}
+                          {data.usage.topActions.map((a) => (
+                            <li
+                              key={a.action}
+                              className="flex items-center justify-between gap-2 border border-white/10 bg-black/25 px-3 py-2"
+                            >
+                              <span className="truncate text-xs font-semibold text-white/75">{a.action}</span>
+                              <span className="shrink-0 text-xs font-black text-orange-200">{a.count}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="border border-white/10 bg-white/[0.04]">
+                      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <ClipboardList className="h-5 w-5 text-lime-300" />
+                          <h2 className="text-lg font-black uppercase">
+                            Sesiones recientes ({data.usage.recentSessions.length})
+                          </h2>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[900px] text-left text-sm">
+                          <thead>
+                            <tr className="border-b border-white/10 text-[11px] font-black uppercase tracking-wide text-white/40">
+                              <th className="px-3 py-3">Quién / fuente</th>
+                              <th className="px-3 py-3">Ruta</th>
+                              <th className="px-3 py-3">Duración</th>
+                              <th className="px-3 py-3">Actividad</th>
+                              <th className="px-3 py-3">Inicio</th>
+                              <th className="px-3 py-3" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.usage.recentSessions.map((s) => (
+                              <tr key={s.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                                <td className="px-3 py-3">
+                                  <p className="font-black uppercase text-white/90">
+                                    {s.memberName || "Anónimo"}
+                                  </p>
+                                  <p className="text-[10px] font-bold uppercase text-white/40">
+                                    {s.source} · {s.id.slice(0, 14)}…
+                                  </p>
+                                </td>
+                                <td className="px-3 py-3 font-mono text-xs text-cyan-200">
+                                  <div>{s.entryPath || "—"}</div>
+                                  {s.exitPath && s.exitPath !== s.entryPath && (
+                                    <div className="text-white/40">→ {s.exitPath}</div>
+                                  )}
+                                </td>
+                                <td className="px-3 py-3 font-black text-lime-200">
+                                  {formatDurationMs(s.durationMs)}
+                                </td>
+                                <td className="px-3 py-3 text-xs font-semibold text-white/60">
+                                  {s.pageViews} pv · {s.clicks} clk · {s.actions} act
+                                </td>
+                                <td className="px-3 py-3 text-xs text-white/45">
+                                  {new Date(s.startedAt).toLocaleString("es-CR", {
+                                    dateStyle: "short",
+                                    timeStyle: "short",
+                                  })}
+                                </td>
+                                <td className="px-3 py-3 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setUsageSessionId((cur) => (cur === s.id ? null : s.id))
+                                    }
+                                    className="text-[11px] font-black uppercase text-lime-300"
+                                  >
+                                    {usageSessionId === s.id ? "Cerrar" : "Detalle"}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {usageSessionId &&
+                        (() => {
+                          const s = data.usage!.recentSessions.find((x) => x.id === usageSessionId);
+                          if (!s) return null;
+                          return (
+                            <div className="border-t border-white/10 bg-black/30 p-5">
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <h3 className="text-base font-black uppercase">
+                                    Timeline · {s.memberName || "Anónimo"}
+                                  </h3>
+                                  <p className="mt-1 font-mono text-[11px] text-white/40">{s.id}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setUsageSessionId(null)}
+                                  className="text-xs font-black uppercase text-white/50"
+                                >
+                                  Cerrar
+                                </button>
+                              </div>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {s.topPaths.map((p) => (
+                                  <span
+                                    key={p.path}
+                                    className="border border-cyan-400/30 bg-cyan-400/10 px-2 py-1 font-mono text-[10px] text-cyan-100"
+                                  >
+                                    {p.path} ×{p.count}
+                                  </span>
+                                ))}
+                                {s.topTabs.map((t) => (
+                                  <span
+                                    key={t.tab}
+                                    className="border border-lime-400/30 bg-lime-400/10 px-2 py-1 text-[10px] font-black uppercase text-lime-100"
+                                  >
+                                    tab:{t.tab} ×{t.count}
+                                  </span>
+                                ))}
+                                {s.topActions.map((a) => (
+                                  <span
+                                    key={a.action}
+                                    className="border border-orange-400/30 bg-orange-400/10 px-2 py-1 text-[10px] font-semibold text-orange-100"
+                                  >
+                                    {a.action} ×{a.count}
+                                  </span>
+                                ))}
+                              </div>
+                              <ol className="mt-4 max-h-80 space-y-1.5 overflow-y-auto border border-white/10 bg-black/40 p-3">
+                                {s.timeline.map((ev, i) => (
+                                  <li
+                                    key={`${ev.at}-${i}`}
+                                    className="grid grid-cols-[auto_1fr] gap-3 text-xs"
+                                  >
+                                    <span className="font-mono text-white/35">
+                                      {new Date(ev.at).toLocaleTimeString("es-CR", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        second: "2-digit",
+                                      })}
+                                    </span>
+                                    <span className="text-white/75">
+                                      <span className="font-black uppercase text-lime-200/90">
+                                        {ev.type}
+                                      </span>
+                                      {ev.path ? ` · ${ev.path}` : ""}
+                                      {ev.tab ? ` · tab ${ev.tab}` : ""}
+                                      {ev.action ? ` · ${ev.action}` : ""}
+                                      {ev.label ? ` · “${ev.label}”` : ""}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          );
+                        })()}
+                    </div>
+                  </>
+                ) : (
+                  <div className="border border-white/10 bg-white/[0.04] p-8 text-center">
+                    <ClipboardList className="mx-auto h-8 w-8 text-white/30" />
+                    <p className="mt-3 font-black uppercase text-white/60">Sin bitácora aún</p>
+                    <p className="mt-1 text-sm text-white/40">
+                      Los datos se generan al navegar el sitio y el Member OS.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 

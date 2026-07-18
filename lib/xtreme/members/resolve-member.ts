@@ -162,6 +162,9 @@ export async function resolveMember(
   if (p.cedula && digitsOnly(p.cedula).length >= 6) {
     const byCed = await resolveByCedula(db, p.cedula);
     if (byCed) return byCed;
+    // En autenticación y check-in la cédula es autoritativa. Si no existe,
+    // no se debe reinterpretar como teléfono/código y elegir a otra persona.
+    if (p.strictCedula) return null;
   }
 
   // 2) Sesión / memberKey

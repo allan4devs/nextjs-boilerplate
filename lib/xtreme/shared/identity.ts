@@ -32,9 +32,9 @@ export function matchCedula(stored: unknown, raw: unknown) {
   const docDigits = cedulaDigits(stored);
   const docFormatted = normalizeCedula(stored);
   if (!docDigits && !docFormatted) return false;
-  if (digits && docDigits && (docDigits === digits || docDigits.endsWith(digits) || digits.endsWith(docDigits))) {
-    return true;
-  }
+  // Una cédula es una credencial de identidad: nunca aceptar sufijos ni
+  // coincidencias parciales. Dos documentos distintos pueden compartirlos.
+  if (digits && docDigits && docDigits === digits) return true;
   return Boolean(formatted && docFormatted && docFormatted === formatted);
 }
 

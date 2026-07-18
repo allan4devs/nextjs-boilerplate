@@ -1,0 +1,374 @@
+{
+  "generatedAt": "2026-07-18T00:50:03.951Z",
+  "summary": {
+    "mode": "dry-run",
+    "spreadsheetRows": 2941,
+    "spreadsheetNames": 2052,
+    "mongoMembers": 2056,
+    "exactNameMatches": 2026,
+    "changesNeeded": 0,
+    "alreadyAligned": 2026,
+    "unmatchedExcelNames": 0,
+    "ambiguousMongoMatches": 0,
+    "invalidExcelRows": 26,
+    "conflictingExcelCedulas": 31
+  },
+  "writeResult": null,
+  "changes": [],
+  "unmatchedExcel": [],
+  "ambiguousMongo": [],
+  "invalidExcel": [
+    {
+      "name": "JOSE FRANCISCO ACEVEDO MIRANDA",
+      "row": 36,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "ANDREA ALFARO SALAZAR",
+      "row": 145,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "LUISA FERNANDA ARGUEDAS CHAVES",
+      "row": 337,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "SANDRA DANIELA ARGUELLO MEJIAS",
+      "row": 343,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "nulo BARRANTES JIMENEZ",
+      "row": 441,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "KIARA DILANNA BENAVIDES GUZMAN",
+      "row": 472,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Ariana Borbón Quiros",
+      "row": 541,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Alejandro Borbón Quirós",
+      "row": 543,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "NULO FONSECA RIVERA",
+      "row": 1006,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "DORALYN LARIOS MEDINA",
+      "row": 1366,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Carlos Francisco Millet Nieto",
+      "row": 1575,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Angelina Monge Barrientos",
+      "row": 1606,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Joseth Montero Morera",
+      "row": 1632,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Marjorie Quiros Paniagua",
+      "row": 1990,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Marjorie Quiros Paniaguaa",
+      "row": 1993,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Fauricio Rodriguez Paniagua",
+      "row": 2146,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Kanean Rodriguez Paniagua",
+      "row": 2148,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "MARIA PAULA ROJAS ARIAS",
+      "row": 2203,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Leo Salas Soto",
+      "row": 2365,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "LUIS ENRIQUE SALAZAR CORDERO",
+      "row": 2384,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "JOSHA DANIEL SOZA CERDAS",
+      "row": 2598,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Maria Fernanda Valeria Quiros",
+      "row": 2671,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Gloriana Valerio Quiros",
+      "row": 2682,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Maria Fernanda Valerio Quiros",
+      "row": 2683,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "Daniela Valerio Quirós",
+      "row": 2684,
+      "reason": "fecha de vencimiento invalida"
+    },
+    {
+      "name": "GUISELLE VILLALOBOS RODRIGUEZ",
+      "row": 2855,
+      "reason": "fecha de vencimiento invalida"
+    }
+  ],
+  "conflictingCedulas": [
+    {
+      "name": "Luis Antonio Abarca Alvarado",
+      "rows": [
+        3,
+        30
+      ]
+    },
+    {
+      "name": "Cristo Acevedo Sandino",
+      "rows": [
+        39,
+        40
+      ]
+    },
+    {
+      "name": "Isaac Alfaro Arguedas",
+      "rows": [
+        113,
+        114
+      ]
+    },
+    {
+      "name": "NULO Alfaro Barrantes",
+      "rows": [
+        121,
+        122
+      ]
+    },
+    {
+      "name": "Angie Alfaro rodriguez",
+      "rows": [
+        141,
+        142,
+        143
+      ]
+    },
+    {
+      "name": "Engels Arafat Rodriguez",
+      "rows": [
+        228,
+        2070
+      ]
+    },
+    {
+      "name": "Nulo Avila Davila",
+      "rows": [
+        398,
+        399
+      ]
+    },
+    {
+      "name": "Juan David Beleño Serna",
+      "rows": [
+        468,
+        469
+      ]
+    },
+    {
+      "name": "FLOR MARIA BOGANTES HIDALGO",
+      "rows": [
+        519,
+        520
+      ]
+    },
+    {
+      "name": "Angel Cardinale",
+      "rows": [
+        630,
+        631
+      ]
+    },
+    {
+      "name": "Maria Fonseca Mendoza",
+      "rows": [
+        1001,
+        1002
+      ]
+    },
+    {
+      "name": "Gustavo Fonseca Quadros",
+      "rows": [
+        1003,
+        1004
+      ]
+    },
+    {
+      "name": "Jimena García Zamora",
+      "rows": [
+        1067,
+        1068
+      ]
+    },
+    {
+      "name": "Abdiel González Mafla",
+      "rows": [
+        1111,
+        1112
+      ]
+    },
+    {
+      "name": "Yubelkis Lopez Altamirano",
+      "rows": [
+        1414,
+        1415
+      ]
+    },
+    {
+      "name": "Jennifer Lopez Giraldo",
+      "rows": [
+        1426,
+        1427
+      ]
+    },
+    {
+      "name": "Keilyn Manzanares Gonzalez",
+      "rows": [
+        1458,
+        1459
+      ]
+    },
+    {
+      "name": "Daniela Montenegro Zamora",
+      "rows": [
+        1625,
+        1626
+      ]
+    },
+    {
+      "name": "Katherine Muñoz Zamora",
+      "rows": [
+        1748,
+        1749
+      ]
+    },
+    {
+      "name": "Felipe Narvaez Cardona",
+      "rows": [
+        1789,
+        1790
+      ]
+    },
+    {
+      "name": "Adriana Orozco Alpizar",
+      "rows": [
+        1836,
+        1837,
+        1838
+      ]
+    },
+    {
+      "name": "David Picado Zamora",
+      "rows": [
+        1902,
+        1903
+      ]
+    },
+    {
+      "name": "Michell Reyes",
+      "rows": [
+        2044,
+        2045
+      ]
+    },
+    {
+      "name": "Fabian Rojas Espinoza",
+      "rows": [
+        2229,
+        2230
+      ]
+    },
+    {
+      "name": "Evelyn Sacida Martinez",
+      "rows": [
+        2322,
+        2323
+      ]
+    },
+    {
+      "name": "Elizabet Sanchez Lopez",
+      "rows": [
+        2427,
+        2428
+      ]
+    },
+    {
+      "name": "nulo Sanchez Vargas",
+      "rows": [
+        2445,
+        2446,
+        2447
+      ]
+    },
+    {
+      "name": "James Sibaja Monge",
+      "rows": [
+        2505,
+        2506
+      ]
+    },
+    {
+      "name": "Emanuel Solano Arias",
+      "rows": [
+        2520,
+        2521
+      ]
+    },
+    {
+      "name": "Henry Triana Torres",
+      "rows": [
+        2630,
+        2631
+      ]
+    },
+    {
+      "name": "Adrian Vargas Salazar",
+      "rows": [
+        2769,
+        2770
+      ]
+    }
+  ]
+}
