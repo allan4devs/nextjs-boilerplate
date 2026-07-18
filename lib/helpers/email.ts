@@ -7,18 +7,37 @@ import { EMAIL_SUPPRESSIONS_COLLECTION } from "@/lib/xtreme/shared/config";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const PREFERENCES_BLOCK = "__XTREME_EMAIL_PREFERENCES__";
 
-export type SendEmailResult = { ok: boolean; skipped?: boolean; error?: string };
+export type SendEmailResult = {
+  ok: boolean;
+  skipped?: boolean;
+  error?: string;
+  code?:
+    | "configuration"
+    | "invalid_recipient"
+    | "suppressed"
+    | "provider_rejected"
+    | "network";
+};
+
+/** Diagnóstico seguro: informa nombres de variables, nunca sus valores. */
+export function emailConfigurationError() {
+  const issues: string[] = [];
+  if (process.env.EMAIL_SENDING_ENABLED?.trim().toLowerCase() !== "true") {
+    issues.push("EMAIL_SENDING_ENABLED no está en true");
+  }
+  if (!process.env.RESEND_API_KEY?.trim()) issues.push("falta RESEND_API_KEY");
+  if (!process.env.SMTP_FROM?.trim()) issues.push("falta SMTP_FROM");
+  return issues.length
+    ? `Configuración de correo incompleta en el servidor: ${issues.join(", ")}. Corregí las variables del entorno Production y volvé a desplegar.`
+    : null;
+}
 
 /**
  * Interruptor de seguridad de salida. Tener credenciales configuradas no basta:
  * los correos solo salen cuando se habilitan de forma deliberada.
  */
 export function emailEnabled() {
-  return Boolean(
-    process.env.EMAIL_SENDING_ENABLED?.trim().toLowerCase() === "true" &&
-      process.env.RESEND_API_KEY?.trim() &&
-      process.env.SMTP_FROM?.trim(),
-  );
+  return emailConfigurationError() === null;
 }
 
 function reservationCc() {
@@ -76,9 +95,19 @@ export async function sendEmail(args: {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.SMTP_FROM?.trim();
   const to = (Array.isArray(args.to) ? args.to : [args.to]).map((t) => t.trim()).filter(Boolean);
+  const configurationError = emailConfigurationError();
 
-  if (!emailEnabled() || !apiKey || !from || !to.length) {
-    return { ok: false, skipped: true };
+  if (configurationError || !apiKey || !from) {
+    console.error("EMAIL SEND SKIPPED", configurationError);
+    return { ok: false, skipped: true, code: "configuration", error: configurationError || "Configuración de correo incompleta." };
+  }
+  if (!to.length) {
+    return {
+      ok: false,
+      skipped: true,
+      code: "invalid_recipient",
+      error: "No hay un correo destinatario válido para realizar el envío.",
+    };
   }
 
   try {
@@ -87,7 +116,14 @@ export async function sendEmail(args: {
       const suppressed = await db
         .collection(EMAIL_SUPPRESSIONS_COLLECTION)
         .countDocuments({ email: { $in: to } }, { limit: 1 });
-      if (suppressed) return { ok: false, skipped: true };
+      if (suppressed) {
+        return {
+          ok: false,
+          skipped: true,
+          code: "suppressed",
+          error: "El destinatario desactivó los correos opcionales; el envío fue omitido.",
+        };
+      }
     }
 
     const preferencesEnabled = args.managePreferences !== false;
@@ -132,13 +168,22 @@ export async function sendEmail(args: {
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       console.error("EMAIL SEND FAILED", response.status, detail.slice(0, 300));
-      return { ok: false, error: resendError(response.status, detail) };
+      return {
+        ok: false,
+        code: "provider_rejected",
+        error: resendError(response.status, detail),
+      };
     }
 
     return { ok: true };
   } catch (err) {
     console.error("EMAIL SEND ERROR", err);
-    return { ok: false, error: err instanceof Error ? err.message : "network" };
+    const detail = err instanceof Error ? err.message.trim().slice(0, 160) : "error de red desconocido";
+    return {
+      ok: false,
+      code: "network",
+      error: `No se pudo conectar con Resend: ${detail}. Revisá la red del deployment e intentá de nuevo.`,
+    };
   }
 }
 

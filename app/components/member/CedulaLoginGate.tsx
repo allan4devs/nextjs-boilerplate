@@ -8,9 +8,23 @@
 
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CreditCard } from "lucide-react";
-import { GameButton, GameCallout, GameLabel } from "../GameOS";
+import { GameButton, GameLabel } from "../GameOS";
+import { MSG } from "./constants";
 import { formatCedulaInput } from "./utils";
 import type { MemberOs } from "./useMemberOs";
+
+function loginErrorHint(error: string): string | null {
+  if (error === MSG.errors.cedulaNotRegistered) {
+    return "Usá el enlace del correo o pedí el alta en recepción.";
+  }
+  if (error === MSG.errors.cedulaNeedsInvite) {
+    return "Recepción te manda el enlace; ahí creás el PIN.";
+  }
+  if (error.startsWith("Cédula incompleta")) {
+    return "Escaneá el carnet o digitá todos los números.";
+  }
+  return null;
+}
 
 export default function CedulaLoginGate({ os }: { os: MemberOs }) {
   const {
@@ -23,6 +37,12 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
     setError,
     startMemberByCedula,
   } = os;
+
+  const hint = error ? loginErrorHint(error) : null;
+  const showHelpLinks =
+    needsRegistration ||
+    error === MSG.errors.cedulaNotRegistered ||
+    error === MSG.errors.cedulaNeedsInvite;
 
   return (
     <div className="xg-os-login-shell fixed inset-0 z-50 grid bg-black/90 backdrop-blur-md">
@@ -45,7 +65,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           Escaneá tu cédula
         </h2>
         <p className="mt-2 text-sm font-bold text-white/55">
-          Pasá el carnet por el lector o digitá los números. Luego confirmá con tu PIN.
+          Escaneá o digitá · después tu PIN
         </p>
 
         <div className="mt-6 grid gap-2 text-left">
@@ -71,19 +91,17 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
               />
             </div>
           </label>
-
-          {needsRegistration && (
-            <GameCallout tone="orange">
-              No se crea cuenta solo con la cédula: muchas del reimport venían mal. La llave es
-              tu correo: abrí el enlace de invitación o registro, revisá y corregí nombre y
-              cédula, y después creás el PIN. También podés pedir el alta en recepción.
-            </GameCallout>
-          )}
         </div>
 
         {error && (
-          <div className="mt-3 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-left text-sm font-bold text-red-200">
-            {error}
+          <div
+            role="alert"
+            className="mt-3 border-[3px] border-red-400/45 bg-red-500/10 px-3 py-2.5 text-left"
+          >
+            <p className="text-sm font-black text-red-200">{error}</p>
+            {hint && (
+              <p className="mt-1 text-xs font-semibold leading-snug text-red-100/70">{hint}</p>
+            )}
           </div>
         )}
 
@@ -91,13 +109,13 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           Entrar <ArrowRight className="h-4 w-4" />
         </GameButton>
 
-        {needsRegistration ? (
-          <div className="mt-4 grid gap-2 text-left">
+        {showHelpLinks ? (
+          <div className="mt-4 grid gap-2">
             <Link
               href="/primer-dia"
               className="border-[3px] border-white/15 bg-black/40 px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#d8ff3e] transition hover:border-[#d8ff3e]"
             >
-              Primer día gratis · registrate con correo
+              Primer día · registro con correo
             </Link>
             <Link
               href="/precios"
@@ -108,8 +126,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           </div>
         ) : (
           <p className="mt-3 px-1 text-xs font-semibold text-white/38">
-            Lector USB tipo teclado: escaneá y el sistema recibe la cédula + Enter. Primera vez:
-            usá el enlace del correo o el alta en recepción.
+            Primera vez: enlace del correo o recepción.
           </p>
         )}
 

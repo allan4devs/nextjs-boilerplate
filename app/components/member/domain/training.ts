@@ -24,6 +24,14 @@ export type MachineGuide = {
   mistakes: string[];
   starter: string;
   accent: string;
+  /** Foto principal del equipo / zona (path en /public). */
+  image: string;
+  /** Fotos extra para la galería del modal. */
+  images?: string[];
+  /** Enlace a video de técnica (YouTube u otro). */
+  videoUrl?: string;
+  /** Título corto del botón de video. */
+  videoLabel?: string;
 };
 
 export type Routine = {

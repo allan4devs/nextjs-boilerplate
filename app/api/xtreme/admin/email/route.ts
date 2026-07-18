@@ -12,7 +12,11 @@ import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
   EMAIL_CONTACTS_COLLECTION,
+  MEMBERS_COLLECTION,
+  PENDING_REGISTRATIONS_COLLECTION,
   EMAIL_SUPPRESSIONS_COLLECTION,
+  type MemberDoc,
+  type PendingRegistrationDoc,
 } from "@/lib/xtreme/shared";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +40,72 @@ type SuppressionDoc = {
   unsubscribedAt?: Date;
   createdAt?: Date;
 };
+
+type RecipientContactDoc = { email: string; name?: string };
+
+function recipientSource(options: { member: boolean; pending: boolean; imported: boolean }) {
+  return [
+    options.member ? "Socio" : "",
+    options.pending ? "Registro pendiente" : "",
+    options.imported ? "Lista importada" : "",
+  ].filter(Boolean).join(" + ") || "Correo sin ficha";
+}
+
+async function buildRecipientList(db: Awaited<ReturnType<typeof getDb>>, emails: string[]) {
+  if (!emails.length) return [];
+  const [members, pending, contacts] = await Promise.all([
+    db.collection<MemberDoc>(MEMBERS_COLLECTION)
+      .find({ email: { $in: emails } })
+      .project({ email: 1, memberName: 1, emailVerified: 1, membership: 1 })
+      .toArray(),
+    db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION)
+      .find({ email: { $in: emails }, confirmedAt: null })
+      .project({ email: 1, expectedMemberName: 1 })
+      .toArray(),
+    db.collection<RecipientContactDoc>(EMAIL_CONTACTS_COLLECTION)
+      .find({ email: { $in: emails }, status: "active" })
+      .project({ email: 1, name: 1 })
+      .toArray(),
+  ]);
+
+  const membersByEmail = new Map<string, MemberDoc[]>();
+  for (const member of members) {
+    const email = normalizeEmail(member.email);
+    if (!email) continue;
+    const list = membersByEmail.get(email) ?? [];
+    list.push(member);
+    membersByEmail.set(email, list);
+  }
+  const pendingByEmail = new Map(
+    pending.map((item) => [normalizeEmail(item.email), String(item.expectedMemberName || "").trim()]),
+  );
+  const contactsByEmail = new Map(
+    contacts.map((item) => [normalizeEmail(item.email), String(item.name || "").trim()]),
+  );
+
+  return emails.map((email) => {
+    const memberHits = membersByEmail.get(email) ?? [];
+    const memberNames = [...new Set(memberHits.map((item) => String(item.memberName || "").trim()).filter(Boolean))];
+    const pendingName = pendingByEmail.get(email) || "";
+    const contactName = contactsByEmail.get(email) || "";
+    const primaryMember = memberHits[0];
+    return {
+      email,
+      name: memberNames.join(" / ") || pendingName || contactName || "Sin nombre",
+      source: recipientSource({
+        member: memberHits.length > 0,
+        pending: pendingByEmail.has(email),
+        imported: contactsByEmail.has(email),
+      }),
+      emailVerified: memberHits.some((item) => item.emailVerified === true),
+      duplicateProfiles: memberHits.length > 1,
+      plan: String(primaryMember?.membership?.plan || "").trim(),
+      nextBillingDate: String(primaryMember?.membership?.nextBillingDate || "").slice(0, 10),
+    };
+  }).sort((left, right) =>
+    left.name.localeCompare(right.name, "es-CR", { sensitivity: "base" }) || left.email.localeCompare(right.email),
+  );
+}
 
 const AUDIENCES = new Set<EmailAudience>(EMAIL_AUDIENCE_IDS);
 
@@ -66,6 +136,10 @@ export async function GET(req: NextRequest) {
     const counts = Object.fromEntries(
       EMAIL_AUDIENCE_IDS.map((id) => [id, audiences[id]?.length ?? 0]),
     ) as Record<EmailAudience, number>;
+    const requestedAudience = String(req.nextUrl.searchParams.get("audience") || "") as EmailAudience;
+    const recipientList = AUDIENCES.has(requestedAudience)
+      ? await buildRecipientList(db, audiences[requestedAudience] ?? [])
+      : undefined;
     return NextResponse.json({
       ok: true,
       audiences: {
@@ -74,6 +148,7 @@ export async function GET(req: NextRequest) {
       },
       campaigns: campaigns.map((campaign) => ({ ...campaign, _id: undefined })),
       unsubscribes: unsubscribes.map((item) => ({ ...item, _id: undefined })),
+      ...(recipientList ? { recipientList, recipientAudience: requestedAudience } : {}),
     });
   } catch (error) {
     console.error("XTREME ADMIN EMAIL GET", error);

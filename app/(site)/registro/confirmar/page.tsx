@@ -23,6 +23,7 @@ type VerifyState =
       paidRegistration: boolean;
       invitedRegistration: boolean;
       profileCorrected?: boolean;
+      claimedExistingCedula?: boolean;
     };
 
 function ConfirmInner() {
@@ -36,6 +37,7 @@ function ConfirmInner() {
   const [goal, setGoal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +110,7 @@ function ConfirmInner() {
     }
     setSubmitting(true);
     setError("");
+    setErrorCode("");
     try {
       const res = await fetch("/api/xtreme/register", {
         method: "POST",
@@ -122,10 +125,13 @@ function ConfirmInner() {
         paidRegistration?: boolean;
         invitedRegistration?: boolean;
         profileCorrected?: boolean;
+        claimedExistingCedula?: boolean;
+        code?: string;
         error?: string;
       };
       if (!res.ok || !json.ok) {
         setError(json.error || "No se pudo completar el registro.");
+        setErrorCode(json.code || "");
         return;
       }
       setState({
@@ -135,6 +141,7 @@ function ConfirmInner() {
         paidRegistration: Boolean(json.paidRegistration),
         invitedRegistration: Boolean(json.invitedRegistration),
         profileCorrected: Boolean(json.profileCorrected),
+        claimedExistingCedula: Boolean(json.claimedExistingCedula),
       });
     } catch {
       setError("Error de conexion.");
@@ -284,9 +291,18 @@ function ConfirmInner() {
             </label>
 
             {error && (
-              <p className="mt-4 border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-400">
-                {error}
-              </p>
+              <div className="mt-4 border border-red-500/30 bg-red-500/10 px-3 py-3 text-sm font-bold text-red-300">
+                <p>{error}</p>
+                {(errorCode === "verified_cedula_owner" ||
+                  errorCode === "contact_already_registered") && (
+                  <Link
+                    href="/contacto"
+                    className="mt-3 inline-flex border border-red-300/40 px-3 py-2 text-xs font-black uppercase text-white transition hover:bg-white hover:text-black"
+                  >
+                    Contactar recepción sin salir del proceso
+                  </Link>
+                )}
+              </div>
             )}
 
             <button
@@ -313,7 +329,9 @@ function ConfirmInner() {
             </h1>
             <p className="mt-3 text-sm font-semibold text-white/70">
               {state.paidRegistration
-                ? "Tu pago, correo y cédula quedaron unidos de forma segura. Ya podés entrar a la app y crear tu PIN."
+                ? state.claimedExistingCedula
+                  ? "Encontramos tu ficha anterior por cédula y la unimos con el pago y el correo confirmado. No perdiste la membresía ni se creó una cuenta duplicada."
+                  : "Tu pago, correo y cédula quedaron unidos de forma segura. Ya podés entrar a la app y crear tu PIN."
                 : state.invitedRegistration
                   ? state.profileCorrected
                     ? "Tus datos quedaron corregidos y el correo verificado. Ya podés entrar a la app y crear tu PIN."

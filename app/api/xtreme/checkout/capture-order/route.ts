@@ -219,6 +219,13 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       console.error("Xtreme PayPal capture error:", { status: response.status, data, orderID });
+      await recordEvent(db, {
+        type: "payment_failed",
+        memberId: pending.memberKey || undefined,
+        source: "paypal",
+        entity: { type: "paypal_order", id: orderID },
+        properties: { optionId: pending.optionId, reason: "paypal_capture", status: response.status },
+      });
       return NextResponse.json(
         { success: false, message: "No se pudo confirmar el pago." },
         { status: response.status || 500 },
@@ -240,6 +247,13 @@ export async function POST(req: NextRequest) {
         orderID,
         captured: capturedAmount,
         expected: pending.amountUsd,
+      });
+      await recordEvent(db, {
+        type: "payment_failed",
+        memberId: pending.memberKey || undefined,
+        source: "paypal",
+        entity: { type: "paypal_order", id: orderID },
+        properties: { optionId: pending.optionId, reason: "amount_mismatch" },
       });
       return NextResponse.json(
         { success: false, message: "Monto del pago no coincide. Contactá recepción." },

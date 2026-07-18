@@ -1,15 +1,16 @@
 "use client";
 
 /**
- * Tab Máquinas — hub táctil por zona + tiles grandes.
- * Tocá una máquina para abrir la guía (modal). Rutinas rápidas
- * y tips viven en paneles que se abren al demandar.
+ * Tab Máquinas — hub táctil por zona + tiles con foto del piso.
+ * Tocá una máquina para abrir la guía (modal con fotos y video).
  */
 
 import { useMemo, useState } from "react";
 import {
   Dumbbell,
+  HeartPulse,
   LayoutGrid,
+  Play,
   ShieldCheck,
   Target,
   type LucideIcon,
@@ -23,7 +24,9 @@ const ZONE_ICONS: Record<string, LucideIcon> = {
   Pierna: Dumbbell,
   Pecho: Target,
   Espalda: LayoutGrid,
+  Hombro: ShieldCheck,
   "Full body": ShieldCheck,
+  Cardio: HeartPulse,
 };
 
 export default function MaquinasTab({ os }: { os: MemberOs }) {
@@ -39,6 +42,8 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
   const filtered = zoneFilter
     ? MACHINE_GUIDE.filter((m) => m.zone === zoneFilter)
     : MACHINE_GUIDE;
+
+  const withVideo = MACHINE_GUIDE.filter((m) => m.videoUrl).length;
 
   const machinesContent = (
     <div className="space-y-3">
@@ -78,25 +83,36 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
               key={machine.id}
               type="button"
               onClick={() => setOsModal({ kind: "machine", machineId: machine.id })}
-              className="group relative flex min-h-[148px] flex-col overflow-hidden border-[3px] border-white/20 bg-[#0c0c0c] text-left shadow-[4px_4px_0_rgba(0,0,0,.55)] transition active:translate-x-px active:translate-y-px active:shadow-none hover:border-[#d8ff3e]/50"
+              className="group relative flex min-h-[168px] flex-col overflow-hidden border-[3px] border-white/20 bg-[#0c0c0c] text-left shadow-[4px_4px_0_rgba(0,0,0,.55)] transition active:translate-x-px active:translate-y-px active:shadow-none hover:border-[#d8ff3e]/50 sm:min-h-[180px]"
             >
-              <div className={`h-2.5 bg-gradient-to-r ${machine.accent}`} />
-              <div className="flex flex-1 flex-col justify-between p-3 sm:p-3.5">
-                <div>
+              <div
+                className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-105"
+                style={{ backgroundImage: `url(${machine.image})` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/75 to-black/30" />
+              <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${machine.accent}`} />
+              <div className="relative flex flex-1 flex-col justify-between p-3 sm:p-3.5">
+                <div className="flex items-start justify-between gap-2">
                   <span
-                    className={`mb-2 grid h-11 w-11 place-items-center bg-gradient-to-br ${machine.accent} text-black shadow-[2px_2px_0_rgba(0,0,0,.35)] sm:h-12 sm:w-12`}
+                    className={`grid h-10 w-10 place-items-center bg-gradient-to-br ${machine.accent} text-black shadow-[2px_2px_0_rgba(0,0,0,.35)] sm:h-11 sm:w-11`}
                   >
-                    <ZoneIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <ZoneIcon className="h-5 w-5" />
                   </span>
+                  {machine.videoUrl && (
+                    <span className="inline-flex items-center gap-1 border-2 border-black/50 bg-black/70 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#d8ff3e]">
+                      <Play className="h-3 w-3 fill-current" />
+                      Video
+                    </span>
+                  )}
+                </div>
+                <div>
                   <GameLabel tone="white">
                     {machine.zone} · {machine.level}
                   </GameLabel>
-                  <h2 className="mt-1 text-sm font-black uppercase leading-tight sm:text-base">
+                  <h2 className="mt-1 text-sm font-black uppercase leading-tight drop-shadow sm:text-base">
                     {machine.name}
                   </h2>
-                </div>
-                <div className="mt-2">
-                  <div className="flex flex-wrap gap-1">
+                  <div className="mt-2 flex flex-wrap gap-1">
                     {machine.muscles.slice(0, 2).map((muscle) => (
                       <GameChip key={muscle} tone="lime">
                         {muscle}
@@ -173,8 +189,8 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
           label: "text-cyan-300",
         },
         {
-          title: "Progreso",
-          body: "Sumá reps o kilos solo cuando la técnica esté limpia 2 sesiones seguidas.",
+          title: "Video",
+          body: "Cada guía tiene fotos del piso y un video de técnica. Miralo antes si es tu primera vez.",
           tone: "border-orange-300/40 bg-orange-300/[0.08]",
           label: "text-orange-300",
         },
@@ -191,7 +207,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
     {
       id: "maquinas",
       label: "Máquinas",
-      hint: `${MACHINE_GUIDE.length} guías · por zona`,
+      hint: `${MACHINE_GUIDE.length} guías · ${withVideo} con video`,
       icon: Dumbbell,
       tone: "lime",
       badge: String(filtered.length),
@@ -208,7 +224,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
     {
       id: "tips",
       label: "Tips",
-      hint: "Ajuste · control · progreso",
+      hint: "Ajuste · control · video",
       icon: ShieldCheck,
       tone: "cyan",
       content: tipsContent,
@@ -222,7 +238,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
         activeId={activeId}
         onActiveChange={setActiveId}
         title="Guía de máquinas"
-        subtitle="Pierna, pecho, espalda y full body — tocá y abrí la guía."
+        subtitle="Fotos del piso + videos de técnica — tocá y abrí la guía."
         header={
           <div className="border-[3px] border-[#d8ff3e]/35 bg-[#d8ff3e]/[0.07] p-3 sm:p-3.5">
             <div className="flex items-start gap-3">
@@ -232,8 +248,8 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
               <div>
                 <p className="text-sm font-black uppercase">Entrená fuerte con técnica</p>
                 <p className="mt-1 text-xs font-bold text-white/45">
-                  Beneficio de socio: guías de cada equipo (ajuste, tips y errores). Combiná con
-                  peso libre, cardio, VIP y zona funcional en el piso.
+                  Beneficio de socio: fotos reales del gym, ajuste, tips, errores y video de
+                  referencia por equipo. Combiná con peso libre, cardio, VIP y zona funcional.
                 </p>
               </div>
             </div>

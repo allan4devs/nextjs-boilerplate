@@ -47,6 +47,16 @@ type CenterData = {
   }>;
 };
 
+type RecipientPreview = {
+  email: string;
+  name: string;
+  source: string;
+  emailVerified: boolean;
+  duplicateProfiles: boolean;
+  plan: string;
+  nextBillingDate: string;
+};
+
 const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string }> = [
   {
     id: "claim_profile",
@@ -402,6 +412,9 @@ export default function EmailCampaignCenter() {
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [recipients, setRecipients] = useState<RecipientPreview[]>([]);
+  const [recipientsBusy, setRecipientsBusy] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState("");
   const [form, setForm] = useState(() => {
     const seed = templateFor("claim_profile");
     return {
@@ -416,6 +429,13 @@ export default function EmailCampaignCenter() {
   const parsed = useMemo(() => parseSpreadsheet(sheet), [sheet]);
   const validCount = useMemo(() => new Set(parsed.filter((row) => EMAIL_RE.test(row.email)).map((row) => row.email)).size, [parsed]);
   const activeTemplate = templateFor(form.audience);
+  const filteredRecipients = useMemo(() => {
+    const query = recipientSearch.trim().toLocaleLowerCase("es-CR");
+    if (!query) return recipients;
+    return recipients.filter((item) =>
+      `${item.name} ${item.email} ${item.source} ${item.plan}`.toLocaleLowerCase("es-CR").includes(query),
+    );
+  }, [recipientSearch, recipients]);
 
   function applyTemplate(audience: AudienceId = form.audience) {
     const next = templateFor(audience);
@@ -447,6 +467,30 @@ export default function EmailCampaignCenter() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setRecipientsBusy(true);
+    setRecipientSearch("");
+    void fetch(`/api/xtreme/admin/email?audience=${encodeURIComponent(form.audience)}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const json = (await response.json()) as { recipientList?: RecipientPreview[]; error?: string };
+        if (!response.ok) throw new Error(json.error || "No se pudo cargar la lista de destinatarios.");
+        setRecipients(json.recipientList ?? []);
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setRecipients([]);
+        setError(err instanceof Error ? err.message : "No se pudo cargar la lista de destinatarios.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRecipientsBusy(false);
+      });
+    return () => controller.abort();
+  }, [form.audience]);
 
   async function importContacts() {
     if (!validCount) return setError("Pegá al menos un correo válido.");
@@ -557,6 +601,42 @@ export default function EmailCampaignCenter() {
             Plantilla activa: <span className="font-black text-lime-200">{AUDIENCE_LABELS[form.audience]}</span>
             {" · "}CTA → <span className="text-cyan-200">{activeTemplate.ctaPath}</span>
           </div>
+          <div className="mt-3 border-2 border-cyan-300/25 bg-cyan-300/[0.04] p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-cyan-200">Lista exacta de destinatarios</div>
+                <p className="mt-1 text-xs font-semibold text-white/45">
+                  {recipientsBusy ? "Calculando con las reglas actuales..." : `${recipients.length} personas recibirían esta campaña ahora.`}
+                </p>
+              </div>
+              {recipientsBusy && <Loader2 className="h-4 w-4 animate-spin text-cyan-200" />}
+            </div>
+            <input
+              value={recipientSearch}
+              onChange={(event) => setRecipientSearch(event.target.value)}
+              placeholder="Buscar por nombre, correo, origen o plan"
+              className="mt-3 min-h-10 w-full border-2 border-white/15 bg-black px-3 text-xs font-semibold text-white outline-none focus:border-cyan-300"
+            />
+            <div className="mt-3 max-h-72 overflow-y-auto border border-white/10">
+              {filteredRecipients.map((recipient) => (
+                <div key={recipient.email} className="grid gap-1 border-b border-white/10 px-3 py-2 text-xs last:border-b-0 sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <div className="truncate font-black text-white">{recipient.name}</div>
+                    <div className="truncate font-semibold text-cyan-100/70">{recipient.email}</div>
+                  </div>
+                  <div className="text-left font-semibold text-white/40 sm:text-right">
+                    <div>{recipient.source} · {recipient.emailVerified ? "correo verificado" : "sin verificar"}{recipient.duplicateProfiles ? " · correo repetido en fichas" : ""}</div>
+                    {(recipient.plan || recipient.nextBillingDate) && <div>{recipient.plan || "Sin plan"}{recipient.nextBillingDate ? ` · vence ${recipient.nextBillingDate}` : ""}</div>}
+                  </div>
+                </div>
+              ))}
+              {!recipientsBusy && !filteredRecipients.length && (
+                <p className="px-3 py-4 text-xs font-semibold text-white/40">
+                  {recipientSearch ? "Nadie coincide con la búsqueda." : "Esta audiencia no tiene destinatarios."}
+                </p>
+              )}
+            </div>
+          </div>
           {([{ key: "subject", label: "Asunto", placeholder: activeTemplate.subject }, { key: "title", label: "Título", placeholder: activeTemplate.title }] as const).map((field) => (
             <label key={field.key} className="mt-3 block text-[10px] font-black uppercase tracking-widest text-white/45">
               {field.label}
@@ -601,7 +681,7 @@ export default function EmailCampaignCenter() {
           </label>
           <button
             type="button"
-            disabled={!campaignConsent || !form.subject || !form.title || !form.message || Boolean(busy)}
+            disabled={!campaignConsent || !form.subject || !form.title || !form.message || recipientsBusy || Boolean(busy)}
             onClick={() => void queueCampaign()}
             className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 bg-lime-300 px-4 text-xs font-black uppercase text-black disabled:opacity-40"
           >

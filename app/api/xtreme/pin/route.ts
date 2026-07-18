@@ -19,6 +19,13 @@ import {
   revokeAllMemberSessions,
 } from "@/lib/xtreme/session";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
+import { recordEvent } from "@/lib/xtreme/events";
+import {
+  authAttemptStatus,
+  clearAuthAttempts,
+  recordFailedAuthAttempt,
+  requestFingerprint,
+} from "@/lib/xtreme/auth-attempts";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +116,25 @@ export async function POST(req: NextRequest) {
     const db = await getDb();
     const col = db.collection(PINS_COLLECTION);
 
+    async function trackAccess(
+      type: string,
+      outcome: "success" | "failed" | "blocked",
+      reason?: string,
+    ) {
+      await recordEvent(db, {
+        type,
+        memberId: normalizedName,
+        source: "member_app",
+        entity: { type: "member", id: normalizedName },
+        properties: {
+          outcome,
+          action,
+          ...(reason ? { reason } : {}),
+          requestFingerprint: requestFingerprint(req),
+        },
+      });
+    }
+
     async function notifyPinEvent(kind: "set" | "changed" | "recovered") {
       const member = await db
         .collection<MemberContact>(MEMBERS_COLLECTION)
@@ -156,8 +182,25 @@ export async function POST(req: NextRequest) {
 
     // --- OTP: recuperación (PIN ya existe) o primer setup (correo verificado, sin PIN) ---
     if (action === "requestOtp") {
+      const rate = await authAttemptStatus(db, req, {
+        scope: "member_otp_request",
+        subject: normalizedName,
+      });
+      if (rate.blocked) {
+        await trackAccess("otp_requested", "blocked", "rate_limit");
+        return NextResponse.json(
+          { error: "Demasiadas solicitudes. Esperá unos minutos antes de pedir otro código." },
+          { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+        );
+      }
       const member = await db.collection<MemberContact>(MEMBERS_COLLECTION).findOne({ normalizedName });
       if (!member) {
+        await recordFailedAuthAttempt(db, rate.key, {
+          scope: "member_otp_request",
+          maxAttempts: 3,
+          windowMs: 15 * 60_000,
+        });
+        await trackAccess("otp_requested", "failed", "profile_not_found");
         return NextResponse.json({ error: "Perfil no encontrado." }, { status: 404 });
       }
       if (!memberEmailIsTrusted(member) || !member.email) {
@@ -209,17 +252,23 @@ export async function POST(req: NextRequest) {
       });
 
       if (!sent.ok) {
+        await trackAccess("otp_requested", "failed", "email_delivery");
         return NextResponse.json(
           {
-            error: sent.skipped
-              ? "Correo no configurado (RESEND_API_KEY). Pedí ayuda en recepción."
-              : sent.error || "No se pudo enviar el código. Intentá de nuevo.",
+            error: sent.error || "No se pudo enviar el código. Intentá de nuevo.",
+            emailErrorCode: sent.code || "unknown",
           },
           { status: 502 },
         );
       }
 
       const masked = member.email.replace(/(.{2}).+(@.+)/, "$1***$2");
+      await recordFailedAuthAttempt(db, rate.key, {
+        scope: "member_otp_request",
+        maxAttempts: 3,
+        windowMs: 15 * 60_000,
+      });
+      await trackAccess("otp_requested", "success");
       return NextResponse.json({
         ok: true,
         sent: true,
@@ -317,6 +366,7 @@ export async function POST(req: NextRequest) {
       );
 
       await notifyPinEvent("set");
+      await trackAccess("pin_created", "success", sessionOk ? "magic_link_session" : otpOk ? "otp" : "staff");
       return withMemberSession(
         db,
         req,
@@ -330,10 +380,19 @@ export async function POST(req: NextRequest) {
     if (!doc?.pinHash) return NextResponse.json({ valid: false, hasPinSet: false });
 
     if (action === "change") {
+      const memberSession = await resolveMemberSession(req);
+      if (!memberSession || memberSession.memberKey !== normalizedName) {
+        await trackAccess("pin_change_attempted", "failed", "session_required");
+        return NextResponse.json(
+          { error: "Iniciá sesión antes de cambiar el PIN." },
+          { status: 401 },
+        );
+      }
       if (!/^\d{4}$/.test(currentPin)) {
         return NextResponse.json({ error: "PIN actual requerido." }, { status: 400 });
       }
       if (doc.pinHash !== hashPin(currentPin, normalizedName)) {
+        await trackAccess("pin_change_attempted", "failed", "incorrect_current_pin");
         return NextResponse.json({ error: "PIN actual incorrecto." }, { status: 401 });
       }
       await col.updateOne(
@@ -341,6 +400,7 @@ export async function POST(req: NextRequest) {
         { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
       );
       await notifyPinEvent("changed");
+      await trackAccess("pin_change_attempted", "success");
       return withMemberSession(
         db,
         req,
@@ -383,6 +443,7 @@ export async function POST(req: NextRequest) {
         { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
       );
       await notifyPinEvent("recovered");
+      await trackAccess("pin_recovered", "success", "otp");
       return withMemberSession(
         db,
         req,
@@ -393,10 +454,33 @@ export async function POST(req: NextRequest) {
     }
 
     // verify
+    const loginRate = await authAttemptStatus(db, req, {
+      scope: "member_pin_login",
+      subject: normalizedName,
+    });
+    if (loginRate.blocked) {
+      await trackAccess("login_attempted", "blocked", "rate_limit");
+      return NextResponse.json(
+        { error: "Demasiados intentos. Esperá unos minutos antes de volver a ingresar." },
+        { status: 429, headers: { "Retry-After": String(loginRate.retryAfterSeconds) } },
+      );
+    }
     const valid = doc.pinHash === hashPin(pin, normalizedName);
     if (!valid) {
+      const failed = await recordFailedAuthAttempt(db, loginRate.key, {
+        scope: "member_pin_login",
+        maxAttempts: 5,
+        windowMs: 15 * 60_000,
+      });
+      await trackAccess(
+        "login_attempted",
+        failed.blocked ? "blocked" : "failed",
+        "incorrect_pin",
+      );
       return NextResponse.json({ valid: false, hasPinSet: true });
     }
+    await clearAuthAttempts(db, loginRate.key);
+    await trackAccess("login_attempted", "success");
     return withMemberSession(
       db,
       req,

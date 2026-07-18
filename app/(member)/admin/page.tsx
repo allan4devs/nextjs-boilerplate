@@ -208,6 +208,27 @@ type AdminData = {
     referralsRewarded: number;
     appOpens: number;
     appOpenMembers: number;
+    accountFunnel: {
+      lookups: number;
+      loginSuccess: number;
+      loginFailed: number;
+      loginBlocked: number;
+      registrationsStarted: number;
+      registrationsCompleted: number;
+      registrationFailed: number;
+      freeFirstDays: number;
+      pinsCreated: number;
+    };
+    reservations: { attempted: number; completed: number; failed: number; cancelled: number };
+    monthly: { checkoutsStarted: number; paymentsCompleted: number };
+    recentAccessAttempts: Array<{
+      stage: string;
+      outcome: string;
+      memberId?: string;
+      identityHint?: string;
+      requestFingerprint?: string;
+      occurredAt: string;
+    }>;
     appOpenSeries: Array<{ date: string; opens: number; unique: number }>;
     dayPassToVisit: { dayPasses: number; visited: number; ratePct: number };
     dayPassToPlan: {
@@ -1583,6 +1604,56 @@ export default function XtremeAdminPage() {
                       <div className="border border-white/10 bg-black/20 px-2 py-2">1er ingreso {data.growth.firstCheckins}</div>
                       <div className="border border-white/10 bg-black/20 px-2 py-2">Renovaciones {data.growth.renewalsCompleted}</div>
                     </div>
+                    <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                      <div className="border border-cyan-300/20 bg-black/25 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-cyan-200">Acceso y alta</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold text-white/60">
+                          <span>Identificados {data.growth.accountFunnel.lookups}</span>
+                          <span>Ingresaron {data.growth.accountFunnel.loginSuccess}</span>
+                          <span>PIN fallido {data.growth.accountFunnel.loginFailed}</span>
+                          <span>Bloqueados {data.growth.accountFunnel.loginBlocked}</span>
+                          <span>Registro iniciado {data.growth.accountFunnel.registrationsStarted}</span>
+                          <span>Registro completo {data.growth.accountFunnel.registrationsCompleted}</span>
+                          <span>Faltó completar {data.growth.accountFunnel.registrationFailed}</span>
+                          <span>PIN creado {data.growth.accountFunnel.pinsCreated}</span>
+                        </div>
+                      </div>
+                      <div className="border border-lime-300/20 bg-black/25 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-lime-200">Primer día y reservas</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold text-white/60">
+                          <span>Día gratis {data.growth.accountFunnel.freeFirstDays}</span>
+                          <span>Intentos {data.growth.reservations.attempted}</span>
+                          <span>Reservadas {data.growth.reservations.completed}</span>
+                          <span>Fallidas {data.growth.reservations.failed}</span>
+                          <span>Canceladas {data.growth.reservations.cancelled}</span>
+                        </div>
+                      </div>
+                      <div className="border border-orange-300/20 bg-black/25 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-orange-200">Mensualidad</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold text-white/60">
+                          <span>Checkout {data.growth.monthly.checkoutsStarted}</span>
+                          <span>Pagadas {data.growth.monthly.paymentsCompleted}</span>
+                        </div>
+                        <p className="mt-3 text-[10px] font-semibold text-white/35">Las cifras de pago vienen del servidor, no del navegador.</p>
+                      </div>
+                    </div>
+                    {data.growth.recentAccessAttempts.length > 0 && (
+                      <details className="mt-4 border border-white/10 bg-black/25 p-4">
+                        <summary className="cursor-pointer text-xs font-black uppercase tracking-wider text-white/65">
+                          Quién intentó ingresar o registrarse ({data.growth.recentAccessAttempts.length})
+                        </summary>
+                        <div className="mt-3 max-h-64 space-y-2 overflow-auto">
+                          {data.growth.recentAccessAttempts.map((event, index) => (
+                            <div key={`${event.occurredAt}-${index}`} className="grid gap-1 border-b border-white/10 pb-2 text-[11px] sm:grid-cols-[1.2fr_.8fr_1fr_auto]">
+                              <span className="font-black text-white/70">{event.memberId || event.identityHint || "Persona no identificada"}</span>
+                              <span className={event.outcome === "success" ? "text-lime-200" : event.outcome === "blocked" ? "text-red-200" : "text-orange-200"}>{event.outcome}</span>
+                              <span className="text-white/40">{event.stage.replaceAll("_", " ")}</span>
+                              <span className="text-white/30">{new Date(event.occurredAt).toLocaleString("es-CR")}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
                   </div>
                 )}
 

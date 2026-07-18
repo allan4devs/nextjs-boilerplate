@@ -3,6 +3,7 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { sendWelcomeEmail, sendAdminNewMemberNotification } from "@/lib/helpers/email";
 import { businessDate } from "@/lib/xtreme/business-date";
 import { recordEvent } from "@/lib/xtreme/events";
+import { requestFingerprint } from "@/lib/xtreme/auth-attempts";
 import { grantFreeFirstDayIfEligible } from "@/lib/xtreme/entitlements";
 import {
   cedulaDigits,
@@ -266,6 +267,15 @@ export async function GET(req: NextRequest) {
     });
 
     if (!hit?.memberKey) {
+      await recordEvent(db, {
+        type: "login_lookup_attempted",
+        source: "member_app",
+        properties: {
+          outcome: "not_found",
+          method: digits.length >= 6 ? "cedula" : "name",
+          requestFingerprint: requestFingerprint(req),
+        },
+      });
       return NextResponse.json({
         member: null,
         exists: false,
@@ -276,6 +286,18 @@ export async function GET(req: NextRequest) {
         nextBestAction: null,
       });
     }
+
+    await recordEvent(db, {
+      type: "login_lookup_attempted",
+      memberId: hit.memberKey,
+      source: "member_app",
+      entity: { type: "member", id: hit.memberKey },
+      properties: {
+        outcome: "found",
+        method: hit.resolvedBy === "cedula" ? "cedula" : "name",
+        requestFingerprint: requestFingerprint(req),
+      },
+    });
 
     return NextResponse.json(
       await bootstrapLookup(

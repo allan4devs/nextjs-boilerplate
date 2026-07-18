@@ -61,7 +61,8 @@ export async function inviteExistingMemberToApp(
     return {
       ok: false,
       status: 409,
-      error: "Este socio ya tiene correo verificado. Puede entrar directo a la app.",
+      error:
+        "Este socio ya tiene correo verificado. Si nunca creó el PIN: que entre a /app con su cédula, toque «Enviar código al correo» y cree el PIN de 4 dígitos. Si ya tiene PIN, que lo use para entrar.",
     };
   }
 

@@ -147,6 +147,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!clean(customer.name) || (!body.memberCheckout && (!clean(customer.phone) || !clean(customer.email)))) {
+      await recordEvent(db, {
+        type: "checkout_failed",
+        memberId: authenticatedMemberKey || undefined,
+        source: body.memberCheckout ? "member_app" : "site",
+        properties: { optionId: option.id, reason: "missing_customer_fields" },
+      });
       return NextResponse.json(
         { success: false, message: "Nombre, teléfono y correo son requeridos para pagar." },
         { status: 400 },
@@ -186,6 +192,12 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok || !data.id) {
       console.error("Xtreme PayPal create order error:", { status: response.status, data });
+      await recordEvent(db, {
+        type: "checkout_failed",
+        memberId: memberKey || undefined,
+        source: body.memberCheckout ? "member_app" : "site",
+        properties: { optionId: option.id, reason: "paypal_create", status: response.status },
+      });
       return NextResponse.json(
         { success: false, message: data.message || "No se pudo crear la orden de pago en línea." },
         { status: response.status || 500 },

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
-import { emailEnabled, sendCustomReminderEmail } from "@/lib/helpers/email";
+import {
+  emailConfigurationError,
+  emailEnabled,
+  sendCustomReminderEmail,
+} from "@/lib/helpers/email";
 import {
   MEMBERS_COLLECTION,
   type MemberDoc,
@@ -27,7 +31,10 @@ export async function POST(req: NextRequest) {
 
     if (!emailEnabled()) {
       return NextResponse.json(
-        { error: "El envio de correos no esta configurado todavia." },
+        {
+          error: emailConfigurationError() || "El envío de correos no está disponible.",
+          emailErrorCode: "configuration",
+        },
         { status: 503 },
       );
     }
@@ -78,7 +85,10 @@ export async function POST(req: NextRequest) {
 
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.error || "No se pudo enviar el correo." },
+        {
+          error: result.error || "No se pudo enviar el correo.",
+          emailErrorCode: result.code || "unknown",
+        },
         { status: 502 },
       );
     }

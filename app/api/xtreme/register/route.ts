@@ -15,7 +15,12 @@ import {
 } from "@/lib/xtreme/registration-token";
 import {
   MEMBERS_COLLECTION,
+  PAYMENTS_COLLECTION,
   PENDING_REGISTRATIONS_COLLECTION,
+  ENTITLEMENTS_COLLECTION,
+  ENTITLEMENT_LEDGER_COLLECTION,
+  BOOKINGS_COLLECTION,
+  RESERVATIONS_COLLECTION,
   type MemberDoc,
   type PendingRegistrationDoc,
   addDays,
@@ -35,10 +40,21 @@ import {
   attachSessionCookie,
   createMemberSession,
 } from "@/lib/xtreme/session";
+import {
+  authAttemptStatus,
+  recordFailedAuthAttempt,
+  requestFingerprint,
+} from "@/lib/xtreme/auth-attempts";
 
 export const dynamic = "force-dynamic";
 
 const TOKEN_TTL_MIN = 60;
+
+function maskedEmail(email: string) {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return "correo-invalido";
+  return `${local.slice(0, 2)}***@${domain}`;
+}
 
 /**
  * Paso 1 — el usuario da solo su correo. Creamos un registro pendiente y le
@@ -53,19 +69,54 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
   }
 
   const db = await getDb();
+  const rate = await authAttemptStatus(db, req, {
+    scope: "public_registration_start",
+    subject: email,
+  });
+  if (rate.blocked) {
+    await recordEvent(db, {
+      type: "registration_attempted",
+      source: "site",
+      properties: {
+        outcome: "blocked",
+        reason: "rate_limit",
+        source,
+        identityHint: maskedEmail(email),
+        requestFingerprint: requestFingerprint(req),
+      },
+    });
+    return NextResponse.json(
+      { error: "Demasiados intentos. Esperá unos minutos antes de pedir otro enlace." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
+  }
 
   // Si el correo ya pertenece a un socio, no iniciamos otro registro ni enviamos correo.
   const existingMember = await db
     .collection<MemberDoc>(MEMBERS_COLLECTION)
     .findOne({ email });
   if (existingMember) {
-    return NextResponse.json(
-      {
-        error:
-          "Ese correo ya está registrado. No enviamos un nuevo enlace. Ingresá desde la app.",
+    await recordFailedAuthAttempt(db, rate.key, {
+      scope: "public_registration_start",
+      maxAttempts: 4,
+      windowMs: 15 * 60_000,
+    });
+    await recordEvent(db, {
+      type: "registration_attempted",
+      memberId: existingMember.normalizedName,
+      source: "site",
+      properties: {
+        outcome: "existing_account",
+        source,
+        identityHint: maskedEmail(email),
+        requestFingerprint: requestFingerprint(req),
       },
-      { status: 409 },
-    );
+    });
+    // No revelar públicamente si el correo ya pertenece a una cuenta.
+    return NextResponse.json({
+      ok: true,
+      message: "Si el correo puede iniciar un registro, recibirás un enlace con los siguientes pasos.",
+    });
   }
 
   const token = createRegistrationToken();
@@ -114,16 +165,25 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
   await recordEvent(db, {
     type: "registration_started",
     source: "site",
-    entity: { type: "registration", id: email },
-    properties: { source, emailSent: result.ok },
+    properties: {
+      source,
+      emailSent: result.ok,
+      identityHint: maskedEmail(email),
+      requestFingerprint: requestFingerprint(req),
+    },
   }).catch(() => {});
+
+  await recordFailedAuthAttempt(db, rate.key, {
+    scope: "public_registration_start",
+    maxAttempts: 4,
+    windowMs: 15 * 60_000,
+  });
 
   if (!result.ok) {
     return NextResponse.json(
       {
-        error:
-          result.error ||
-          "El correo de confirmación no está configurado. Contactá al administrador.",
+        error: result.error || "No se pudo enviar el correo de confirmación.",
+        emailErrorCode: result.code || "unknown",
       },
       { status: 502 },
     );
@@ -225,10 +285,22 @@ export async function GET(req: NextRequest) {
  * Aqui se crea o reclama el perfil y se marca el correo como verificado.
  * Import legacy: en el primer registro se permite corregir datos basura del Excel.
  */
-async function confirmRegistration(body: Record<string, unknown>) {
+async function confirmRegistration(req: NextRequest, body: Record<string, unknown>) {
   const token = String(body.token ?? "").trim();
   const verified = await verifyToken(token);
   if ("error" in verified) {
+    try {
+      const db = await getDb();
+      await recordEvent(db, {
+        type: "registration_confirmation_attempted",
+        source: "site",
+        properties: {
+          outcome: "failed",
+          reason: `token_${verified.status}`,
+          requestFingerprint: requestFingerprint(req),
+        },
+      });
+    } catch {}
     return NextResponse.json({ error: verified.error }, { status: verified.status });
   }
   const { pending, db } = verified;
@@ -261,10 +333,10 @@ async function confirmRegistration(body: Record<string, unknown>) {
   const paidInvite = pending.source === "paypal" && boundInvite;
   const staffInvite = pending.source === "reception" || pending.source === "admin";
 
-  const existing = boundInvite
+  const boundExisting = boundInvite
     ? await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: boundKey })
     : null;
-  if (boundInvite && !existing) {
+  if (boundInvite && !boundExisting) {
     return NextResponse.json(
       {
         error: paidInvite
@@ -276,7 +348,8 @@ async function confirmRegistration(body: Record<string, unknown>) {
   }
 
   // Nunca registrado = aún no verificó correo: puede corregir nombre/cédula/tel del import.
-  const neverRegistered = !existing || existing.emailVerified !== true;
+  let existing = boundExisting;
+  let neverRegistered = !existing || existing.emailVerified !== true;
 
   // PayPal: nombre queda atado al pago. Invitación/import: el socio corrige basura del Excel.
   const memberName = paidInvite
@@ -307,7 +380,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
   }
 
   // Identidad estable: ficha importada/pago conserva su key; alta nueva usa el nombre.
-  const normalizedName = boundInvite ? boundKey : normalizeKey(memberName);
+  let normalizedName = boundInvite ? boundKey : normalizeKey(memberName);
   const now = new Date();
 
   // Duplicados en OTRO perfil (no la ficha que estamos reclamando).
@@ -322,29 +395,88 @@ async function confirmRegistration(body: Record<string, unknown>) {
           { cedula: { $exists: true, $type: "string", $ne: "" } },
         ],
       },
-      { projection: { memberName: 1, phone: 1, email: 1, cedula: 1, normalizedName: 1 } },
+      {
+        projection: {
+          memberName: 1,
+          phone: 1,
+          email: 1,
+          cedula: 1,
+          normalizedName: 1,
+          emailVerified: 1,
+          membership: 1,
+        },
+      },
     )
     .limit(40)
     .toArray();
 
   const phoneDigits = phone.replace(/\D/g, "");
-  const duplicate = contactCandidates.find((doc) => {
+  const cedulaDuplicate = contactCandidates.find(
+    (doc) => doc.cedula && matchCedula(doc.cedula, cedula),
+  );
+  const contactDuplicate = contactCandidates.find((doc) => {
+    if (cedulaDuplicate?.normalizedName === doc.normalizedName) return false;
     if (doc.email && normalizeEmail(doc.email) === email) return true;
-    if (doc.phone && normalizePhone(doc.phone).replace(/\D/g, "") === phoneDigits) return true;
-    if (doc.cedula && matchCedula(doc.cedula, cedula)) return true;
-    return false;
+    return Boolean(doc.phone && normalizePhone(doc.phone).replace(/\D/g, "") === phoneDigits);
   });
-  if (duplicate) {
+  let claimedExistingCedula = false;
+  const previousBoundKey = normalizedName;
+
+  if (cedulaDuplicate?.normalizedName) {
+    const sameVerifiedEmail =
+      cedulaDuplicate.emailVerified === true && normalizeEmail(cedulaDuplicate.email) === email;
+    const paidSourceIsProvisional =
+      !paidInvite ||
+      !boundExisting ||
+      (boundExisting.emailVerified !== true && cedulaDigits(boundExisting.cedula).length === 0);
+    const paidSourceCanMove =
+      paidSourceIsProvisional ||
+      normalizeEmail(boundExisting.email) === email;
+    if ((cedulaDuplicate.emailVerified !== true || sameVerifiedEmail) && paidSourceCanMove) {
+      normalizedName = normalizeKey(cedulaDuplicate.normalizedName);
+      existing = cedulaDuplicate;
+      neverRegistered = cedulaDuplicate.emailVerified !== true;
+      claimedExistingCedula = normalizedName !== previousBoundKey;
+    } else {
+      await recordEvent(db, {
+        type: "registration_identity_conflict",
+        memberId: normalizeKey(cedulaDuplicate.normalizedName),
+        source: "member_app",
+        properties: {
+          reason: paidSourceCanMove ? "verified_cedula_owner" : "verified_paid_source",
+          paidRegistration: paidInvite,
+          requestFingerprint: requestFingerprint(req),
+        },
+      });
+      return NextResponse.json(
+        {
+          error:
+            paidSourceCanMove
+              ? "Tu pago y este enlace siguen guardados. Esa cédula ya pertenece a una cuenta verificada, así que no la vamos a reemplazar ni a crear duplicada. Contactá a recepción para confirmar identidad y unir el pago de forma segura."
+              : "Tu pago y este enlace siguen guardados, pero el perfil ligado al pago ya estaba verificado con otra identidad. No moveremos datos automáticamente. Contactá a recepción para revisar y unir el pago de forma segura.",
+          code: "verified_cedula_owner",
+          recoverable: true,
+          paymentPreserved: paidInvite,
+        },
+        { status: 409 },
+      );
+    }
+  } else if (contactDuplicate) {
     return NextResponse.json(
       {
-        error: `Ese contacto o cédula ya está ligado a ${duplicate.memberName}. Hablá con recepción para unir las fichas.`,
+        error: `El correo o teléfono ya está ligado a ${contactDuplicate.memberName}. Tus datos siguen guardados; hablá con recepción para unir las fichas sin perder el pago ni el acceso.`,
+        code: "contact_already_registered",
+        recoverable: true,
+        paymentPreserved: paidInvite,
       },
       { status: 409 },
     );
   }
 
   // Si alguien ya reclamó este perfil con correo verificado, no reescribir con otro enlace suelto.
-  if (existing?.emailVerified === true && !neverRegistered) {
+  const verifiedBySameEmail =
+    existing?.emailVerified === true && normalizeEmail(existing.email) === email;
+  if (existing?.emailVerified === true && !neverRegistered && !verifiedBySameEmail) {
     return NextResponse.json(
       {
         error: "Este perfil ya fue activado. Entrá a la app con tu cédula y PIN.",
@@ -364,6 +496,13 @@ async function confirmRegistration(body: Record<string, unknown>) {
     updatedAt: now,
   };
   if (goal) set.goal = goal;
+
+  // Un pago puede haber creado una ficha provisional por nombre antes de que la
+  // persona escribiera su cédula. Al encontrar una ficha vieja sin verificar,
+  // conservamos la membresía pagada y la trasladamos a la identidad por cédula.
+  if (claimedExistingCedula && paidInvite && boundExisting?.membership) {
+    set.membership = boundExisting.membership;
+  }
 
   // Guardamos snapshot de lo que venía del import por si hay que auditar correcciones.
   if (existing && neverRegistered) {
@@ -408,9 +547,90 @@ async function confirmRegistration(body: Record<string, unknown>) {
     { upsert: true },
   );
 
+  if (
+    claimedExistingCedula &&
+    boundInvite &&
+    previousBoundKey &&
+    previousBoundKey !== normalizedName
+  ) {
+    const associationFilter = pending.paymentId ? { id: pending.paymentId } : { normalizedName: previousBoundKey };
+    const entitlementFilter = pending.paymentId
+      ? {
+          memberKey: previousBoundKey,
+          "source.type": "payment",
+          "source.id": pending.paymentId,
+        }
+      : { memberKey: previousBoundKey };
+    const movedEntitlements = await db
+      .collection<{ id: string }>(ENTITLEMENTS_COLLECTION)
+      .find(entitlementFilter, { projection: { id: 1 } })
+      .toArray();
+    const movedEntitlementIds = movedEntitlements.map((item) => item.id).filter(Boolean);
+    await Promise.all([
+      db.collection(PAYMENTS_COLLECTION).updateMany(
+        associationFilter,
+        { $set: { normalizedName, memberName } },
+      ),
+      db.collection(ENTITLEMENTS_COLLECTION).updateMany(
+        entitlementFilter,
+        { $set: { memberKey: normalizedName } },
+      ),
+      db.collection(ENTITLEMENT_LEDGER_COLLECTION).updateMany(
+        movedEntitlementIds.length
+          ? { memberKey: previousBoundKey, entitlementId: { $in: movedEntitlementIds } }
+          : { memberKey: "__none__" },
+        { $set: { memberKey: normalizedName } },
+      ),
+      db.collection(BOOKINGS_COLLECTION).updateMany(
+        movedEntitlementIds.length
+          ? { memberKey: previousBoundKey, entitlementId: { $in: movedEntitlementIds } }
+          : { memberKey: "__none__" },
+        { $set: { memberKey: normalizedName, memberName } },
+      ),
+      db.collection(RESERVATIONS_COLLECTION).updateMany(
+        movedEntitlementIds.length
+          ? { normalizedName: previousBoundKey, entitlementId: { $in: movedEntitlementIds } }
+          : pending.paymentId
+            ? { normalizedName: "__none__" }
+            : { normalizedName: previousBoundKey },
+        { $set: { normalizedName, memberName } },
+      ),
+      db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION).updateOne(
+        { email },
+        { $set: { expectedMemberKey: normalizedName, expectedMemberName: memberName } },
+      ),
+    ]);
+
+    // La ficha provisional de PayPal ya quedó absorbida por la identidad de cédula.
+    if (paidInvite && boundExisting?.emailVerified !== true) {
+      await db.collection<MemberDoc>(MEMBERS_COLLECTION).deleteOne({
+        normalizedName: previousBoundKey,
+        emailVerified: { $ne: true },
+      });
+    }
+
+    await recordEvent(db, {
+      type: "paid_profile_merged_by_cedula",
+      memberId: normalizedName,
+      source: "member_app",
+      entity: { type: "member", id: normalizedName },
+      properties: {
+        previousMemberKey: previousBoundKey,
+        paymentId: pending.paymentId || null,
+      },
+    });
+  }
+
   const freeFirstDay = !existing && !staffInvite && !paidInvite && !boundInvite;
   if (freeFirstDay) {
     await grantFreeFirstDayIfEligible(db, normalizedName, today);
+    await recordEvent(db, {
+      type: "free_first_day_granted",
+      memberId: normalizedName,
+      source: "member_app",
+      entity: { type: "member", id: normalizedName },
+      properties: { registrationSource: pending.source, date: today },
+    });
   }
 
   // Consumir el registro pendiente (token de un solo uso).
@@ -438,9 +658,25 @@ async function confirmRegistration(body: Record<string, unknown>) {
         invitedRegistration: staffInvite,
         boundInvite,
         correctedImport: Boolean(existing && neverRegistered),
+        claimedExistingCedula,
       },
     }).catch(() => {});
   }
+
+  await recordEvent(db, {
+    type: "registration_completed",
+    memberId: normalizedName,
+    source: "member_app",
+    entity: { type: "member", id: normalizedName },
+    properties: {
+      source: pending.source,
+      freeFirstDay,
+      paidRegistration: paidInvite,
+      invitedRegistration: staffInvite,
+      requestFingerprint: requestFingerprint(req),
+      claimedExistingCedula,
+    },
+  });
 
   // Sesión HttpOnly al confirmar el enlace: solo quien abrió el mail puede setear PIN en /app.
   const { token: sessionToken, expiresAt: sessionExpires } = await createMemberSession(db, {
@@ -457,6 +693,7 @@ async function confirmRegistration(body: Record<string, unknown>) {
     session: true,
     canSetPin: true,
     profileCorrected: Boolean(existing && neverRegistered),
+    claimedExistingCedula,
   });
   attachSessionCookie(res, sessionToken, sessionExpires);
   return res;
@@ -466,7 +703,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const action = String(body.action ?? "start");
-    if (action === "confirm") return await confirmRegistration(body);
+    if (action === "confirm") return await confirmRegistration(req, body);
     return await startRegistration(req, body);
   } catch (err) {
     console.error("XTREME REGISTER POST", err);

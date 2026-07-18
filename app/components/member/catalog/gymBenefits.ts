@@ -148,12 +148,12 @@ export const GYM_SERVICES: GymServiceBenefit[] = [
   {
     id: "maquinas-guia",
     title: "Guía de máquinas",
-    text: "Cada equipo con ajuste, tips y errores comunes. Entrená fuerte sin perder técnica.",
+    text: "Fotos del piso, video de técnica, ajuste, tips y errores. Entrená fuerte sin perder la forma.",
     icon: Sparkles,
     highlights: [
-      "Guías por zona y nivel",
-      "Tips y errores a evitar",
-      "Rutinas rápidas por objetivo",
+      "Fotos reales del gym por equipo",
+      "Video de técnica en cada guía",
+      "Tips, errores y rutinas rápidas",
     ],
     ctaTab: "maquinas",
     ctaLabel: "Abrir guías",

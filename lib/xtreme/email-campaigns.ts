@@ -120,7 +120,13 @@ export async function processQueuedEmailCampaigns(db: Db, limit = 20) {
       skipped += 1;
       await deliveries.updateOne(
         { deliveryKey: item.deliveryKey },
-        { $set: { status: "skipped", updatedAt: now, error: "Suprimido o no disponible" } },
+        {
+          $set: {
+            status: "skipped",
+            updatedAt: now,
+            error: result.error || "Envío omitido sin detalle.",
+          },
+        },
       );
     } else if (item.attempts + 1 < 3) {
       await deliveries.updateOne(

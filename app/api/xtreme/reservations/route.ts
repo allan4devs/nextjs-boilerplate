@@ -11,6 +11,7 @@ import {
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 import { bookSession, cancelBooking, sessionSnapshot } from "@/lib/xtreme/inventory";
 import { queuePushMemberEvent } from "@/lib/xtreme/member-push";
+import { recordEvent } from "@/lib/xtreme/events";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,18 @@ export async function POST(req: NextRequest) {
     });
 
     if (!result.ok) {
+      await recordEvent(db, {
+        type: "reservation_attempted",
+        memberId: sessionOrErr.memberKey,
+        source: "member_app",
+        entity: { type: "class", id: `${trainingId}:${trainingDate}` },
+        properties: {
+          outcome: "failed",
+          reason: result.code,
+          trainingId,
+          trainingDate,
+        },
+      });
       const status =
         result.code === "full"
           ? 409
@@ -147,6 +160,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    await recordEvent(db, {
+      type: "reservation_created",
+      memberId: sessionOrErr.memberKey,
+      source: "member_app",
+      entity: { type: "booking", id: result.booking.id },
+      properties: {
+        outcome: result.duplicate ? "duplicate" : "success",
+        trainingId,
+        trainingDate,
+        entitlementId: result.entitlementId,
+      },
+    });
+
     return NextResponse.json({
       ok: true,
       bookingId: result.booking.id,
@@ -197,6 +223,14 @@ export async function DELETE(req: NextRequest) {
       type: "reservation_cancelled",
       trainingName,
       trainingDate,
+    });
+
+    await recordEvent(db, {
+      type: "reservation_cancelled",
+      memberId: sessionOrErr.memberKey,
+      source: "member_app",
+      entity: { type: "class", id: `${trainingId}:${trainingDate}` },
+      properties: { trainingId, trainingDate },
     });
 
     return NextResponse.json({

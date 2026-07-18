@@ -72,6 +72,9 @@ async function ensureIndexes(db: Db) {
     // Fase 2.0: eventos, sesiones sociales y entregas de lifecycle
     db.collection("xtreme_gym_events").createIndex({ type: 1, occurredAt: -1 }),
     db.collection("xtreme_gym_events").createIndex({ memberId: 1, occurredAt: -1 }),
+    // Intentos de autenticacion: bloqueo temporal y limpieza automatica.
+    db.collection("xtreme_gym_auth_attempts").createIndex({ key: 1 }, { unique: true }),
+    db.collection("xtreme_gym_auth_attempts").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     // Bitácora de uso por sesión de navegador
     db.collection("xtreme_gym_session_logs").createIndex({ id: 1 }, { unique: true }),
     db.collection("xtreme_gym_session_logs").createIndex({ lastSeenAt: -1 }),

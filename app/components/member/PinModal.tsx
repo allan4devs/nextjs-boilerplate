@@ -239,12 +239,12 @@ export default function PinModal({
           : "Ingresá tu PIN";
   const subtitle =
     mode === "set"
-      ? "Código al correo verificado + PIN de 4 dígitos"
+      ? "PIN de 4 dígitos · si te lo pide, usá el código del correo"
       : mode === "change"
-        ? "Primero validamos el PIN actual"
+        ? "Primero el PIN actual"
         : mode === "recover"
-          ? "Código al correo verificado de la cuenta"
-          : "Entramos a tu perfil Xtreme";
+          ? "Código del correo + nuevo PIN"
+          : "PIN de 4 dígitos";
 
   return (
     <div className="xg-os-login-shell fixed inset-0 z-50 grid bg-black/90 backdrop-blur-md">
@@ -273,16 +273,14 @@ export default function PinModal({
               </p>
             ) : (
               <p className="text-center text-[11px] font-semibold text-white/45">
-                {mode === "set"
-                  ? "Si acabás de abrir el enlace del correo, podés crear el PIN de una. Si no, pedí el código."
-                  : "Solo con el código del correo verificado."}
+                {mode === "set" ? "Opcional si venís del enlace del correo." : "Requerido para recuperar."}
               </p>
             )}
             <input
               value={otpCode}
               onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
               inputMode="numeric"
-              placeholder={mode === "set" ? "Codigo de 6 digitos (si te lo pidió)" : "Codigo de 6 digitos"}
+              placeholder="Código de 6 dígitos"
               className="w-full border border-white/12 bg-black/45 px-3 py-3 text-center text-sm font-bold tracking-[0.3em] text-white outline-none placeholder:tracking-normal placeholder:text-white/30 focus:border-[#d8ff3e]"
             />
           </div>

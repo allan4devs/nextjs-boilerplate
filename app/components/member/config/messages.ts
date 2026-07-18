@@ -10,16 +10,16 @@ export const MSG = {
     offline: "Sin conexión. Revisá tu internet y volvé a intentar en un toque.",
     /** El servidor respondió con error pero sin mensaje utilizable. */
     server: "El servidor anda fallando. Intentá de nuevo en un momento.",
-    sessionExpired: "Tu sesión venció. Ingresá el PIN para continuar.",
-    loadApp: "No pude cargar Xtreme Gym. Intentá de nuevo.",
+    sessionExpired: "Sesión vencida. Ingresá tu PIN.",
+    loadApp: "No se pudo cargar. Intentá de nuevo.",
     cedulaTooShort: (minDigits: number) =>
-      `Digitá o escaneá la cédula (mínimo ${minDigits} dígitos).`,
-    cedulaNotRegistered:
-      "No hay cuenta activa con esa cédula. El sistema viejo a menudo traía cédulas mal: usá el enlace al correo o pedí invitación en recepción. El correo es la llave; ahí corregís nombre y cédula.",
-    cedulaNeedsInvite:
-      "Hay ficha, pero todavía no activaste el acceso. No confíes en la cédula del import. Pedí el enlace a tu correo (recepción/admin), revisá nombre y cédula, y creá el PIN.",
-    cedulaNoProfile: "No se pudo resolver el perfil de esa cédula.",
-    profileNotFound: "Perfil no encontrado. Iniciá sesión con tu cédula.",
+      `Cédula incompleta (mín. ${minDigits} dígitos).`,
+    /** Cuenta no encontrada por cédula — el detalle va en la UI de login. */
+    cedulaNotRegistered: "No hay cuenta con esa cédula.",
+    /** Ficha existe pero sin acceso activado (sin correo verificado / PIN). */
+    cedulaNeedsInvite: "Cuenta sin activar. Pedí el enlace en recepción.",
+    cedulaNoProfile: "No encontramos el perfil de esa cédula.",
+    profileNotFound: "Perfil no encontrado. Probá con tu cédula.",
     saveGoal: "No se pudo guardar la meta.",
     saveProfile: "No se pudo guardar.",
     badgeNotEarned: "Solo podés fijar badges que ya ganaste.",
@@ -35,14 +35,12 @@ export const MSG = {
     processImage: "No se pudo procesar la imagen. Intentá con otra foto.",
     sendReminder: "No se pudo enviar el aviso.",
     pinSendOtp: "No se pudo enviar el código.",
-    pinOtpMissing: "Pedí el código al correo, o escribí tu teléfono/correo registrado.",
+    pinOtpMissing: "Pedí el código al correo primero.",
     pinMismatch: "Los PIN no coinciden.",
-    pinAlreadySet: "Ya existe PIN. Ingresalo para entrar.",
-    pinNotSet: "Este perfil no tiene PIN. Creá uno de 4 dígitos con el código del correo.",
-    pinSetupOtpRequired:
-      "Para crear el PIN pedí un código al correo verificado de la cuenta (botón Enviar código).",
-    pinSetupInviteRequired:
-      "No se puede crear el PIN solo con la cédula. Usá el enlace de invitación del correo o recepción.",
+    pinAlreadySet: "Ya tenés PIN. Ingresalo para entrar.",
+    pinNotSet: "Todavía no tenés PIN. Crealo con el código del correo.",
+    pinSetupOtpRequired: "Pedí el código al correo y creá tu PIN.",
+    pinSetupInviteRequired: "Pedí el enlace de activación en recepción.",
     pinWrong: "PIN incorrecto.",
     pinValidate: "No se pudo validar el PIN.",
   },
@@ -63,5 +61,7 @@ export const MSG = {
       `Código enviado a ${maskedEmail} (vence en ${expiresInMin} min).`,
     pinChanged: "PIN actualizado. Sesión protegida.",
     pinRecovered: "PIN recuperado. Guardalo bien para la próxima.",
+    pinSetupWithSession: "Creá tu PIN de 4 dígitos.",
+    pinSetupWithOtp: "Pedí el código al correo y creá tu PIN.",
   },
 } as const;

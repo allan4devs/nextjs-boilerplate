@@ -774,9 +774,8 @@ export async function POST(req: NextRequest) {
       if (!result.ok) {
         return NextResponse.json(
           {
-            error: result.skipped
-              ? "Correo no configurado (RESEND_API_KEY)."
-              : result.error || "No se pudo enviar el correo.",
+            error: result.error || "No se pudo enviar el correo.",
+            emailErrorCode: result.code || "unknown",
           },
           { status: 502 },
         );

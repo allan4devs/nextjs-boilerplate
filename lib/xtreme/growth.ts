@@ -26,6 +26,27 @@ export type GrowthSnapshot = {
   referralsRewarded: number;
   appOpens: number;
   appOpenMembers: number;
+  accountFunnel: {
+    lookups: number;
+    loginSuccess: number;
+    loginFailed: number;
+    loginBlocked: number;
+    registrationsStarted: number;
+    registrationsCompleted: number;
+    registrationFailed: number;
+    freeFirstDays: number;
+    pinsCreated: number;
+  };
+  reservations: { attempted: number; completed: number; failed: number; cancelled: number };
+  monthly: { checkoutsStarted: number; paymentsCompleted: number };
+  recentAccessAttempts: Array<{
+    stage: string;
+    outcome: string;
+    memberId?: string;
+    identityHint?: string;
+    requestFingerprint?: string;
+    occurredAt: string;
+  }>;
   appOpenSeries: Array<{ date: string; opens: number; unique: number }>;
   dayPassToVisit: {
     dayPasses: number;
@@ -70,6 +91,8 @@ export async function computeGrowthSnapshot(db: Db, windowDays = 30): Promise<Gr
     .toArray();
 
   const countType = (type: string) => events.filter((e) => e.type === type).length;
+  const countOutcome = (type: string, outcome: string) =>
+    events.filter((e) => e.type === type && e.properties?.outcome === outcome).length;
 
   // Entradas al app de socios (evento app_opened del Member OS)
   const appOpenEvents = events.filter((e) => e.type === "app_opened");
@@ -95,6 +118,14 @@ export async function computeGrowthSnapshot(db: Db, windowDays = 30): Promise<Gr
   const planPayments = payments.filter((p) =>
     ["week", "fortnight", "month"].includes(p.optionId),
   );
+  const accessEventTypes = new Set([
+    "login_lookup_attempted",
+    "login_attempted",
+    "registration_attempted",
+    "registration_confirmation_attempted",
+    "registration_started",
+    "registration_completed",
+  ]);
 
   // Day-pass → first visit within 2 days (using checkins collection)
   let dayPassVisited = 0;
@@ -165,6 +196,47 @@ export async function computeGrowthSnapshot(db: Db, windowDays = 30): Promise<Gr
     referralsRewarded: countType("referral_rewarded"),
     appOpens: appOpenEvents.length,
     appOpenMembers: new Set(appOpenEvents.map((e) => e.memberId).filter(Boolean)).size,
+    accountFunnel: {
+      lookups: countType("login_lookup_attempted"),
+      loginSuccess: countOutcome("login_attempted", "success"),
+      loginFailed: countOutcome("login_attempted", "failed"),
+      loginBlocked: countOutcome("login_attempted", "blocked"),
+      registrationsStarted: countType("registration_started"),
+      registrationsCompleted: countType("registration_completed"),
+      registrationFailed: countOutcome("registration_confirmation_attempted", "failed"),
+      freeFirstDays: countType("free_first_day_granted"),
+      pinsCreated: countType("pin_created"),
+    },
+    reservations: {
+      attempted: countType("reservation_attempted") + countType("reservation_created"),
+      completed: events.filter(
+        (e) => e.type === "reservation_created" && e.properties?.outcome === "success",
+      ).length,
+      failed: countOutcome("reservation_attempted", "failed"),
+      cancelled: countType("reservation_cancelled"),
+    },
+    monthly: {
+      checkoutsStarted: events.filter(
+        (e) => e.type === "checkout_started" && e.properties?.optionId === "month",
+      ).length,
+      paymentsCompleted: payments.filter((p) => p.optionId === "month").length,
+    },
+    recentAccessAttempts: events
+      .filter((e) => accessEventTypes.has(e.type))
+      .slice(0, 30)
+      .map((e) => ({
+        stage: e.type,
+        outcome: String(e.properties?.outcome ?? (e.type.endsWith("_completed") ? "success" : "started")),
+        memberId: e.memberId,
+        identityHint:
+          typeof e.properties?.identityHint === "string" ? e.properties.identityHint : undefined,
+        requestFingerprint:
+          typeof e.properties?.requestFingerprint === "string"
+            ? e.properties.requestFingerprint
+            : undefined,
+        occurredAt:
+          e.occurredAt instanceof Date ? e.occurredAt.toISOString() : String(e.occurredAt),
+      })),
     appOpenSeries,
     dayPassToVisit: {
       dayPasses: dayPassPayments.length,
