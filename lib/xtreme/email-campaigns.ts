@@ -14,6 +14,12 @@ export type EmailAudience =
   | "never_opened"
   | "inactive"
   | "members"
+  /** Ficha con correo pero sin emailVerified: reclamar y corregir nombre/cédula del import. */
+  | "claim_profile"
+  | "winback_90"
+  | "winback_180"
+  | "winback_365"
+  | "possible_foreign"
   | "plan_week"
   | "plan_fortnight"
   | "plan_month"

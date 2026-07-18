@@ -74,9 +74,9 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
 
           {needsRegistration && (
             <GameCallout tone="orange">
-              Esta cédula aún no tiene cuenta activa. La cuenta y el PIN solo se crean con el
-              enlace del correo (invitación o registro) o en recepción. Así nadie se mete con
-              solo saber tu cédula.
+              No se crea cuenta solo con la cédula: muchas del reimport venían mal. La llave es
+              tu correo: abrí el enlace de invitación o registro, revisá y corregí nombre y
+              cédula, y después creás el PIN. También podés pedir el alta en recepción.
             </GameCallout>
           )}
         </div>

@@ -194,21 +194,36 @@ function ConfirmInner() {
             </div>
             <h1 className="mt-3 text-3xl font-black uppercase leading-none">
               {state.boundProfile && state.neverRegistered
-                ? "Revisá y corregí tu perfil"
+                ? "Verificá correo y tus datos"
                 : "Completá tu perfil"}
             </h1>
-            <p className="mt-2 text-sm font-semibold text-white/60">{state.email}</p>
+            <p className="mt-2 text-sm font-semibold text-white/60">
+              Correo a verificar: <span className="text-[#d8ff3e]">{state.email}</span>
+            </p>
 
-            {state.boundProfile && state.neverRegistered ? (
-              <div className="mt-4 border border-orange-300/35 bg-orange-300/10 px-3 py-3 text-sm font-semibold text-orange-100">
-                Traemos datos del sistema viejo del gym: pueden venir mal (cédula, nombre o
-                teléfono). Corregilos acá — es tu primer registro y queda ligado a este correo.
-              </div>
-            ) : null}
+            <div className="mt-4 border border-orange-300/35 bg-orange-300/10 px-3 py-3 text-sm font-semibold text-orange-100">
+              <strong>Checklist:</strong> al guardar, este correo queda verificado y tenés que
+              confirmar que estén bien:
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-orange-50/95">
+                <li>Nombre completo</li>
+                <li>Teléfono</li>
+                <li>Cédula / documento de identidad</li>
+              </ul>
+              {state.boundProfile && state.neverRegistered ? (
+                <p className="mt-2 text-orange-50/90">
+                  El reimport del sistema viejo suele traer cédulas mal. No las tomés como verdad:
+                  corregí acá lo que haga falta.
+                </p>
+              ) : (
+                <p className="mt-2 text-orange-50/90">
+                  Usá tus datos reales. No copies datos ajenos ni del archivo viejo del gym.
+                </p>
+              )}
+            </div>
 
             <label className="mt-6 block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
-                Nombre completo
+                1 · Nombre completo
               </span>
               <input
                 autoComplete="name"
@@ -216,7 +231,7 @@ function ConfirmInner() {
                 onChange={(e) => setMemberName(e.target.value)}
                 readOnly={!state.canEditName}
                 className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e] read-only:cursor-not-allowed read-only:text-white/55"
-                placeholder="Nombre y apellidos"
+                placeholder="Nombre y apellidos como en tu cédula"
               />
               {!state.canEditName && (
                 <span className="mt-2 block text-xs font-semibold text-white/40">
@@ -226,22 +241,7 @@ function ConfirmInner() {
             </label>
             <label className="mt-4 block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
-                Cédula
-              </span>
-              <input
-                inputMode="numeric"
-                value={cedula}
-                onChange={(e) => setCedula(e.target.value)}
-                className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
-                placeholder="1-2345-6789"
-              />
-              <span className="mt-2 block text-xs font-semibold text-white/40">
-                Si el import la traía mal, poné la correcta. La usás después para entrar a la app.
-              </span>
-            </label>
-            <label className="mt-4 block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
-                Teléfono
+                2 · Teléfono
               </span>
               <input
                 inputMode="tel"
@@ -251,6 +251,25 @@ function ConfirmInner() {
                 className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
                 placeholder="8898 4000"
               />
+              <span className="mt-2 block text-xs font-semibold text-white/40">
+                Preferible con WhatsApp. Recepción te puede contactar si hace falta.
+              </span>
+            </label>
+            <label className="mt-4 block">
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
+                3 · Cédula / documento de identidad
+              </span>
+              <input
+                inputMode="numeric"
+                value={cedula}
+                onChange={(e) => setCedula(e.target.value)}
+                className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
+                placeholder="1-2345-6789 o documento de residencia"
+              />
+              <span className="mt-2 block text-xs font-semibold text-white/40">
+                Si el import la traía mal, poné la correcta. Después entrás a la app con esta ID +
+                PIN.
+              </span>
             </label>
             <label className="mt-4 block">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
@@ -278,7 +297,7 @@ function ConfirmInner() {
               {submitting ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : state.boundProfile && state.neverRegistered ? (
-                "Confirmar mis datos y activar cuenta"
+                "Verificar correo y confirmar mis datos"
               ) : (
                 "Crear mi cuenta"
               )}

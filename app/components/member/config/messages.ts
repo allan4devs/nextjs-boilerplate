@@ -15,9 +15,9 @@ export const MSG = {
     cedulaTooShort: (minDigits: number) =>
       `Digitá o escaneá la cédula (mínimo ${minDigits} dígitos).`,
     cedulaNotRegistered:
-      "Cédula sin cuenta activa. Usá el enlace del correo de invitación/registro o pedí el alta en recepción. No se crea cuenta solo con la cédula.",
+      "No hay cuenta activa con esa cédula. El sistema viejo a menudo traía cédulas mal: usá el enlace al correo o pedí invitación en recepción. El correo es la llave; ahí corregís nombre y cédula.",
     cedulaNeedsInvite:
-      "Tu ficha existe pero aún no tenés acceso a la app. Pedí el enlace de invitación en recepción o al admin para confirmar tu correo y crear el PIN.",
+      "Hay ficha, pero todavía no activaste el acceso. No confíes en la cédula del import. Pedí el enlace a tu correo (recepción/admin), revisá nombre y cédula, y creá el PIN.",
     cedulaNoProfile: "No se pudo resolver el perfil de esa cédula.",
     profileNotFound: "Perfil no encontrado. Iniciá sesión con tu cédula.",
     saveGoal: "No se pudo guardar la meta.",

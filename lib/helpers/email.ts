@@ -245,20 +245,24 @@ export async function sendStaffMemberAppInviteEmail(args: {
   return sendEmail({
     to: args.to,
     subject: bound
-      ? "Confirmá tu correo en la app de Xtreme Gym"
+      ? "Verificá tu correo · revisá nombre, teléfono y cédula · Xtreme Gym"
       : "Te invitaron a la app de Xtreme Gym",
     html: layout(
-      bound ? "Confirmá tu acceso a Xtreme Gym" : "Tu invitación a Xtreme Gym",
+      bound ? "Verificá tu correo y tus datos" : "Tu invitación a Xtreme Gym",
       `<p style="font-size:14px;line-height:1.6;">${hello}${escapeHtml(who)} te invitó a ${
-        bound ? "confirmar tu correo y activar tu acceso" : "crear tu acceso personal"
+        bound ? "verificar este correo y activar tu acceso" : "crear tu acceso personal"
       } a la app.</p>
-      <p style="font-size:14px;line-height:1.6;">Desde ahí podés completar tu perfil, conocer los planes y, cuando tengás una membresía activa, administrar tus entrenos y reservas.</p>
-      <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:13px;line-height:1.6;margin:16px 0;"><strong>Importante:</strong> esta invitación ${
-        bound ? "verifica tu correo y une la cuenta a tu ficha" : "crea tu cuenta"
-      }, pero no activa un plan ni incluye el primer día gratis.</div>
+      <p style="font-size:14px;line-height:1.6;"><strong>Tu correo es la llave de la cuenta.</strong> Al abrir el enlace vas a confirmar el mail y revisar tres datos del sistema viejo (pueden venir mal por el reimport):</p>
+      <ul style="font-size:14px;line-height:1.7;padding-left:20px;margin:12px 0;">
+        <li><strong>Nombre completo</strong></li>
+        <li><strong>Teléfono</strong></li>
+        <li><strong>Cédula / documento de identidad</strong></li>
+      </ul>
+      <p style="font-size:14px;line-height:1.6;">Corregí lo que esté mal, guardá, y después creás tu PIN. Esta invitación no activa un plan ni incluye el primer día gratis.</p>
+      <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:13px;line-height:1.6;margin:16px 0;"><strong>Recordá:</strong> no entres a ciegas con la cédula del archivo viejo. Primero verificá el correo y confirmá nombre, teléfono e ID.</div>
       <p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>
       <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">${
-        bound ? "Confirmar correo y entrar a la app" : "Aceptar invitación y crear mi cuenta"
+        bound ? "Verificar correo y mis datos" : "Aceptar invitación y crear mi cuenta"
       }</a>
       <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Este enlace es personal, se usa una sola vez y vence en ${args.expiresHours} horas. Si no solicitaste esta invitación, podés ignorar el correo.</p>`,
     ),
@@ -540,12 +544,20 @@ export async function sendCampaignEmail(args: {
   const button = args.ctaLabel
     ? `<a href="${escapeHtml(absoluteAppUrl(safePath))}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">${escapeHtml(args.ctaLabel)}</a>`
     : "";
+  const returnActions = `<div style="margin:22px 0 4px;padding:16px;background:#f7f9ec;border-left:4px solid #d8ff3e;">
+    <p style="margin:0 0 10px;font-size:13px;font-weight:900;text-transform:uppercase;">¿Qué querés hacer ahora?</p>
+    <p style="margin:0;font-size:13px;line-height:2;">
+      <a href="${escapeHtml(absoluteAppUrl("/app"))}" style="color:#111;font-weight:bold;">Entrar a mi cuenta</a><br>
+      <a href="${escapeHtml(absoluteAppUrl("/primer-dia#registro"))}" style="color:#111;font-weight:bold;">Crear o retomar mi registro</a><br>
+      <a href="${escapeHtml(absoluteAppUrl("/precios#inscripcion"))}" style="color:#111;font-weight:bold;">Activar un plan</a>
+    </p>
+  </div>`;
   return sendEmail({
     to: args.to,
     optional: true,
     idempotencyKey: args.idempotencyKey,
     subject: args.subject,
-    html: layout(escapeHtml(args.title), `${paragraphs}${button}`),
+    html: layout(escapeHtml(args.title), `${paragraphs}${button}${returnActions}`),
   });
 }
 
@@ -657,6 +669,29 @@ export async function sendPinRecoveryOtpEmail(args: {
 /** Notificacion al admin cuando se registra un nuevo socio con primer dia gratis. */
 export function adminNotificationAddress() {
   return process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || "aallanrd@gmail.com";
+}
+
+export async function sendAdminEmailOptOutNotification(args: {
+  email: string;
+  reason: string;
+  reasonLabel: string;
+  feedback?: string;
+}) {
+  return sendEmail({
+    to: adminNotificationAddress(),
+    managePreferences: false,
+    subject: `Nueva baja de correo y motivo — Xtreme Gym`,
+    html: layout(
+      "Preferencia de contacto recibida",
+      `<p style="font-size:14px;line-height:1.7;">Una persona desactivó los correos opcionales y compartió el motivo. La respuesta también quedó disponible en el Centro de correos de Super Admin.</p>
+      <table style="border-collapse:collapse;margin:12px 0;">
+        ${row("Correo", escapeHtml(args.email))}
+        ${row("Motivo", escapeHtml(args.reasonLabel))}
+        ${args.feedback ? row("Comentario", escapeHtml(args.feedback)) : ""}
+      </table>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">No se le enviarán más campañas ni recordatorios opcionales. Los avisos transaccionales y de seguridad permanecen disponibles.</p>`,
+    ),
+  });
 }
 
 export async function sendAdminOperationalAlert(args: {

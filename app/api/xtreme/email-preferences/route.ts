@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { absoluteAppUrl } from "@/lib/constants/app-url";
 import { getDb } from "@/lib/helpers/mongodb";
+import { sendAdminEmailOptOutNotification } from "@/lib/helpers/email";
 import {
   emailFromPreferencesToken,
   emailPreferencesToken,
@@ -21,9 +22,30 @@ const ALLOWED_REASONS = new Set([
   "not_relevant",
   "prefer_app",
   "no_longer_member",
+  "price",
+  "schedule",
+  "moved_away",
+  "health",
+  "bad_experience",
+  "temporary_break",
   "other",
   "one_click",
 ]);
+
+const REASON_LABELS: Record<string, string> = {
+  too_many: "Recibe demasiados correos",
+  not_relevant: "El contenido no le resulta relevante",
+  prefer_app: "Prefiere revisar todo desde la app",
+  no_longer_member: "Ya no entrena en Xtreme Gym",
+  price: "El precio no se ajusta a su situación",
+  schedule: "Los horarios no le funcionan",
+  moved_away: "Se mudó o vive lejos",
+  health: "Salud, lesión o condición personal",
+  bad_experience: "Tuvo una mala experiencia",
+  temporary_break: "Necesita una pausa temporal",
+  other: "Otro motivo",
+  one_click: "Baja directa desde el correo",
+};
 
 const DISABLED_PREFS: NotificationPrefs = {
   streakRisk: false,
@@ -102,6 +124,9 @@ export async function POST(req: NextRequest) {
     const feedback = String(body.feedback || "").trim().slice(0, 500);
     const now = new Date();
     const db = await getDb();
+    const previousSuppression = await db
+      .collection(SUPPRESSIONS_COLLECTION)
+      .findOne({ email }, { projection: { reason: 1, feedback: 1 } });
 
     await Promise.all([
       db.collection(SUPPRESSIONS_COLLECTION).updateOne(
@@ -140,6 +165,20 @@ export async function POST(req: NextRequest) {
       entity: { type: "email_preference", id: member?.normalizedName || "anonymous" },
       properties: { reason },
     });
+
+    const shouldNotifyAdmin =
+      reason !== "one_click" &&
+      (!previousSuppression ||
+        previousSuppression.reason !== reason ||
+        String(previousSuppression.feedback || "") !== feedback);
+    if (shouldNotifyAdmin) {
+      await sendAdminEmailOptOutNotification({
+        email,
+        reason,
+        reasonLabel: REASON_LABELS[reason] || reason,
+        feedback: feedback || undefined,
+      });
+    }
 
     return NextResponse.json({
       ok: true,
