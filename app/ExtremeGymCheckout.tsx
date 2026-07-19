@@ -117,7 +117,7 @@ export default function ExtremeGymCheckout({
     "day-pass": {
       label: "Day pass",
       category: "Class",
-      note: "One day of access — great to book a class today.",
+      note: "One day of access - great to book a class today.",
     },
     week: { label: "Weekly plan", category: "Plan", note: "One week to build momentum." },
     fortnight: { label: "Fortnightly plan", category: "Plan", note: "A solid rhythm for consistent progress." },

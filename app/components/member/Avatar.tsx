@@ -15,7 +15,7 @@ export default function Avatar({
   className?: string;
   textClass?: string;
 }) {
-  // Caja con tamaño fijo + overflow: la foto nunca se “sale” del círculo
+  // Caja con tamaño fijo + overflow: la foto nunca se "sale" del círculo
   // (imgs grandes en flex min-width:auto suelen romper layouts estrechos).
   const boxClass = `${className} relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full`;
 

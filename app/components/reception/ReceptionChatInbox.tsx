@@ -36,7 +36,7 @@ function formatTime(value: string) {
       minute: "2-digit",
     });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -51,7 +51,7 @@ function formatWhen(value: string) {
     if (sameDay) return formatTime(value);
     return d.toLocaleDateString("es-CR", { day: "2-digit", month: "short" });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -394,7 +394,7 @@ export default function ReceptionChatInbox() {
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Respondé al visitante…"
+                placeholder="Respondé al visitante..."
                 maxLength={1000}
                 disabled={sending}
                 className="min-w-0 flex-1 border-[3px] border-white/20 bg-black/50 px-3 py-3 text-sm font-bold outline-none focus:border-[#d8ff3e]"

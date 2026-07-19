@@ -24,7 +24,7 @@ async function roleFromReq(req: NextRequest) {
 }
 
 /**
- * GET — inbox staff o hilo de una sesión:
+ * GET - inbox staff o hilo de una sesión:
  *  - sin sessionId: lista de sesiones
  *  - con sessionId: mensajes (afterSeq) y marca leídos staff
  */
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST — reply | close | reopen */
+/** POST - reply | close | reopen */
 export async function POST(req: NextRequest) {
   const role = await roleFromReq(req);
   if (!role) return unauthorized();

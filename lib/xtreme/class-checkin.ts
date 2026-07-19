@@ -1,7 +1,7 @@
 /**
  * Reglas de check-in a clase grupal:
  * - solo con reserva activa (reserved)
- * - solo dentro de la ventana horaria (inicio - early … fin + grace)
+ * - solo dentro de la ventana horaria (inicio - early ... fin + grace)
  * Al completar, la reserva pasa a attended.
  */
 import type { Db } from "mongodb";

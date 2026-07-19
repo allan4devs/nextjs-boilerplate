@@ -160,14 +160,14 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
   },
   {
     id: "winback_90",
-    label: "Win-back 90–179 d",
-    detail: "Membresía vencida hace 90–179 días, con correo único en ficha.",
+    label: "Win-back 90-179 d",
+    detail: "Membresía vencida hace 90-179 días, con correo único en ficha.",
     group: "Win-back",
   },
   {
     id: "winback_180",
-    label: "Win-back 180–364 d",
-    detail: "Vencidos hace 6–12 meses con correo usable.",
+    label: "Win-back 180-364 d",
+    detail: "Vencidos hace 6-12 meses con correo usable.",
     group: "Win-back",
   },
   {
@@ -179,7 +179,7 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
   {
     id: "possible_foreign",
     label: "Posibles extranjeros",
-    detail: "Señal blanda (DIMEX / doc 8–12 dígitos / nombres). Activación por correo.",
+    detail: "Señal blanda (DIMEX / doc 8-12 dígitos / nombres). Activación por correo.",
     group: "Segmentos",
   },
   {
@@ -303,7 +303,7 @@ type CampaignTemplate = {
   ctaPath: string;
 };
 
-/** Plantillas listas por audiencia — tono tico, claro y positivo. */
+/** Plantillas listas por audiencia - tono tico, claro y positivo. */
 const CLAIM_BASE: CampaignTemplate = {
   subject: "Activá tu plan en Xtreme Gym cuando querás",
   title: "Tu cuenta ya está lista en Xtreme Gym Ciudad Quesada",
@@ -315,7 +315,7 @@ const CLAIM_BASE: CampaignTemplate = {
     "• Niveles, entrenamientos y máquinas\n" +
     "• Seguimiento de salud y progreso\n" +
     "• Promociones y comunidad\n\n" +
-    "El enlace es personal y vence en 72 horas. Pura vida — equipo Xtreme Gym, Ciudad Quesada.",
+    "El enlace es personal y vence en 72 horas. Pura vida - equipo Xtreme Gym, Ciudad Quesada.",
   ctaLabel: "Revisar datos y elegir mi plan",
   ctaPath: "/registro/confirmar",
 };
@@ -325,12 +325,12 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
   claim_recovered: {
     ...CLAIM_BASE,
     subject: "Confirmá tus datos en Xtreme Gym",
-    title: "Encontramos tu ficha — activá la app",
+    title: "Encontramos tu ficha - activá la app",
     message:
       "Hola. Según la lista del gym, este correo te pertenece y ya teníamos tu nombre en Xtreme Gym.\n\n" +
       "Tocá el enlace personal: vas a ver nombre, teléfono y cédula para confirmarlos o corregirlos, y creás tu PIN de 4 dígitos.\n\n" +
       "Así dejás la cuenta lista para reservar clases y usar la app.\n\n" +
-      "El enlace vence en 72 horas. Pura vida — Xtreme Gym, Ciudad Quesada.",
+      "El enlace vence en 72 horas. Pura vida - Xtreme Gym, Ciudad Quesada.",
     ctaLabel: "Confirmar mis datos",
   },
   claim_native: {
@@ -340,16 +340,16 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     message:
       "Hola. Tu correo ya está en la ficha de Xtreme Gym, pero todavía no lo verificaste.\n\n" +
       "Con el enlace de este mensaje completás o corregís tus datos y creás tu PIN.\n\n" +
-      "Pura vida — equipo Xtreme.",
+      "Pura vida - equipo Xtreme.",
   },
   claim_active_plan: {
-    subject: "Tu plan en Xtreme ya está activo — confirmá tus datos",
+    subject: "Tu plan en Xtreme ya está activo - confirmá tus datos",
     title: "Ya tenés plan: solo falta confirmar la cuenta",
     message:
       "Hola. En Xtreme Gym ya figurás con un plan vigente (semana, quincena, mes o adultos mayores).\n\n" +
       "Con este enlace revisás nombre, teléfono y cédula, y creás tu PIN de 4 dígitos. Al entrar a la app vas a ver tu plan tal como está en recepción.\n\n" +
       "No es una venta nueva: es solo para que uses la app con lo que ya pagaste.\n\n" +
-      "El enlace vence en 72 horas. Pura vida — Xtreme Gym, Ciudad Quesada.",
+      "El enlace vence en 72 horas. Pura vida - Xtreme Gym, Ciudad Quesada.",
     ctaLabel: "Confirmar mis datos",
     ctaPath: "/registro/confirmar",
   },
@@ -360,7 +360,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
       "Hola. Este correo aparece en la lista de contactos de Xtreme Gym (Ciudad Quesada).\n\n" +
       "Si entrenás o entrenaste con nosotros, tocá el enlace y registrate con tu correo y tu cédula (o documento). Creás un PIN de 4 dígitos y quedás listo para usar la app, reservar y ver tu progreso.\n\n" +
       "Si este correo no es tuyo o no querés recibir mensajes del gym, podés ignorar este mail o darte de baja al final.\n\n" +
-      "El enlace vence en 72 horas. Pura vida — equipo Xtreme Gym.",
+      "El enlace vence en 72 horas. Pura vida - equipo Xtreme Gym.",
     ctaLabel: "Registrarme con correo y cédula",
     ctaPath: "/registro/confirmar",
   },
@@ -371,10 +371,10 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     message:
       "Hola. Asociamos este correo a tu ficha en Xtreme Gym a partir de la lista del gimnasio (nombre y apellidos).\n\n" +
       "Si todavía no activaste la app, usá el enlace para revisar tus datos y crear tu PIN. Si ya tenés acceso, podés entrar directo a la app.\n\n" +
-      "Pura vida — Xtreme Gym, Ciudad Quesada.",
+      "Pura vida - Xtreme Gym, Ciudad Quesada.",
   },
   winback_90: {
-    subject: "Te extrañamos en Xtreme — volvé cuando quieras",
+    subject: "Te extrañamos en Xtreme - volvé cuando quieras",
     title: "Tu membresía venció hace poco",
     message:
       "Hola. Hace unos meses se te venció el plan en Xtreme Gym y nos encantaría verte de nuevo en el piso.\n\n" +
@@ -421,7 +421,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/registro/confirmar",
   },
   unregistered: {
-    subject: "Volvé a Xtreme Gym — Ciudad Quesada",
+    subject: "Volvé a Xtreme Gym - Ciudad Quesada",
     title: "Te extrañamos en el piso",
     message:
       "Hola. Estamos armando de nuevo la comunidad de Xtreme Gym con app, reservas y planes claros.\n\n" +
@@ -441,7 +441,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/registro/confirmar",
   },
   never_opened: {
-    subject: "Ya tenés cuenta en Xtreme — abrí la app",
+    subject: "Ya tenés cuenta en Xtreme - abrí la app",
     title: "Tu app te está esperando",
     message:
       "Hola. Tu correo ya está listo en Xtreme Gym, pero todavía no abriste la app.\n\n" +
@@ -451,7 +451,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/app",
   },
   inactive: {
-    subject: "Hace rato no te vemos en Xtreme — ¿volvemos?",
+    subject: "Hace rato no te vemos en Xtreme - ¿volvemos?",
     title: "Tu racha te extraña",
     message:
       "Hola. Hace un tiempo no abrís la app ni marcás entrenos en Xtreme Gym.\n\n" +
@@ -471,7 +471,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/app",
   },
   plan_week: {
-    subject: "Tu plan semanal en Xtreme — sacale el jugo",
+    subject: "Tu plan semanal en Xtreme - sacale el jugo",
     title: "Semana de entreno, bien enfocada",
     message:
       "Hola. Tenés un plan semanal activo en Xtreme Gym: ideal para meterle con constancia sin enredos.\n\n" +
@@ -481,7 +481,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/app",
   },
   plan_fortnight: {
-    subject: "Tu plan quincenal Xtreme — 15 días para rendir",
+    subject: "Tu plan quincenal Xtreme - 15 días para rendir",
     title: "Quincena en marcha",
     message:
       "Hola. Vas con plan quincenal en Xtreme Gym: dos semanas para armar hábito y ver progreso.\n\n" +
@@ -491,7 +491,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/app",
   },
   plan_month: {
-    subject: "Tu plan mensual Xtreme — el ritmo que funciona",
+    subject: "Tu plan mensual Xtreme - el ritmo que funciona",
     title: "Mes de constancia",
     message:
       "Hola. Tu plan mensual en Xtreme Gym te da el mes completo para entrenar a tu ritmo: fuerza, cardio o funcional.\n\n" +
@@ -501,7 +501,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/app",
   },
   plan_quarter: {
-    subject: "Plan trimestral Xtreme — 3 meses de progresión",
+    subject: "Plan trimestral Xtreme - 3 meses de progresión",
     title: "Vas a largo plazo",
     message:
       "Hola. Con el plan trimestral en Xtreme Gym tenés tiempo de verdad para subir cargas, mejorar técnica y armar hábito.\n\n" +
@@ -511,7 +511,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/app",
   },
   plan_free_day: {
-    subject: "Tu primer día en Xtreme — no lo dejes pasar",
+    subject: "Tu primer día en Xtreme - no lo dejes pasar",
     title: "El primer día gratis te espera",
     message:
       "Hola. Activaste el primer día gratis en Xtreme Gym. Cuando vengas, presentate en recepción con tu nombre; el equipo te orienta en las zonas.\n\n" +
@@ -531,7 +531,7 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/adultos-mayores",
   },
   plan_other: {
-    subject: "Tu plan en Xtreme Gym — un recordatorio amable",
+    subject: "Tu plan en Xtreme Gym - un recordatorio amable",
     title: "Seguimos con vos",
     message:
       "Hola. Tenés un plan especial o personalizado en Xtreme Gym.\n\n" +
@@ -551,12 +551,12 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/precios",
   },
   imported: {
-    subject: "Xtreme Gym te escribe — lista del gimnasio",
+    subject: "Xtreme Gym te escribe - lista del gimnasio",
     title: "Seguimos en contacto",
     message:
       "Hola. Formás parte de la lista de contactos de Xtreme Gym en Ciudad Quesada.\n\n" +
       "Queremos invitarte a conocer (o reencontrarte con) el gym: máquinas, zona funcional, app de socios y planes claros. Si ya no querés recibir correos, usá el enlace de preferencias al pie de este mensaje.\n\n" +
-      "Pura vida — el equipo Xtreme.",
+      "Pura vida - el equipo Xtreme.",
     ctaLabel: "Conocer Xtreme Gym",
     ctaPath: "/",
   },
@@ -902,14 +902,14 @@ export default function EmailCampaignCenter() {
             [(data?.diagnostics.quarantinedMembers ?? 0) + (data?.diagnostics.unsafeIdentityMatches ?? 0), "No seguros (claim)", "Aislados de activación con match; sí entran en invitación masiva"],
           ].map(([value, label, detail]) => (
             <div key={String(label)} className="border-2 border-white/10 bg-black/40 p-3">
-              <div className="text-2xl font-black text-cyan-100">{value ?? "—"}</div>
+              <div className="text-2xl font-black text-cyan-100">{value ?? "-"}</div>
               <div className="mt-1 text-[10px] font-black uppercase tracking-wide text-white">{label}</div>
               <div className="mt-1 text-[10px] font-semibold text-white/35">{detail}</div>
             </div>
           ))}
         </div>
         <p className="mt-3 text-[11px] font-semibold text-white/45">
-          No seguros: {data?.diagnostics.quarantinedMembers ?? "—"} en cuarentena · {data?.diagnostics.quarantineWithPreviousEmail ?? "—"} con correo anterior guardado · {data?.diagnostics.unsafeIdentityMatches ?? "—"} nombre/correo dudoso · {data?.diagnostics.quarantineShared ?? "—"} compartidos · {data?.diagnostics.quarantinePlaceholder ?? "—"} placeholders. Corré el script de recovery para realinear.
+          No seguros: {data?.diagnostics.quarantinedMembers ?? "-"} en cuarentena · {data?.diagnostics.quarantineWithPreviousEmail ?? "-"} con correo anterior guardado · {data?.diagnostics.unsafeIdentityMatches ?? "-"} nombre/correo dudoso · {data?.diagnostics.quarantineShared ?? "-"} compartidos · {data?.diagnostics.quarantinePlaceholder ?? "-"} placeholders. Corré el script de recovery para realinear.
         </p>
         {coverage && (
           <div className="mt-4 border-2 border-white/10 bg-black/40 p-3">
@@ -958,7 +958,7 @@ export default function EmailCampaignCenter() {
                   }`}
                 >
                   <div className="text-2xl font-black text-lime-200">
-                    {data?.audiences[item.id] ?? "—"}
+                    {data?.audiences[item.id] ?? "-"}
                   </div>
                   <div className="mt-1 text-xs font-black uppercase">{item.label}</div>
                   <p className="mt-2 text-xs font-semibold leading-relaxed text-white/40">
@@ -971,7 +971,7 @@ export default function EmailCampaignCenter() {
         );
       })}
       <p className="text-xs font-bold text-white/40">
-        Bajas/supresiones protegidas: {data?.audiences.suppressed ?? "—"} · Preferí «Activar · Excel /
+        Bajas/supresiones protegidas: {data?.audiences.suppressed ?? "-"} · Preferí «Activar · Excel /
         cuarentena» para la campaña masiva de claim.
       </p>
 
@@ -1214,7 +1214,7 @@ export default function EmailCampaignCenter() {
                   <span className="font-black text-white">{item.email}</span>
                   <span className="font-black uppercase text-red-200">{OPT_OUT_REASON_LABELS[item.reason || ""] || item.reason || "Sin motivo"}</span>
                 </div>
-                {item.feedback && <p className="mt-2 whitespace-pre-wrap font-semibold leading-relaxed text-white/60">“{item.feedback}”</p>}
+                {item.feedback && <p className="mt-2 whitespace-pre-wrap font-semibold leading-relaxed text-white/60">"{item.feedback}"</p>}
                 {date && <p className="mt-2 font-semibold text-white/30">{new Date(date).toLocaleString("es-CR")}</p>}
               </div>
             );

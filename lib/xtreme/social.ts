@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Capa social (Fase 5): liga mensual, referidos y compas.
+ * Xtreme Gym - Capa social (Fase 5): liga mensual, referidos y compas.
  * Funciones puras, sin dependencias de servidor: se puede importar
  * tanto desde rutas API como desde componentes cliente.
  */
@@ -15,7 +15,7 @@ import {
 } from "./gamification";
 
 // ---------------------------------------------------------------------------
-// XP mensual (insumo del leaderboard — se reinicia cada mes)
+// XP mensual (insumo del leaderboard - se reinicia cada mes)
 // ---------------------------------------------------------------------------
 
 /** "YYYY-MM" del mes al que pertenece una fecha ISO. */
@@ -112,7 +112,7 @@ export function firstNameOf(name: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Referidos — "Trae un amigo: ambos ganan una semana"
+// Referidos - "Trae un amigo: ambos ganan una semana"
 // ---------------------------------------------------------------------------
 
 export const REFERRAL_REWARD_DAYS = 7;

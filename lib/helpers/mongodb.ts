@@ -89,7 +89,7 @@ async function ensureIndexes(db: Db) {
     db.collection("xtreme_gym_referrals").createIndex({ referrer: 1, createdAt: -1 }),
     db.collection("xtreme_gym_buddy_requests").createIndex({ from: 1, to: 1 }, { unique: true }),
     db.collection("xtreme_gym_buddy_requests").createIndex({ to: 1, status: 1 }),
-    // Strategy 2.0 hard path — member sessions, entitlements, class inventory
+    // Strategy 2.0 hard path - member sessions, entitlements, class inventory
     db.collection("xtreme_gym_sessions").createIndex({ tokenHash: 1 }, { unique: true }),
     db.collection("xtreme_gym_sessions").createIndex({ memberKey: 1, revokedAt: 1 }),
     db.collection("xtreme_gym_sessions").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),

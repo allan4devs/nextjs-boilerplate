@@ -303,7 +303,7 @@ export function useResumenViewModel(os: MemberOs): {
                 ? "Llegaste al nivel máximo. Seguí entrenando para mantener tu racha."
                 : `${milestoneLeft.toLocaleString()} XP para el nivel ${level + 1}.`,
             weeksStreak: gami.weeksStreak,
-            weekLabel: `Esta semana — ${weekDoneCount}/${weeklyGoal}`,
+            weekLabel: `Esta semana - ${weekDoneCount}/${weeklyGoal}`,
             days: weekDates.map((date) => ({
               date,
               label: dayLabel(date),
@@ -501,6 +501,7 @@ export function useResumenViewModel(os: MemberOs): {
       const training = TRAININGS.find((entry) => entry.id === trainingId);
       const classModel = model.classes.find((entry) => entry.id === trainingId);
       if (!training || !classModel?.isToday || classModel.hasStarted) return;
+      // reserveTraining ya bloquea sin plan activo y abre el modal de acceso.
       void reserveTraining(training);
     },
     [model.classes, reserveTraining],

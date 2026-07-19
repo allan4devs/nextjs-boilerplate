@@ -31,7 +31,7 @@ type VerifyState =
       boundProfile: boolean;
       neverRegistered: boolean;
       canEditName: boolean;
-      /** Datos en archivo (import / ficha) — se muestran como referencia. */
+      /** Datos en archivo (import / ficha) - se muestran como referencia. */
       savedProfile: SavedProfile;
     }
   | {
@@ -365,7 +365,7 @@ function ConfirmInner() {
         {state.phase === "loading" && (
           <div className="grid place-items-center border border-white/10 bg-[#111] py-20">
             <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
-            <p className="mt-4 text-sm font-bold text-white/50">Validando tu enlace…</p>
+            <p className="mt-4 text-sm font-bold text-white/50">Validando tu enlace...</p>
           </div>
         )}
 
@@ -506,7 +506,7 @@ function ConfirmInner() {
                   Cédula / documento
                   {!state.savedProfile.cedula ? (
                     <span className="ml-2 font-semibold normal-case tracking-normal text-orange-200/90">
-                      (no la teníamos — escribila)
+                      (no la teníamos - escribila)
                     </span>
                   ) : null}
                 </span>
@@ -537,7 +537,7 @@ function ConfirmInner() {
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
-                  placeholder="Ganar fuerza, bajar grasa…"
+                  placeholder="Ganar fuerza, bajar grasa..."
                 />
               </label>
             </section>

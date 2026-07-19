@@ -68,7 +68,7 @@ export const SYSTEM_LINKS: SystemLinkItem[] = [
 ];
 
 /**
- * Lista compacta de sistemas con iconos — para sidebar mobile / menús internos.
+ * Lista compacta de sistemas con iconos - para sidebar mobile / menús internos.
  */
 export default function SystemLinks({
   onNavigate,

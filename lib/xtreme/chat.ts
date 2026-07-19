@@ -159,7 +159,7 @@ function toIso(value: Date | string) {
 
 function previewOf(body: string) {
   if (body.length <= CHAT_PREVIEW_MAX) return body;
-  return `${body.slice(0, CHAT_PREVIEW_MAX - 1)}…`;
+  return `${body.slice(0, CHAT_PREVIEW_MAX - 1)}...`;
 }
 
 export async function findSessionById(db: Db, sessionId: string): Promise<ChatSessionDoc | null> {

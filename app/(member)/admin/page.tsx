@@ -461,7 +461,7 @@ function memberDraftFrom(member: AdminMember): MemberDraft {
     cedula: member.cedula ?? "",
     coach: member.coach,
     notes: member.notes,
-    plan: member.plan === "—" ? "Xtreme Mensual" : member.plan,
+    plan: member.plan === "-" ? "Xtreme Mensual" : member.plan,
     nextBillingDate: member.nextBillingDate,
     startedAt: member.startedAt || new Date().toISOString().slice(0, 10),
   };
@@ -1068,15 +1068,32 @@ export default function XtremeAdminPage() {
         endsOn?: string;
         emailSent?: boolean;
         emailAvailable?: boolean;
+        emailKind?: "plan" | "invite" | "none";
+        emailError?: string | null;
+        inviteExpiresHours?: number | null;
+        extended?: boolean;
+        hasPin?: boolean;
+        needsRegistration?: boolean;
         error?: string;
       };
       if (!response.ok || !json.ok) throw new Error(json.error ?? "No se pudo otorgar el plan.");
-      const emailStatus = json.emailSent
-        ? " Le enviamos la confirmacion por correo."
-        : !json.emailAvailable
-          ? " El socio no tiene un correo disponible."
-          : " El plan quedó activo, pero el correo no pudo enviarse.";
-      setMessage(`${json.plan} activado para ${quickPlanMember.memberName} hasta ${json.endsOn}.${emailStatus}`);
+      const extendLabel = json.extended ? " (días sumados al plan vigente)" : "";
+      let emailStatus = "";
+      if (json.emailSent && json.emailKind === "invite") {
+        emailStatus = ` Le enviamos un enlace para completar registro y crear PIN (vence en ${json.inviteExpiresHours ?? 24} h). El plan se conserva.`;
+      } else if (json.emailSent && json.emailKind === "plan") {
+        emailStatus = json.hasPin
+          ? " Le avisamos por correo que el plan ya está activo."
+          : " Le avisamos por correo: plan activo y que cree el PIN en la app.";
+      } else if (!json.emailAvailable) {
+        emailStatus =
+          " El plan quedó activo, pero el socio no tiene correo en la ficha: invitalo después con un correo válido.";
+      } else {
+        emailStatus = ` El plan quedó activo, pero el correo no se envió${json.emailError ? `: ${json.emailError}` : "."}`;
+      }
+      setMessage(
+        `${json.plan} activado para ${quickPlanMember.memberName} hasta ${json.endsOn}${extendLabel}.${emailStatus}`,
+      );
       setQuickPlanMember(null);
       await load(code);
     } catch (err) {
@@ -1753,7 +1770,7 @@ export default function XtremeAdminPage() {
                   <div className="border border-white/10 bg-white/[0.04] p-5">
                     <div className="flex items-center gap-3">
                       <DoorOpen className="h-5 w-5 text-cyan-300" />
-                      <h2 className="text-lg font-black uppercase">Ingresos al gym — ultimos 7 dias</h2>
+                      <h2 className="text-lg font-black uppercase">Ingresos al gym - ultimos 7 dias</h2>
                     </div>
                     <div className="mt-4 border border-white/10 bg-black/25 p-3">
                       <BarTrendChart
@@ -1771,7 +1788,7 @@ export default function XtremeAdminPage() {
                   <div className="border border-white/10 bg-white/[0.04] p-5">
                     <div className="flex items-center gap-3">
                       <Smartphone className="h-5 w-5 text-lime-300" />
-                      <h2 className="text-lg font-black uppercase">Entradas al app — ultimos 7 dias</h2>
+                      <h2 className="text-lg font-black uppercase">Entradas al app - ultimos 7 dias</h2>
                     </div>
                     <div className="mt-4 border border-white/10 bg-black/25 p-3">
                       <BarTrendChart
@@ -1872,7 +1889,7 @@ export default function XtremeAdminPage() {
                       <span className="text-[11px] font-semibold text-white/40">
                         {filteredMembers.length === 0
                           ? "0 resultados"
-                          : `${(safeMemberPage - 1) * memberPageSize + 1}–${Math.min(
+                          : `${(safeMemberPage - 1) * memberPageSize + 1}-${Math.min(
                               safeMemberPage * memberPageSize,
                               filteredMembers.length,
                             )} de ${filteredMembers.length}`}
@@ -1959,8 +1976,8 @@ export default function XtremeAdminPage() {
                               <span className="mt-1 inline-block text-[10px] font-black uppercase tracking-wide text-lime-300/70">Click para mas info →</span>
                             </td>
                             <td className="px-3 py-3 text-xs font-semibold text-white/55">
-                              <div>{m.phone || "—"}</div>
-                              <div className="truncate max-w-[140px]">{m.email || "—"}</div>
+                              <div>{m.phone || "-"}</div>
+                              <div className="truncate max-w-[140px]">{m.email || "-"}</div>
                               {m.email ? (
                                 <div
                                   className={`mt-0.5 text-[10px] font-black uppercase tracking-wide ${
@@ -1983,7 +2000,7 @@ export default function XtremeAdminPage() {
                                 {m.totalWorkouts} ent · {m.totalMinutes} min
                               </div>
                             </td>
-                            <td className="px-3 py-3 text-white/70">{m.coach || "—"}</td>
+                            <td className="px-3 py-3 text-white/70">{m.coach || "-"}</td>
                             <td className="px-3 py-3">
                               <span className={`inline-block border px-2 py-1 text-[10px] font-black uppercase ${STATUS_STYLES[m.membershipStatus]}`}>
                                 {STATUS_LABEL[m.membershipStatus]}
@@ -2055,7 +2072,7 @@ export default function XtremeAdminPage() {
                                     !m.email
                                       ? "Sin correo registrado"
                                       : !m.emailVerified
-                                        ? "Correo sin verificar — usá Invitar app"
+                                        ? "Correo sin verificar - usá Invitar app"
                                         : "Enviar recordatorio de membresia por correo"
                                   }
                                   className="grid h-8 w-8 place-items-center border border-white/10 text-white/60 transition hover:border-orange-300 hover:text-orange-200 disabled:opacity-40"
@@ -2134,7 +2151,7 @@ export default function XtremeAdminPage() {
                           return (
                             <span key={page} className="inline-flex items-center gap-1.5">
                               {showGap && (
-                                <span className="px-1 text-[11px] font-black text-white/30">…</span>
+                                <span className="px-1 text-[11px] font-black text-white/30">...</span>
                               )}
                               <button
                                 type="button"
@@ -2322,11 +2339,11 @@ export default function XtremeAdminPage() {
                                     {s.memberName || "Anónimo"}
                                   </p>
                                   <p className="text-[10px] font-bold uppercase text-white/40">
-                                    {s.source} · {s.id.slice(0, 14)}…
+                                    {s.source} · {s.id.slice(0, 14)}...
                                   </p>
                                 </td>
                                 <td className="px-3 py-3 font-mono text-xs text-cyan-200">
-                                  <div>{s.entryPath || "—"}</div>
+                                  <div>{s.entryPath || "-"}</div>
                                   {s.exitPath && s.exitPath !== s.entryPath && (
                                     <div className="text-white/40">→ {s.exitPath}</div>
                                   )}
@@ -2427,7 +2444,7 @@ export default function XtremeAdminPage() {
                                       {ev.path ? ` · ${ev.path}` : ""}
                                       {ev.tab ? ` · tab ${ev.tab}` : ""}
                                       {ev.action ? ` · ${ev.action}` : ""}
-                                      {ev.label ? ` · “${ev.label}”` : ""}
+                                      {ev.label ? ` · "${ev.label}"` : ""}
                                       {ev.meta && (
                                         <span className="mt-1 block font-mono text-[10px] text-cyan-200/70">
                                           {Object.entries(ev.meta)
@@ -2529,7 +2546,7 @@ export default function XtremeAdminPage() {
                 <div className="border border-white/10 bg-white/[0.04] p-5">
                   <div className="flex items-center gap-3">
                     <TrendingUp className="h-5 w-5 text-lime-300" />
-                    <h2 className="text-lg font-black uppercase">Ingresos por dia — ultimos 14 dias</h2>
+                    <h2 className="text-lg font-black uppercase">Ingresos por dia - ultimos 14 dias</h2>
                   </div>
                   <div className="mt-4 border border-white/10 bg-black/25 p-3">
                     <BarTrendChart
@@ -2963,7 +2980,7 @@ export default function XtremeAdminPage() {
                     </div>
 
                     <div className="border border-white/10 bg-white/[0.04] p-5">
-                      <h2 className="text-lg font-black uppercase">Socio — badges y ajustes</h2>
+                      <h2 className="text-lg font-black uppercase">Socio - badges y ajustes</h2>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2">
                         <input
                           value={gamiMemberQ}
@@ -3306,7 +3323,7 @@ function InviteMemberModal({
         <div className="mt-5 space-y-3">
           <GameCallout tone="lime">
             Se guarda el correo en la ficha (sin verificar) y se manda un enlace de 24 h. Al
-            confirmarlo, el correo queda verificado y unido a este socio — no crea ficha nueva.
+            confirmarlo, el correo queda verificado y unido a este socio - no crea ficha nueva.
           </GameCallout>
           <label className="block">
             <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Correo</span>
@@ -3395,9 +3412,18 @@ function QuickPlanModal({
           ))}
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 space-y-2">
           <GameCallout tone="lime">
-            Si la membresia sigue activa, los {selected.days} dias se suman al vencimiento actual. Si esta vencida, empiezan hoy.
+            Si la membresía sigue activa, los {selected.days} días se suman al vencimiento actual. Si está vencida, empiezan hoy.
+          </GameCallout>
+          <GameCallout tone="orange">
+            {member.emailVerified
+              ? member.email
+                ? "Tiene correo verificado: le avisamos por correo. Si aún no tiene PIN, el mail le indica cómo crearlo en la app."
+                : "Sin correo en la ficha: el plan se activa igual, pero no se envía correo."
+              : member.email
+                ? "Aún no completó registro: le mandamos enlace para confirmar correo, datos y crear PIN. Su plan no se borra al registrarse."
+                : "Sin correo en la ficha: el plan se activa, pero tenés que invitarlo después con un correo para que cree el PIN."}
           </GameCallout>
         </div>
         <div className="mt-5 flex gap-2">
@@ -3642,7 +3668,7 @@ function MemberModal({
             </div>
             <div className="border-[3px] border-[#d8ff3e]/40 bg-black/30 p-3 text-center">
               <Activity className="mx-auto h-4 w-4 text-[#d8ff3e]" />
-              <p className="mt-1 text-lg font-black">{member.latestWeight ? `${member.latestWeight}` : "—"}</p>
+              <p className="mt-1 text-lg font-black">{member.latestWeight ? `${member.latestWeight}` : "-"}</p>
               <p className="text-[10px] font-black uppercase text-white/40">Peso kg</p>
             </div>
           </div>
@@ -3770,11 +3796,11 @@ function UserDetailModal({
             <div className="border-[3px] border-white/15 bg-black/30 p-3 sm:p-5">
               <div className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Informacion del socio</div>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-white/50">Telefono</span><span className="font-semibold">{member.phone || "—"}</span></div>
+                <div className="flex justify-between"><span className="text-white/50">Telefono</span><span className="font-semibold">{member.phone || "-"}</span></div>
                 <div className="flex justify-between gap-2">
                   <span className="text-white/50 shrink-0">Email</span>
                   <span className="font-semibold truncate max-w-[200px] text-right">
-                    {member.email || "—"}
+                    {member.email || "-"}
                     {member.email ? (
                       <span className={`ml-2 text-[10px] font-black uppercase ${member.emailVerified ? "text-lime-300" : "text-orange-300"}`}>
                         {member.emailVerified ? "OK" : "sin verificar"}
@@ -3782,9 +3808,9 @@ function UserDetailModal({
                     ) : null}
                   </span>
                 </div>
-                <div className="flex justify-between"><span className="text-white/50">Coach asignado</span><span className="font-semibold">{member.coach || "—"}</span></div>
-                <div className="flex justify-between"><span className="text-white/50">Objetivo</span><span className="font-semibold">{member.goal || "—"}</span></div>
-                <div className="flex justify-between"><span className="text-white/50">Entrenamiento favorito</span><span className="font-semibold">{member.favoriteTraining || "—"}</span></div>
+                <div className="flex justify-between"><span className="text-white/50">Coach asignado</span><span className="font-semibold">{member.coach || "-"}</span></div>
+                <div className="flex justify-between"><span className="text-white/50">Objetivo</span><span className="font-semibold">{member.goal || "-"}</span></div>
+                <div className="flex justify-between"><span className="text-white/50">Entrenamiento favorito</span><span className="font-semibold">{member.favoriteTraining || "-"}</span></div>
               </div>
               {member.notes && (
                 <div className="mt-4 border-t border-white/10 pt-3 text-xs">
@@ -3802,7 +3828,7 @@ function UserDetailModal({
                 <div className="text-white/50">Estado</div><div><span className={`inline-block px-2 py-px text-xs font-black border ${STATUS_STYLES[member.membershipStatus]}`}>{STATUS_LABEL[member.membershipStatus]}</span></div>
                 <div className="text-white/50">Dias restantes</div><div className="font-bold">{member.daysRemaining} dias</div>
                 <div className="text-white/50">Proximo cobro</div><div className="font-bold">{member.nextBillingDate}</div>
-                <div className="text-white/50">Inicio</div><div className="font-bold">{member.startedAt || "—"}</div>
+                <div className="text-white/50">Inicio</div><div className="font-bold">{member.startedAt || "-"}</div>
               </div>
             </div>
 
@@ -3856,7 +3882,7 @@ function UserDetailModal({
                   <div className="mt-3 grid gap-2 text-sm">
                     {member.trainingPlan.items.slice(0, 4).map((it, idx) => (
                       <div key={idx} className={`flex justify-between border px-3 py-1.5 text-xs ${it.done ? "border-lime-300/40 bg-lime-300/5" : "border-white/10"}`}>
-                        <span className="font-bold">{it.day || `Sesión ${idx + 1}`} — {it.focus}</span>
+                        <span className="font-bold">{it.day || `Sesión ${idx + 1}`} - {it.focus}</span>
                         <span className="text-white/50">{it.targetMinutes}min {it.done ? "✓" : ""}</span>
                       </div>
                     ))}
@@ -3866,7 +3892,7 @@ function UserDetailModal({
                   </div>
 
                   {member.trainingPlan.coachNote && (
-                    <div className="mt-3 text-xs italic text-white/70 border-l-2 border-lime-300/40 pl-3">“{member.trainingPlan.coachNote}”</div>
+                    <div className="mt-3 text-xs italic text-white/70 border-l-2 border-lime-300/40 pl-3">"{member.trainingPlan.coachNote}"</div>
                   )}
                 </div>
               ) : (
@@ -3876,7 +3902,7 @@ function UserDetailModal({
               )}
             </div>
 
-            {/* Body metrics tracking — key for personal trainer */}
+            {/* Body metrics tracking - key for personal trainer */}
             <div className="border border-white/10 bg-white/[0.015] p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -3934,7 +3960,7 @@ function UserDetailModal({
                             <td className="px-3 py-2 font-mono text-xs">{m.date}</td>
                             <td className="px-3 py-2 font-bold">{m.weightKg}</td>
                             <td className="px-3 py-2 font-bold">{m.waistCm}</td>
-                            <td className="px-3 py-2 text-xs text-white/60 truncate max-w-[200px]">{m.note || "—"}</td>
+                            <td className="px-3 py-2 text-xs text-white/60 truncate max-w-[200px]">{m.note || "-"}</td>
                           </tr>
                         ))}
                       </tbody>

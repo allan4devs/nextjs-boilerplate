@@ -36,7 +36,7 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
     weeklySessions: 3,
     objective: "Aumentar fuerza general manteniendo ejecución estable.",
     sessions: [
-      { day: "Fuerza 1", focus: "Pierna + empuje", targetMinutes: 60, exercises: "Descansar 90–120 segundos en series principales.", machines: [{ machineId: "leg-press", sets: 4, reps: 8 }, { machineId: "chest-press", sets: 4, reps: 8 }, { machineId: "leg-curl", sets: 3, reps: 10 }] },
+      { day: "Fuerza 1", focus: "Pierna + empuje", targetMinutes: 60, exercises: "Descansar 90-120 segundos en series principales.", machines: [{ machineId: "leg-press", sets: 4, reps: 8 }, { machineId: "chest-press", sets: 4, reps: 8 }, { machineId: "leg-curl", sets: 3, reps: 10 }] },
       { day: "Fuerza 2", focus: "Espalda + core", targetMinutes: 55, exercises: "Pausa de un segundo en la contracción.", machines: [{ machineId: "lat-pulldown", sets: 4, reps: 8 }, { machineId: "seated-row", sets: 4, reps: 8 }, { machineId: "cable-station", sets: 3, reps: 10, notes: "Anti-rotación" }] },
       { day: "Fuerza 3", focus: "Full body", targetMinutes: 65, exercises: "Registrar cargas y buscar una mejora pequeña por semana.", machines: [{ machineId: "leg-press", sets: 5, reps: 6 }, { machineId: "chest-press", sets: 4, reps: 8 }, { machineId: "seated-row", sets: 4, reps: 8 }] },
     ],
@@ -44,7 +44,7 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
   {
     id: "hypertrophy",
     name: "Hipertrofia",
-    description: "Volumen moderado, rangos de 8–15 y trabajo por zonas.",
+    description: "Volumen moderado, rangos de 8-15 y trabajo por zonas.",
     weeklySessions: 4,
     objective: "Ganar masa muscular con volumen progresivo y buena recuperación.",
     sessions: [

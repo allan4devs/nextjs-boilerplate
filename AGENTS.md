@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guía para agentes de código trabajando en este repo. La guía completa del proyecto está en [CLAUDE.md](CLAUDE.md) — leerla primero.
+Guía para agentes de código trabajando en este repo. La guía completa del proyecto está en [CLAUDE.md](CLAUDE.md) - leerla primero.
 
 ## Regla dura: servidores
 

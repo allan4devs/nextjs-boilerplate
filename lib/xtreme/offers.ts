@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Phase 3 offers (day-pass → plan credit).
+ * Xtreme Gym - Phase 3 offers (day-pass → plan credit).
  * Server-calculated pricing; client never supplies the trusted amount.
  */
 import type { Db } from "mongodb";

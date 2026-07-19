@@ -85,7 +85,7 @@ export default async function PreciosPage({
                           {value ? (
                             <CheckCircle2 className="mx-auto h-5 w-5 text-[#f6c400]" />
                           ) : (
-                            <span className="text-white/20">—</span>
+                            <span className="text-white/20">-</span>
                           )}
                         </td>
                       ))}

@@ -1,6 +1,6 @@
 # GROK.md
 
-Guía completa del proyecto en [CLAUDE.md](CLAUDE.md) y [AGENTS.md](AGENTS.md) — seguirlas.
+Guía completa del proyecto en [CLAUDE.md](CLAUDE.md) y [AGENTS.md](AGENTS.md) - seguirlas.
 
 ## Regla dura: servidores
 

@@ -53,7 +53,7 @@ export function classifyMemberSearchInput(raw: string): MemberSearchClass {
     return { kind: "code", code: digits, cedula: digits, q };
   }
 
-  // 4–7 dígitos puros: parcial de código, teléfono o cédula incompleta → probar varios.
+  // 4-7 dígitos puros: parcial de código, teléfono o cédula incompleta → probar varios.
   if (!hasLetters && digits.length >= 4 && compact === digits) {
     return {
       kind: "text",

@@ -126,7 +126,7 @@ self.addEventListener("notificationclick", (event) => {
           return;
         }
       } catch {
-        // client.url inválido — seguir con el siguiente.
+        // client.url inválido - seguir con el siguiente.
       }
     }
     if (self.clients.openWindow) {

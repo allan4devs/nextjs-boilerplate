@@ -1,6 +1,6 @@
 /**
- * Xtreme Gym — Class session inventory + atomic booking (Strategy 2.0 §6.2).
- * Capacity is an atomic counter on the session document — no count-then-insert race.
+ * Xtreme Gym - Class session inventory + atomic booking (Strategy 2.0 §6.2).
+ * Capacity is an atomic counter on the session document - no count-then-insert race.
  */
 import type { Db } from "mongodb";
 import {

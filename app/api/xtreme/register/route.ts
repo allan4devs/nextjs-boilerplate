@@ -32,6 +32,8 @@ import {
   isValidEmail,
   matchCedula,
   memberAccessCode,
+  isInactivePlanLabel,
+  membershipCoversToday,
   membershipStatus,
   normalizeCedula,
   normalizeEmail,
@@ -77,7 +79,7 @@ async function findMemberByEmail(db: Awaited<ReturnType<typeof getDb>>, email: s
 }
 
 /**
- * Paso 1 — correo y/o cédula. Si hay ficha importada / campaña sin verificar,
+ * Paso 1 - correo y/o cédula. Si hay ficha importada / campaña sin verificar,
  * la ligamos al pending para precargar datos en /registro/confirmar.
  * Solo se bloquea re-registro cuando el correo ya está verificado.
  */
@@ -276,11 +278,20 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     { upsert: true },
   );
 
+  const boundMs = boundMember?.membership
+    ? membershipStatus(boundMember.membership)
+    : null;
+  const boundHasPlan =
+    Boolean(boundMember) && membershipCoversToday(boundMember?.membership);
+
   const result = await sendRegistrationConfirmEmail({
     to: email,
     token,
     expiresMinutes: TOKEN_TTL_MIN,
     baseUrl: requestAppUrl(req.url),
+    memberName: expectedMemberName || undefined,
+    planLabel: boundHasPlan ? boundMs?.plan : undefined,
+    planEndsOn: boundHasPlan ? boundMs?.nextBillingDate : undefined,
   });
 
   await recordEvent(db, {
@@ -324,7 +335,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
   });
 }
 
-/** Paso 2a — validar el token sin completar el perfil (para mostrar el form). */
+/** Paso 2a - validar el token sin completar el perfil (para mostrar el form). */
 async function verifyToken(token: string) {
   if (!token) {
     return { error: "Falta el enlace de confirmación. Pedí uno nuevo desde el registro.", status: 400 as const };
@@ -474,7 +485,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Paso 2b — con el token valido, el usuario completa (o corrige) nombre, cedula y telefono.
+ * Paso 2b - con el token valido, el usuario completa (o corrige) nombre, cedula y telefono.
  * Aqui se crea o reclama el perfil y se marca el correo como verificado.
  * Import legacy: en el primer registro se permite corregir datos basura del Excel.
  */
@@ -763,16 +774,20 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     } as MemberDoc["profileClaim"];
   }
 
-  // Usar fecha de vencimiento real (no status stale) para no pisar planes del Excel.
-  const existingMembership = existing?.membership
-    ? membershipStatus(existing.membership)
-    : null;
-  const existingPlanUsable =
-    Boolean(existingMembership) &&
-    existingMembership!.daysRemaining >= 0 &&
-    !/sin plan/i.test(existingMembership!.plan || "");
+  // Plan vigente (admin/pago/Excel): NUNCA pisarlo al completar registro + PIN.
+  // Preferimos membresía ya elegida (pago) o la de la ficha que se está reclamando.
+  const candidateMembership = set.membership || existing?.membership;
+  const existingPlanUsable = membershipCoversToday(candidateMembership);
 
-  if (!existing) {
+  if (existingPlanUsable && candidateMembership) {
+    const ms = membershipStatus(candidateMembership);
+    set.membership = {
+      plan: ms.plan,
+      status: ms.status,
+      startedAt: candidateMembership.startedAt || ms.startedAt || today,
+      nextBillingDate: ms.nextBillingDate,
+    };
+  } else if (!existing) {
     // Staff (recepción/admin manual) crea cuenta sin plan.
     // Campaña / primer-día / app: primer día gratis para poder usar la app.
     set.membership = staffInvite
@@ -783,7 +798,7 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
           nextBillingDate: addDays(toUtcDate(today), -1).toISOString().slice(0, 10),
         }
       : createFreeFirstDayMembership(today);
-  } else if (staffInvite && !existing.membership) {
+  } else if (staffInvite && (!existing.membership || isInactivePlanLabel(existing.membership.plan))) {
     set.membership = {
       plan: "Sin plan activo",
       status: "expired",
@@ -796,7 +811,6 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     !existingPlanUsable
   ) {
     // Ficha importada sin plan usable: al activar por campaña/registro, dar primer día.
-    // Si ya tiene plan vigente (Excel/pago), se conserva tal cual.
     set.membership = createFreeFirstDayMembership(today);
   }
 
@@ -884,12 +898,14 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     });
   }
 
-  // Primer día solo si aplicamos membresía free day (alta nueva o ficha sin plan usable).
+  // Primer día solo si aplicamos membresía free day (nunca si ya hay plan usable del admin/pago).
   const freeFirstDay = Boolean(
     set.membership &&
       !staffInvite &&
       !paidInvite &&
-      (!existing || !existingPlanUsable),
+      !existingPlanUsable &&
+      (set.membership.plan === "Primer día gratis" ||
+        /primer\s*d[ií]a/i.test(String(set.membership.plan || ""))),
   );
   if (freeFirstDay) {
     await grantFreeFirstDayIfEligible(db, normalizedName, today);
@@ -942,7 +958,23 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
   const profileWasReady = Boolean(existing?.emailVerified && existing?.cedula);
 
   if (!profileWasReady) {
-    await sendWelcomeEmail({ to: email, memberName, accessCode, cedula });
+    // Releer ficha por si el plan venía de admin y se preservó en el $set.
+    const saved = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne(
+      { normalizedName },
+      { projection: { membership: 1 } },
+    );
+    const savedMs = membershipStatus(saved?.membership);
+    const welcomePlan =
+      membershipCoversToday(saved?.membership) && !isInactivePlanLabel(savedMs.plan)
+        ? { planLabel: savedMs.plan, planEndsOn: savedMs.nextBillingDate }
+        : {};
+    await sendWelcomeEmail({
+      to: email,
+      memberName,
+      accessCode,
+      cedula,
+      ...welcomePlan,
+    });
     await recordEvent(db, {
       type: "profile_created",
       memberId: normalizedName,
@@ -959,6 +991,8 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
         boundInvite,
         correctedImport: Boolean(existing && neverRegistered),
         claimedExistingCedula,
+        preservedPlan: existingPlanUsable,
+        plan: welcomePlan.planLabel || null,
       },
     }).catch(() => {});
   }

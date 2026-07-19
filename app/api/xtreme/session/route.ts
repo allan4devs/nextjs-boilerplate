@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   return res;
 }
 
-/** Explicit logout — revoke current session token. */
+/** Explicit logout - revoke current session token. */
 export async function DELETE(req: NextRequest) {
   const token = req.cookies.get(MEMBER_SESSION_COOKIE)?.value ?? "";
   const db = await getDb();

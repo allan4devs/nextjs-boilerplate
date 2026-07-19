@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     configured: missing.length === 0,
     publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() || "",
     deviceCount,
-    // Solo nombres de env, nunca secretos — para depurar en el cliente/UI.
+    // Solo nombres de env, nunca secretos - para depurar en el cliente/UI.
     missingKeys: missing,
   });
 }

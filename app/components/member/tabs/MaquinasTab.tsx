@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Tab Máquinas — hub táctil por zona + tiles con foto del piso.
+ * Tab Máquinas - hub táctil por zona + tiles con foto del piso.
  * Tocá una máquina para abrir la guía (modal con fotos y video).
  */
 
@@ -184,7 +184,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
         },
         {
           title: "Control",
-          body: "Bajá en 2–3 segundos. El ego del peso no paga el progreso.",
+          body: "Bajá en 2-3 segundos. El ego del peso no paga el progreso.",
           tone: "border-cyan-300/40 bg-cyan-300/[0.08]",
           label: "text-cyan-300",
         },
@@ -238,7 +238,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
         activeId={activeId}
         onActiveChange={setActiveId}
         title="Guía de máquinas"
-        subtitle="Fotos del piso + videos de técnica — tocá y abrí la guía."
+        subtitle="Fotos del piso + videos de técnica - tocá y abrí la guía."
         header={
           <div className="border-[3px] border-[#d8ff3e]/35 bg-[#d8ff3e]/[0.07] p-3 sm:p-3.5">
             <div className="flex items-start gap-3">

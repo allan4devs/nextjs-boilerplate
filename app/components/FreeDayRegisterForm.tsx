@@ -47,7 +47,7 @@ export default function FreeDayRegisterForm(props: FormProps) {
           id="registro"
           className={`border border-white/10 bg-[#0e0e0e] p-6 sm:p-8 ${props.className || ""}`}
         >
-          <p className="text-sm font-bold text-white/50">Cargando registro…</p>
+          <p className="text-sm font-bold text-white/50">Cargando registro...</p>
         </div>
       }
     >
@@ -208,7 +208,7 @@ function FreeDayRegisterFormInner({
               {foundProfile
                 ? ", revisar los datos que ya tenemos de vos"
                 : ", completar tu perfil"}{" "}
-              y crear tu PIN — todo en un solo paso.
+              y crear tu PIN - todo en un solo paso.
             </p>
 
             {foundProfile && (

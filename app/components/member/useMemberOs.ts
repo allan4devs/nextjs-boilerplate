@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Member OS — hook central de estado.
+ * Member OS - hook central de estado.
  * Sesion por cedula + PIN, datos del socio, reservas, gamificacion,
  * y todas las acciones contra /api/xtreme/*. Los componentes de UI
  * reciben el objeto `MemberOs` completo y destructuran lo que usan.
@@ -33,6 +33,7 @@ import {
   errorText,
   formatCedulaInput,
   initialMember,
+  membershipAllowsClassBooking,
   normalizeName,
   onlyDigits,
   readJson,
@@ -762,7 +763,7 @@ export function useMemberOs() {
     [loadGymStatus, openMemberAuthGate, revokeServerSession],
   );
 
-  /** @deprecated Preferir startMemberByCedula — se mantiene para rehidratacion por nombre en storage. */
+  /** @deprecated Preferir startMemberByCedula - se mantiene para rehidratacion por nombre en storage. */
   const startMember = useCallback(
     async (name: string, allowSession = true, contact: { cedula?: string } = {}) => {
       const trimmed = normalizeName(name);
@@ -1037,6 +1038,22 @@ export function useMemberOs() {
     if (!unlocked) return;
     setError("");
     setMessage("");
+
+    // Gate de UI: sin plan/pase vigente no se llama al API (el backend también bloquea).
+    if (!membershipAllowsClassBooking(currentMember.membership)) {
+      const expired =
+        currentMember.membership.status === "expired" ||
+        currentMember.membership.daysRemaining < 0;
+      setOsModal({
+        kind: "access-required",
+        reason: expired ? "expired" : "payment_required",
+        message: expired ? MSG.errors.planExpired : MSG.errors.planRequired,
+        trainingName: training.name,
+        checkoutOptionId: expired ? "month" : "day-pass",
+      });
+      return;
+    }
+
     setReservingTrainingId(training.id);
 
     try {

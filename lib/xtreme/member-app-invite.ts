@@ -1,6 +1,10 @@
 import type { Db } from "mongodb";
 import { requestAppUrl } from "@/lib/constants/app-url";
-import { sendStaffMemberAppInviteEmail, type SendEmailResult } from "@/lib/helpers/email";
+import {
+  sendAdminPlanRegistrationInviteEmail,
+  sendStaffMemberAppInviteEmail,
+  type SendEmailResult,
+} from "@/lib/helpers/email";
 import {
   createRegistrationToken,
   hashRegistrationToken,
@@ -29,12 +33,22 @@ export type MemberAppInviteResult =
       expiresHours: number;
       emailSent: true;
       alreadyVerified?: false;
+      /** Present when the invite email mentioned an admin plan grant. */
+      planInvite?: boolean;
     }
   | { ok: false; status: number; error: string };
 
+export type PlanGrantInviteContext = {
+  plan: string;
+  endsOn: string;
+  extended?: boolean;
+};
+
 /**
  * Asigna correo (sin verificar) a un socio existente y manda magic link
- * ligado con expectedMemberKey — al confirmar no se crea ficha nueva.
+ * ligado con expectedMemberKey - al confirmar no se crea ficha nueva.
+ * Si planGrant está presente, el correo explica que el plan ya está activo
+ * y solo falta completar registro + PIN (el plan se conserva).
  */
 export async function inviteExistingMemberToApp(
   db: Db,
@@ -43,6 +57,7 @@ export async function inviteExistingMemberToApp(
     email?: string;
     source: MemberAppInviteSource;
     baseUrl?: string;
+    planGrant?: PlanGrantInviteContext;
   },
 ): Promise<MemberAppInviteResult> {
   const memberKey = normalizeKey(args.memberKey);
@@ -134,14 +149,26 @@ export async function inviteExistingMemberToApp(
     { upsert: true },
   );
 
-  const sent: SendEmailResult = await sendStaffMemberAppInviteEmail({
-    to: email,
-    token,
-    memberName,
-    expiresHours: INVITE_EXPIRES_HOURS,
-    source: args.source,
-    baseUrl: args.baseUrl,
-  });
+  const planGrant = args.planGrant;
+  const sent: SendEmailResult = planGrant
+    ? await sendAdminPlanRegistrationInviteEmail({
+        to: email,
+        token,
+        memberName,
+        plan: planGrant.plan,
+        endsOn: planGrant.endsOn,
+        extended: planGrant.extended,
+        expiresHours: INVITE_EXPIRES_HOURS,
+        baseUrl: args.baseUrl,
+      })
+    : await sendStaffMemberAppInviteEmail({
+        to: email,
+        token,
+        memberName,
+        expiresHours: INVITE_EXPIRES_HOURS,
+        source: args.source,
+        baseUrl: args.baseUrl,
+      });
 
   if (!sent.ok) {
     return {
@@ -158,6 +185,7 @@ export async function inviteExistingMemberToApp(
     memberName,
     expiresHours: INVITE_EXPIRES_HOURS,
     emailSent: true,
+    planInvite: Boolean(planGrant),
   };
 }
 

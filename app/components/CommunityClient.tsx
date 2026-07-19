@@ -22,7 +22,7 @@ export default function CommunityClient() {
   const [referral, setReferral] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  /** Sesión cookie activa (misma que Member OS) — necesaria para registrar push. */
+  /** Sesión cookie activa (misma que Member OS) - necesaria para registrar push. */
   const [sessionOk, setSessionOk] = useState(false);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function CommunityClient() {
   }
 
   if (!memberName) return <main className="min-h-screen bg-[#080808] px-5 py-20 text-white"><div className="mx-auto max-w-xl border border-white/10 p-8"><h1 className="text-3xl font-black uppercase">Entrá primero a tu perfil</h1><a href="/app" className="mt-6 inline-block bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black">Abrir app</a></div></main>;
-  // Sesión vencida o error al cargar: no dejar el spinner infinito — mandar a re-login en /app.
+  // Sesión vencida o error al cargar: no dejar el spinner infinito - mandar a re-login en /app.
   if (!data && message) return <main className="min-h-screen bg-[#080808] px-5 py-20 text-white"><div className="mx-auto max-w-xl border border-white/10 p-8"><h1 className="text-3xl font-black uppercase">Sesión requerida</h1><p className="mt-4 text-sm font-bold text-white/60">{message}</p><a href="/app" className="mt-6 inline-block bg-[#d8ff3e] px-5 py-3 font-black uppercase text-black">Ingresar PIN en la app</a></div></main>;
   if (!data) return <main className="grid min-h-screen place-items-center bg-[#080808] text-[#d8ff3e]"><Loader2 className="h-8 w-8 animate-spin" /><span className="sr-only">Cargando comunidad</span></main>;
 

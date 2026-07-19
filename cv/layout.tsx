@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     absolute: "Allan José Rojas Durán | Senior Software Engineer",
   },
   description:
-    "Senior Software Engineer — full-stack, cloud-native, and distributed systems. TypeScript, React, Next.js, Java, Spring Boot, Python, AWS, Kubernetes. Based in Costa Rica, open to remote roles.",
+    "Senior Software Engineer - full-stack, cloud-native, and distributed systems. TypeScript, React, Next.js, Java, Spring Boot, Python, AWS, Kubernetes. Based in Costa Rica, open to remote roles.",
   openGraph: {
     title: "Allan José Rojas Durán | Senior Software Engineer",
     description:

@@ -8,4 +8,8 @@ export {
   onlyDigits,
 } from "./identity";
 export { resizePhoto } from "./resizeImage";
-export { membershipPlanDays, membershipRemainingPct } from "./membership";
+export {
+  membershipAllowsClassBooking,
+  membershipPlanDays,
+  membershipRemainingPct,
+} from "./membership";

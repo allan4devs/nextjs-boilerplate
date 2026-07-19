@@ -42,7 +42,7 @@ function adminEnv(
   const value = process.env[name]?.trim() ?? "";
   if (value) return value;
   if (process.env.NODE_ENV === "production") {
-    console.error(`[xtreme] Missing required env ${name} — admin auth disabled for this role.`);
+    console.error(`[xtreme] Missing required env ${name} - admin auth disabled for this role.`);
     return "";
   }
   console.warn(`[xtreme] ${name} not set; using dev fallback. Set it before production.`);

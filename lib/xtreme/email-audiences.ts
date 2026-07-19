@@ -121,7 +121,7 @@ function planAudience(planValue: unknown, rateValue?: unknown): PlanAudience {
   const rate = normalize(rateValue);
   const planOnly = normalize(planValue);
   const plan = `${rate} ${planOnly}`.trim();
-  if (!plan || plan === "—" || plan.includes("sin plan")) return "no_plan";
+  if (!plan || plan === "-" || plan.includes("sin plan")) return "no_plan";
   if (rate.includes("matricula") || planOnly.includes("matricula")) return "plan_other";
   if (rate.includes("diario") || planOnly.includes("pase del dia")) return "plan_free_day";
   if (plan.includes("primer dia") || plan.includes("free day")) return "plan_free_day";
@@ -138,7 +138,7 @@ function planAudience(planValue: unknown, rateValue?: unknown): PlanAudience {
 /** Plan de membresía vigente hoy (no primer día gratis / sin plan). */
 function hasActivePaidPlan(member: MemberDoc, todayIso: string) {
   const plan = String(member.membership?.plan || "").trim();
-  if (!plan || plan === "—" || /sin plan/i.test(plan)) return false;
+  if (!plan || plan === "-" || /sin plan/i.test(plan)) return false;
   if (/primer\s*d[ií]a/i.test(plan) || /free\s*day/i.test(plan)) return false;
   const endsOn = String(member.membership?.nextBillingDate || "").slice(0, 10);
   if (!endsOn) return false;

@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Phase 3 qualified referrals.
+ * Xtreme Gym - Phase 3 qualified referrals.
  * Reward fires after referred member's first verified paid check-in, via entitlement ledger.
  */
 import { createHash } from "crypto";

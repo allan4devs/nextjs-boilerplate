@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Xtreme Member OS — orquestador del app de socios.
+ * Xtreme Member OS - orquestador del app de socios.
  * Todo el estado vive en useMemberOs (app/components/member/useMemberOs.ts);
  * aqui solo se compone el shell (HUD, nav, dock), los tabs y los modales.
  */
@@ -92,7 +92,7 @@ export default function ExtremeGymSite() {
             storeSession(memberName, cedula);
             setShowPin(false);
             setMessage((current) => current || "Sesion protegida. Bienvenido a Xtreme.");
-            // Cookie set by /api/xtreme/pin — load full profile now.
+            // Cookie set by /api/xtreme/pin - load full profile now.
             void reloadFullMember(memberName, cedula).then(() => loadReservations(memberName));
           }}
         />
@@ -128,7 +128,7 @@ export default function ExtremeGymSite() {
             <div className="text-center">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#d8ff3e]" />
               <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-white/45">
-                Cargando tu perfil…
+                Cargando tu perfil...
               </p>
             </div>
           </div>
@@ -163,7 +163,7 @@ export default function ExtremeGymSite() {
         />
       )}
 
-      {/* Opt-in push de toda la app (entrenos, reservas, racha…) — no solo comunidad */}
+      {/* Opt-in push de toda la app (entrenos, reservas, racha...) - no solo comunidad */}
       {unlocked && memberName && !showPin && !showTour && (
         <PushOptInBanner unlocked={unlocked} memberName={memberName} />
       )}

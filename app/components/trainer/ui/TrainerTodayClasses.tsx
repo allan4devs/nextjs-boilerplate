@@ -155,7 +155,7 @@ export function TrainerTodayClasses({ os }: { os: TrainerOs }) {
                     {selected.trainingName}
                   </h3>
                   <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-white/40">
-                    <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" /> {timeLabel(selected.startAt)}–{timeLabel(selected.endAt)}</span>
+                    <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" /> {timeLabel(selected.startAt)}-{timeLabel(selected.endAt)}</span>
                     <span>{selected.coach}</span>
                   </p>
                 </div>

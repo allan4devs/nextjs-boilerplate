@@ -6,7 +6,7 @@
  * de cambiar pesos.
  */
 
-export const MEMBER_HOME_ALGORITHM_VERSION = "context-v1";
+export const MEMBER_HOME_ALGORITHM_VERSION = "context-v2";
 
 export type MemberHomePanelId =
   | "visit"
@@ -48,21 +48,21 @@ export function rankMemberHomePanels(
   const priorityFor = (id: MemberHomePanelId): MemberHomePriority => {
     switch (id) {
       case "visit":
-        return { id, score: 1000, reason: "TenÃ©s una visita activa; al salir, cerrÃ¡ tu ingreso." };
+        return { id, score: 1000, reason: "Tenés una visita activa; al salir, cerrá tu ingreso." };
       case "membership": {
         const days = input.membershipDaysRemaining ?? 999;
         if (!input.membershipActive || days <= 0) {
-          return { id, score: 980, reason: "Tu membresÃ­a necesita renovaciÃ³n para mantener la continuidad." };
+          return { id, score: 980, reason: "Tu membresía necesita renovación para mantener la continuidad." };
         }
-        if (days <= 3) return { id, score: 910, reason: `Te quedan ${days} dÃ­as de membresÃ­a.` };
-        return { id, score: 790, reason: `Tu membresÃ­a vence en ${days} dÃ­as.` };
+        if (days <= 3) return { id, score: 910, reason: `Te quedan ${days} días de membresía.` };
+        return { id, score: 790, reason: `Tu membresía vence en ${days} días.` };
       }
       case "training":
         if (input.hasActiveWorkout) {
           return { id, score: 900, reason: "Ya empezaste un entreno; continualo donde lo dejaste." };
         }
         if (!input.trainedToday && input.streak >= 3) {
-          return { id, score: 820, reason: `EntrenÃ¡ hoy para cuidar tu racha de ${input.streak} dÃ­as.` };
+          return { id, score: 820, reason: `Entrená hoy para cuidar tu racha de ${input.streak} días.` };
         }
         if (!input.trainedToday && gap === 1) {
           return { id, score: 780, reason: "Te falta un entreno para completar la meta semanal." };
@@ -70,39 +70,41 @@ export function rankMemberHomePanels(
         return {
           id,
           score: input.pendingPlanItems > 0 ? 720 : 610,
-          reason: input.pendingPlanItems > 0
-            ? `TenÃ©s ${input.pendingPlanItems} entreno${input.pendingPlanItems === 1 ? "" : "s"} pendiente${input.pendingPlanItems === 1 ? "" : "s"} en tu plan.`
-            : "RegistrÃ¡ tu movimiento de hoy y seguÃ­ sumando.",
+          reason:
+            input.pendingPlanItems > 0
+              ? `Tenés ${input.pendingPlanItems} entreno${input.pendingPlanItems === 1 ? "" : "s"} pendiente${input.pendingPlanItems === 1 ? "" : "s"} en tu plan.`
+              : "Registrá tu movimiento de hoy y seguí sumando.",
         };
       case "classes":
         if (input.hasReservedClassToday) {
-          return { id, score: 850, reason: "TenÃ©s una clase reservada para hoy." };
+          return { id, score: 850, reason: "Tenés una clase reservada para hoy." };
         }
-        return input.hasAvailableClassToday
-          ? { id, score: 640, reason: "TodavÃ­a hay clases y cupos disponibles hoy." }
-          : { id, score: 500, reason: "RevisÃ¡ el estado de tus clases de hoy." };
+        if (input.hasAvailableClassToday) {
+          return { id, score: 640, reason: "Hay clases con cupo hoy. Reservá antes de que se llenen." };
+        }
+        return { id, score: 420, reason: "Revisá horarios y cupos de clases." };
       case "week":
+        if (gap <= 0) return { id, score: 300, reason: "Meta semanal cumplida. ¡Pura vida!" };
+        if (gap === 1) return { id, score: 700, reason: "Un entreno más y cerrás la meta de la semana." };
+        return { id, score: 500, reason: `Vas ${input.weekDone} de ${input.weeklyGoal} esta semana.` };
+      case "momentum":
         return {
           id,
-          score: gap === 1 ? 740 : 570,
-          reason: gap === 1 ? "EstÃ¡s a un entreno de completar tu semana." : `Te faltan ${gap} entrenos para tu meta semanal.`,
-        };
-      case "occupancy":
-        return {
-          id,
-          score: input.activeVisit ? 260 : 520,
-          reason: input.activeVisit ? "RevisÃ¡ cÃ³mo estÃ¡ el gym mientras entrenÃ¡s." : "MirÃ¡ la ocupaciÃ³n antes de salir hacia el gym.",
+          score: input.streak >= 3 ? 560 : 380,
+          reason: input.streak > 0 ? `Racha de ${input.streak} días. Mantenela viva.` : "Empezá tu racha hoy.",
         };
       case "progress":
-        return { id, score: 390, reason: "RevisÃ¡ tus entrenos, medidas y tendencia reciente." };
-      case "momentum":
-        return { id, score: 350, reason: "ConsultÃ¡ tu racha, nivel y XP acumulado." };
+        return { id, score: 360, reason: "Mirando números se ve el avance real." };
+      case "occupancy":
+        return { id, score: 340, reason: "Mirá qué tan lleno está el gym ahora." };
       case "gym":
-        return { id, score: 180, reason: "DescubrÃ­ zonas, beneficios y servicios incluidos." };
+        return { id, score: 280, reason: "Zonas, VIP y todo lo que tenés en el gym." };
+      default:
+        return { id, score: 100, reason: "Abrí para ver más." };
     }
   };
 
   return panelIds
-    .map(priorityFor)
-    .sort((a, b) => b.score - a.score || panelIds.indexOf(a.id) - panelIds.indexOf(b.id));
+    .map((id) => priorityFor(id))
+    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
 }

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Tab Entrenar — hub dinámico: plan, clases, meta y rutinas.
+ * Tab Entrenar - hub dinámico: plan, clases, meta y rutinas.
  * Cada bloque se abre con un cuadro grande; las clases se expanden
  * al tocar para reservar / check-in sin saturar la pantalla.
  */
@@ -25,7 +25,7 @@ import {
 import { classCheckInWindow } from "@/lib/xtreme/class-schedule";
 import { GameButton, GameCallout, GameLabel } from "../../GameOS";
 import { GOALS, ROUTINES, TRAININGS } from "../constants";
-import { todayIso } from "../utils";
+import { membershipAllowsClassBooking, todayIso } from "../utils";
 import type { MemberOs } from "../useMemberOs";
 import type { Training } from "../domain/training";
 import PanelHub, { type HubPanel } from "../PanelHub";
@@ -108,6 +108,7 @@ function TrainingCard({
   onToggle,
   onReserve,
   onComplete,
+  needsAccess = false,
 }: {
   training: Training;
   unlocked: boolean;
@@ -120,6 +121,8 @@ function TrainingCard({
   onToggle: () => void;
   onReserve: () => void;
   onComplete: () => void;
+  /** Sin plan/pase vigente: Reservar abre checkout en vez de crear cupo. */
+  needsAccess?: boolean;
 }) {
   const Icon = training.icon;
   const isFull = reservation.remaining <= 0 && !reservation.isMine;
@@ -219,7 +222,13 @@ function TrainingCard({
               ) : (
                 <ChevronRight className="h-4 w-4" />
               )}
-              {reservation.isMine ? "Cancelar" : isFull ? "Lleno" : "Reservar"}
+              {reservation.isMine
+                ? "Cancelar"
+                : isFull
+                  ? "Lleno"
+                  : needsAccess
+                    ? "Activar acceso"
+                    : "Reservar"}
             </button>
             <button
               type="button"
@@ -280,15 +289,11 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
   const today = todayIso();
   const membership = currentMember.membership;
   const freeDayToday =
-    membership.plan === "Primer día gratis" || /primer\s*d[ií]a/i.test(membership.plan || "");
-  // Primer día gratis (vigente hoy) y cualquier membresía con días >= 0 pueden reservar.
-  // Solo pedimos pago si está vencida o sin plan.
-  const needsAccess =
-    unlocked &&
-    !freeDayToday &&
-    (membership.status === "expired" ||
-      membership.plan === "Sin plan activo" ||
-      membership.daysRemaining < 0);
+    (membership.plan === "Primer día gratis" || /primer\s*d[ií]a/i.test(membership.plan || "")) &&
+    membership.daysRemaining >= 0 &&
+    membership.status !== "expired";
+  // Sin plan / vencido: no se reserva. Primer día gratis solo si sigue vigente hoy.
+  const needsAccess = unlocked && !membershipAllowsClassBooking(membership);
 
   const clasesContent = (
     <div className="space-y-3">
@@ -361,6 +366,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
               savingTrainingId={savingTrainingId}
               date={today}
               expanded={openTrainingId === training.id}
+              needsAccess={needsAccess}
               onToggle={() =>
                 setOpenTrainingId((id) => (id === training.id ? null : training.id))
               }
@@ -487,16 +493,16 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
           if (id !== "clases") setOpenTrainingId(null);
         }}
         title="Entrenar"
-        subtitle="Tocá un cuadro. Reservá, check-in o seguí tu plan."
+        subtitle="Tocá un cuadro grande. El detalle se abre y se cierra sin perder la pantalla."
         header={
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {activeWorkout && (
               <button
                 type="button"
                 onClick={() => setActiveId("plan")}
-                className="flex min-h-16 w-full items-center gap-3 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-4 py-3 text-left text-black shadow-[5px_5px_0_rgba(216,255,62,.2)] transition hover:bg-white"
+                className="flex min-h-[3.75rem] w-full items-center gap-3 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-4 py-3 text-left text-black shadow-[5px_5px_0_rgba(216,255,62,.2)] transition hover:bg-white"
               >
-                <span className="relative grid h-10 w-10 shrink-0 place-items-center bg-black text-[#d8ff3e]">
+                <span className="relative grid h-11 w-11 shrink-0 place-items-center bg-black text-[#d8ff3e]">
                   <Radio className="h-5 w-5" />
                   <span className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-orange-400" />
                 </span>
@@ -506,18 +512,18 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
                     {currentMember.activePlanWorkout?.trainingName || "Continuar entreno"}
                   </span>
                 </span>
-                <span className="shrink-0 text-xs font-black uppercase">Abrir y finalizar →</span>
+                <span className="shrink-0 text-xs font-black uppercase">Abrir →</span>
               </button>
             )}
 
             {activeVisit && (
-              <div className="flex min-h-16 flex-col gap-3 border-[3px] border-orange-300 bg-orange-300/10 px-4 py-3 sm:flex-row sm:items-center">
+              <div className="flex min-h-[3.75rem] flex-col gap-2 border-[3px] border-orange-300 bg-orange-300/10 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
                 <span className="grid h-10 w-10 shrink-0 place-items-center bg-orange-300 text-black">
                   <DoorOpen className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-black uppercase tracking-[.18em] text-orange-200">Ingreso activo</p>
-                  <p className="font-black uppercase">Cuando terminés, marcá tu salida</p>
+                  <p className="text-sm font-black uppercase">Cuando terminés, marcá salida</p>
                 </div>
                 <button
                   type="button"
@@ -527,13 +533,33 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
                       void registerCheckout();
                     }
                   }}
-                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 bg-orange-300 px-4 text-xs font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
+                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 bg-orange-300 px-4 text-xs font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
                 >
                   {isRegisteringCheckout ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-                  {isRegisteringCheckout ? "Registrando…" : "Registrar salida"}
+                  {isRegisteringCheckout ? "Registrando..." : "Salida"}
                 </button>
               </div>
             )}
+
+            {/* Acciones siempre a la vista */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setOsModal({ kind: "quick-train" })}
+                className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/45 bg-[#d8ff3e]/10 px-3 text-xs font-black uppercase text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/20"
+              >
+                <Sparkles className="h-4 w-4" />
+                Marcar tiempo
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveId("clases")}
+                className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-orange-300/45 bg-orange-300/10 px-3 text-xs font-black uppercase text-orange-100 transition hover:border-orange-300"
+              >
+                <Dumbbell className="h-4 w-4" />
+                Clases hoy
+              </button>
+            </div>
 
             <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {[
@@ -545,13 +571,13 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
               },
               {
                 label: "Meta",
-                value: goal.split(" ")[0] || "—",
+                value: goal.split(" ")[0] || "-",
                 icon: Sparkles,
                 tone: "text-orange-300",
               },
               {
                 label: "Plan",
-                value: activeWorkout ? "LIVE" : hasPlan ? "Listo" : "—",
+                value: activeWorkout ? "LIVE" : hasPlan ? "Listo" : "-",
                 icon: ClipboardList,
                 tone: "text-cyan-300",
               },

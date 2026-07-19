@@ -98,8 +98,8 @@ export default function ZonasPage() {
                 <Clock3 className="h-7 w-7" />
                 <h3 className="mt-4 text-xl font-black uppercase">Lunes, miércoles y viernes</h3>
                 <div className="mt-3 flex flex-wrap gap-3 text-sm font-black uppercase">
-                  <span className="border border-black/20 bg-black/[.05] px-3 py-2">5:30 a. m. – 6:45 a. m.</span>
-                  <span className="border border-black/20 bg-black/[.05] px-3 py-2">5:00 p. m. – 6:15 p. m.</span>
+                  <span className="border border-black/20 bg-black/[.05] px-3 py-2">5:30 a. m. - 6:45 a. m.</span>
+                  <span className="border border-black/20 bg-black/[.05] px-3 py-2">5:00 p. m. - 6:15 p. m.</span>
                 </div>
                 <p className="mt-3 text-sm font-bold text-black/55">Los cupos son limitados y el grupo inicia una vez conformado.</p>
               </article>

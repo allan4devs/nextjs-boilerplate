@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Entitlement engine (Strategy 2.0 §6.1).
+ * Xtreme Gym - Entitlement engine (Strategy 2.0 §6.1).
  * Pure decision + ledger-backed grants. Payments create entitlements;
  * reservations consume them; refunds revoke them.
  */
@@ -10,6 +10,8 @@ import {
   FREE_FIRST_DAY_OFFER_ID,
   FREE_FIRST_DAY_PLAN_LABEL,
   MEMBERS_COLLECTION,
+  isInactivePlanLabel,
+  membershipCoversToday,
   membershipStatus,
   todayIso,
   type MemberDoc,
@@ -242,6 +244,7 @@ export async function listMemberEntitlements(db: Db, memberKey: string) {
 /**
  * Backfill a synthetic entitlement from legacy membership fields so existing
  * active members are not locked out the day we turn on the gate.
+ * Never invents access: needs a real nextBillingDate covering today + usable plan.
  */
 export async function ensureLegacyEntitlement(db: Db, member: MemberDoc): Promise<EntitlementDoc[]> {
   const memberKey = member.normalizedName || "";
@@ -254,24 +257,32 @@ export async function ensureLegacyEntitlement(db: Db, member: MemberDoc): Promis
 
   const ms = membershipStatus(member.membership);
   // daysRemaining === 0 = vigente hoy (p. ej. primer día gratis).
-  // "Sin plan activo" no genera cupo artificial.
-  if (ms.daysRemaining < 0 || ms.plan === "Sin plan activo" || ms.plan === "—") {
+  // Sin plan / sin fecha / vencido: no generar cupo artificial.
+  if (!membershipCoversToday(member.membership) || !ms.nextBillingDate) {
+    return existing;
+  }
+
+  const endsOn = ms.nextBillingDate;
+  if (endsOn < today) return existing;
+
+  const isFreeDay =
+    ms.plan === FREE_FIRST_DAY_PLAN_LABEL || /primer\s*d[ií]a/i.test(String(ms.plan || ""));
+  // Primer día gratis es de una sola vez: no rehidratar si ya se usó en el pasado.
+  if (isFreeDay && (await hasFreeFirstDayGrant(db, memberKey))) {
     return existing;
   }
 
   const now = new Date();
-  const endsOn = ms.nextBillingDate || today;
-  const startsOn = member.membership?.startedAt || today;
-  const isFreeDay =
-    ms.plan === FREE_FIRST_DAY_PLAN_LABEL || /primer\s*d[ií]a/i.test(String(ms.plan || ""));
+  const startsOnRaw = String(member.membership?.startedAt || today).slice(0, 10);
+  const startsOn = startsOnRaw <= endsOn ? startsOnRaw : endsOn;
   const doc: EntitlementDoc = {
     id: newEntitlementId(isFreeDay ? "free" : "legacy"),
     memberKey,
     kind: isFreeDay ? "day_pass" : "plan",
     offerId: isFreeDay ? FREE_FIRST_DAY_OFFER_ID : "legacy-membership",
     label: ms.plan || "Membresia",
-    startsOn: startsOn <= endsOn ? startsOn : endsOn,
-    endsOn: endsOn < today ? today : endsOn,
+    startsOn,
+    endsOn,
     remainingBookings: null,
     source: { type: "migration", id: isFreeDay ? FREE_FIRST_DAY_OFFER_ID : "membership-field" },
     status: "active",
@@ -489,7 +500,7 @@ export async function releaseBookingEntitlement(db: Db, entitlementId: string, m
     entitlementId,
     action: "extend",
     deltaBookings: 1,
-    note: "booking cancelled — credit restored",
+    note: "booking cancelled - credit restored",
     source: current.source,
   });
 }
@@ -562,20 +573,17 @@ export async function decideBooking(
   let entitlements = await ensureLegacyEntitlement(db, member);
   let decision = canBook(entitlements, args);
 
-  // Si no hay cupo de plan, intentar activar primer día gratis (una sola vez) o
-  // rehidratar entitlement del día cuando la ficha todavía cubre hoy.
+  // Solo reintentar primer día gratis si la ficha es explícitamente free day y cubre hoy.
+  // Nunca regalar free day a gente sin plan / vencida / solo por no tener entitlements.
   if (!decision.allowed && (decision.reason === "payment_required" || decision.reason === "expired")) {
     const ms = membershipStatus(member.membership);
     const planLabel = String(ms.plan || "");
     const isFreeDayPlan =
       planLabel === FREE_FIRST_DAY_PLAN_LABEL || /primer\s*d[ií]a/i.test(planLabel);
-    const coversToday = ms.daysRemaining >= 0 && planLabel !== "Sin plan activo";
+    const coversToday = membershipCoversToday(member.membership) && !isInactivePlanLabel(planLabel);
 
-    if (coversToday || isFreeDayPlan) {
-      // Primer día: grant idempotente; no pisa si ya se usó otro día.
-      if (isFreeDayPlan || !entitlements.some((e) => e.status === "active" || e.status === "exhausted")) {
-        await grantFreeFirstDayIfEligible(db, memberKey, args.date || todayIso()).catch(() => null);
-      }
+    if (isFreeDayPlan && coversToday) {
+      await grantFreeFirstDayIfEligible(db, memberKey, args.date || todayIso()).catch(() => null);
       entitlements = await ensureLegacyEntitlement(db, member);
       decision = canBook(entitlements, args);
     }

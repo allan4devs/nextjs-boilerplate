@@ -106,7 +106,7 @@ export default function PushNotificationsCard({ unlocked, compact = false }: Pro
     }
   }
 
-  const capMessage = capability?.message ?? "Revisando soporte de notificaciones…";
+  const capMessage = capability?.message ?? "Revisando soporte de notificaciones...";
   const showIosHint = capability?.reason === "ios-not-standalone";
   const showDenied = capability?.reason === "permission-denied";
   const hardBlock =
@@ -137,7 +137,7 @@ export default function PushNotificationsCard({ unlocked, compact = false }: Pro
           </p>
           <p className="mt-1 text-xs font-semibold leading-relaxed text-white/50">
             Entrenos, reservas, salida del gym, recordatorio ~1 h antes de tu clase, badges, plan, racha y
-            renovación — aunque la app esté cerrada. Separado del correo.
+            renovación - aunque la app esté cerrada. Separado del correo.
             {capability?.isStandalone ? " · App instalada ✓" : ""}
           </p>
         </div>
@@ -220,7 +220,7 @@ export default function PushNotificationsCard({ unlocked, compact = false }: Pro
             {!unlocked
               ? "Desbloqueá tu sesión primero"
               : showIosHint
-                ? "Ya instalé la app — activar"
+                ? "Ya instalé la app - activar"
                 : showDenied
                   ? "Reintentar permiso"
                   : hardBlock

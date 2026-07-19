@@ -37,7 +37,7 @@ function isValidFaceHash(value: string) {
   return /^[0-9a-f]{16}$/i.test(value);
 }
 
-/** Public kiosk view — no phone/email/cédula/access code leakage. */
+/** Public kiosk view - no phone/email/cédula/access code leakage. */
 function toKioskMember(
   doc: MemberDoc,
   extra?: { hasPin?: boolean; faceDistance?: number },
@@ -331,7 +331,7 @@ export async function POST(req: NextRequest) {
       duplicate: false,
       message:
         ms.status === "expired"
-          ? "Ingreso registrado. Membresia vencida — hablar con recepcion."
+          ? "Ingreso registrado. Membresia vencida - hablar con recepcion."
           : ms.status === "warning"
             ? "Bienvenido. Tu membresia vence pronto."
             : referralReward.rewarded

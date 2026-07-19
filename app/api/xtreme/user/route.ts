@@ -134,7 +134,7 @@ async function buildAuthenticatedMemberPayload(
   };
 }
 
-/** Minimal bootstrap for login — no phone/email/metrics/access code. */
+/** Minimal bootstrap for login - no phone/email/metrics/access code. */
 async function bootstrapLookup(
   db: Awaited<ReturnType<typeof getDb>>,
   normalizedName: string,
@@ -174,7 +174,7 @@ async function bootstrapLookup(
     member: {
       memberName: doc.memberName ?? "",
       normalizedName: doc.normalizedName ?? normalizedName,
-      // Only last digits hint for UI confirmation — not full cédula
+      // Only last digits hint for UI confirmation - not full cédula
       cedula: "",
     },
     exists: true,
@@ -410,7 +410,7 @@ export async function POST(req: NextRequest) {
     if (body.cedula !== undefined && cedulaRaw) set.cedula = cedulaRaw;
 
     if (!existing) {
-      // Ignore client plan/dates — self-serve always starts as free first day.
+      // Ignore client plan/dates - self-serve always starts as free first day.
       set.membership = createFreeFirstDayMembership(today);
     }
 
@@ -473,7 +473,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
-    // Strategy 2.0: identity from session cookie — body.memberName is not authorization.
+    // Strategy 2.0: identity from session cookie - body.memberName is not authorization.
     const sessionOrErr = await requireMemberSession(req);
     if (!isSession(sessionOrErr)) return sessionOrErr;
     const memberName = sessionOrErr.memberName;

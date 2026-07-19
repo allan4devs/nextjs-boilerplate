@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Tab Perfil — hub de paneles en 2 columnas.
+ * Tab Perfil - hub de paneles en 2 columnas.
  * El socio toca un cuadro grande para abrir el ajuste; no hay un scroll
  * eterno de formularios abiertos.
  */
@@ -358,7 +358,7 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
       badge: String(activeNotifs),
       content: (
         <div className="space-y-5">
-          {/* Web Push del Member OS (entrenos, reservas, racha…) — no es solo comunidad */}
+          {/* Web Push del Member OS (entrenos, reservas, racha...) - no es solo comunidad */}
           <div>
             <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-[#d8ff3e]">
               Avisos de la app (este celular)
@@ -508,7 +508,7 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
       id: "pagos",
       label: "Pagos",
       hint: isLoadingPayments
-        ? "Cargando…"
+        ? "Cargando..."
         : paymentHistory
           ? `${paymentHistory.payments.length} registros`
           : "Historial",

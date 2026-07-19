@@ -166,7 +166,7 @@ function buildPlan(name: string, goal: string) {
   };
 }
 
-/** Live production and local `next start` — never seed/wipe real data. Preview (VERCEL_ENV=preview) may still seed. */
+/** Live production and local `next start` - never seed/wipe real data. Preview (VERCEL_ENV=preview) may still seed. */
 function seedDisabledInThisEnv() {
   if (process.env.VERCEL_ENV === "production") return true;
   if (process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "development") return false;

@@ -150,7 +150,7 @@ export async function getPushCapability(): Promise<PushCapability> {
       canSubscribe: false,
       reason: "ios-not-standalone",
       message:
-        "En iPhone/iPad: tocá Compartir → “Agregar a pantalla de inicio” y abrí Xtreme desde ahí. Después podés activar los avisos.",
+        'En iPhone/iPad: tocá Compartir → "Agregar a pantalla de inicio" y abrí Xtreme desde ahí. Después podés activar los avisos.',
       isIos: true,
       isStandalone: false,
       permission,

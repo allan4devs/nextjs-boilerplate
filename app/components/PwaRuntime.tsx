@@ -167,7 +167,7 @@ export default function PwaRuntime() {
       </p>
       <p className="mt-2 text-sm font-semibold leading-6 text-white/60">
         {isIos
-          ? "Tocá Compartir y luego ‘Agregar a pantalla de inicio’."
+          ? "Tocá Compartir y luego 'Agregar a pantalla de inicio'."
           : isIngreso
             ? "Dejá el ingreso de la puerta activo como una app independiente."
             : isReception

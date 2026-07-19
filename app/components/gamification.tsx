@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Xtreme Gym — Componentes de gamificacion (Fase 1).
+ * Xtreme Gym - Componentes de gamificacion (Fase 1).
  * Anillo de racha, XP/nivel, galeria de badges y celebraciones.
  */
 

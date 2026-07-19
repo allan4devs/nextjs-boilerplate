@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
       members.updateOne({ normalizedName: target }, { $pull: { buddies: memberKey } }),
     ]);
   } else if (action === "referral-redeem") {
-    // Phase 3: redeem only records pending referral — reward after first paid check-in
+    // Phase 3: redeem only records pending referral - reward after first paid check-in
     const code = String(body.code ?? "").trim().toUpperCase();
     const accountAgeDays = member.createdAt
       ? Math.floor((Date.now() - new Date(member.createdAt).getTime()) / 86_400_000)

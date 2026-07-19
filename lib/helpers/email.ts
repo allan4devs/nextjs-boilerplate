@@ -425,6 +425,10 @@ export async function sendRegistrationConfirmEmail(args: {
   token: string;
   expiresMinutes: number;
   baseUrl?: string;
+  /** Si la ficha ya tiene plan (admin/Excel/pago), el mail lo aclara. */
+  planLabel?: string;
+  planEndsOn?: string;
+  memberName?: string;
 }) {
   const href = absoluteRequestUrl(
     `/registro/confirmar?token=${encodeURIComponent(args.token)}`,
@@ -435,15 +439,23 @@ export async function sendRegistrationConfirmEmail(args: {
     args.expiresMinutes >= 60
       ? `${hours} hora${hours === 1 ? "" : "s"}`
       : `${args.expiresMinutes} minutos`;
+  const hasPlan = Boolean(args.planLabel && args.planEndsOn);
+  const hello = args.memberName?.trim()
+    ? `¡Pura vida, ${args.memberName.trim()}!`
+    : "¡Pura vida!";
 
   return sendEmail({
     to: args.to,
     managePreferences: false,
-    subject: "Confirmá tu correo y activá tu acceso — Xtreme Gym",
+    subject: hasPlan
+      ? "Confirmá tu correo y creá tu PIN - plan ya activo · Xtreme Gym"
+      : "Confirmá tu correo y activá tu acceso - Xtreme Gym",
     text: [
-      "¡Pura vida! Gracias por registrarte en Xtreme Gym.",
+      `${hello} Gracias por registrarte en Xtreme Gym.`,
       "",
-      "Para activar tu acceso (todo en un solo paso):",
+      hasPlan
+        ? `Ya tenés plan ${args.planLabel} activo hasta ${args.planEndsOn}. Solo falta confirmar este correo y crear tu PIN.`
+        : "Para activar tu acceso (todo en un solo paso):",
       "1) Abrí el enlace y confirmá este correo",
       "2) Completá nombre, teléfono y cédula",
       "3) Creá tu PIN de 4 dígitos en la misma pantalla",
@@ -451,16 +463,30 @@ export async function sendRegistrationConfirmEmail(args: {
       `Enlace (vence en ${expiresLabel}):`,
       href,
       "",
-      "Después entrás a la app con cédula + PIN.",
+      hasPlan
+        ? "Tu plan se conserva al registrarte. Después entrás a la app con cédula + PIN."
+        : "Después entrás a la app con cédula + PIN.",
       `WhatsApp: ${BUSINESS.phone}`,
     ].join("\n"),
     html: layout(
-      "Confirmá tu correo",
+      hasPlan ? "Confirmá correo y creá tu PIN" : "Confirmá tu correo",
       [
-        p("¡Pura vida! Gracias por registrarte en <strong>Xtreme Gym</strong>."),
-        p("Con este enlace activás tu acceso completo: correo, perfil y PIN, en un solo paso."),
+        p(`${escapeHtml(hello)} Gracias por registrarte en <strong>Xtreme Gym</strong>.`),
+        hasPlan
+          ? detailsTable(
+              row("Plan", escapeHtml(args.planLabel || "")) +
+                row("Acceso hasta", escapeHtml(args.planEndsOn || "")),
+            )
+          : "",
+        p(
+          hasPlan
+            ? "Tu plan <strong>ya está en la ficha</strong>. Con este enlace solo confirmás el correo, completás datos y creás el PIN - el plan no se borra."
+            : "Con este enlace activás tu acceso completo: correo, perfil y PIN, en un solo paso.",
+        ),
         infoCard(
-          "<strong>Qué vas a hacer</strong><br>Confirmar este correo, completar tus datos y crear tu PIN de 4 dígitos. Después entrás a la app con cédula + PIN.",
+          hasPlan
+            ? "<strong>Qué vas a hacer</strong><br>Confirmar este correo, completar tus datos y crear tu PIN de 4 dígitos. Después entrás con cédula + PIN y podés reservar con tu plan."
+            : "<strong>Qué vas a hacer</strong><br>Confirmar este correo, completar tus datos y crear tu PIN de 4 dígitos. Después entrás a la app con cédula + PIN.",
         ),
         steps([
           "Tocá el botón y abrí el formulario seguro.",
@@ -537,7 +563,7 @@ export async function sendStaffMemberAppInviteEmail(args: {
       [
         p(`${hello}Te invitó <strong>${escapeHtml(who)}</strong> a la app de socios.`),
         p(
-          "Con el enlace confirmás este correo, dejás listos tus datos y creás tu PIN — todo junto. Después entrás con cédula + PIN.",
+          "Con el enlace confirmás este correo, dejás listos tus datos y creás tu PIN - todo junto. Después entrás con cédula + PIN.",
         ),
         infoCard(
           "<strong>En la app vas a poder</strong><br>Reservar clases · Marcar entrenos · Cuidar tu racha · Usar tu carné digital",
@@ -574,7 +600,7 @@ export async function sendPaymentAppInviteEmail(args: {
   return sendEmail({
     to: args.to,
     managePreferences: false,
-    subject: `Pago recibido · completá tu perfil — Xtreme Gym`,
+    subject: `Pago recibido · completá tu perfil - Xtreme Gym`,
     text: [
       `Hola ${args.memberName}.`,
       "",
@@ -620,20 +646,30 @@ export async function sendWelcomeEmail(args: {
   memberName: string;
   accessCode: string;
   cedula?: string;
+  /** Si el admin/pago ya dejó plan vigente al registrarse. */
+  planLabel?: string;
+  planEndsOn?: string;
 }) {
   const appUrl = absoluteAppUrl("/app");
   const cedulaLine = args.cedula
     ? `Ingresá tu cédula <strong>${escapeHtml(args.cedula)}</strong>.`
     : "Ingresá la cédula con la que te registraste.";
+  const hasPlan = Boolean(args.planLabel && args.planEndsOn);
+  const planText = hasPlan
+    ? `Tu plan ${args.planLabel} está activo hasta ${args.planEndsOn}.`
+    : "";
 
   return sendEmail({
     to: args.to,
     managePreferences: false,
-    subject: `¡Listo, ${args.memberName}! Tu perfil en Xtreme Gym`,
+    subject: hasPlan
+      ? `¡Listo, ${args.memberName}! Plan activo y PIN creado - Xtreme Gym`
+      : `¡Listo, ${args.memberName}! Tu perfil en Xtreme Gym`,
     text: [
       `¡Pura vida, ${args.memberName}!`,
       "",
       "Tu perfil de socio quedó activo y tu PIN ya está creado.",
+      planText,
       "",
       `Código de ingreso en recepción: ${args.accessCode}`,
       args.cedula ? `Cédula: ${args.cedula}` : "",
@@ -657,6 +693,12 @@ export async function sendWelcomeEmail(args: {
         p(
           "Tu perfil de socio en <strong>Xtreme Gym</strong> quedó listo y tu <strong>PIN ya está creado</strong>. Guardá este correo: tiene tu código de ingreso.",
         ),
+        hasPlan
+          ? detailsTable(
+              row("Plan", escapeHtml(args.planLabel || "")) +
+                row("Acceso hasta", escapeHtml(args.planEndsOn || "")),
+            )
+          : "",
         p("<strong>Tu código de ingreso</strong> (recepción o pantalla de ingreso)"),
         codeBox(args.accessCode),
         infoCard(
@@ -669,7 +711,9 @@ export async function sendWelcomeEmail(args: {
         ]),
         ctaButton("Entrar a mi app", appUrl),
         p(
-          "En la app podés <strong>reservar clases</strong>, <strong>marcar entrenos</strong>, cuidar tu <strong>racha</strong> y seguir tu <strong>progreso</strong>.",
+          hasPlan
+            ? "Con tu plan activo ya podés <strong>reservar clases</strong>, <strong>marcar entrenos</strong>, cuidar tu <strong>racha</strong> y seguir tu <strong>progreso</strong>."
+            : "En la app podés <strong>reservar clases</strong>, <strong>marcar entrenos</strong>, cuidar tu <strong>racha</strong> y seguir tu <strong>progreso</strong>.",
         ),
         helpFooter(),
       ].join(""),
@@ -704,7 +748,7 @@ export async function sendPaymentReceiptEmail(args: {
     to: args.to,
     cc: reservationCc(),
     managePreferences: false,
-    subject: `Recibo Xtreme Gym — ${args.optionLabel}`,
+    subject: `Recibo Xtreme Gym - ${args.optionLabel}`,
     text: [
       `Hola ${args.customerName}. Gracias por tu pago en Xtreme Gym.`,
       "",
@@ -753,7 +797,7 @@ export async function sendReservationEmail(args: {
     to: args.to,
     cc: reservationCc(),
     managePreferences: false,
-    subject: `Reserva confirmada — ${args.trainingName} (${args.trainingDate})`,
+    subject: `Reserva confirmada - ${args.trainingName} (${args.trainingDate})`,
     text: [
       `Hola ${args.memberName}. Tu cupo quedó reservado.`,
       "",
@@ -788,7 +832,7 @@ export async function sendPinChangedEmail(args: {
   const copy =
     args.kind === "set"
       ? {
-          subject: "PIN creado — ya podés entrar a tu app · Xtreme Gym",
+          subject: "PIN creado - ya podés entrar a tu app · Xtreme Gym",
           title: "Tu PIN quedó creado",
           lead: "Creaste el PIN de 4 dígitos de tu perfil.",
           next: "A partir de ahora entrás a la app con tu cédula y este PIN.",
@@ -850,7 +894,7 @@ export async function sendMembershipReminderEmail(args: {
   return sendEmail({
     to: args.to,
     optional: true,
-    subject: expired ? "Xtreme Gym — membresía vencida" : "Xtreme Gym — tu membresía vence pronto",
+    subject: expired ? "Xtreme Gym - membresía vencida" : "Xtreme Gym - tu membresía vence pronto",
     html: layout(
       "Recordatorio de membresía",
       `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}, ${escapeHtml(headline)}.</p>
@@ -920,44 +964,145 @@ export async function sendMilestoneEmail(args: { to: string; memberName: string;
   });
 }
 
-/** Aviso transaccional: un administrador activó acceso para el socio. */
+/**
+ * Aviso: admin activó/extendió plan a un socio que YA tiene correo verificado.
+ * hasPin=false → guía a crear PIN por OTP en la app (no magic link de registro).
+ */
 export async function sendAdminGrantedPlanEmail(args: {
   to: string;
   memberName: string;
   plan: string;
   endsOn: string;
+  /** Si false, el socio aún no tiene PIN y debe crearlo en /app. */
+  hasPin?: boolean;
+  /** true si se sumaron días a un plan que ya estaba vigente. */
+  extended?: boolean;
 }) {
   const appUrl = absoluteAppUrl("/app");
+  const hasPin = args.hasPin !== false;
+  const actionLine = args.extended
+    ? `El equipo de Xtreme Gym extendió tu plan ${args.plan} (se sumaron los días a tu acceso actual).`
+    : `El equipo de Xtreme Gym activó tu plan ${args.plan}.`;
+  const pinSteps = hasPin
+    ? [
+        "Abrí la app con el botón de abajo.",
+        "Ingresá con tu <strong>cédula</strong> y tu <strong>PIN</strong>.",
+        "Reservá clases, marcá entrenos y usá tu carné digital.",
+      ]
+    : [
+        "Abrí la app con el botón de abajo.",
+        "Ingresá tu <strong>cédula</strong>.",
+        "Tocá <strong>Enviar código al correo</strong> y creá tu <strong>PIN de 4 dígitos</strong>.",
+        "Con cédula + PIN ya podés reservar y entrenar.",
+      ];
+
   return sendEmail({
     to: args.to,
     managePreferences: false,
-    subject: `Tu plan ${args.plan} ya está activo — Xtreme Gym`,
+    subject: hasPin
+      ? `Tu plan ${args.plan} ya está activo - Xtreme Gym`
+      : `Tu plan ${args.plan} está activo · creá tu PIN - Xtreme Gym`,
     text: [
       `Hola ${args.memberName}.`,
       "",
-      `El equipo de Xtreme Gym activó tu plan ${args.plan}.`,
+      actionLine,
       `Acceso hasta: ${args.endsOn}`,
       "",
-      "Entrá a la app con tu cédula y PIN para reservar, marcar entrenos y usar tu carné digital.",
+      hasPin
+        ? "Entrá a la app con tu cédula y PIN para reservar, marcar entrenos y usar tu carné digital."
+        : "Tu plan ya vale: solo falta crear tu PIN. Entrá a la app con tu cédula, pedí el código a este correo y elegí un PIN de 4 dígitos.",
       `App: ${appUrl}`,
       `WhatsApp: ${BUSINESS.phone}`,
     ].join("\n"),
     html: layout(
-      "Tu plan ya está activo",
+      hasPin ? "Tu plan ya está activo" : "Plan activo · creá tu PIN",
       [
         p(
-          `Hola <strong>${escapeHtml(args.memberName)}</strong>. El equipo de Xtreme Gym activó tu acceso.`,
+          `Hola <strong>${escapeHtml(args.memberName)}</strong>. ${escapeHtml(actionLine)}`,
         ),
         detailsTable(
           row("Plan", escapeHtml(args.plan)) + row("Acceso hasta", escapeHtml(args.endsOn)),
         ),
-        p("Ya podés entrar a la app, usar tu carné digital, reservar clases y seguir tu progreso."),
+        p(
+          hasPin
+            ? "Ya podés entrar a la app, usar tu carné digital, reservar clases y seguir tu progreso."
+            : "El plan ya está en tu ficha. Completá el PIN para entrar a la app y reservar clases.",
+        ),
+        steps(pinSteps),
+        ctaButton(hasPin ? "Abrir mi app" : "Crear mi PIN en la app", appUrl),
+        helpFooter(),
+      ].join(""),
+    ),
+  });
+}
+
+/**
+ * Admin activó plan a socio que aún NO verificó correo / no se registró:
+ * magic link para completar ficha + crear PIN, con el plan ya guardado.
+ */
+export async function sendAdminPlanRegistrationInviteEmail(args: {
+  to: string;
+  token: string;
+  memberName: string;
+  plan: string;
+  endsOn: string;
+  expiresHours: number;
+  extended?: boolean;
+  baseUrl?: string;
+}) {
+  const href = absoluteRequestUrl(
+    `/registro/confirmar?token=${encodeURIComponent(args.token)}`,
+    args.baseUrl,
+  );
+  const expiresLabel = `${args.expiresHours} hora${args.expiresHours === 1 ? "" : "s"}`;
+  const name = args.memberName.trim() || "socio";
+  const planLine = args.extended
+    ? `Tu plan <strong>${escapeHtml(args.plan)}</strong> ya está activo y se extendió hasta <strong>${escapeHtml(args.endsOn)}</strong>.`
+    : `Tu plan <strong>${escapeHtml(args.plan)}</strong> ya está activo hasta <strong>${escapeHtml(args.endsOn)}</strong>.`;
+
+  return sendEmail({
+    to: args.to,
+    managePreferences: false,
+    subject: `${name}, tu plan está listo · completá tu acceso - Xtreme Gym`,
+    text: [
+      `Hola ${name}.`,
+      "",
+      args.extended
+        ? `El equipo de Xtreme Gym extendió tu plan ${args.plan} hasta ${args.endsOn}.`
+        : `El equipo de Xtreme Gym activó tu plan ${args.plan} hasta ${args.endsOn}.`,
+      "",
+      "Para usarlo en la app (un solo paso):",
+      "1) Abrí el enlace y confirmá este correo",
+      "2) Revisá o completá nombre, teléfono y cédula",
+      "3) Creá tu PIN de 4 dígitos",
+      "",
+      `Enlace (vence en ${expiresLabel}):`,
+      href,
+      "",
+      "Tu plan se conserva: no se borra al completar el registro.",
+      "Después entrás con cédula + PIN.",
+      `WhatsApp: ${BUSINESS.phone}`,
+    ].join("\n"),
+    html: layout(
+      "Plan activo · activá tu app",
+      [
+        p(`Hola <strong>${escapeHtml(name)}</strong>. El equipo de Xtreme Gym dejó listo tu acceso.`),
+        detailsTable(
+          row("Plan", escapeHtml(args.plan)) + row("Acceso hasta", escapeHtml(args.endsOn)),
+        ),
+        p(
+          `${planLine} Solo falta confirmar este correo, dejar tus datos y crear tu PIN - el plan <strong>no se pierde</strong> al registrarte.`,
+        ),
         steps([
-          "Abrí la app con el botón de abajo.",
-          "Ingresá con tu <strong>cédula</strong> y tu <strong>PIN</strong>.",
-          "Si todavía no tenés PIN, pedí el código a este correo desde la app.",
+          "Abrí el enlace seguro.",
+          "Confirmá <strong>nombre</strong>, <strong>teléfono</strong> y <strong>cédula</strong>.",
+          "Creá tu <strong>PIN de 4 dígitos</strong> en la misma pantalla.",
         ]),
-        ctaButton("Abrir mi app", appUrl),
+        ctaButton("Completar registro y crear PIN", href),
+        linkFallback(href),
+        muted(
+          `Enlace personal, de un solo uso. Vence en <strong>${expiresLabel}</strong>. Después entrás con cédula + PIN.`,
+        ),
         helpFooter(),
       ].join(""),
     ),
@@ -1156,7 +1301,7 @@ export async function sendWinBackEmail(args: {
   return sendEmail({
     to: args.to,
     optional: true,
-    subject: "Volvé a Xtreme — lo importante es retomar",
+    subject: "Volvé a Xtreme - lo importante es retomar",
     html: layout(
       "Tu próximo entreno cuenta",
       `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Han pasado ${args.inactiveDays} días desde tu último entreno. Eso no borra lo que ya avanzaste.</p>
@@ -1176,7 +1321,7 @@ export async function sendMonthlyRecapEmail(args: {
   return sendEmail({
     optional: true,
     to: args.to,
-    subject: `Tu mes en Xtreme — ${args.workouts} entrenos 💪`,
+    subject: `Tu mes en Xtreme - ${args.workouts} entrenos 💪`,
     html: layout(
       "Tu mes en Xtreme",
       `<p style="font-size:14px;line-height:1.6;">${escapeHtml(args.memberName)}, esto fue lo que construiste en ${escapeHtml(args.month)}:</p>
@@ -1278,7 +1423,7 @@ export async function sendAdminEmailOptOutNotification(args: {
   return sendEmail({
     to: adminNotificationAddress(),
     managePreferences: false,
-    subject: `Nueva baja de correo y motivo — Xtreme Gym`,
+    subject: `Nueva baja de correo y motivo - Xtreme Gym`,
     html: layout(
       "Preferencia de contacto recibida",
       `<p style="font-size:14px;line-height:1.7;">Una persona desactivó los correos opcionales y compartió el motivo. La respuesta también quedó disponible en el Centro de correos de Super Admin.</p>

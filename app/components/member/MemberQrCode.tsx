@@ -90,7 +90,7 @@ export default function MemberQrCode({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs font-bold text-black/40">
-            Generando…
+            Generando...
           </div>
         )}
       </div>

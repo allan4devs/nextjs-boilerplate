@@ -55,7 +55,7 @@ const DISABLED_PREFS: NotificationPrefs = {
   weeklyRecap: false,
 };
 
-/** GET — enlace de preferencias para socio autenticado (Member OS). */
+/** GET - enlace de preferencias para socio autenticado (Member OS). */
 export async function GET(req: NextRequest) {
   try {
     const sessionOrErr = await requireMemberSession(req);

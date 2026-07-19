@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Motor de gamificacion (Fase 1).
+ * Xtreme Gym - Motor de gamificacion (Fase 1).
  * Funciones puras, sin dependencias de servidor: se puede importar
  * tanto desde rutas API como desde componentes cliente.
  */
@@ -82,7 +82,7 @@ export function weekStartIso(date: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Rachas 2.0 — protectores de racha
+// Rachas 2.0 - protectores de racha
 // ---------------------------------------------------------------------------
 
 export const FREEZE_EARN_EVERY = 7; // 1 protector por cada 7 entrenos
@@ -366,7 +366,7 @@ export function buildMemberView(args: {
 const count = (v: MemberView, id: string) => v.trainingIdCounts[id] ?? 0;
 
 export const BADGES: BadgeDef[] = [
-  // — Constancia —
+  // - Constancia -
   { id: "primer-paso", name: "Primer Paso", desc: "Su primer entreno marcado", icon: "Star", tier: "bronze",
     progress: (v) => ({ current: Math.min(1, v.totalWorkouts), target: 1 }), test: (v) => v.totalWorkouts >= 1 },
   { id: "racha-3", name: "Encendido", desc: "3 dias de racha", icon: "Flame", tier: "bronze",
@@ -394,7 +394,7 @@ export const BADGES: BadgeDef[] = [
   { id: "ultra", name: "Ultra", desc: "5.000 minutos acumulados", icon: "Gauge", tier: "gold",
     progress: (v) => ({ current: Math.min(5000, v.totalMinutes), target: 5000 }), test: (v) => v.totalMinutes >= 5000 },
 
-  // — Horario —
+  // - Horario -
   { id: "madrugador", name: "Madrugador", desc: "10 entrenos antes de las 7 am", icon: "Sunrise", tier: "silver",
     progress: (v) => ({ current: Math.min(10, v.earlyWorkouts), target: 10 }), test: (v) => v.earlyWorkouts >= 10 },
   { id: "buho", name: "Buho de Hierro", desc: "10 entrenos despues de las 8 pm", icon: "Moon", tier: "silver",
@@ -402,7 +402,7 @@ export const BADGES: BadgeDef[] = [
   { id: "guerrero-lunes", name: "Guerrero de Lunes", desc: "8 lunes entrenados", icon: "Swords", tier: "silver",
     progress: (v) => ({ current: Math.min(8, v.mondayWorkouts), target: 8 }), test: (v) => v.mondayWorkouts >= 8 },
 
-  // — Clases —
+  // - Clases -
   { id: "todoterreno", name: "Todoterreno", desc: "Probo los 4 entrenamientos", icon: "Target", tier: "silver",
     progress: (v) => ({ current: Math.min(4, v.distinctTrainings), target: 4 }), test: (v) => v.distinctTrainings >= 4 },
   { id: "fuerza-fan", name: "Casa de Fuerza", desc: "10 sesiones de Fuerza Total", icon: "Dumbbell", tier: "silver",
@@ -412,7 +412,7 @@ export const BADGES: BadgeDef[] = [
   { id: "core-master", name: "Core de Acero", desc: "10 sesiones de Xtreme Core", icon: "Shield", tier: "silver",
     progress: (v) => ({ current: Math.min(10, count(v, "xtreme-core")), target: 10 }), test: (v) => count(v, "xtreme-core") >= 10 },
 
-  // — Progreso —
+  // - Progreso -
   { id: "primera-medida", name: "Punto de Partida", desc: "Registraste tu primera medida", icon: "Ruler", tier: "bronze",
     progress: (v) => ({ current: Math.min(1, v.metricsCount), target: 1 }), test: (v) => v.metricsCount >= 1 },
   { id: "medidas-12", name: "Cientifico del Progreso", desc: "12 medidas registradas", icon: "TrendingUp", tier: "gold",
@@ -420,7 +420,7 @@ export const BADGES: BadgeDef[] = [
   { id: "plan-completado", name: "Plan Cumplido", desc: "Completaste el plan de tu coach", icon: "ClipboardCheck", tier: "gold",
     progress: (v) => ({ current: v.planProgressPct, target: 100 }), test: (v) => v.planProgressPct >= 100 },
 
-  // — Secretos —
+  // - Secretos -
   { id: "navidad", name: "Regalo de Hierro", desc: "Entreno un 25 de diciembre", icon: "Gift", tier: "gold", secret: true,
     test: (v) => v.workoutMonthDays.has("12-25") },
   { id: "ano-nuevo", name: "Proposito Real", desc: "Entreno un 1 de enero", icon: "PartyPopper", tier: "gold", secret: true,

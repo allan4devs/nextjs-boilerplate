@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Xtreme Gym — Gimnasio en Ciudad Quesada, San Carlos";
+export const alt = "Xtreme Gym - Gimnasio en Ciudad Quesada, San Carlos";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

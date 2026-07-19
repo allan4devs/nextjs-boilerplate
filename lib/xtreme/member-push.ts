@@ -1,7 +1,7 @@
 /**
  * Avisos push del Member OS (por socio / dispositivo).
  * Independiente del correo: solo llega a quien activó push en su celular.
- * Nunca debe tumbar la acción del socio — errores se loguean y se ignoran.
+ * Nunca debe tumbar la acción del socio - errores se loguean y se ignoran.
  */
 import type { Db } from "mongodb";
 import { sendMemberPush } from "@/lib/helpers/push";

@@ -209,7 +209,7 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
             className="inline-flex min-h-16 w-full items-center justify-center gap-3 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-5 text-base font-black uppercase text-black shadow-[5px_5px_0_rgba(216,255,62,.22)] transition hover:bg-white disabled:opacity-50"
           >
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
-            {busy ? "Guardando entreno…" : "Finalizar y guardar entreno"}
+            {busy ? "Guardando entreno..." : "Finalizar y guardar entreno"}
           </button>
           <p className="text-xs font-semibold text-white/40">
             Para finalizar tiene que haber un ingreso registrado hoy. El tiempo, máquinas y repeticiones quedarán en tu historial.

@@ -26,7 +26,7 @@ type Options = {
 
 /**
  * Vida Xtreme: hábitos y wellness.
- * No requiere plan de membresía — solo sesión desbloqueada (cédula + PIN).
+ * No requiere plan de membresía - solo sesión desbloqueada (cédula + PIN).
  */
 export function useMemberLifestyle({ unlocked, memberName, setMessage, setError }: Options) {
   const [lifestyle, setLifestyle] = useState<MemberLifestyle>(EMPTY);

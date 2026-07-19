@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Phase 3 next-best action (rules v0).
+ * Xtreme Gym - Phase 3 next-best action (rules v0).
  * Exactly one home-screen recommendation. Pure function, no I/O.
  */
 

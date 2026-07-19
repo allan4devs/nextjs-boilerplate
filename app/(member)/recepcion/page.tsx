@@ -78,7 +78,7 @@ function formatTime(value: string | Date) {
       minute: "2-digit",
     });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -1176,7 +1176,7 @@ export default function RecepcionPage() {
                     )}
                   </div>
 
-                  {/* Teclado numerico rapido (tablet) — estilo juego */}
+                  {/* Teclado numerico rapido (tablet) - estilo juego */}
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     {["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"].map((key) => (
                       <button
@@ -1334,7 +1334,7 @@ export default function RecepcionPage() {
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-black uppercase">{m.memberName}</p>
                               <p className="text-xs font-bold text-white/40">
-                                Dist. {m.faceDistance ?? "—"} · {MEMBERSHIP_STATUS_LABELS[m.membershipStatus]}
+                                Dist. {m.faceDistance ?? "-"} · {MEMBERSHIP_STATUS_LABELS[m.membershipStatus]}
                               </p>
                             </div>
                           </button>
@@ -1544,7 +1544,7 @@ export default function RecepcionPage() {
               <span className="text-lg text-white/40"> / {status?.capacity ?? 85}</span>
             </p>
             <p className="mt-1 text-sm font-bold text-white/50">
-              {status?.occupancyPct ?? 0}% · {status?.level ?? "—"} · hoy {status?.checkinsToday ?? 0} ingresos
+              {status?.occupancyPct ?? 0}% · {status?.level ?? "-"} · hoy {status?.checkinsToday ?? 0} ingresos
             </p>
             <div className="mt-3 h-3 border-[3px] border-white/15 bg-black/45">
               <div
@@ -1874,7 +1874,7 @@ function MemberPreview({
       {expired && (
         <div className="mt-3">
           <GameCallout tone="orange" icon={ShieldAlert}>
-            Membresía vencida — podés ingresar, cobrá renovación.
+            Membresía vencida - podés ingresar, cobrá renovación.
           </GameCallout>
         </div>
       )}

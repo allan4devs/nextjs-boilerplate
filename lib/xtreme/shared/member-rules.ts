@@ -1,4 +1,4 @@
-import { addDays, toUtcDate, todayIso } from "./dates";
+import { addDays, isoDateOrEmpty, toUtcDate, todayIso } from "./dates";
 import {
   DEFAULT_NOTIFICATION_PREFS,
   type CheckinDoc,
@@ -8,6 +8,12 @@ import {
 } from "./types";
 
 const LEGACY_ACTIVE_CHECKIN_MINUTES = 90;
+
+/** Plan labels that must never unlock class booking by themselves. */
+export function isInactivePlanLabel(plan: string | undefined | null) {
+  const value = String(plan ?? "").trim();
+  return !value || value === "-" || /^sin\s*plan/i.test(value);
+}
 
 export function isCheckinOpen(checkin: CheckinDoc, now = Date.now()) {
   if (checkin.checkedOutAt instanceof Date) return false;
@@ -34,13 +40,33 @@ export function clampPinnedBadges(ids: unknown, max = 3): string[] {
 }
 
 export function membershipStatus(membership?: Membership) {
-  const plan = membership?.plan ?? "—";
-  const nextBillingDate = membership?.nextBillingDate ?? todayIso();
+  const planRaw = String(membership?.plan ?? "").trim();
+  const plan = planRaw || "-";
+  const nextBillingDate = isoDateOrEmpty(membership?.nextBillingDate);
+  const startedAt = isoDateOrEmpty(membership?.startedAt) || String(membership?.startedAt ?? "");
+
+  // Sin fecha de vencimiento real o sin plan usable = sin acceso (no inventar "hoy").
+  if (isInactivePlanLabel(plan) || !nextBillingDate) {
+    return {
+      plan: isInactivePlanLabel(plan) && plan === "-" ? "Sin plan activo" : plan,
+      nextBillingDate: nextBillingDate || "",
+      daysRemaining: -1,
+      status: "expired" as const,
+      startedAt,
+    };
+  }
+
   const today = toUtcDate(todayIso());
   const daysRemaining = Math.ceil((toUtcDate(nextBillingDate).getTime() - today.getTime()) / 86_400_000);
   const status: "active" | "warning" | "expired" =
     daysRemaining < 0 ? "expired" : daysRemaining <= 5 ? "warning" : "active";
-  return { plan, nextBillingDate, daysRemaining, status, startedAt: membership?.startedAt ?? "" };
+  return { plan, nextBillingDate, daysRemaining, status, startedAt };
+}
+
+/** True when membership fields alone cover booking on the gym's business day. */
+export function membershipCoversToday(membership?: Membership) {
+  const ms = membershipStatus(membership);
+  return ms.daysRemaining >= 0 && !isInactivePlanLabel(ms.plan);
 }
 
 export function computeStreak(workouts: WorkoutEntry[]) {

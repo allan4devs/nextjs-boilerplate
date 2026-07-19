@@ -64,7 +64,7 @@ export default function ActiveVisitPanel({ visit, onCheckout }: Props) {
           ) : (
             <LogOut className="h-5 w-5" />
           )}
-          {visit.busy ? "Registrando…" : "Registrar mi salida"}
+          {visit.busy ? "Registrando..." : "Registrar mi salida"}
         </GameButton>
       </div>
     </section>

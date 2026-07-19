@@ -369,6 +369,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Acceso rapido a membresia: solo super admin, con entitlement real y auditoria.
+    // Si el socio ya tiene días vigentes, se suman. El correo guía a entrar o a
+    // completar registro+PIN sin borrar el plan.
     if (action === "quickPlan") {
       if (role !== "super") return forbidden();
       const memberName = normalizeName(body.memberName);
@@ -394,6 +396,8 @@ export async function POST(req: NextRequest) {
       }
 
       const today = todayIso();
+      const priorMs = membershipStatus(member.membership);
+      const hadActiveDays = priorMs.daysRemaining >= 0 && !/sin plan/i.test(priorMs.plan || "");
       const currentEnd = member.membership?.nextBillingDate;
       const extensionBase = currentEnd && currentEnd >= today ? currentEnd : today;
       const endsOn = addDaysIso(extensionBase, option.days);
@@ -417,31 +421,102 @@ export async function POST(req: NextRequest) {
           },
         },
       );
+
+      const pinDoc = await db.collection(PINS_COLLECTION).findOne(
+        { normalizedName: memberKey },
+        { projection: { pinHash: 1 } },
+      );
+      const hasPin = Boolean(pinDoc?.pinHash);
+      const displayName = member.memberName || memberName;
+      const emailOnFile = String(member.email || "").trim();
+      const verified = member.emailVerified === true && Boolean(emailOnFile);
+
+      let emailSent = false;
+      let emailKind: "plan" | "invite" | "none" = "none";
+      let emailError: string | undefined;
+      let inviteExpiresHours: number | undefined;
+
+      if (verified) {
+        const emailResult = await sendAdminGrantedPlanEmail({
+          to: emailOnFile,
+          memberName: displayName,
+          plan: option.label,
+          endsOn,
+          hasPin,
+          extended: hadActiveDays,
+        });
+        emailSent = emailResult.ok;
+        emailKind = "plan";
+        if (!emailResult.ok) emailError = emailResult.error || "No se pudo enviar el correo.";
+      } else if (emailOnFile) {
+        // Sin verificar: magic link de registro+PIN; el plan ya quedó en la ficha.
+        const invite = await inviteExistingMemberToApp(db, {
+          memberKey,
+          email: emailOnFile,
+          source: "admin",
+          baseUrl: inviteBaseUrlFromRequest(req.url) || requestAppUrl(req.url),
+          planGrant: {
+            plan: option.label,
+            endsOn,
+            extended: hadActiveDays,
+          },
+        });
+        if (invite.ok) {
+          emailSent = true;
+          emailKind = "invite";
+          inviteExpiresHours = invite.expiresHours;
+        } else {
+          emailError = invite.error;
+        }
+      }
+
       await writeAudit(db, {
         actorRole: role,
         action: "member.quick_plan_grant",
         targetType: "member",
         targetId: memberKey,
-        summary: `${option.label} otorgado a ${member.memberName || memberName} hasta ${endsOn}`,
-        meta: { optionId, days: option.days, endsOn, entitlementId: entitlement.id },
+        summary: `${option.label} otorgado a ${displayName} hasta ${endsOn}`,
+        meta: {
+          optionId,
+          days: option.days,
+          endsOn,
+          entitlementId: entitlement.id,
+          extended: hadActiveDays,
+          emailKind,
+          emailSent,
+          hasPin,
+        },
       });
-      const emailResult =
-        member.email && member.emailVerified === true
-          ? await sendAdminGrantedPlanEmail({
-              to: member.email,
-              memberName: member.memberName || memberName,
-              plan: option.label,
-              endsOn,
-            })
-          : { ok: false, skipped: true };
+      await recordEvent(db, {
+        type: "admin_plan_granted",
+        source: "admin",
+        memberId: memberKey,
+        entity: { type: "member", id: memberKey },
+        properties: {
+          optionId,
+          plan: option.label,
+          endsOn,
+          extended: hadActiveDays,
+          emailKind,
+          emailSent,
+          hasPin,
+        },
+      }).catch(() => {});
+
       return NextResponse.json({
         ok: true,
         entitlementId: entitlement.id,
         plan: option.label,
         days: option.days,
         endsOn,
-        emailSent: emailResult.ok,
-        emailAvailable: Boolean(member.email && member.emailVerified === true),
+        extended: hadActiveDays,
+        hasPin,
+        emailSent,
+        emailKind,
+        emailError: emailError || null,
+        inviteExpiresHours: inviteExpiresHours ?? null,
+        emailAvailable: Boolean(emailOnFile),
+        needsRegistration: !verified,
       });
     }
 
@@ -605,7 +680,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, checkin, membershipStatus: ms.status });
     }
 
-    // Pago manual — solo super admin
+    // Pago manual - solo super admin
     if (action === "payment") {
       if (role !== "super") return forbidden();
 
@@ -732,7 +807,7 @@ export async function POST(req: NextRequest) {
         action: "payment.create",
         targetType: "payment",
         targetId: payment.id,
-        summary: `Pago ${payment.amountCrc} CRC — ${payment.optionLabel} (${payment.customerName})`,
+        summary: `Pago ${payment.amountCrc} CRC - ${payment.optionLabel} (${payment.customerName})`,
         meta: { method: payment.method, category: payment.category },
       });
 

@@ -181,7 +181,7 @@ export async function issueCampaignClaimLink(
 
 /**
  * Contacto importado con nombre ≈ ficha sin correo (o correo no verificado).
- * Evita que un socio “sin correo en ficha” no pueda reclamar vía la lista.
+ * Evita que un socio "sin correo en ficha" no pueda reclamar vía la lista.
  */
 async function findMemberForContactEmail(db: Db, email: string): Promise<MemberDoc | null> {
   const contact = await db

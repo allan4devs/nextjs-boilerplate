@@ -43,7 +43,7 @@ export default function PushOptInBanner({ unlocked, memberName }: Props) {
         return;
       }
       // Si el entorno no puede push (Safari iOS sin instalar), igual mostramos
-      // el banner con el mensaje de capability al activar — o lo ocultamos si
+      // el banner con el mensaje de capability al activar - o lo ocultamos si
       // es hard block sin solución en este browser.
       if (cap.reason === "unsupported" || cap.reason === "insecure") {
         setVisible(false);
@@ -102,7 +102,7 @@ export default function PushOptInBanner({ unlocked, memberName }: Props) {
             Activá notificaciones en este celular
           </p>
           <p className="mt-1.5 text-xs font-semibold leading-relaxed text-white/50">
-            Te avisamos ~1 h antes de tu clase, más racha, reservas, badges y renovación —
+            Te avisamos ~1 h antes de tu clase, más racha, reservas, badges y renovación -
             aunque no tengas la app abierta. Separado del correo.
           </p>
           {error && (

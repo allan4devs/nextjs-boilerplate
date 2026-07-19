@@ -51,7 +51,7 @@ function GamificationOverviewComponent({
             weeklyGoal={streak.weeklyGoal}
           />
           <p className="mt-3 text-center text-sm font-bold italic text-[#eaff93]">
-            “{streak.phrase}”
+            "{streak.phrase}"
           </p>
           {gamification.freezesText && (
             <p className="mt-3 text-center text-xs font-bold text-cyan-200/70">

@@ -148,7 +148,7 @@ export const GYM_HELP_SECTIONS: LegalSection[] = [
     id: "visita",
     title: "Tu visita al gym",
     paragraphs: [
-      `Estamos en ${BUSINESS.location}. Lunes a viernes 5:00 AM–10:00 PM, sábados 6:00 AM–6:00 PM y domingos 7:00 AM–1:00 PM.`,
+      `Estamos en ${BUSINESS.location}. Lunes a viernes 5:00 AM-10:00 PM, sábados 6:00 AM-6:00 PM y domingos 7:00 AM-1:00 PM.`,
     ],
     bullets: [
       "Llevá ropa cómoda, tenis de entrenamiento, toalla y agua.",

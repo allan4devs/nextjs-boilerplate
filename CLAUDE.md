@@ -25,38 +25,38 @@ Si `tsc` reporta errores raros en `.next/types/validator.ts` sobre rutas que ya 
 
 ### Rutas (App Router)
 
-- `app/(site)/…` — todas las páginas: el sitio público (`/`, `/precios`, `/zonas`, `/contacto`, etc.) y también las apps (`/app` Member OS, `/admin`, `/recepcion`, `/ingreso`, `/dzcate`). El route group comparte `app/(site)/layout.tsx`.
-- `app/api/xtreme/*` — todos los endpoints. Son route handlers que hablan con MongoDB; no hay ORM.
+- `app/(site)/...` - todas las páginas: el sitio público (`/`, `/precios`, `/zonas`, `/contacto`, etc.) y también las apps (`/app` Member OS, `/admin`, `/recepcion`, `/ingreso`, `/dzcate`). El route group comparte `app/(site)/layout.tsx`.
+- `app/api/xtreme/*` - todos los endpoints. Son route handlers que hablan con MongoDB; no hay ORM.
 - `app/(site)/app/page.tsx` solo monta `app/ExtremeGymSite.tsx` (el Member OS).
 
 ### Member OS (app de socios)
 
 `app/ExtremeGymSite.tsx` es un orquestador delgado. Toda la lógica vive en `app/components/member/`:
 
-- `useMemberOs.ts` — **hook central**: todo el estado, efectos y acciones (login por cédula, PIN, entrenos, reservas, medidas, perfil). Devuelve el objeto `MemberOs`; cada componente de UI recibe `{ os: MemberOs }` y destructura lo que usa. Para agregar estado/acción nueva: agregarla aquí y al objeto de retorno.
-- `constants.ts` — catálogos estáticos (TRAININGS, MACHINE_GUIDE, ROUTINES, TABS, llaves de localStorage) y tipos derivados (`TabId`, `Training`, `MachineGuide`).
-- `types.ts` — tipos de dominio (`Member`, `Gamification`, `MembersResponse`, etc.) que espejan las respuestas de `/api/xtreme/*`.
-- `utils.ts` — helpers puros (fechas, cédula, `memberCode`, `readJson`).
-- `tabs/` — un archivo por tab: `ResumenTab`, `EntrenarTab`, `MaquinasTab`, `ProgresoTab`, `PerfilTab`.
+- `useMemberOs.ts` - **hook central**: todo el estado, efectos y acciones (login por cédula, PIN, entrenos, reservas, medidas, perfil). Devuelve el objeto `MemberOs`; cada componente de UI recibe `{ os: MemberOs }` y destructura lo que usa. Para agregar estado/acción nueva: agregarla aquí y al objeto de retorno.
+- `constants.ts` - catálogos estáticos (TRAININGS, MACHINE_GUIDE, ROUTINES, TABS, llaves de localStorage) y tipos derivados (`TabId`, `Training`, `MachineGuide`).
+- `types.ts` - tipos de dominio (`Member`, `Gamification`, `MembersResponse`, etc.) que espejan las respuestas de `/api/xtreme/*`.
+- `utils.ts` - helpers puros (fechas, cédula, `memberCode`, `readJson`).
+- `tabs/` - un archivo por tab: `ResumenTab`, `EntrenarTab`, `MaquinasTab`, `ProgresoTab`, `PerfilTab`.
 - Shell: `TopHud`, `SideNav`, `BottomDock`, `CedulaLoginGate`, `PinModal`, `OsModals` (todos los `GameModal` del OS).
 
 Flujo de sesión del socio: cédula (lector de barras USB tipo teclado o digitada) → lookup en `/api/xtreme/user?cedula=` → si no existe pide nombre+teléfono para alta → PIN de 4 dígitos (`/api/xtreme/pin`, con recuperación OTP por correo) → sesión en localStorage con TTL de 30 días.
 
 ### UI compartida
 
-- `app/components/GameOS.tsx` — design system "de juego" del Member OS: `GamePanel`, `GameButton`, `GameModal`, `GameStat`, `GameHudPill`, etc. Estética: bordes de 3px, sombras duras, lima `#d8ff3e` sobre negro. Usar estos componentes en vez de recrear estilos.
-- `app/components/gamification.tsx` — `StreakRing`, `XpBar`, `BadgeGallery`, `CelebrationOverlay`, helpers de badges.
-- `app/components/charts.tsx` — charts SVG propios (`LineTrendChart`, `BarTrendChart`) sin librería externa.
-- `app/components/OnboardingTour.tsx` — tour de bienvenida; los targets usan atributos `data-tour`.
-- `app/lib/site.ts` — datos del negocio (teléfonos, precios, horarios) para el sitio público.
+- `app/components/GameOS.tsx` - design system "de juego" del Member OS: `GamePanel`, `GameButton`, `GameModal`, `GameStat`, `GameHudPill`, etc. Estética: bordes de 3px, sombras duras, lima `#d8ff3e` sobre negro. Usar estos componentes en vez de recrear estilos.
+- `app/components/gamification.tsx` - `StreakRing`, `XpBar`, `BadgeGallery`, `CelebrationOverlay`, helpers de badges.
+- `app/components/charts.tsx` - charts SVG propios (`LineTrendChart`, `BarTrendChart`) sin librería externa.
+- `app/components/OnboardingTour.tsx` - tour de bienvenida; los targets usan atributos `data-tour`.
+- `app/lib/site.ts` - datos del negocio (teléfonos, precios, horarios) para el sitio público.
 
 ### Backend (lib/)
 
-- `lib/helpers/mongodb.ts` — cliente Mongo cacheado en `globalThis` (con recuperación ante fallos de conexión). `getDb()` es el punto de entrada.
-- `lib/xtreme/shared.ts` — nombres de todas las colecciones (`xtreme_gym_*`) y helpers de member key/hash. Los datos del socio se buscan por `normalizedName` (nombre en mayúsculas) o por cédula.
-- `lib/xtreme/gamification.ts` — reglas de XP, niveles, rachas, badges, protectores de racha; las constantes (`STREAK_MILESTONES`, `WEEKLY_GOAL_MIN/MAX`) se importan también en el cliente.
-- `lib/xtreme/session.ts` — sesiones de servidor con cookie HttpOnly (token opaco, solo el hash va a Mongo).
-- `lib/xtreme/lifecycle.ts` + `app/api/xtreme/jobs/lifecycle/route.ts` — job diario de correos/push (cron de Vercel en `vercel.json`, autenticado con `CRON_SECRET` como Bearer). Usa llaves de entrega en Mongo para no duplicar envíos en reintentos.
+- `lib/helpers/mongodb.ts` - cliente Mongo cacheado en `globalThis` (con recuperación ante fallos de conexión). `getDb()` es el punto de entrada.
+- `lib/xtreme/shared.ts` - nombres de todas las colecciones (`xtreme_gym_*`) y helpers de member key/hash. Los datos del socio se buscan por `normalizedName` (nombre en mayúsculas) o por cédula.
+- `lib/xtreme/gamification.ts` - reglas de XP, niveles, rachas, badges, protectores de racha; las constantes (`STREAK_MILESTONES`, `WEEKLY_GOAL_MIN/MAX`) se importan también en el cliente.
+- `lib/xtreme/session.ts` - sesiones de servidor con cookie HttpOnly (token opaco, solo el hash va a Mongo).
+- `lib/xtreme/lifecycle.ts` + `app/api/xtreme/jobs/lifecycle/route.ts` - job diario de correos/push (cron de Vercel en `vercel.json`, autenticado con `CRON_SECRET` como Bearer). Usa llaves de entrega en Mongo para no duplicar envíos en reintentos.
 - `lib/helpers/email.ts` (Resend), `lib/helpers/push.ts` (web-push/VAPID), `lib/helpers/paypal.ts` + `lib/constants/paypal.ts` (checkout de planes).
 
 ### Convenciones

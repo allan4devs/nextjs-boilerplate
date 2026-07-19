@@ -74,7 +74,7 @@ export const MACHINE_GUIDE: MachineGuide[] = [
       "Ajustá el respaldo para que la rodilla quede alineada con el eje y el rodillo sobre el tobillo.",
     tips: [
       "Subí con control hasta casi bloquear sin rebotar",
-      "Bajá en 2–3 segundos",
+      "Bajá en 2-3 segundos",
       "Mantené cadera pegada al asiento",
     ],
     mistakes: ["Peso excesivo y balanceo", "Rodillas hacia afuera o adentro", "Rango incompleto"],
@@ -287,7 +287,7 @@ export const MACHINE_GUIDE: MachineGuide[] = [
       "Bloquear pasillos con discos",
       "Saltar el calentamiento de movilidad",
     ],
-    starter: "Empezá con 2–3 movimientos compuestos: sentadilla, press y remo.",
+    starter: "Empezá con 2-3 movimientos compuestos: sentadilla, press y remo.",
     accent: "from-orange-400 to-amber-500",
     image: "/xtreme/zona-mancuernas.webp",
     images: [
@@ -305,14 +305,14 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     level: "Todos",
     muscles: ["Sistema cardiovascular", "Piernas", "Resistencia"],
     setup:
-      "Ajustá sillín o inclinación, amarrá bien los zapatos y arrancá 3–5 min suave para calentar.",
+      "Ajustá sillín o inclinación, amarrá bien los zapatos y arrancá 3-5 min suave para calentar.",
     tips: [
       "Podés hacer intervalos (ej. 30s fuerte / 90s suave)",
       "Mantené postura erguida en elíptica y bici",
       "Hidrátate y no te colgués del manubrio",
     ],
     mistakes: ["Empezar a tope sin calentar", "Inclinación extrema sin control", "Sesiones solo en 0 de esfuerzo"],
-    starter: "15–25 min: 5 calentamiento + 10 intervalos + 5 vuelta a la calma.",
+    starter: "15-25 min: 5 calentamiento + 10 intervalos + 5 vuelta a la calma.",
     accent: "from-cyan-400 to-teal-500",
     image: "/xtreme/zona-cardio.webp",
     images: [

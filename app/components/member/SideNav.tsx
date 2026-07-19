@@ -2,14 +2,13 @@
 
 /**
  * Navegacion lateral (desktop colapsable + drawer mobile):
- * tabs del OS, perfil, sistemas y mini-login por cedula.
+ * tabs del OS, perfil y mini-login por cedula.
  *
- * Mobile/iPhone: el drawer respeta safe-area (notch / Dynamic Island)
- * y el selector de sistemas vive aquí (no flota en el top).
+ * Mobile/iPhone: el drawer respeta safe-area (notch / Dynamic Island).
+ * Sin salidas al sitio público ni al centro de apps: el socio se queda en el OS.
  */
 
-import Link from "next/link";
-import { ArrowRight, House, LayoutGrid, UserRound, X } from "lucide-react";
+import { ArrowRight, UserRound, X } from "lucide-react";
 import { GameButton } from "../GameOS";
 import Avatar from "./Avatar";
 import { TABS } from "./constants";
@@ -178,29 +177,8 @@ export default function SideNav({ os }: { os: MemberOs }) {
 
         </nav>
 
-        <div className="xg-side-nav-footer shrink-0 border-t-[3px] border-white/15 p-2">
-          {/* Solo el centro de apps (no listar cada sistema 1 a 1). */}
-          <Link
-            href="/acceso"
-            title="Centro de sistemas"
-            onClick={closeNav}
-            className={`mb-2 flex min-h-12 w-full items-center gap-3 border-[3px] border-[#d8ff3e]/45 bg-[#d8ff3e]/10 px-2 text-xs font-black uppercase tracking-[.1em] text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/15 ${
-              navOpen ? "justify-start" : "justify-center lg:justify-center"
-            }`}
-          >
-            <LayoutGrid className="h-5 w-5 shrink-0" />
-            <span className={navOpen ? "block" : "lg:hidden"}>Centro de apps</span>
-          </Link>
-          <Link
-            href="/"
-            title="Ir al sitio Xtreme Gym"
-            onClick={closeNav}
-            className="flex min-h-12 w-full items-center justify-center gap-3 border-[3px] border-white/10 px-2 text-xs font-black uppercase tracking-[.1em] text-white/50 transition hover:border-[#d8ff3e]/40 hover:text-white"
-          >
-            <House className="h-4 w-4 shrink-0" />
-            <span className={navOpen ? "block" : "lg:hidden"}>Sitio web</span>
-          </Link>
-          {memberName && (
+        {memberName && (
+          <div className="xg-side-nav-footer shrink-0 border-t-[3px] border-white/15 p-2">
             <button
               type="button"
               onClick={() => {
@@ -209,14 +187,14 @@ export default function SideNav({ os }: { os: MemberOs }) {
                 resetMember();
               }}
               title="Cerrar sesion"
-              className={`mt-2 w-full border-[3px] border-red-400/25 py-2 text-xs font-black uppercase text-red-200/70 transition hover:border-red-400/50 hover:text-red-200 ${
+              className={`w-full border-[3px] border-red-400/25 py-2 text-xs font-black uppercase text-red-200/70 transition hover:border-red-400/50 hover:text-red-200 ${
                 navOpen ? "block" : "lg:hidden"
               }`}
             >
               Cerrar sesion
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
     </>
   );

@@ -11,6 +11,7 @@ export {
   initialMember,
   initialsOf,
   memberCode,
+  membershipAllowsClassBooking,
   membershipPlanDays,
   membershipRemainingPct,
   normalizeName,

@@ -42,9 +42,9 @@ import { requestAppUrl } from "@/lib/constants/app-url";
 
 type CaptureBody = {
   orderID?: string;
-  /** Ignored for grants — option comes from pending order created at checkout. */
+  /** Ignored for grants - option comes from pending order created at checkout. */
   optionId?: string;
-  /** Optional class hold — capture creates booking after entitlement grant. */
+  /** Optional class hold - capture creates booking after entitlement grant. */
   trainingId?: string;
   trainingName?: string;
   trainingDate?: string;

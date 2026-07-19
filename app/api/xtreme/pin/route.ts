@@ -465,7 +465,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "recover") {
-      // Solo OTP al correo verificado. Ya no se acepta teléfono/correo “a ojo”
+      // Solo OTP al correo verificado. Ya no se acepta teléfono/correo "a ojo"
       // (cualquiera que conociera el contacto reseteaba el PIN).
       if (otpCode.length !== 6) {
         return NextResponse.json(

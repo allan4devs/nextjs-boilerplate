@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Phase 3 growth metrics from the event ledger.
+ * Xtreme Gym - Phase 3 growth metrics from the event ledger.
  * Crude but honest aggregates for the admin Growth strip.
  */
 import type { Db } from "mongodb";

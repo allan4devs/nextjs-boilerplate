@@ -158,7 +158,7 @@ export async function resolveMember(
 ): Promise<ResolvedMember | null> {
   const p = buildMemberLookupParams(input);
 
-  // 1) Cédula — siempre primero
+  // 1) Cédula - siempre primero
   if (p.cedula && digitsOnly(p.cedula).length >= 6) {
     const byCed = await resolveByCedula(db, p.cedula);
     if (byCed) return byCed;
@@ -179,7 +179,7 @@ export async function resolveMember(
     if (byNameKey) return byNameKey;
   }
 
-  // 4) Código de acceso (solo 4–8 dígitos; 9+ ya se intentó como cédula)
+  // 4) Código de acceso (solo 4-8 dígitos; 9+ ya se intentó como cédula)
   const codeDigits = p.code ? digitsOnly(p.code) : "";
   if (codeDigits.length >= 9) {
     const byCedFromCode = await resolveByCedula(db, codeDigits);

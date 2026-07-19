@@ -627,7 +627,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
         </div>
       )}
 
-      {/* Panel izquierdo — marca + collage */}
+      {/* Panel izquierdo - marca + collage */}
       <section className="relative flex flex-col justify-center px-8 py-14 sm:px-14">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-10 lg:gap-14">
           <div className="grid h-14 w-14 place-items-center bg-[#0b0b0b] text-[#d8ff3e]">
@@ -642,17 +642,17 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
             gusta<span className="text-[#8fbf00]">.</span>
           </h1>
 
-          <GymCollage occupancyPct={status?.occupancyPct ?? 0} level={status?.level ?? "—"} />
+          <GymCollage occupancyPct={status?.occupancyPct ?? 0} level={status?.level ?? "-"} />
         </div>
       </section>
 
-      {/* Panel derecho — ingreso (cara / buscar / perfil) */}
+      {/* Panel derecho - ingreso (cara / buscar / perfil) */}
       <section className="relative flex flex-col justify-center bg-white px-6 py-12 sm:px-14 lg:border-l lg:border-black/10">
         {onStaffRequest ? (
           <button
             type="button"
             onClick={onStaffRequest}
-            aria-label="Reception OS — staff"
+            aria-label="Reception OS - staff"
             className="absolute right-6 top-6 text-black/40 transition hover:text-black"
           >
             <Settings className="h-6 w-6" />
@@ -819,9 +819,9 @@ function FaceCard({
 
   const statusCopy: Record<FaceGuideStatus, string> = {
     waiting: "Colocá tu rostro en el círculo",
-    detected: "Rostro detectado — mantené la posición",
-    locking: "Perfecto… identificando",
-    scanning: isCheckingIn ? "Registrando ingreso…" : "Analizando rostro…",
+    detected: "Rostro detectado - mantené la posición",
+    locking: "Perfecto... identificando",
+    scanning: isCheckingIn ? "Registrando ingreso..." : "Analizando rostro...",
     cooldown: "Listo para el siguiente socio",
   };
 
@@ -924,7 +924,7 @@ function FaceCard({
         </div>
       )}
 
-      {/* Manual fallback — la detección es automática */}
+      {/* Manual fallback - la detección es automática */}
       <button
         type="button"
         onClick={onScan}
@@ -938,7 +938,7 @@ function FaceCard({
       {matches.length > 1 && (
         <div className="mt-5 w-full text-left">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-black/40">
-            Varias coincidencias — elegí la tuya
+            Varias coincidencias - elegí la tuya
           </p>
           <div className="mt-2 space-y-2">
             {matches.map((m) => (
@@ -964,7 +964,7 @@ function FaceCard({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black uppercase">{m.memberName}</span>
                   <span className="text-[11px] font-bold text-black/40">
-                    Match {m.faceDistance ?? "—"} · {MEMBERSHIP_STATUS_LABELS[m.membershipStatus]}
+                    Match {m.faceDistance ?? "-"} · {MEMBERSHIP_STATUS_LABELS[m.membershipStatus]}
                   </span>
                 </span>
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-[#8fbf00]" />

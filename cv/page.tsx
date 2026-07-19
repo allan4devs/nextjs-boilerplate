@@ -33,10 +33,10 @@ const CONTACT = {
 };
 
 const SUMMARY =
-  "Senior Software Engineer with 10+ years shipping production systems across enterprise, healthcare, and consumer products. I design and deliver end-to-end platforms—scalable backends, modern web clients, and reliable cloud infrastructure—from architecture through production ownership. Strong in Java/Spring and TypeScript/React stacks on AWS, with deep experience in microservices, data modeling, CI/CD, and observability. I work effectively with product and cross-functional partners, raise engineering quality through design reviews and mentoring, and use AI-assisted workflows to accelerate delivery without sacrificing reliability.";
+  "Senior Software Engineer with 10+ years shipping production systems across enterprise, healthcare, and consumer products. I design and deliver end-to-end platforms-scalable backends, modern web clients, and reliable cloud infrastructure-from architecture through production ownership. Strong in Java/Spring and TypeScript/React stacks on AWS, with deep experience in microservices, data modeling, CI/CD, and observability. I work effectively with product and cross-functional partners, raise engineering quality through design reviews and mentoring, and use AI-assisted workflows to accelerate delivery without sacrificing reliability.";
 
 const ACHIEVEMENTS = [
-  "Owned full product delivery for cloud-native platforms—architecture, implementation, infrastructure, and production operations.",
+  "Owned full product delivery for cloud-native platforms-architecture, implementation, infrastructure, and production operations.",
   "Designed and operated backend services and APIs at production scale with Java, Spring Boot, Node.js, and Python.",
   "Built modern React/TypeScript frontends and operator dashboards with real-time data and strong UX for internal and customer workflows.",
   "Established CI/CD, containerization, and cloud deployment patterns that improved release consistency and team throughput.",
@@ -85,7 +85,7 @@ const EXPERIENCE = [
   },
   {
     role: "Software Engineer",
-    company: "MicroVention – Terumo",
+    company: "MicroVention - Terumo",
     location: "Costa Rica",
     bullets: [
       "Built Java systems for manufacturing operations in an FDA-regulated medical device environment.",

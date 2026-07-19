@@ -69,7 +69,7 @@ Opcional: VAPID (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUB
 
 1. `npx tsc --noEmit` y `npm run build`
 2. `GET /api/health` → `ok: true` y checks de db/admin/cron/email/paypal
-3. `/primer-dia` → correo → confirmar → app + PIN → membresía “Primer día gratis”
+3. `/primer-dia` → correo → confirmar → app + PIN → membresía "Primer día gratis"
 4. `/ingreso`, `/recepcion`, `/entrenador` y `/admin` usan sesiones HttpOnly independientes; el check-in del socio exige PIN
-5. PayPal sandbox: capture otorga el plan de la orden creada (no se puede “upgradear” el `optionId` en el cliente)
+5. PayPal sandbox: capture otorga el plan de la orden creada (no se puede "upgradear" el `optionId` en el cliente)
 6. No usar Seed/Reset en la base live

@@ -14,7 +14,7 @@ export const MSG = {
     loadApp: "No se pudo cargar. Intentá de nuevo.",
     cedulaTooShort: (minDigits: number) =>
       `Cédula incompleta (mín. ${minDigits} dígitos).`,
-    /** Cuenta no encontrada por cédula — el detalle va en la UI de login. */
+    /** Cuenta no encontrada por cédula - el detalle va en la UI de login. */
     cedulaNotRegistered: "No hay cuenta con esa cédula.",
     /** Ficha existe pero sin acceso activado (sin correo verificado / PIN). */
     cedulaNeedsInvite: "Cuenta sin activar. Pedí el enlace en recepción.",

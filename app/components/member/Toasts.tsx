@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Toast del Member OS — reemplaza el callout inline que empujaba el contenido.
+ * Toast del Member OS - reemplaza el callout inline que empujaba el contenido.
  * Flota abajo (sobre el dock), se desvanece solo y se puede cerrar con click.
  * Los errores duran mas porque suelen pedir una accion del socio.
  */

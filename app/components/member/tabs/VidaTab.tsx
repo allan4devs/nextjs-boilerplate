@@ -163,7 +163,7 @@ export default function VidaTab({ os }: { os: MemberOs }) {
     <div className="xg-tab-in space-y-3 sm:space-y-4" data-tour="tour-vida-hub">
       {isLoadingLifestyle && (
         <div className="flex items-center gap-2 border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-bold text-cyan-100">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando tu check-in…
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando tu check-in...
         </div>
       )}
       {lifestyleLoadError && (
@@ -275,7 +275,7 @@ export default function VidaTab({ os }: { os: MemberOs }) {
       </section>
 
       <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="border-[2px] border-white/10 bg-black/25 p-3"><BedDouble className="mx-auto h-5 w-5 text-cyan-300" /><p className="mt-1 text-lg font-black">{sleepHours || "—"}</p><p className="text-[9px] font-black uppercase text-white/35">horas</p></div>
+        <div className="border-[2px] border-white/10 bg-black/25 p-3"><BedDouble className="mx-auto h-5 w-5 text-cyan-300" /><p className="mt-1 text-lg font-black">{sleepHours || "-"}</p><p className="text-[9px] font-black uppercase text-white/35">horas</p></div>
         <div className="border-[2px] border-white/10 bg-black/25 p-3"><Droplets className="mx-auto h-5 w-5 text-cyan-300" /><p className="mt-1 text-lg font-black">{waterCups}</p><p className="text-[9px] font-black uppercase text-white/35">vasos</p></div>
         <div className="border-[2px] border-white/10 bg-black/25 p-3"><Footprints className="mx-auto h-5 w-5 text-cyan-300" /><p className="mt-1 text-lg font-black">{steps.toLocaleString()}</p><p className="text-[9px] font-black uppercase text-white/35">pasos</p></div>
       </div>

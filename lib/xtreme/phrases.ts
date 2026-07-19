@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Frases motivacionales por contexto.
+ * Xtreme Gym - Frases motivacionales por contexto.
  * Eleccion deterministica por (nombre + fecha + contexto): se siente
  * personal, no se repite el mismo dia y no requiere infraestructura.
  * Tono: tico sancarleno, profesional, voseo natural (podés, tenés, seguí).

@@ -67,7 +67,7 @@ function isValidFaceHash(value: string) {
 }
 
 /**
- * GET — panel de recepcion:
+ * GET - panel de recepcion:
  *  - estado de ocupacion + ingresos recientes
  *  - roster ligero de socios con foto/face (para galeria)
  *  - match de faceHash por query

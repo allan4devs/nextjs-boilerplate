@@ -1,6 +1,7 @@
 import type { Membership, TrainingPlan } from "./types";
 
 const DAY_MS = 86_400_000;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function addMonths(date: string, months: number) {
   const source = toUtcDate(date);
@@ -18,9 +19,31 @@ function toUtcDate(date: string) {
   return new Date(`${date}T00:00:00.000Z`);
 }
 
-/** @deprecated Prefer createFreeFirstDayMembership for self-serve alta. */
+function isoOrEmpty(value: unknown) {
+  const raw = String(value ?? "").slice(0, 10);
+  return ISO_DATE.test(raw) ? raw : "";
+}
+
+function isInactivePlanLabel(plan: string) {
+  const value = plan.trim();
+  return !value || value === "-" || /^sin\s*plan/i.test(value);
+}
+
+/** Staff / unpaid account: no class booking access. */
+export function createInactiveMembership(today: string): Membership {
+  const yesterday = new Date(`${today}T00:00:00.000Z`);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  return {
+    plan: "Sin plan activo",
+    status: "expired",
+    startedAt: today,
+    nextBillingDate: yesterday.toISOString().slice(0, 10),
+  };
+}
+
+/** @deprecated Prefer createFreeFirstDayMembership for primer-día flows only. */
 export function createDefaultMembership(today: string): Membership {
-  return createFreeFirstDayMembership(today);
+  return createInactiveMembership(today);
 }
 
 /** Self-serve first visit: one calendar day of access (not a paid monthly plan). */
@@ -37,16 +60,39 @@ export function membershipWithStatus(
   membership: Membership | undefined,
   today: string,
 ) {
-  const current = membership ?? createDefaultMembership(today);
+  if (!membership) {
+    return { ...createInactiveMembership(today), daysRemaining: -1 };
+  }
+
+  const plan = String(membership.plan ?? "").trim() || "Sin plan activo";
+  const nextBillingDate = isoOrEmpty(membership.nextBillingDate);
+  const startedAt = isoOrEmpty(membership.startedAt) || String(membership.startedAt ?? today);
+
+  if (isInactivePlanLabel(plan) || !nextBillingDate) {
+    return {
+      plan: isInactivePlanLabel(plan) ? (plan === "-" ? "Sin plan activo" : plan) : plan,
+      status: "expired" as const,
+      startedAt,
+      nextBillingDate: nextBillingDate || createInactiveMembership(today).nextBillingDate,
+      daysRemaining: -1,
+    };
+  }
+
   const currentDate = toUtcDate(today);
-  const nextBilling = toUtcDate(current.nextBillingDate);
+  const nextBilling = toUtcDate(nextBillingDate);
   const daysRemaining = Math.ceil(
     (nextBilling.getTime() - currentDate.getTime()) / DAY_MS,
   );
   const status: Membership["status"] =
     daysRemaining < 0 ? "expired" : daysRemaining <= 5 ? "warning" : "active";
 
-  return { ...current, status, daysRemaining };
+  return {
+    plan,
+    status,
+    startedAt,
+    nextBillingDate,
+    daysRemaining,
+  };
 }
 
 export function toPublicTrainingPlan(plan?: TrainingPlan) {

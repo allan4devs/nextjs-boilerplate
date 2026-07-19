@@ -1,5 +1,5 @@
 /**
- * Xtreme Gym — Member sessions (Strategy 2.0 §4.1).
+ * Xtreme Gym - Member sessions (Strategy 2.0 §4.1).
  * Opaque random token in HttpOnly cookie; only a hash is stored in Mongo.
  */
 import { createHash, randomBytes } from "crypto";

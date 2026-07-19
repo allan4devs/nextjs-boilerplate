@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Tab Progreso — inventario de logros, medidas corporales con
+ * Tab Progreso - inventario de logros, medidas corporales con
  * graficos de tendencia, leaderboard y ultimos entrenos.
  */
 
@@ -46,7 +46,7 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
             </p>
             <p className="mt-1.5 text-xs font-semibold leading-relaxed text-white/50">
               Medite en el consultorio sin costo y cargá peso y cintura acá. Tu historial queda
-              ligado a la racha y a tu meta — no se pierde en un papel.
+              ligado a la racha y a tu meta - no se pierde en un papel.
             </p>
           </div>
         </div>

@@ -134,7 +134,7 @@
         reconectamos de una. Pura vida.
       </p>
       <button type="button" onclick="location.reload()">Reintentar</button>
-      <div class="status"><span class="dot"></span><span id="status-text">Buscando conexión…</span></div>
+      <div class="status"><span class="dot"></span><span id="status-text">Buscando conexión...</span></div>
     </main>
     <script>
       (() => {
@@ -147,7 +147,7 @@
           try {
             const response = await fetch("/", { method: "HEAD", cache: "no-store" });
             if (response.ok) {
-              statusText.textContent = "¡Volvió la señal! Recargando…";
+              statusText.textContent = "¡Volvió la señal! Recargando...";
               location.reload();
               return;
             }

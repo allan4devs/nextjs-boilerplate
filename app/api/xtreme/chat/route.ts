@@ -44,7 +44,7 @@ function guestTokenFrom(req: NextRequest, body?: { guestToken?: string }) {
   );
 }
 
-/** GET — poll de mensajes del visitante: ?sessionId=&afterSeq=&guestToken= */
+/** GET - poll de mensajes del visitante: ?sessionId=&afterSeq=&guestToken= */
 export async function GET(req: NextRequest) {
   try {
     const sessionId = req.nextUrl.searchParams.get("sessionId")?.trim() || "";
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST — start | send | close (visitante) */
+/** POST - start | send | close (visitante) */
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as {

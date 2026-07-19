@@ -349,7 +349,7 @@ export default function ReceptionChatWidget({ memberContext = null }: Props) {
                   {english ? "Hello! Send us a message and reception will reply." : "¡Pura vida! Escribí y recepción te contesta en vivo."}
                 </p>
                 <p className="mt-1 text-xs font-bold text-white/40">
-                  {english ? "Ask about hours, plans, your first day or anything else." : "Horarios, planes, primer día… lo que ocupés."}
+                  {english ? "Ask about hours, plans, your first day or anything else." : "Horarios, planes, primer día... lo que ocupés."}
                 </p>
               </div>
             )}
@@ -396,7 +396,7 @@ export default function ReceptionChatWidget({ memberContext = null }: Props) {
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={closed ? (english ? "New message…" : "Nuevo mensaje…") : (english ? "Message reception…" : "Escribí a recepción…")}
+              placeholder={closed ? (english ? "New message..." : "Nuevo mensaje...") : (english ? "Message reception..." : "Escribí a recepción...")}
               maxLength={1000}
               disabled={sending}
               className="min-w-0 flex-1 border-[2px] border-white/20 bg-black/50 px-3 py-2.5 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#d8ff3e]"
