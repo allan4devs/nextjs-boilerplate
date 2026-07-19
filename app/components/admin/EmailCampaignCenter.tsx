@@ -317,6 +317,8 @@ const CLAIM_BASE: CampaignTemplate = {
     "• Promociones y comunidad\n\n" +
     "El enlace es personal y vence en 72 horas. Pura vida - equipo Xtreme Gym, Ciudad Quesada.",
   ctaLabel: "Revisar datos y elegir mi plan",
+  // El procesador de campañas inyecta ?token= por destinatario.
+  // Esta ruta base no se envía sola (sin token se reescribe a registro abierto).
   ctaPath: "/registro/confirmar",
 };
 

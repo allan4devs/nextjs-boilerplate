@@ -343,9 +343,15 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
             </button>
           </div>
           <p className="text-xs font-semibold text-white/42">
-            El correo sirve para recuperar el PIN con código OTP. El teléfono evita perfiles
-            duplicados.
+            El correo sirve para recuperar el PIN con código OTP. Si lo cambiás, te mandamos un
+            enlace al correo nuevo para confirmarlo (así no queda un correo mal escrito bloqueado).
+            El teléfono evita perfiles duplicados.
           </p>
+          {currentMember.email && currentMember.emailVerified === false && (
+            <p className="text-xs font-bold text-orange-200/90">
+              Correo pendiente de confirmar. Revisá la bandeja (y spam) del correo que guardaste.
+            </p>
+          )}
         </div>
       ),
     },

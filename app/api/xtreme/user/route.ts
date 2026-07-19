@@ -565,7 +565,78 @@ export async function PATCH(req: NextRequest) {
               { status: 400 },
             );
           }
-          set.email = email;
+          const currentEmail = String(existing.email || "")
+            .trim()
+            .toLowerCase();
+          if (email !== currentEmail) {
+            // No permitir robar un correo ya verificado en otra ficha.
+            const taken = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({
+              normalizedName: { $ne: normalizedName },
+              email,
+              emailVerified: true,
+            });
+            if (taken) {
+              return NextResponse.json(
+                {
+                  error: `Ese correo ya está verificado en la cuenta de ${taken.memberName || "otro socio"}.`,
+                },
+                { status: 409 },
+              );
+            }
+            set.email = email;
+            // Debe confirmar el correo nuevo con magic link (OTP/PIN recovery confía en verificado).
+            set.emailVerified = false;
+            try {
+              const { createRegistrationToken, hashRegistrationToken } = await import(
+                "@/lib/xtreme/registration-token"
+              );
+              const { sendRegistrationConfirmEmail } = await import("@/lib/helpers/email");
+              const { requestAppUrl } = await import("@/lib/constants/app-url");
+              const {
+                PENDING_REGISTRATIONS_COLLECTION,
+              } = await import("@/lib/xtreme/shared");
+              const token = createRegistrationToken();
+              const expiresAt = new Date(Date.now() + 60 * 60_000);
+              await db.collection(PENDING_REGISTRATIONS_COLLECTION).updateOne(
+                { email },
+                {
+                  $set: {
+                    email,
+                    tokenHash: hashRegistrationToken(token),
+                    expiresAt,
+                    confirmedAt: null,
+                    memberNormalizedName: null,
+                    expectedMemberKey: normalizedName,
+                    expectedMemberName: existing.memberName || normalizedName,
+                    source: "email_change",
+                    updatedAt: new Date(),
+                  },
+                  $setOnInsert: { createdAt: new Date() },
+                },
+                { upsert: true },
+              );
+              const sent = await sendRegistrationConfirmEmail({
+                to: email,
+                token,
+                expiresMinutes: 60,
+                baseUrl: requestAppUrl(req.url),
+                memberName: existing.memberName || undefined,
+                purpose: "email_change",
+              });
+              if (!sent.ok) {
+                return NextResponse.json(
+                  {
+                    error:
+                      sent.error ||
+                      "Guardamos el correo, pero no se pudo enviar el enlace de confirmación. Revisá el correo o pedí ayuda en recepción.",
+                  },
+                  { status: 502 },
+                );
+              }
+            } catch (emailErr) {
+              console.error("PROFILE EMAIL CHANGE LINK", emailErr);
+            }
+          }
         }
       }
       if (body.cedula !== undefined) {
@@ -636,7 +707,16 @@ export async function PATCH(req: NextRequest) {
         }
       }
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      return NextResponse.json({ member: toPublicMember(doc, today), leaderboard: await getMemberLeaderboard(memberRepository, today) });
+      const emailNeedsConfirm =
+        set.emailVerified === false && Boolean(set.email);
+      return NextResponse.json({
+        member: toPublicMember(doc, today),
+        leaderboard: await getMemberLeaderboard(memberRepository, today),
+        emailNeedsConfirm,
+        message: emailNeedsConfirm
+          ? "Te mandamos un enlace al correo nuevo. Confirmalo para poder recuperar el PIN con OTP."
+          : undefined,
+      });
     }
 
     if (action === "planWorkoutStart") {

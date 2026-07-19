@@ -5,7 +5,6 @@ import {
   MEMBERS_COLLECTION,
   RESERVATIONS_COLLECTION,
   normalizeKey,
-  normalizeName,
   todayIso,
 } from "@/lib/xtreme/shared";
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
@@ -23,17 +22,16 @@ function isoDate(value: unknown) {
 /**
  * Strategy 2.0: reservations require a member session + active entitlement.
  * Capacity is claimed atomically on class_sessions.bookedCount.
+ * isMine solo con cookie de sesión del socio (nunca por nombre suelto de query).
  */
 export async function GET(req: NextRequest) {
   try {
     const trainingDate = isoDate(req.nextUrl.searchParams.get("date"));
-    const memberName = normalizeName(req.nextUrl.searchParams.get("memberName"));
     const session = await requireMemberSession(req);
-    const memberKey = isSession(session)
-      ? session.memberKey
-      : memberName
-        ? normalizeKey(memberName)
-        : "";
+    // Solo la sesión HttpOnly identifica al socio para isMine.
+    // El query memberName no se usa: evitaba que un kiosco compartido
+    // o un nombre residual marcaran "Reservada" de otra persona.
+    const memberKey = isSession(session) ? normalizeKey(session.memberKey) : "";
 
     const db = await getDb();
     const reservations = await sessionSnapshot(db, trainingDate, memberKey);
@@ -41,7 +39,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       date: trainingDate,
       reservations,
-      auth: isSession(session) ? "session" : memberKey ? "name" : "anon",
+      auth: memberKey ? "session" : "anon",
+      memberKey: memberKey || null,
     });
   } catch (err) {
     console.error("XTREME RESERVATIONS GET", err);
@@ -65,9 +64,14 @@ export async function POST(req: NextRequest) {
     if (!isSession(sessionOrErr)) return sessionOrErr;
 
     const db = await getDb();
+    // Identidad solo de la cookie: cada reserva queda ligada a un memberKey único.
+    const memberKey = normalizeKey(sessionOrErr.memberKey);
+    if (!memberKey) {
+      return NextResponse.json({ error: "Sesión sin identidad de socio." }, { status: 401 });
+    }
     const result = await bookSession(db, {
-      memberKey: sessionOrErr.memberKey,
-      memberName: sessionOrErr.memberName,
+      memberKey,
+      memberName: sessionOrErr.memberName || memberKey,
       trainingId,
       trainingName,
       date: trainingDate,
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
     if (!result.ok) {
       await recordEvent(db, {
         type: "reservation_attempted",
-        memberId: sessionOrErr.memberKey,
+        memberId: memberKey,
         source: "member_app",
         entity: { type: "class", id: `${trainingId}:${trainingDate}` },
         properties: {
@@ -107,7 +111,7 @@ export async function POST(req: NextRequest) {
             result.code === "expired" || result.code === "limit_reached" ? "month" : "day-pass",
           trainingId,
           trainingDate,
-          reservations: await sessionSnapshot(db, trainingDate, sessionOrErr.memberKey),
+          reservations: await sessionSnapshot(db, trainingDate, memberKey),
         },
         { status },
       );
@@ -117,14 +121,14 @@ export async function POST(req: NextRequest) {
     try {
       await db.collection(RESERVATIONS_COLLECTION).updateOne(
         {
-          normalizedName: sessionOrErr.memberKey,
+          normalizedName: memberKey,
           trainingId,
           trainingDate,
         },
         {
           $set: {
-            memberName: sessionOrErr.memberName,
-            normalizedName: sessionOrErr.memberKey,
+            memberName: sessionOrErr.memberName || memberKey,
+            normalizedName: memberKey,
             trainingId,
             trainingName,
             trainingDate,
@@ -145,20 +149,20 @@ export async function POST(req: NextRequest) {
     const member = await db
       .collection<{ email?: string; emailVerified?: boolean; memberName?: string }>(MEMBERS_COLLECTION)
       .findOne(
-        { normalizedName: sessionOrErr.memberKey },
+        { normalizedName: memberKey },
         { projection: { email: 1, emailVerified: 1, memberName: 1 } },
       );
     // Solo correo verificado: el import del Excel trae muchos correos cruzados.
     if (member?.email && member.emailVerified === true) {
       await sendReservationEmail({
         to: member.email,
-        memberName: member.memberName || sessionOrErr.memberName,
+        memberName: member.memberName || sessionOrErr.memberName || memberKey,
         trainingName,
         trainingDate,
       });
     }
     if (!result.duplicate) {
-      queuePushMemberEvent(db, sessionOrErr.memberKey, {
+      queuePushMemberEvent(db, memberKey, {
         type: "reservation_booked",
         trainingName,
         trainingDate,
@@ -167,7 +171,7 @@ export async function POST(req: NextRequest) {
 
     await recordEvent(db, {
       type: "reservation_created",
-      memberId: sessionOrErr.memberKey,
+      memberId: memberKey,
       source: "member_app",
       entity: { type: "booking", id: result.booking.id },
       properties: {
@@ -184,7 +188,7 @@ export async function POST(req: NextRequest) {
       sessionId: result.session.id,
       entitlementId: result.entitlementId,
       duplicate: Boolean(result.duplicate),
-      reservations: await sessionSnapshot(db, trainingDate, sessionOrErr.memberKey),
+      reservations: await sessionSnapshot(db, trainingDate, memberKey),
     });
   } catch (err) {
     console.error("XTREME RESERVATIONS POST", err);
@@ -205,17 +209,22 @@ export async function DELETE(req: NextRequest) {
     const sessionOrErr = await requireMemberSession(req);
     if (!isSession(sessionOrErr)) return sessionOrErr;
 
+    const memberKey = normalizeKey(sessionOrErr.memberKey);
+    if (!memberKey) {
+      return NextResponse.json({ error: "Sesión sin identidad de socio." }, { status: 401 });
+    }
+
     const db = await getDb();
     await cancelBooking(db, {
-      memberKey: sessionOrErr.memberKey,
+      memberKey,
       trainingId,
       date: trainingDate,
     });
 
-    // Legacy mirror
+    // Legacy mirror — solo la fila de este socio
     await db.collection(RESERVATIONS_COLLECTION).updateOne(
       {
-        normalizedName: sessionOrErr.memberKey,
+        normalizedName: memberKey,
         trainingId,
         trainingDate,
         status: "reserved",
@@ -224,7 +233,7 @@ export async function DELETE(req: NextRequest) {
     );
 
     const trainingName = String(body.trainingName ?? trainingId).trim() || trainingId;
-    queuePushMemberEvent(db, sessionOrErr.memberKey, {
+    queuePushMemberEvent(db, memberKey, {
       type: "reservation_cancelled",
       trainingName,
       trainingDate,
@@ -232,7 +241,7 @@ export async function DELETE(req: NextRequest) {
 
     await recordEvent(db, {
       type: "reservation_cancelled",
-      memberId: sessionOrErr.memberKey,
+      memberId: memberKey,
       source: "member_app",
       entity: { type: "class", id: `${trainingId}:${trainingDate}` },
       properties: { trainingId, trainingDate },
@@ -240,7 +249,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      reservations: await sessionSnapshot(db, trainingDate, sessionOrErr.memberKey),
+      reservations: await sessionSnapshot(db, trainingDate, memberKey),
     });
   } catch (err) {
     console.error("XTREME RESERVATIONS DELETE", err);

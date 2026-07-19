@@ -222,8 +222,11 @@ export type PendingRegistrationDoc = {
   expectedMemberName?: string | null;
   paymentId?: string | null;
   createdAt: Date;
-  /** campaign = magic link de campañas admin (claim / activación masiva). */
-  source: "primer-dia" | "app" | "paypal" | "reception" | "admin" | "campaign";
+  /**
+   * campaign = magic link de campañas admin.
+   * email_change = actualizar correo de cuenta ya registrada (cédula + PIN).
+   */
+  source: "primer-dia" | "app" | "paypal" | "reception" | "admin" | "campaign" | "email_change";
 };
 
 export type AuditDoc = {

@@ -16,7 +16,10 @@ export type SendEmailResult = {
     | "invalid_recipient"
     | "suppressed"
     | "provider_rejected"
+    | "rate_limit"
     | "network";
+  /** HTTP status del proveedor (útil para reintentos 429). */
+  status?: number;
 };
 
 /** Diagnóstico seguro: informa nombres de variables, nunca sus valores. */
@@ -63,6 +66,7 @@ function resendError(status: number, detail: string) {
   }
   if (status === 401) return "La API key de Resend no es válida.";
   if (status === 403) return "Resend rechazó el envío por permisos o configuración del remitente.";
+  if (status === 429) return "Resend limitó el envío (rate limit). Reintentamos en el próximo lote.";
 
   const safeMessage = message
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[correo]")
@@ -173,7 +177,8 @@ export async function sendEmail(args: {
       console.error("EMAIL SEND FAILED", response.status, detail.slice(0, 300));
       return {
         ok: false,
-        code: "provider_rejected",
+        status: response.status,
+        code: response.status === 429 ? "rate_limit" : "provider_rejected",
         error: resendError(response.status, detail),
       };
     }
@@ -429,6 +434,8 @@ export async function sendRegistrationConfirmEmail(args: {
   planLabel?: string;
   planEndsOn?: string;
   memberName?: string;
+  /** register = alta; email_change = actualizar correo de cuenta ya existente. */
+  purpose?: "register" | "email_change";
 }) {
   const href = absoluteRequestUrl(
     `/registro/confirmar?token=${encodeURIComponent(args.token)}`,
@@ -440,6 +447,7 @@ export async function sendRegistrationConfirmEmail(args: {
       ? `${hours} hora${hours === 1 ? "" : "s"}`
       : `${args.expiresMinutes} minutos`;
   const hasPlan = Boolean(args.planLabel && args.planEndsOn);
+  const isChange = args.purpose === "email_change";
   const hello = args.memberName?.trim()
     ? `¡Pura vida, ${args.memberName.trim()}!`
     : "¡Pura vida!";
@@ -447,53 +455,74 @@ export async function sendRegistrationConfirmEmail(args: {
   return sendEmail({
     to: args.to,
     managePreferences: false,
-    subject: hasPlan
-      ? "Confirmá tu correo y creá tu PIN - plan ya activo · Xtreme Gym"
-      : "Confirmá tu correo y activá tu acceso - Xtreme Gym",
+    subject: isChange
+      ? "Confirmá tu correo nuevo - Xtreme Gym"
+      : hasPlan
+        ? "Confirmá tu correo y creá tu PIN - plan ya activo · Xtreme Gym"
+        : "Confirmá tu correo y activá tu acceso - Xtreme Gym",
     text: [
-      `${hello} Gracias por registrarte en Xtreme Gym.`,
+      isChange
+        ? `${hello} Pediste actualizar el correo de tu cuenta Xtreme Gym.`
+        : `${hello} Gracias por registrarte en Xtreme Gym.`,
       "",
-      hasPlan
-        ? `Ya tenés plan ${args.planLabel} activo hasta ${args.planEndsOn}. Solo falta confirmar este correo y crear tu PIN.`
-        : "Para activar tu acceso (todo en un solo paso):",
+      isChange
+        ? "Para guardar este correo en tu ficha:"
+        : hasPlan
+          ? `Ya tenés plan ${args.planLabel} activo hasta ${args.planEndsOn}. Solo falta confirmar este correo y crear tu PIN.`
+          : "Para activar tu acceso (todo en un solo paso):",
       "1) Abrí el enlace y confirmá este correo",
-      "2) Completá nombre, teléfono y cédula",
-      "3) Creá tu PIN de 4 dígitos en la misma pantalla",
+      isChange
+        ? "2) Confirmá cédula y tu PIN actual"
+        : "2) Completá nombre, teléfono y cédula",
+      isChange
+        ? "3) Listo: el correo nuevo queda en tu perfil"
+        : "3) Creá tu PIN de 4 dígitos en la misma pantalla",
       "",
       `Enlace (vence en ${expiresLabel}):`,
       href,
       "",
-      hasPlan
-        ? "Tu plan se conserva al registrarte. Después entrás a la app con cédula + PIN."
-        : "Después entrás a la app con cédula + PIN.",
+      isChange
+        ? "Si no pediste este cambio, ignorá el correo."
+        : hasPlan
+          ? "Tu plan se conserva al registrarte. Después entrás a la app con cédula + PIN."
+          : "Después entrás a la app con cédula + PIN.",
       `WhatsApp: ${BUSINESS.phone}`,
     ].join("\n"),
     html: layout(
-      hasPlan ? "Confirmá correo y creá tu PIN" : "Confirmá tu correo",
+      isChange ? "Confirmá tu correo nuevo" : hasPlan ? "Confirmá correo y creá tu PIN" : "Confirmá tu correo",
       [
-        p(`${escapeHtml(hello)} Gracias por registrarte en <strong>Xtreme Gym</strong>.`),
-        hasPlan
+        p(
+          isChange
+            ? `${escapeHtml(hello)} Pediste <strong>actualizar el correo</strong> de tu cuenta en Xtreme Gym.`
+            : `${escapeHtml(hello)} Gracias por registrarte en <strong>Xtreme Gym</strong>.`,
+        ),
+        hasPlan && !isChange
           ? detailsTable(
               row("Plan", escapeHtml(args.planLabel || "")) +
                 row("Acceso hasta", escapeHtml(args.planEndsOn || "")),
             )
           : "",
         p(
-          hasPlan
-            ? "Tu plan <strong>ya está en la ficha</strong>. Con este enlace solo confirmás el correo, completás datos y creás el PIN - el plan no se borra."
-            : "Con este enlace activás tu acceso completo: correo, perfil y PIN, en un solo paso.",
+          isChange
+            ? "Con este enlace confirmás que este correo es tuyo. Si ya tenías cuenta, usá cédula + PIN para autorizar el cambio."
+            : hasPlan
+              ? "Tu plan <strong>ya está en la ficha</strong>. Con este enlace solo confirmás el correo, completás datos y creás el PIN - el plan no se borra."
+              : "Con este enlace activás tu acceso completo: correo, perfil y PIN, en un solo paso.",
         ),
-        infoCard(
-          hasPlan
-            ? "<strong>Qué vas a hacer</strong><br>Confirmar este correo, completar tus datos y crear tu PIN de 4 dígitos. Después entrás con cédula + PIN y podés reservar con tu plan."
-            : "<strong>Qué vas a hacer</strong><br>Confirmar este correo, completar tus datos y crear tu PIN de 4 dígitos. Después entrás a la app con cédula + PIN.",
+        steps(
+          isChange
+            ? [
+                "Tocá el botón y abrí el formulario seguro.",
+                "Confirmá <strong>cédula</strong> y tu <strong>PIN</strong> actual.",
+                "El correo nuevo queda guardado y verificado.",
+              ]
+            : [
+                "Tocá el botón y abrí el formulario seguro.",
+                "Completá <strong>nombre</strong>, <strong>teléfono</strong> y <strong>cédula</strong>.",
+                "Creá tu <strong>PIN de 4 dígitos</strong> en la misma pantalla.",
+              ],
         ),
-        steps([
-          "Tocá el botón y abrí el formulario seguro.",
-          "Completá <strong>nombre</strong>, <strong>teléfono</strong> y <strong>cédula</strong>.",
-          "Creá tu <strong>PIN de 4 dígitos</strong> en la misma pantalla.",
-        ]),
-        ctaButton("Completar registro y crear PIN", href),
+        ctaButton(isChange ? "Confirmar correo nuevo" : "Completar registro y crear PIN", href),
         linkFallback(href),
         muted(`Este enlace es personal y vence en <strong>${expiresLabel}</strong>.`),
         helpFooter(),
@@ -1128,10 +1157,17 @@ export async function sendCampaignEmail(args: {
         `<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#222;">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`,
     )
     .join("");
-  // Soporta rutas internas y rutas con query (?token=) del magic link de activación.
+  // Soporta rutas internas y magic links con query (?token=).
+  // Nunca dejar /registro/confirmar sin token: no es un enlace de registro usable.
   const rawPath = String(args.ctaPath || "/app").trim();
-  const safePath =
+  let safePath =
     rawPath.startsWith("/") && !rawPath.startsWith("//") ? rawPath : "/app";
+  if (
+    safePath.startsWith("/registro/confirmar") &&
+    !/[?&]token=/.test(safePath)
+  ) {
+    safePath = "/primer-dia#registro";
+  }
   const primaryHref = absoluteAppUrl(safePath);
   const button = args.ctaLabel
     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 18px;">

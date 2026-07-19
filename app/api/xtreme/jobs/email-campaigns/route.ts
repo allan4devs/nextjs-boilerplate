@@ -26,10 +26,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = await getDb();
-    // ~50 s de presupuesto, lotes de 25, varias rondas si hay cola.
-    const emailCampaigns = await processQueuedEmailCampaigns(db, 25, {
-      maxRounds: 8,
-      deadlineMs: 50_000,
+    // ~55 s de presupuesto: lotes de 30, varias rondas (≈1000 envíos en ~20–30 min con cron */5).
+    const emailCampaigns = await processQueuedEmailCampaigns(db, 30, {
+      maxRounds: 10,
+      deadlineMs: 55_000,
     });
     return NextResponse.json({
       ok: true,

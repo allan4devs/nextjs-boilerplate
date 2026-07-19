@@ -152,8 +152,17 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     }
   }
 
-  // Cuenta ya activa: no reenviar registro (anti-enumeración).
-  if (boundMember?.emailVerified === true) {
+  // Cuenta ya activa: por defecto no reenviar (anti-enumeración).
+  // Excepción: cédula de cuenta verificada + correo NUEVO distinto → corrección de correo.
+  const boundStoredEmail = normalizeEmail(boundMember?.email);
+  const wantsEmailCorrection =
+    Boolean(boundMember?.emailVerified === true) &&
+    Boolean(email && isValidEmail(email)) &&
+    Boolean(digits.length >= 6) &&
+    Boolean(boundStoredEmail) &&
+    email !== boundStoredEmail;
+
+  if (boundMember?.emailVerified === true && !wantsEmailCorrection) {
     await recordFailedAuthAttempt(db, rate.key, {
       scope: "public_registration_start",
       maxAttempts: 4,
@@ -173,7 +182,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     return NextResponse.json({
       ok: true,
       message:
-        "Si podés registrarte con esos datos, te llega un correo. Si ya tenés cuenta, entrá a la app con cédula y PIN.",
+        "Si podés registrarte con esos datos, te llega un correo. Si ya tenés cuenta, entrá a la app con cédula y PIN. Si pusiste mal el correo al registrarte, escribí tu cédula y el correo correcto para enviarte un enlace de corrección.",
       alreadyRegistered: true,
     });
   }
@@ -214,8 +223,14 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     expectedMemberName = normalizeName(contact?.name) || "";
   }
 
-  // Si la ficha no tenía ese correo, lo dejamos listo (sin verificar) para el claim.
-  if (boundMember && expectedMemberKey && normalizeEmail(boundMember.email) !== email) {
+  // Si la ficha no tenía ese correo y NO es corrección de cuenta verificada,
+  // lo dejamos listo (sin verificar) para el claim.
+  if (
+    boundMember &&
+    expectedMemberKey &&
+    normalizeEmail(boundMember.email) !== email &&
+    !wantsEmailCorrection
+  ) {
     await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
       { normalizedName: expectedMemberKey },
       {
@@ -256,7 +271,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     expiresAt,
     confirmedAt: null,
     memberNormalizedName: null,
-    source,
+    source: wantsEmailCorrection ? "email_change" : source,
   };
   const unsetDoc: Record<string, ""> = { paymentId: "" };
 
@@ -290,8 +305,9 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     expiresMinutes: TOKEN_TTL_MIN,
     baseUrl: requestAppUrl(req.url),
     memberName: expectedMemberName || undefined,
-    planLabel: boundHasPlan ? boundMs?.plan : undefined,
-    planEndsOn: boundHasPlan ? boundMs?.nextBillingDate : undefined,
+    planLabel: boundHasPlan && !wantsEmailCorrection ? boundMs?.plan : undefined,
+    planEndsOn: boundHasPlan && !wantsEmailCorrection ? boundMs?.nextBillingDate : undefined,
+    purpose: wantsEmailCorrection ? "email_change" : "register",
   });
 
   await recordEvent(db, {
@@ -326,11 +342,14 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
 
   return NextResponse.json({
     ok: true,
-    message: expectedMemberKey
-      ? "Te enviamos un enlace. Al abrirlo vas a ver los datos que tenemos de vos para revisar, completar y crear tu PIN."
-      : "Te enviamos un enlace para confirmar tu correo, completar el perfil y crear tu PIN. Revisá tu bandeja (y spam).",
+    message: wantsEmailCorrection
+      ? "Te enviamos un enlace al correo nuevo. Al abrirlo confirmás cédula + PIN actual y actualizamos el correo de tu cuenta."
+      : expectedMemberKey
+        ? "Te enviamos un enlace. Al abrirlo vas a ver los datos que tenemos de vos para revisar, completar y crear tu PIN."
+        : "Te enviamos un enlace para confirmar tu correo, completar el perfil y crear tu PIN. Revisá tu bandeja (y spam).",
     expiresMinutes: TOKEN_TTL_MIN,
     foundProfile: Boolean(expectedMemberKey),
+    emailCorrection: wantsEmailCorrection,
     sentToMasked: maskedEmail(email),
   });
 }
@@ -568,11 +587,12 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
   const staffInvite =
     pending.source === "reception" || pending.source === "admin";
   const campaignInvite = pending.source === "campaign";
+  const emailChangeFlow = pending.source === "email_change";
 
   // Binding huérfano (key vieja de import): en campañas/registro público se suelta y se crea/completa limpio.
   // En PayPal / recepción / admin manual sí exigimos la ficha.
   if (boundKey && !boundExisting) {
-    if (paidInvite || staffInvite) {
+    if (paidInvite || staffInvite || emailChangeFlow) {
       return NextResponse.json(
         {
           error: paidInvite
@@ -590,6 +610,8 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
   // Nunca registrado = aún no verificó correo: puede corregir nombre/cédula/tel del import.
   let existing = boundExisting;
   let neverRegistered = !existing || existing.emailVerified !== true;
+  /** Corrección de correo: cuenta verificada + PIN + magic link del correo nuevo. */
+  let emailCorrection = emailChangeFlow;
 
   // El enlace prueba propiedad del correo, pero el socio decide si conserva o
   // corrige lo precargado. La key ligada a la ficha/pago se mantiene estable.
@@ -633,6 +655,28 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
   }
   if (pin !== pinConfirm) {
     return NextResponse.json({ error: "Los dos PIN no coinciden." }, { status: 400 });
+  }
+
+  // Corrección de correo vía source email_change: exigir PIN de la ficha ligada.
+  if (emailChangeFlow && boundInvite && boundExisting?.emailVerified === true) {
+    const ownerKey = boundKey;
+    const pinDoc = await db
+      .collection<{ pinHash?: string }>(PINS_COLLECTION)
+      .findOne({ normalizedName: ownerKey }, { projection: { pinHash: 1 } });
+    if (!pinDoc?.pinHash || pinDoc.pinHash !== hashPin(pin, ownerKey)) {
+      return NextResponse.json(
+        {
+          error:
+            "Para actualizar el correo necesitás el PIN actual de tu cuenta. Si lo olvidaste, recuperarlo en la app con el correo viejo o pedí ayuda en recepción.",
+          code: "email_correction_pin_required",
+          recoverable: true,
+        },
+        { status: 401 },
+      );
+    }
+    emailCorrection = true;
+    existing = boundExisting;
+    neverRegistered = false;
   }
 
   // Identidad estable: ficha importada/pago conserva su key; alta nueva usa el nombre.
@@ -693,6 +737,49 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
       existing = cedulaDuplicate;
       neverRegistered = cedulaDuplicate.emailVerified !== true;
       claimedExistingCedula = normalizedName !== previousBoundKey;
+    } else if (
+      cedulaDuplicate.emailVerified === true &&
+      !sameVerifiedEmail &&
+      normalizeEmail(cedulaDuplicate.email) !== email
+    ) {
+      // Corrección de correo: magic link prueba el correo NUEVO; PIN prueba la cuenta de la cédula.
+      const ownerKey = normalizeKey(cedulaDuplicate.normalizedName);
+      const pinDoc = await db
+        .collection<{ pinHash?: string }>(PINS_COLLECTION)
+        .findOne({ normalizedName: ownerKey }, { projection: { pinHash: 1 } });
+      if (!pinDoc?.pinHash || pinDoc.pinHash !== hashPin(pin, ownerKey)) {
+        return NextResponse.json(
+          {
+            error:
+              "Esa cédula ya tiene cuenta. Si es tuya y te registraste con un correo mal escrito, poné tu PIN actual acá para actualizar el correo. Si no tenés el PIN, recuperarlo en la app con el correo viejo o pedí ayuda en recepción.",
+            code: "email_correction_pin_required",
+            recoverable: true,
+          },
+          { status: 409 },
+        );
+      }
+      // El correo nuevo no puede estar verificado en OTRA ficha.
+      const emailTaken = contactCandidates.find(
+        (doc) =>
+          doc.emailVerified === true &&
+          normalizeEmail(doc.email) === email &&
+          normalizeKey(doc.normalizedName || "") !== ownerKey,
+      );
+      if (emailTaken) {
+        return NextResponse.json(
+          {
+            error: `Ese correo ya está verificado en la cuenta de ${emailTaken.memberName}. Usá otro o pedí ayuda en recepción.`,
+            code: "email_taken",
+            recoverable: true,
+          },
+          { status: 409 },
+        );
+      }
+      normalizedName = ownerKey;
+      existing = cedulaDuplicate;
+      neverRegistered = false;
+      claimedExistingCedula = false;
+      emailCorrection = true;
     } else {
       await recordEvent(db, {
         type: "registration_identity_conflict",
@@ -729,10 +816,16 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     );
   }
 
-  // Si alguien ya reclamó este perfil con correo verificado, no reescribir con otro enlace suelto.
+  // Si alguien ya reclamó este perfil con correo verificado, no reescribir con otro enlace suelto
+  // (salvo corrección de correo autorizada con PIN).
   const verifiedBySameEmail =
     existing?.emailVerified === true && normalizeEmail(existing.email) === email;
-  if (existing?.emailVerified === true && !neverRegistered && !verifiedBySameEmail) {
+  if (
+    existing?.emailVerified === true &&
+    !neverRegistered &&
+    !verifiedBySameEmail &&
+    !emailCorrection
+  ) {
     return NextResponse.json(
       {
         error: "Este perfil ya fue activado. Entrá a la app con tu cédula y PIN.",
@@ -903,6 +996,7 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     set.membership &&
       !staffInvite &&
       !paidInvite &&
+      !emailCorrection &&
       !existingPlanUsable &&
       (set.membership.plan === "Primer día gratis" ||
         /primer\s*d[ií]a/i.test(String(set.membership.plan || ""))),

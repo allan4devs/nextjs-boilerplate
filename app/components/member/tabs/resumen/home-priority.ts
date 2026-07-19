@@ -48,6 +48,10 @@ export function rankMemberHomePanels(
   const priorityFor = (id: MemberHomePanelId): MemberHomePriority => {
     switch (id) {
       case "visit":
+        // Solo priorizar si hay ingreso real; si no, score 0 (no se muestra).
+        if (!input.activeVisit) {
+          return { id, score: 0, reason: "" };
+        }
         return { id, score: 1000, reason: "Tenés una visita activa; al salir, cerrá tu ingreso." };
       case "membership": {
         const days = input.membershipDaysRemaining ?? 999;

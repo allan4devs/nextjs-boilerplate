@@ -4,11 +4,70 @@ import { emailConfigurationError, emailEnabled, sendCampaignEmail } from "@/lib/
 import {
   CLAIM_LINK_AUDIENCES,
   issueCampaignClaimLink,
+  type CampaignClaimLink,
 } from "@/lib/xtreme/campaign-claim-link";
 import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
 } from "@/lib/xtreme/shared/config";
+
+/** Ruta de confirmación sin ?token= no es un enlace seguro usable. */
+export function isBareRegistroConfirmarPath(path: string | undefined | null) {
+  const raw = String(path || "").trim();
+  if (!raw.startsWith("/registro/confirmar")) return false;
+  return !/[?&]token=/.test(raw);
+}
+
+/**
+ * Resuelve el CTA del correo masivo:
+ * - claim → /registro/confirmar?token=… (magic link personal)
+ * - app → /app (ya verificó y tiene PIN)
+ * - fallback → nunca manda /registro/confirmar vacío de token
+ */
+export function resolveCampaignCta(args: {
+  audience: string;
+  campaignCtaPath?: string;
+  campaignCtaLabel?: string;
+  claim: CampaignClaimLink | null;
+}): { ctaPath: string; ctaLabel: string; linkKind: "claim" | "app" | "fallback" } {
+  const claim = args.claim;
+  if (claim?.kind === "claim" && claim.path.includes("token=")) {
+    return {
+      ctaPath: claim.path,
+      ctaLabel:
+        args.campaignCtaLabel ||
+        (CLAIM_LINK_AUDIENCES.has(args.audience) ? "Activar mi acceso" : "Completar mi registro"),
+      linkKind: "claim",
+    };
+  }
+  if (claim?.kind === "app") {
+    return {
+      ctaPath: "/app",
+      ctaLabel: args.campaignCtaLabel || "Entrar a la app",
+      linkKind: "app",
+    };
+  }
+
+  const raw =
+    args.campaignCtaPath && args.campaignCtaPath.startsWith("/")
+      ? args.campaignCtaPath
+      : "/app";
+
+  // Nunca enviar /registro/confirmar sin token: el form no puede validar el enlace.
+  if (isBareRegistroConfirmarPath(raw) || CLAIM_LINK_AUDIENCES.has(args.audience)) {
+    return {
+      ctaPath: "/primer-dia#registro",
+      ctaLabel: args.campaignCtaLabel || "Iniciar registro seguro",
+      linkKind: "fallback",
+    };
+  }
+
+  return {
+    ctaPath: raw,
+    ctaLabel: args.campaignCtaLabel || "Abrir Xtreme Gym",
+    linkKind: "fallback",
+  };
+}
 
 export type EmailAudience =
   | "imported"
@@ -82,6 +141,9 @@ type EmailDeliveryDoc = {
   createdAt: Date;
   updatedAt: Date;
   error?: string;
+  /** Ruta CTA real del envío (con token si fue magic link). */
+  ctaPath?: string;
+  linkKind?: "claim" | "app" | "fallback";
 };
 
 export type ProcessCampaignsResult = {
@@ -176,24 +238,68 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
     );
     if (!claimed.modifiedCount) continue;
 
-    // Siempre intentar magic link personal: activar ficha, precargar datos y PIN.
-    // Si ya está verificado con PIN → /app. Si falla el claim, se usa el CTA de la campaña.
-    let ctaPath = campaign.ctaPath;
-    let ctaLabel = campaign.ctaLabel;
-    try {
-      const claim = await issueCampaignClaimLink(db, item.email);
-      if (claim?.kind === "claim") {
-        ctaPath = claim.path;
-        ctaLabel =
-          campaign.ctaLabel ||
-          (CLAIM_LINK_AUDIENCES.has(campaign.audience) ? "Activar mi acceso" : "Completar mi registro");
-      } else if (claim?.kind === "app") {
-        ctaPath = campaign.ctaPath?.startsWith("/") ? campaign.ctaPath : "/app";
-        ctaLabel = campaign.ctaLabel || "Entrar a la app";
+    // Magic link personal por destinatario (reintento 1x si falla).
+    let claim: CampaignClaimLink | null = null;
+    for (let attempt = 0; attempt < 2 && !claim; attempt += 1) {
+      try {
+        claim = await issueCampaignClaimLink(db, item.email);
+      } catch (err) {
+        console.error("CAMPAIGN CLAIM LINK", item.email, attempt, err);
+        if (attempt === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 350));
+        }
       }
-    } catch (err) {
-      console.error("CAMPAIGN CLAIM LINK", item.email, err);
-      // No abortar el envío: manda el CTA genérico de la campaña.
+    }
+
+    const resolved = resolveCampaignCta({
+      audience: campaign.audience,
+      campaignCtaPath: campaign.ctaPath,
+      campaignCtaLabel: campaign.ctaLabel,
+      claim,
+    });
+    const { ctaPath, ctaLabel, linkKind } = resolved;
+
+    // Audiencias de activación: sin magic link real no mandamos el correo (mejor reintentar).
+    if (
+      CLAIM_LINK_AUDIENCES.has(campaign.audience) &&
+      linkKind !== "claim" &&
+      linkKind !== "app"
+    ) {
+      const now = new Date();
+      if (item.attempts + 1 < 4) {
+        await deliveries.updateOne(
+          { deliveryKey: item.deliveryKey },
+          {
+            $set: {
+              status: "queued",
+              updatedAt: now,
+              ctaPath,
+              linkKind,
+              error: "No se pudo generar el enlace seguro; reintento automático.",
+            },
+          },
+        );
+      } else {
+        failed += 1;
+        await deliveries.updateOne(
+          { deliveryKey: item.deliveryKey },
+          {
+            $set: {
+              status: "failed",
+              updatedAt: now,
+              ctaPath,
+              linkKind,
+              error: "No se pudo generar el enlace seguro de registro tras varios intentos.",
+            },
+          },
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      continue;
+    }
+
+    if (isBareRegistroConfirmarPath(ctaPath)) {
+      console.error("CAMPAIGN CTA SIN TOKEN", item.email, ctaPath);
     }
 
     const result = await sendCampaignEmail({
@@ -210,8 +316,18 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
       sent += 1;
       await deliveries.updateOne(
         { deliveryKey: item.deliveryKey },
-        { $set: { status: "sent", updatedAt: now }, $unset: { error: "" } },
+        {
+          $set: {
+            status: "sent",
+            updatedAt: now,
+            ctaPath,
+            linkKind,
+          },
+          $unset: { error: "" },
+        },
       );
+      // Ritmo estable bajo Resend (~4 envíos/s de margen).
+      await new Promise((resolve) => setTimeout(resolve, 260));
     } else if (result.skipped) {
       skipped += 1;
       await deliveries.updateOne(
@@ -220,24 +336,60 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
           $set: {
             status: "skipped",
             updatedAt: now,
+            ctaPath,
+            linkKind,
             error: result.error || "Envío omitido sin detalle.",
           },
         },
       );
-    } else if (item.attempts + 1 < 3) {
+    } else if (result.code === "rate_limit" || result.status === 429) {
+      // No quemar reintentos: reencolar y enfriar el lote.
       await deliveries.updateOne(
         { deliveryKey: item.deliveryKey },
-        { $set: { status: "queued", updatedAt: now, error: result.error || "Error de envío" } },
+        {
+          $set: {
+            status: "queued",
+            updatedAt: now,
+            ctaPath,
+            linkKind,
+            error: result.error || "Rate limit Resend",
+          },
+          // Devolver el attempt para no castigar por 429 del proveedor.
+          $inc: { attempts: -1 },
+        },
       );
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      // Cortar el lote actual: el cron siguiente continúa sin saturar.
+      break;
+    } else if (item.attempts + 1 < 4) {
+      await deliveries.updateOne(
+        { deliveryKey: item.deliveryKey },
+        {
+          $set: {
+            status: "queued",
+            updatedAt: now,
+            ctaPath,
+            linkKind,
+            error: result.error || "Error de envío",
+          },
+        },
+      );
+      await new Promise((resolve) => setTimeout(resolve, 400));
     } else {
       failed += 1;
       await deliveries.updateOne(
         { deliveryKey: item.deliveryKey },
-        { $set: { status: "failed", updatedAt: now, error: result.error || "Error de envío" } },
+        {
+          $set: {
+            status: "failed",
+            updatedAt: now,
+            ctaPath,
+            linkKind,
+            error: result.error || "Error de envío",
+          },
+        },
       );
     }
-    // Resend parte de 5 req/s por equipo; dejamos espacio para correos transaccionales.
-    await new Promise((resolve) => setTimeout(resolve, 220));
   }
 
   const counts = await deliveries

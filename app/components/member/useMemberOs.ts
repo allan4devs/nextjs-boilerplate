@@ -433,9 +433,18 @@ export function useMemberOs() {
     );
   }, []);
 
-  const loadReservations = useCallback(async (name: string) => {
-    const params = new URLSearchParams({ memberName: name, date: todayIso() });
-    const response = await fetch(`/api/xtreme/reservations?${params}`, { cache: "no-store" });
+  const loadReservations = useCallback(async (_name?: string) => {
+    // isMine sale solo de la cookie de sesión del socio actual (no del nombre en query).
+    const params = new URLSearchParams({ date: todayIso() });
+    const response = await fetch(`/api/xtreme/reservations?${params}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    if (response.status === 401 || response.status === 403) {
+      // Sin sesión propia: nunca heredar reservas de otro kiosco/socio.
+      setReservations({});
+      return;
+    }
     const data = await readJson<ReservationsResponse>(response);
     setReservations(data.reservations ?? {});
   }, []);
@@ -643,6 +652,8 @@ export function useMemberOs() {
       setMemberNameInput(name);
       setMember(initialMember(name));
       setNeedsRegistration(false);
+      // Evitar mostrar reservas del socio anterior mientras se resuelve el gate.
+      setReservations({});
 
       // Sesión válida + PIN ya creado: entrar sin pedir de nuevo (solo en restore).
       if (hasPin && sessionMatches && args.allowSessionUnlock) {
@@ -695,11 +706,15 @@ export function useMemberOs() {
       setMessage("");
       setIsLoading(true);
       setMemberCedulaInput(formatCedulaInput(cedulaRaw));
-      // No mostrar el perfil anterior mientras se resuelve la cédula (kioscos).
+      // No mostrar el perfil ni reservas del socio anterior (kioscos compartidos).
       setShowPin(false);
       setMemberName("");
       setMemberNameInput("");
       setMember(null);
+      setReservations({});
+      setActiveVisit(null);
+      setNextBestAction(null);
+      setLeaderboard([]);
 
       try {
         if (!allowSession) {
@@ -914,9 +929,15 @@ export function useMemberOs() {
           pinnedBadges: pinnedBadgeIds,
         }),
       });
-      const data = await readJson<MembersResponse>(response);
+      const data = await readJson<
+        MembersResponse & { emailNeedsConfirm?: boolean; message?: string }
+      >(response);
       applyProfileResponse(data);
-      setMessage(MSG.ok.profileSaved);
+      setMessage(
+        data.emailNeedsConfirm && data.message
+          ? data.message
+          : MSG.ok.profileSaved,
+      );
       return true;
     } catch (err) {
       requirePinAgain(err, MSG.errors.saveProfile);
@@ -937,9 +958,13 @@ export function useMemberOs() {
         credentials: "same-origin",
         body: JSON.stringify({ action: "profile", memberName: trimmed, ...patch }),
       });
-      const data = await readJson<MembersResponse>(response);
+      const data = await readJson<
+        MembersResponse & { emailNeedsConfirm?: boolean; message?: string }
+      >(response);
       applyProfileResponse(data);
-      setMessage(okMessage);
+      setMessage(
+        data.emailNeedsConfirm && data.message ? data.message : okMessage,
+      );
       return true;
     } catch (err) {
       requirePinAgain(err, MSG.errors.saveProfile);

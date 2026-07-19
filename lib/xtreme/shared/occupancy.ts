@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import {
+  BOOKINGS_COLLECTION,
   CHECKINS_COLLECTION,
   GYM_CAPACITY,
   RESERVATIONS_COLLECTION,
@@ -30,10 +31,18 @@ export type OccupancySnapshot = {
 
 export async function computeOccupancy(db: Db): Promise<OccupancySnapshot> {
   const date = todayIso();
-  const [checkinDocs, reservationsToday] = await Promise.all([
+  const [checkinDocs, bookingsToday, legacyReservationsToday] = await Promise.all([
     db.collection<CheckinDoc>(CHECKINS_COLLECTION).find({ date }).sort({ checkedInAt: -1 }).toArray(),
+    // Reservas individuales (una fila por socio/clase), no contador compartido.
+    db.collection(BOOKINGS_COLLECTION).countDocuments({
+      trainingDate: date,
+      status: "reserved",
+      memberKey: { $exists: true, $type: "string", $ne: "" },
+    }),
     db.collection(RESERVATIONS_COLLECTION).countDocuments({ trainingDate: date, status: "reserved" }),
   ]);
+  // Preferir bookings 2.0; legacy solo si aún no hay filas nuevas.
+  const reservationsToday = bookingsToday > 0 ? bookingsToday : legacyReservationsToday;
 
   const latestByMember = new Map<string, CheckinDoc>();
   for (const checkin of checkinDocs) {

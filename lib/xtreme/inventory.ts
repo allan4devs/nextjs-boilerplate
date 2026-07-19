@@ -8,6 +8,8 @@ import {
   CLASS_SESSIONS_COLLECTION,
   CLASS_TEMPLATES_COLLECTION,
   TRAININGS,
+  normalizeKey,
+  normalizeName,
   todayIso,
 } from "./shared";
 import { classDurationMin, classStartAt } from "./class-schedule";
@@ -17,6 +19,15 @@ import {
   releaseBookingEntitlement,
   type EntitlementDoc,
 } from "./entitlements";
+
+/** Identidad canónica de una reserva: siempre individual, nunca vacía ni compartida. */
+function requireMemberKey(raw: string) {
+  const memberKey = normalizeKey(normalizeName(raw) || raw);
+  if (!memberKey) {
+    throw new Error("member_key_required");
+  }
+  return memberKey;
+}
 
 export type ClassTemplateDoc = {
   id: string;
@@ -214,6 +225,18 @@ export async function bookSession(
     forceEntitlementId?: string;
   },
 ): Promise<BookResult> {
+  let memberKey: string;
+  try {
+    memberKey = requireMemberKey(args.memberKey);
+  } catch {
+    return {
+      ok: false,
+      code: "no_member",
+      message: "No se pudo identificar al socio para la reserva.",
+    };
+  }
+  const memberName = normalizeName(args.memberName) || memberKey;
+
   const session = await ensureClassSession(db, {
     trainingId: args.trainingId,
     trainingName: args.trainingName,
@@ -235,10 +258,10 @@ export async function bookSession(
     return { ok: false, code: "cutoff", message: "El plazo de reserva ya cerro." };
   }
 
-  // Idempotent: already reserved
+  // Idempotent: solo la reserva de ESTE socio (nunca de otro).
   const existing = await db.collection<BookingDoc>(BOOKINGS_COLLECTION).findOne({
     sessionId: session.id,
-    memberKey: args.memberKey,
+    memberKey,
     status: "reserved",
   });
   if (existing) {
@@ -247,7 +270,7 @@ export async function bookSession(
 
   let entitlementId = args.forceEntitlementId || args.entitlementId;
   if (!entitlementId) {
-    const decision = await decideBooking(db, args.memberKey, {
+    const decision = await decideBooking(db, memberKey, {
       trainingId: args.trainingId,
       date: args.date,
     });
@@ -289,8 +312,8 @@ export async function bookSession(
     trainingId: args.trainingId,
     trainingName: args.trainingName,
     trainingDate: args.date,
-    memberKey: args.memberKey,
-    memberName: args.memberName,
+    memberKey,
+    memberName,
     entitlementId,
     paymentId: args.paymentId ?? null,
     status: "reserved",
@@ -301,7 +324,7 @@ export async function bookSession(
   try {
     await db.collection<BookingDoc>(BOOKINGS_COLLECTION).insertOne(booking);
   } catch (err) {
-    // Unique race: same member double-submit
+    // Unique race: same member double-submit (sessionId+memberKey)
     await db.collection<ClassSessionDoc>(CLASS_SESSIONS_COLLECTION).updateOne(
       { id: session.id, bookedCount: { $gt: 0 } },
       { $inc: { bookedCount: -1 }, $set: { updatedAt: new Date() } },
@@ -309,7 +332,7 @@ export async function bookSession(
     if ((err as { code?: number }).code === 11000) {
       const again = await db.collection<BookingDoc>(BOOKINGS_COLLECTION).findOne({
         sessionId: session.id,
-        memberKey: args.memberKey,
+        memberKey,
         status: "reserved",
       });
       if (again) {
@@ -319,7 +342,7 @@ export async function bookSession(
     throw err;
   }
 
-  const consumed = await consumeBookingEntitlement(db, entitlementId, args.memberKey);
+  const consumed = await consumeBookingEntitlement(db, entitlementId, memberKey);
   if (!consumed.ok && consumed.reason === "limit_reached") {
     // Roll back booking + capacity
     await db.collection<BookingDoc>(BOOKINGS_COLLECTION).updateOne(
@@ -344,17 +367,23 @@ export async function cancelBooking(
   db: Db,
   args: { memberKey: string; trainingId: string; date: string },
 ): Promise<{ ok: boolean; message?: string }> {
+  let memberKey: string;
+  try {
+    memberKey = requireMemberKey(args.memberKey);
+  } catch {
+    return { ok: false, message: "No se pudo identificar al socio." };
+  }
   const sessionId = newSessionId(args.trainingId, args.date);
   const col = db.collection<BookingDoc>(BOOKINGS_COLLECTION);
+  // Solo cancela la reserva de este socio (nunca la de otro).
   const booking = await col.findOne({
     sessionId,
-    memberKey: args.memberKey,
+    memberKey,
     status: "reserved",
   });
   if (!booking) {
-    // Also try loose match for older data
     const loose = await col.findOne({
-      memberKey: args.memberKey,
+      memberKey,
       trainingId: args.trainingId,
       trainingDate: args.date,
       status: "reserved",
@@ -382,12 +411,15 @@ async function cancelBookingDoc(db: Db, booking: BookingDoc) {
   return { ok: true };
 }
 
-export async function sessionSnapshot(db: Db, date: string, memberKey = "") {
+export async function sessionSnapshot(db: Db, date: string, memberKeyRaw = "") {
   await ensureDefaultTemplates(db);
   const templates = await db
     .collection<ClassTemplateDoc>(CLASS_TEMPLATES_COLLECTION)
     .find({ active: true })
     .toArray();
+
+  // Solo marcar isMine con identidad canónica; nunca por nombre suelto ni vacío.
+  const memberKey = memberKeyRaw ? normalizeKey(normalizeName(memberKeyRaw) || memberKeyRaw) : "";
 
   const byTraining: Record<
     string,
@@ -397,37 +429,62 @@ export async function sessionSnapshot(db: Db, date: string, memberKey = "") {
       capacity: number;
       remaining: number;
       isMine: boolean;
+      bookingId?: string | null;
       status: string;
     }
   > = {};
 
-  for (const t of templates.length ? templates : TRAININGS.map((x) => ({
-    id: `tpl-${x.id}`,
-    trainingId: x.id,
-    name: x.name,
-    capacity: x.capacity,
-  }))) {
+  const templateList = templates.length
+    ? templates
+    : TRAININGS.map((x) => ({
+        id: `tpl-${x.id}`,
+        trainingId: x.id,
+        name: x.name,
+        capacity: x.capacity,
+      }));
+
+  for (const t of templateList) {
     const session = await ensureClassSession(db, {
       trainingId: t.trainingId,
       trainingName: t.name,
       date,
       capacity: t.capacity,
     });
-    const isMine = memberKey
-      ? Boolean(
-          await db.collection<BookingDoc>(BOOKINGS_COLLECTION).findOne({
-            sessionId: session.id,
-            memberKey,
-            status: "reserved",
-          }),
-        )
-      : false;
+
+    // Cupos = personas distintas con reserva activa (fuente de verdad individual).
+    const reserved = await db.collection<BookingDoc>(BOOKINGS_COLLECTION).countDocuments({
+      sessionId: session.id,
+      status: "reserved",
+      memberKey: { $exists: true, $type: "string", $ne: "" },
+    });
+
+    // Reconciliar contador si se desfasó (evita cupos fantasma compartidos).
+    if (session.bookedCount !== reserved) {
+      await db.collection<ClassSessionDoc>(CLASS_SESSIONS_COLLECTION).updateOne(
+        { id: session.id },
+        { $set: { bookedCount: reserved, updatedAt: new Date() } },
+      );
+    }
+
+    let isMine = false;
+    let bookingId: string | null = null;
+    if (memberKey) {
+      const mine = await db.collection<BookingDoc>(BOOKINGS_COLLECTION).findOne({
+        sessionId: session.id,
+        memberKey,
+        status: "reserved",
+      });
+      isMine = Boolean(mine);
+      bookingId = mine?.id ?? null;
+    }
+
     byTraining[t.trainingId] = {
       sessionId: session.id,
-      reserved: session.bookedCount,
+      reserved,
       capacity: session.capacity,
-      remaining: Math.max(0, session.capacity - session.bookedCount),
+      remaining: Math.max(0, session.capacity - reserved),
       isMine,
+      bookingId,
       status: session.status,
     };
   }

@@ -7,6 +7,7 @@ import {
   type EmailCampaignDoc,
   newEmailCampaignId,
   processQueuedEmailCampaigns,
+  resolveCampaignCta,
 } from "@/lib/xtreme/email-campaigns";
 import { buildAudienceEmails, EMAIL_AUDIENCE_IDS } from "@/lib/xtreme/email-audiences";
 import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
@@ -358,22 +359,25 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Correo, asunto, título y mensaje son requeridos." }, { status: 400 });
       }
 
-      let ctaPath = requestedPath.startsWith("/") ? requestedPath : "/app";
-      let ctaLabel = requestedLabel || "Abrir Xtreme Gym";
       const claim = await issueCampaignClaimLink(db, email);
-      if (claim?.kind === "claim") ctaPath = claim.path;
-      if (claim?.kind === "app") {
-        ctaPath = "/app";
-        ctaLabel = "Entrar a mi cuenta";
-      }
+      const audience = String(body.audience ?? "invite_recoverable");
+      const resolved = resolveCampaignCta({
+        audience,
+        campaignCtaPath: requestedPath || "/registro/confirmar",
+        campaignCtaLabel:
+          claim?.kind === "app"
+            ? requestedLabel || "Entrar a mi cuenta"
+            : requestedLabel || undefined,
+        claim,
+      });
 
       const result = await sendCampaignEmail({
         to: email,
         subject,
         title,
         message,
-        ctaLabel,
-        ctaPath,
+        ctaLabel: resolved.ctaLabel,
+        ctaPath: resolved.ctaPath,
         idempotencyKey: `email-template-test:${email}:${Date.now()}`,
       });
       await writeAudit(db, {
@@ -382,12 +386,30 @@ export async function POST(req: NextRequest) {
         targetType: "system",
         targetId: email,
         summary: result.ok ? "Prueba individual de campaña enviada" : "Falló la prueba individual de campaña",
-        meta: { subject, ok: result.ok, skipped: Boolean(result.skipped), code: result.code || "" },
+        meta: {
+          subject,
+          ok: result.ok,
+          skipped: Boolean(result.skipped),
+          code: result.code || "",
+          linkKind: resolved.linkKind,
+          ctaPath: resolved.ctaPath.includes("token=")
+            ? "/registro/confirmar?token=…"
+            : resolved.ctaPath,
+        },
       });
       if (!result.ok) {
         return NextResponse.json({ error: result.error || "El proveedor rechazó la prueba." }, { status: 502 });
       }
-      return NextResponse.json({ ok: true, email });
+      return NextResponse.json({
+        ok: true,
+        email,
+        linkKind: resolved.linkKind,
+        // No devolver el token crudo al admin en el JSON (queda en el correo).
+        ctaHasToken: resolved.ctaPath.includes("token="),
+        ctaPathPreview: resolved.ctaPath.includes("token=")
+          ? "/registro/confirmar?token=…"
+          : resolved.ctaPath,
+      });
     }
 
     if (action === "process_queue") {

@@ -577,26 +577,39 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
   const secondary = actionTiles.slice(1);
 
   const priorities = useMemo(() => {
-    return rankMemberHomePanels(
-      ["visit", "membership", "training", "classes", "week", "momentum", "progress", "occupancy", "gym"],
-      {
-        activeVisit: Boolean(model.activeVisit),
-        membershipDaysRemaining: membershipDays,
-        membershipActive: Boolean(model.membership?.status.toLowerCase().includes("activ")),
-        hasActiveWorkout: model.todayTraining.actionLabel === "Continuar entreno",
-        trainedToday: model.todayTraining.completed,
-        pendingPlanItems: model.trainingPlan?.pendingCount ?? 0,
-        hasReservedClassToday: Boolean(reservedClass),
-        hasAvailableClassToday: Boolean(nextOpenClass),
-        weekDone,
-        weeklyGoal,
-        streak: model.streak?.value ?? 0,
-      },
-    );
+    const panelIds: MemberHomePanelId[] = [
+      ...(model.activeVisit ? (["visit"] as const) : []),
+      "membership",
+      "training",
+      "classes",
+      "week",
+      "momentum",
+      "progress",
+      "occupancy",
+      "gym",
+    ];
+    return rankMemberHomePanels(panelIds, {
+      activeVisit: Boolean(model.activeVisit),
+      membershipDaysRemaining: membershipDays,
+      membershipActive: Boolean(model.membership?.status.toLowerCase().includes("activ")),
+      hasActiveWorkout: model.todayTraining.actionLabel === "Continuar entreno",
+      trainedToday: model.todayTraining.completed,
+      pendingPlanItems: model.trainingPlan?.pendingCount ?? 0,
+      hasReservedClassToday: Boolean(reservedClass),
+      hasAvailableClassToday: Boolean(nextOpenClass),
+      weekDone,
+      weeklyGoal,
+      streak: model.streak?.value ?? 0,
+    }).filter((entry) => entry.score > 0);
   }, [membershipDays, model, nextOpenClass, reservedClass, weekDone, weeklyGoal]);
 
   const topReason = priorities[0]?.reason ?? "Elegí una acción y seguí sin scroll.";
   const tracked = useRef("");
+
+  // Si se cierra la visita (checkout), no dejar el modal de "Estoy dentro" abierto.
+  useEffect(() => {
+    if (!model.activeVisit && detail === "visit") setDetail(null);
+  }, [model.activeVisit, detail]);
 
   useEffect(() => {
     const top = priorities[0];
@@ -775,7 +788,7 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
 
       {/* Detail as closable modal - main screen stays put */}
       <GameModal
-        open={detail !== null}
+        open={detail !== null && (detail !== "visit" || Boolean(model.activeVisit))}
         onClose={() => setDetail(null)}
         title={detail ? modalTitle[detail] : ""}
         subtitle={detail ? modalSubtitle[detail] : undefined}
@@ -809,9 +822,9 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
         }
         size="lg"
       >
-        {detail === "visit" && model.activeVisit && (
+        {detail === "visit" && model.activeVisit ? (
           <ActiveVisitPanel visit={model.activeVisit} onCheckout={actions.registerCheckout} />
-        )}
+        ) : null}
         {detail === "membership" && <MembershipHero model={model} actions={actions} />}
         {detail === "training" && <TrainerPlan model={model} actions={actions} />}
         {detail === "classes" && <ClassesPanel model={model} actions={actions} />}
