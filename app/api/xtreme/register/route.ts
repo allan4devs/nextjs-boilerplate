@@ -14,6 +14,7 @@ import {
   hashRegistrationToken,
 } from "@/lib/xtreme/registration-token";
 import {
+  EMAIL_CONTACTS_COLLECTION,
   MEMBERS_COLLECTION,
   PAYMENTS_COLLECTION,
   PENDING_REGISTRATIONS_COLLECTION,
@@ -38,6 +39,7 @@ import {
   normalizePhone,
   toUtcDate,
 } from "@/lib/xtreme/shared";
+import { resolveMember } from "@/lib/xtreme/members/resolve-member";
 import {
   attachSessionCookie,
   createMemberSession,
@@ -59,22 +61,49 @@ function maskedEmail(email: string) {
   return `${local.slice(0, 2)}***@${domain}`;
 }
 
+function looksLikeEmail(value: string) {
+  return value.includes("@");
+}
+
+async function findMemberByEmail(db: Awaited<ReturnType<typeof getDb>>, email: string) {
+  if (!email) return null;
+  const exact = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ email });
+  if (exact) return exact;
+  // Import / campañas a veces guardan mayúsculas o espacios raros.
+  return db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+    email: { $regex: `^${email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+  });
+}
+
 /**
- * Paso 1 — el usuario da solo su correo. Creamos un registro pendiente y le
- * enviamos un link magico para confirmar la cuenta. No se crea el perfil aun.
+ * Paso 1 — correo y/o cédula. Si hay ficha importada / campaña sin verificar,
+ * la ligamos al pending para precargar datos en /registro/confirmar.
+ * Solo se bloquea re-registro cuando el correo ya está verificado.
  */
 async function startRegistration(req: NextRequest, body: Record<string, unknown>) {
-  const email = normalizeEmail(body.email);
   const source = body.source === "app" ? "app" : "primer-dia";
+  // Acepta email, cedula, o un solo campo "identity" (correo o cédula).
+  const identityRaw = String(body.identity ?? "").trim();
+  let email = normalizeEmail(body.email);
+  let cedulaRaw = normalizeCedula(body.cedula);
+  if (!email && !cedulaRaw && identityRaw) {
+    if (looksLikeEmail(identityRaw)) email = normalizeEmail(identityRaw);
+    else cedulaRaw = normalizeCedula(identityRaw);
+  }
+  const digits = cedulaDigits(cedulaRaw);
 
-  if (!email || !isValidEmail(email)) {
-    return NextResponse.json({ error: "Ingresá un correo válido." }, { status: 400 });
+  if ((!email || !isValidEmail(email)) && digits.length < 6) {
+    return NextResponse.json(
+      { error: "Ingresá un correo válido o tu cédula (mínimo 6 dígitos)." },
+      { status: 400 },
+    );
   }
 
   const db = await getDb();
+  const rateSubject = email || `cedula:${digits}`;
   const rate = await authAttemptStatus(db, req, {
     scope: "public_registration_start",
-    subject: email,
+    subject: rateSubject,
   });
   if (rate.blocked) {
     await recordEvent(db, {
@@ -84,7 +113,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
         outcome: "blocked",
         reason: "rate_limit",
         source,
-        identityHint: maskedEmail(email),
+        identityHint: email ? maskedEmail(email) : `cedula:${digits.slice(-4)}`,
         requestFingerprint: requestFingerprint(req),
       },
     });
@@ -94,11 +123,34 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     );
   }
 
-  // Si el correo ya pertenece a un socio, no iniciamos otro registro ni enviamos correo.
-  const existingMember = await db
-    .collection<MemberDoc>(MEMBERS_COLLECTION)
-    .findOne({ email });
-  if (existingMember) {
+  let boundMember: MemberDoc | null = null;
+
+  if (digits.length >= 6) {
+    const byCedula = await resolveMember(db, { cedula: digits });
+    if (byCedula?.member) boundMember = byCedula.member;
+  }
+
+  if (email && isValidEmail(email)) {
+    const byEmail = await findMemberByEmail(db, email);
+    if (byEmail) {
+      // Si ya resolvimos por cédula y el correo es de otra ficha, no mezclar.
+      const boundKey = normalizeKey(boundMember?.normalizedName || "");
+      const emailKey = normalizeKey(byEmail.normalizedName || "");
+      if (boundMember && boundKey && emailKey && boundKey !== emailKey) {
+        return NextResponse.json(
+          {
+            error:
+              "Esa cédula y ese correo pertenecen a fichas distintas. Usá solo uno, o pedí ayuda en recepción.",
+          },
+          { status: 409 },
+        );
+      }
+      boundMember = boundMember || byEmail;
+    }
+  }
+
+  // Cuenta ya activa: no reenviar registro (anti-enumeración).
+  if (boundMember?.emailVerified === true) {
     await recordFailedAuthAttempt(db, rate.key, {
       scope: "public_registration_start",
       maxAttempts: 4,
@@ -106,20 +158,72 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     });
     await recordEvent(db, {
       type: "registration_attempted",
-      memberId: existingMember.normalizedName,
+      memberId: boundMember.normalizedName,
       source: "site",
       properties: {
-        outcome: "existing_account",
+        outcome: "existing_verified_account",
         source,
-        identityHint: maskedEmail(email),
+        identityHint: email ? maskedEmail(email) : `cedula:${digits.slice(-4)}`,
         requestFingerprint: requestFingerprint(req),
       },
     });
-    // No revelar públicamente si el correo ya pertenece a una cuenta.
     return NextResponse.json({
       ok: true,
-      message: "Si el correo puede iniciar un registro, recibirás un enlace con los siguientes pasos.",
+      message:
+        "Si podés registrarte con esos datos, te llega un correo. Si ya tenés cuenta, entrá a la app con cédula y PIN.",
+      alreadyRegistered: true,
     });
+  }
+
+  // Destino del magic link: correo escrito o el de la ficha importada.
+  if (!email || !isValidEmail(email)) {
+    email = normalizeEmail(boundMember?.email);
+  }
+  if (!email || !isValidEmail(email)) {
+    await recordFailedAuthAttempt(db, rate.key, {
+      scope: "public_registration_start",
+      maxAttempts: 4,
+      windowMs: 15 * 60_000,
+    });
+    return NextResponse.json(
+      {
+        error:
+          "Encontramos tu ficha, pero no tiene un correo usable. Escribí un correo para enviarte el enlace de activación.",
+        code: "needs_email",
+        foundProfile: Boolean(boundMember),
+      },
+      { status: 400 },
+    );
+  }
+
+  // Nombre / key a precargar en el form de confirmación.
+  let expectedMemberKey = boundMember?.normalizedName
+    ? normalizeKey(boundMember.normalizedName)
+    : "";
+  let expectedMemberName =
+    normalizeName(boundMember?.memberName) ||
+    (expectedMemberKey ? expectedMemberKey : "");
+
+  if (!expectedMemberName) {
+    const contact = await db
+      .collection<{ email?: string; name?: string }>(EMAIL_CONTACTS_COLLECTION)
+      .findOne({ email });
+    expectedMemberName = normalizeName(contact?.name) || "";
+  }
+
+  // Si la ficha no tenía ese correo, lo dejamos listo (sin verificar) para el claim.
+  if (boundMember && expectedMemberKey && normalizeEmail(boundMember.email) !== email) {
+    await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+      { normalizedName: expectedMemberKey },
+      {
+        $set: {
+          email,
+          emailVerified: false,
+          updatedAt: new Date(),
+        },
+        $unset: { emailQuarantine: "" },
+      },
+    );
   }
 
   const token = createRegistrationToken();
@@ -135,24 +239,37 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     .filter((hash, index, hashes) => hashes.indexOf(hash) === index)
     .slice(0, 5);
 
-  // Un documento por correo, conservando enlaces recientes hasta completar el perfil.
+  // Conservar binding de campaña/pago si no resolvimos ficha ahora.
+  if (!expectedMemberKey && existingPending?.expectedMemberKey) {
+    expectedMemberKey = normalizeKey(existingPending.expectedMemberKey);
+    expectedMemberName =
+      normalizeName(existingPending.expectedMemberName) || expectedMemberName || expectedMemberKey;
+  }
+
+  const setDoc: Record<string, unknown> = {
+    email,
+    tokenHash: hashRegistrationToken(token),
+    previousTokenHashes,
+    expiresAt,
+    confirmedAt: null,
+    memberNormalizedName: null,
+    source,
+  };
+  const unsetDoc: Record<string, ""> = { paymentId: "" };
+
+  if (expectedMemberKey) {
+    setDoc.expectedMemberKey = expectedMemberKey;
+    setDoc.expectedMemberName = expectedMemberName || expectedMemberKey;
+  } else {
+    unsetDoc.expectedMemberKey = "";
+    unsetDoc.expectedMemberName = "";
+  }
+
   await pendingCollection.updateOne(
     { email },
     {
-      $set: {
-        email,
-        tokenHash: hashRegistrationToken(token),
-        previousTokenHashes,
-        expiresAt,
-        confirmedAt: null,
-        memberNormalizedName: null,
-        source,
-      },
-      $unset: {
-        expectedMemberKey: "",
-        expectedMemberName: "",
-        paymentId: "",
-      },
+      $set: setDoc,
+      $unset: unsetDoc,
       $setOnInsert: { createdAt: now },
     },
     { upsert: true },
@@ -168,10 +285,13 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
   await recordEvent(db, {
     type: "registration_started",
     source: "site",
+    memberId: expectedMemberKey || undefined,
     properties: {
       source,
       emailSent: result.ok,
+      boundProfile: Boolean(expectedMemberKey),
       identityHint: maskedEmail(email),
+      viaCedula: digits.length >= 6,
       requestFingerprint: requestFingerprint(req),
     },
   }).catch(() => {});
@@ -194,9 +314,12 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
 
   return NextResponse.json({
     ok: true,
-    message:
-      "Te enviamos un enlace para confirmar tu correo, completar el perfil y crear tu PIN. Revisá tu bandeja (y spam).",
+    message: expectedMemberKey
+      ? "Te enviamos un enlace. Al abrirlo vas a ver los datos que tenemos de vos para revisar, completar y crear tu PIN."
+      : "Te enviamos un enlace para confirmar tu correo, completar el perfil y crear tu PIN. Revisá tu bandeja (y spam).",
     expiresMinutes: TOKEN_TTL_MIN,
+    foundProfile: Boolean(expectedMemberKey),
+    sentToMasked: maskedEmail(email),
   });
 }
 
@@ -258,10 +381,14 @@ export async function GET(req: NextRequest) {
       memberName: member.memberName,
       accessCode: formatAccessCode(memberAccessCode(normalizedName)),
       freeFirstDay:
-        verified.pending.source === "primer-dia" || verified.pending.source === "app",
+        verified.pending.source === "primer-dia" ||
+        verified.pending.source === "app" ||
+        verified.pending.source === "campaign",
       paidRegistration: verified.pending.source === "paypal",
       invitedRegistration:
-        verified.pending.source === "reception" || verified.pending.source === "admin",
+        verified.pending.source === "reception" ||
+        verified.pending.source === "admin" ||
+        verified.pending.source === "campaign",
       session: true,
       hasPinSet: true,
     });
@@ -270,7 +397,7 @@ export async function GET(req: NextRequest) {
   }
   const boundKey = normalizeKey(verified.pending.expectedMemberKey || "");
   let prefill = {
-    memberName: verified.pending.expectedMemberName || "",
+    memberName: normalizeName(verified.pending.expectedMemberName) || "",
     cedula: "",
     phone: "",
     goal: "",
@@ -301,11 +428,24 @@ export async function GET(req: NextRequest) {
   if (bound) {
     neverRegistered = bound.emailVerified !== true;
     prefill = {
-      memberName: bound.memberName || prefill.memberName,
+      memberName: normalizeName(bound.memberName) || prefill.memberName,
       cedula: bound.cedula || "",
       phone: bound.phone || "",
       goal: bound.goal || "",
     };
+  } else if (!prefill.memberName && verified.pending.email) {
+    // Lista importada de contactos sin ficha de socio aún.
+    const contact = await verified.db
+      .collection<{ email?: string; name?: string; phone?: string }>(EMAIL_CONTACTS_COLLECTION)
+      .findOne({ email: normalizeEmail(verified.pending.email) });
+    if (contact) {
+      prefill = {
+        memberName: normalizeName(contact.name) || "",
+        cedula: "",
+        phone: contact.phone || "",
+        goal: "",
+      };
+    }
   }
 
   const boundProfile = Boolean(boundKey || bound);
@@ -376,9 +516,15 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
       ok: true,
       memberName: member.memberName,
       accessCode: formatAccessCode(memberAccessCode(normalizedName)),
-      freeFirstDay: pending.source === "primer-dia" || pending.source === "app",
+      freeFirstDay:
+        pending.source === "primer-dia" ||
+        pending.source === "app" ||
+        pending.source === "campaign",
       paidRegistration: pending.source === "paypal",
-      invitedRegistration: pending.source === "reception" || pending.source === "admin",
+      invitedRegistration:
+        pending.source === "reception" ||
+        pending.source === "admin" ||
+        pending.source === "campaign",
       alreadyCompleted: true,
       session: true,
       hasPinSet: true,
@@ -387,40 +533,47 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     return res;
   }
 
-  // Invitación ligada a ficha existente (PayPal, super admin, recepción, campaña admin).
+  // Invitación ligada a ficha existente (PayPal, recepción, admin, campaña).
   let boundKey = normalizeKey(pending.expectedMemberKey || "");
   let boundExisting = boundKey
     ? await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: boundKey })
     : null;
 
-  // Campaña / magic link solo con correo: reclamar ficha sin verificar de ese email.
+  // Campaña / magic link: reclamar ficha sin verificar de ese email (o verificada sin completar).
   if (!boundExisting && pending.email) {
     const email = normalizeEmail(pending.email);
     const byEmail = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
-      emailVerified: { $ne: true },
       email: { $regex: `^${email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
     });
     if (byEmail?.normalizedName) {
+      // Si ya está verificada con otro flujo, igual permitimos completar cédula/PIN con el mismo correo.
       boundKey = normalizeKey(byEmail.normalizedName);
       boundExisting = byEmail;
     }
   }
 
-  const boundInvite = Boolean(boundKey);
-  const paidInvite = pending.source === "paypal" && boundInvite;
+  const paidInvite = pending.source === "paypal" && Boolean(boundKey);
   const staffInvite =
     pending.source === "reception" || pending.source === "admin";
+  const campaignInvite = pending.source === "campaign";
 
-  if (boundInvite && !boundExisting) {
-    return NextResponse.json(
-      {
-        error: paidInvite
-          ? "No encontramos el perfil asociado al pago. Contactá recepción."
-          : "No encontramos el perfil asociado a la invitación. Contactá recepción.",
-      },
-      { status: 409 },
-    );
+  // Binding huérfano (key vieja de import): en campañas/registro público se suelta y se crea/completa limpio.
+  // En PayPal / recepción / admin manual sí exigimos la ficha.
+  if (boundKey && !boundExisting) {
+    if (paidInvite || staffInvite) {
+      return NextResponse.json(
+        {
+          error: paidInvite
+            ? "No encontramos el perfil asociado al pago. Contactá recepción."
+            : "No encontramos el perfil asociado a la invitación. Contactá recepción.",
+        },
+        { status: 409 },
+      );
+    }
+    boundKey = "";
   }
+
+  const boundInvite = Boolean(boundKey && boundExisting);
 
   // Nunca registrado = aún no verificó correo: puede corregir nombre/cédula/tel del import.
   let existing = boundExisting;
@@ -610,7 +763,8 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
   }
 
   if (!existing) {
-    // Solo los registros públicos reciben el primer día; staff crea cuenta sin plan.
+    // Staff (recepción/admin manual) crea cuenta sin plan.
+    // Campaña / primer-día / app: primer día gratis para poder usar la app.
     set.membership = staffInvite
       ? {
           plan: "Sin plan activo",
@@ -626,6 +780,13 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
       startedAt: today,
       nextBillingDate: addDays(toUtcDate(today), -1).toISOString().slice(0, 10),
     };
+  } else if (
+    (campaignInvite || pending.source === "primer-dia" || pending.source === "app") &&
+    existing &&
+    (!existing.membership || existing.membership.status === "expired")
+  ) {
+    // Ficha importada sin plan usable: al activar por campaña/registro, dar primer día.
+    set.membership = createFreeFirstDayMembership(today);
   }
 
   await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
@@ -712,7 +873,13 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     });
   }
 
-  const freeFirstDay = !existing && !staffInvite && !paidInvite && !boundInvite;
+  // Primer día solo si aplicamos membresía free day (alta nueva o ficha sin plan usable).
+  const freeFirstDay = Boolean(
+    set.membership &&
+      !staffInvite &&
+      !paidInvite &&
+      (!existing || !existing.membership || existing.membership.status === "expired"),
+  );
   if (freeFirstDay) {
     await grantFreeFirstDayIfEligible(db, normalizedName, today);
     await recordEvent(db, {
@@ -720,8 +887,13 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
       memberId: normalizedName,
       source: "member_app",
       entity: { type: "member", id: normalizedName },
-      properties: { registrationSource: pending.source, date: today },
-    });
+      properties: {
+        registrationSource: pending.source,
+        date: today,
+        campaignInvite,
+        reboundProfile: Boolean(existing),
+      },
+    }).catch(() => {});
   }
 
   // El primer acceso termina en esta misma pantalla: guardamos el PIN después

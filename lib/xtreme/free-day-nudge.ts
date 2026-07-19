@@ -43,7 +43,11 @@ type DeliveryDoc = {
 };
 
 const DELIVERIES_COLLECTION = "xtreme_gym_lifecycle_deliveries";
-const FREE_DAY_SOURCES = new Set<PendingRegistrationDoc["source"]>(["primer-dia", "app"]);
+const FREE_DAY_SOURCES = new Set<PendingRegistrationDoc["source"]>([
+  "primer-dia",
+  "app",
+  "campaign",
+]);
 
 function isFreeDaySource(source: PendingRegistrationDoc["source"]) {
   return FREE_DAY_SOURCES.has(source);

@@ -18,6 +18,7 @@ if (!process.env.MONGODB_URI) throw new Error("Falta MONGODB_URI.");
 
 const rows = JSON.parse(await readFile(inputPath, "utf8"));
 const now = new Date();
+const SAFE_NAME_SCORE = 0.72;
 const clean = (value) => String(value ?? "").normalize("NFKC").trim().replace(/\s+/g, " ");
 const fold = (value) => clean(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CR");
 const nameKey = (value) => fold(value).replace(/[^a-z0-9]+/g, " ").trim().toUpperCase();
@@ -123,7 +124,7 @@ try {
   const membersCol = db.collection("xtreme_gym_members");
   const contactsCol = db.collection("xtreme_gym_email_contacts");
   const auditCol = db.collection("xtreme_gym_audit");
-  const members = await membersCol.find({}, { projection: { memberName: 1, normalizedName: 1, email: 1, emailVerified: 1, emailQuarantine: 1 } }).toArray();
+  const members = await membersCol.find({}, { projection: { memberName: 1, normalizedName: 1, email: 1, emailVerified: 1, emailQuarantine: 1, emailRecovery: 1 } }).toArray();
 
   const memberByName = new Map();
   for (const member of members) {
@@ -168,15 +169,36 @@ try {
 
   const selectedOwner = new Map();
   const sharedConflicts = [];
+  const identityMismatches = [];
   for (const [email, ownerMap] of ownersByEmail) {
     const owners = [...ownerMap.values()];
     if (owners.length === 1) {
-      selectedOwner.set(email, { ...owners[0], method: "unique_excel_owner", score: 1 });
+      const owner = owners[0];
+      const score = localNameScore(email, owner.member.memberName);
+      const verifiedOwner = owner.member.emailVerified === true && normalizeCandidateEmail(owner.member.email)?.email === email;
+      if (verifiedOwner || score >= SAFE_NAME_SCORE) {
+        selectedOwner.set(email, { ...owner, method: verifiedOwner ? "verified_current_owner" : "unique_clear_name_match", score });
+      } else {
+        identityMismatches.push({
+          email,
+          memberName: owner.member.memberName,
+          sourceRow: owner.source.row,
+          score,
+          reason: "name_email_mismatch",
+        });
+      }
+      continue;
+    }
+    const verifiedOwners = owners.filter((owner) =>
+      owner.member.emailVerified === true && normalizeCandidateEmail(owner.member.email)?.email === email,
+    );
+    if (verifiedOwners.length === 1) {
+      selectedOwner.set(email, { ...verifiedOwners[0], method: "verified_current_owner", score: 1 });
       continue;
     }
     const ranked = owners.map((owner) => ({ ...owner, score: localNameScore(email, owner.member.memberName) })).sort((left, right) => right.score - left.score);
     const margin = ranked[0].score - (ranked[1]?.score ?? 0);
-    if (ranked[0].score >= 0.72 && margin >= 0.15) selectedOwner.set(email, { ...ranked[0], method: "shared_clear_name_match", margin });
+    if (ranked[0].score >= SAFE_NAME_SCORE && margin >= 0.15) selectedOwner.set(email, { ...ranked[0], method: "shared_clear_name_match", margin });
     else sharedConflicts.push({ email, ownerCount: owners.length, bestScore: ranked[0]?.score ?? 0, margin, names: ranked.map((owner) => owner.member.memberName) });
   }
 
@@ -185,6 +207,21 @@ try {
     const current = normalizeCandidateEmail(member.email)?.email;
     if (current) currentOwnerByEmail.set(current, String(member._id));
   }
+  const unsafeExistingAssignments = members.flatMap((member) => {
+    const email = normalizeCandidateEmail(member.email)?.email;
+    if (!email || member.emailVerified === true || !member.emailRecovery) return [];
+    const score = localNameScore(email, member.memberName);
+    if (score >= SAFE_NAME_SCORE) return [];
+    return [{
+      _id: member._id,
+      memberName: member.memberName,
+      email,
+      score,
+      sourceRow: member.emailRecovery?.sourceRow ?? null,
+      recoveryMethod: member.emailRecovery?.method ?? "",
+      reason: "aggressive_name_mismatch",
+    }];
+  });
   const recoveries = [];
   const skipped = [];
   for (const [memberId, { member, choices }] of candidatesByMember) {
@@ -214,11 +251,37 @@ try {
 
   const contacts = [...ownersByEmail.entries()].map(([email, ownerMap]) => {
     const winner = selectedOwner.get(email);
-    return { email, name: winner?.member.memberName || (ownerMap.size === 1 ? [...ownerMap.values()][0].member.memberName : "Socio Xtreme"), ambiguousOwners: winner ? 0 : ownerMap.size };
+    const singleOwner = ownerMap.size === 1 ? [...ownerMap.values()][0] : null;
+    return {
+      email,
+      name: winner?.member.memberName || singleOwner?.member.memberName || "Socio Xtreme",
+      ambiguousOwners: winner ? 0 : ownerMap.size,
+      status: winner ? "active" : "quarantined",
+      safetyReason: winner ? "name_match" : singleOwner ? "name_email_mismatch" : "shared_without_clear_owner",
+      nameScore: winner?.score ?? (singleOwner ? localNameScore(email, singleOwner.member.memberName) : 0),
+    };
   });
 
   let writeResult = null;
   if (apply) {
+    const quarantineWrite = unsafeExistingAssignments.length ? await membersCol.bulkWrite(unsafeExistingAssignments.map((item) => ({ updateOne: {
+      filter: { _id: item._id, email: item.email, emailVerified: { $ne: true } },
+      update: {
+        $set: {
+          emailVerified: false,
+          emailQuarantine: {
+            previousEmail: item.email,
+            reason: item.reason,
+            at: now,
+            source: "scripts/estado.xlsx-identity-audit",
+            sourceRow: item.sourceRow,
+            score: item.score,
+          },
+          updatedAt: now,
+        },
+        $unset: { email: "", emailRecovery: "" },
+      },
+    } })), { ordered: false }) : { matchedCount: 0, modifiedCount: 0 };
     const memberWrite = recoveries.length ? await membersCol.bulkWrite(recoveries.map((item) => ({ updateOne: {
       filter: { _id: item._id, emailVerified: { $ne: true } },
       update: { $set: { email: item.email, emailVerified: false, emailRecovery: {
@@ -228,26 +291,28 @@ try {
     } })), { ordered: false }) : { matchedCount: 0, modifiedCount: 0 };
     const contactWrite = contacts.length ? await contactsCol.bulkWrite(contacts.map((contact) => ({ updateOne: {
       filter: { email: contact.email },
-      update: { $set: { ...contact, status: "active", source: "scripts/estado.xlsx-recovery", updatedAt: now }, $setOnInsert: { createdAt: now } },
+      update: { $set: { ...contact, source: "scripts/estado.xlsx-recovery", updatedAt: now }, $setOnInsert: { createdAt: now } },
       upsert: true,
     } })), { ordered: false }) : { matchedCount: 0, modifiedCount: 0, upsertedCount: 0 };
     await auditCol.insertOne({ at: now, actor: "script:recover-member-emails", action: "member_emails.recover", targetType: "members",
-      summary: `${memberWrite.modifiedCount} fichas recuperadas; ${contacts.length} contactos procesados`,
-      context: { recoveries: recoveries.length, contacts: contacts.length, sharedConflicts: sharedConflicts.length } });
+      summary: `${memberWrite.modifiedCount} fichas recuperadas; ${quarantineWrite.modifiedCount} asignaciones inseguras aisladas; ${contacts.length} contactos procesados`,
+      context: { recoveries: recoveries.length, quarantined: unsafeExistingAssignments.length, contacts: contacts.length, sharedConflicts: sharedConflicts.length, identityMismatches: identityMismatches.length } });
     writeResult = { membersMatched: memberWrite.matchedCount, membersModified: memberWrite.modifiedCount,
-      contactsMatched: contactWrite.matchedCount, contactsModified: contactWrite.modifiedCount, contactsInserted: contactWrite.upsertedCount };
+      membersQuarantined: quarantineWrite.modifiedCount, contactsMatched: contactWrite.matchedCount, contactsModified: contactWrite.modifiedCount, contactsInserted: contactWrite.upsertedCount };
   }
 
   const report = { generatedAt: now.toISOString(), summary: {
     mode: apply ? "apply" : "dry-run", spreadsheetRows: rows.length, namesWithCandidateEmail: excelByName.size,
     canonicalContactEmails: contacts.length, memberRecoveries: recoveries.length,
-    uniqueExcelOwnerRecoveries: recoveries.filter((item) => item.method === "unique_excel_owner").length,
+    uniqueExcelOwnerRecoveries: recoveries.filter((item) => item.method === "unique_clear_name_match").length,
     sharedClearMatchRecoveries: recoveries.filter((item) => item.method === "shared_clear_name_match").length,
     repairedDomains: recoveries.filter((item) => item.repairedDomain).length, unresolvedSharedEmails: sharedConflicts.length,
     repairedContactDomains: [...ownersByEmail.values()].flatMap((owners) => [...owners.values()]).filter((owner) => owner.source.repairedDomain).length,
     invalidEmailRows: invalidRows.length, placeholderEmailsBlocked: placeholderEmails.size,
+    identityMismatches: identityMismatches.length, unsafeExistingAssignments: unsafeExistingAssignments.length,
+    quarantinedContacts: contacts.filter((contact) => contact.status === "quarantined").length,
     unmatchedExcelNames: unmatchedNames.length, ambiguousMongoNames: ambiguousNames.length, skippedMembers: skipped.length,
-  }, writeResult, recoveries: recoveries.map(({ _id, ...item }) => item), sharedConflicts, invalidRows, unmatchedNames, ambiguousNames, skipped };
+  }, writeResult, recoveries: recoveries.map(({ _id, ...item }) => item), unsafeExistingAssignments: unsafeExistingAssignments.map(({ _id, ...item }) => item), identityMismatches, sharedConflicts, invalidRows, unmatchedNames, ambiguousNames, skipped };
   if (reportPath) await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   console.log(JSON.stringify({ ...report.summary, writeResult }, null, 2));
 } finally {

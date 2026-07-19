@@ -249,6 +249,7 @@ function ConfirmInner() {
     if (state.source === "paypal") return "Pago confirmado";
     if (state.source === "reception") return "Invitación de recepción";
     if (state.source === "admin") return "Activación · Xtreme Gym";
+    if (state.source === "campaign") return "Activación por correo · Xtreme Gym";
     if (state.source === "primer-dia") return "Primer día gratis";
     return "Registro por correo";
   }, [state]);
@@ -503,6 +504,11 @@ function ConfirmInner() {
               <label className="mt-4 block">
                 <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
                   Cédula / documento
+                  {!state.savedProfile.cedula ? (
+                    <span className="ml-2 font-semibold normal-case tracking-normal text-orange-200/90">
+                      (no la teníamos — escribila)
+                    </span>
+                  ) : null}
                 </span>
                 <input
                   inputMode="numeric"

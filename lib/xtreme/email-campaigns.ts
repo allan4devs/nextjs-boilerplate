@@ -159,39 +159,24 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
     );
     if (!claimed.modifiedCount) continue;
 
-    // Campañas de activación: cada destinatario recibe un magic link personal
-    // ligado a su ficha (si existe) para verificar/corregir datos y crear PIN.
+    // Siempre intentar magic link personal: activar ficha, precargar datos y PIN.
+    // Si ya está verificado con PIN → /app. Si falla el claim, se usa el CTA de la campaña.
     let ctaPath = campaign.ctaPath;
     let ctaLabel = campaign.ctaLabel;
-    if (CLAIM_LINK_AUDIENCES.has(campaign.audience)) {
-      try {
-        const claim = await issueCampaignClaimLink(db, item.email);
-        if (claim?.kind === "claim") {
-          ctaPath = claim.path;
-          ctaLabel = campaign.ctaLabel || "Activar mi acceso";
-        } else if (claim?.kind === "app") {
-          ctaPath = "/app";
-          ctaLabel = campaign.ctaLabel || "Entrar a la app";
-        }
-      } catch (err) {
-        console.error("CAMPAIGN CLAIM LINK", item.email, err);
-        const now = new Date();
-        const detail =
-          err instanceof Error ? err.message.slice(0, 160) : "Error al generar enlace de activación";
-        if (item.attempts + 1 < 3) {
-          await deliveries.updateOne(
-            { deliveryKey: item.deliveryKey },
-            { $set: { status: "queued", updatedAt: now, error: detail } },
-          );
-        } else {
-          failed += 1;
-          await deliveries.updateOne(
-            { deliveryKey: item.deliveryKey },
-            { $set: { status: "failed", updatedAt: now, error: detail } },
-          );
-        }
-        continue;
+    try {
+      const claim = await issueCampaignClaimLink(db, item.email);
+      if (claim?.kind === "claim") {
+        ctaPath = claim.path;
+        ctaLabel =
+          campaign.ctaLabel ||
+          (CLAIM_LINK_AUDIENCES.has(campaign.audience) ? "Activar mi acceso" : "Completar mi registro");
+      } else if (claim?.kind === "app") {
+        ctaPath = campaign.ctaPath?.startsWith("/") ? campaign.ctaPath : "/app";
+        ctaLabel = campaign.ctaLabel || "Entrar a la app";
       }
+    } catch (err) {
+      console.error("CAMPAIGN CLAIM LINK", item.email, err);
+      // No abortar el envío: manda el CTA genérico de la campaña.
     }
 
     const result = await sendCampaignEmail({

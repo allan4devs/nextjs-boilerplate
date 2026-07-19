@@ -15,10 +15,10 @@ import type { MemberOs } from "./useMemberOs";
 
 function loginErrorHint(error: string): string | null {
   if (error === MSG.errors.cedulaNotRegistered) {
-    return "Usá el enlace del correo o pedí el alta en recepción.";
+    return "Activá la cuenta con correo o cédula, o pedí el alta en recepción.";
   }
   if (error === MSG.errors.cedulaNeedsInvite) {
-    return "Recepción te manda el enlace; ahí creás el PIN.";
+    return "Activá con el enlace del correo o tocá «Activar cuenta» abajo para cargar tus datos y crear el PIN.";
   }
   if (error.startsWith("Cédula incompleta")) {
     return "Escaneá el carnet o digitá todos los números.";
@@ -43,6 +43,9 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
     needsRegistration ||
     error === MSG.errors.cedulaNotRegistered ||
     error === MSG.errors.cedulaNeedsInvite;
+  const registerHref = memberCedulaInput
+    ? `/primer-dia?cedula=${encodeURIComponent(memberCedulaInput.replace(/\D/g, ""))}#registro`
+    : "/primer-dia#registro";
 
   return (
     <div className="xg-os-login-shell fixed inset-0 z-50 grid bg-black/90 backdrop-blur-md">
@@ -112,10 +115,10 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
         {showHelpLinks ? (
           <div className="mt-4 grid gap-2">
             <Link
-              href="/primer-dia"
+              href={registerHref}
               className="border-[3px] border-white/15 bg-black/40 px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#d8ff3e] transition hover:border-[#d8ff3e]"
             >
-              Primer día · registro con correo
+              Activar cuenta · correo o cédula
             </Link>
             <Link
               href="/precios"
@@ -126,7 +129,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           </div>
         ) : (
           <p className="mt-3 px-1 text-xs font-semibold text-white/38">
-            Primera vez: enlace del correo o recepción.
+            Primera vez: enlace del correo, cédula en registro o recepción.
           </p>
         )}
 

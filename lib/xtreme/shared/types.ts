@@ -161,6 +161,8 @@ export type MemberDoc = {
     reason?: string;
     at?: Date;
     source?: string;
+    sourceRow?: number;
+    score?: number;
   };
   /** Trazabilidad de una recuperacion conservadora desde el Excel historico. */
   emailRecovery?: {
@@ -214,7 +216,8 @@ export type PendingRegistrationDoc = {
   expectedMemberName?: string | null;
   paymentId?: string | null;
   createdAt: Date;
-  source: "primer-dia" | "app" | "paypal" | "reception" | "admin";
+  /** campaign = magic link de campañas admin (claim / activación masiva). */
+  source: "primer-dia" | "app" | "paypal" | "reception" | "admin" | "campaign";
 };
 
 export type AuditDoc = {

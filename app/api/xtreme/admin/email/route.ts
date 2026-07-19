@@ -9,6 +9,7 @@ import {
   processQueuedEmailCampaigns,
 } from "@/lib/xtreme/email-campaigns";
 import { buildAudienceEmails, EMAIL_AUDIENCE_IDS } from "@/lib/xtreme/email-audiences";
+import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
@@ -68,15 +69,25 @@ async function buildMemberCoverage(db: Awaited<ReturnType<typeof getDb>>) {
       member.legacyImport?.rows?.find((row: { rate?: string }) => String(row.rate || "").trim())
         ?.rate ||
       "";
+    const rawEmail = normalizeEmail(member.email);
+    const quarantinedCandidate = normalizeEmail(member.emailQuarantine?.previousEmail);
+    const emailSafe = Boolean(rawEmail && isSafeCampaignMemberEmail(member));
+    const inferredUnsafeReason = rawEmail && !emailSafe ? "name_email_mismatch" : "";
     return {
       name: String(member.memberName || member.normalizedName || "Sin nombre").trim(),
-      email: normalizeEmail(member.email),
+      email: emailSafe ? rawEmail : "",
+      emailSafe,
+      emailNameScore: rawEmail || quarantinedCandidate
+        ? memberEmailNameScore(rawEmail || quarantinedCandidate, member.memberName || member.normalizedName)
+        : 0,
       emailVerified: member.emailVerified === true,
       plan: String(member.membership?.plan || "").trim(),
       rate: String(rate).trim(),
       sourceStatus: String(member.legacyImport?.canonicalSourceStatus || "").trim(),
-      quarantineReason: String(member.emailQuarantine?.reason || "").trim(),
-      quarantinedEmail: normalizeEmail(member.emailQuarantine?.previousEmail),
+      quarantineReason: String(member.emailQuarantine?.reason || inferredUnsafeReason).trim(),
+      quarantinedEmail: emailSafe
+        ? quarantinedCandidate
+        : rawEmail || quarantinedCandidate,
       recoveryMethod: String(member.emailRecovery?.method || "").trim(),
       recoveredAt: member.emailRecovery?.at ? new Date(member.emailRecovery.at).toISOString() : "",
     };

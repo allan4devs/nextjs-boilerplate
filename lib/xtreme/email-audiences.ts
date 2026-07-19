@@ -14,6 +14,7 @@ import {
   type PendingRegistrationDoc,
 } from "@/lib/xtreme/shared";
 import type { EmailAudience } from "@/lib/xtreme/email-campaigns";
+import { isSafeCampaignMemberEmail } from "@/lib/xtreme/email-identity";
 
 export const EMAIL_AUDIENCE_IDS = [
   "imported",
@@ -53,6 +54,7 @@ export type EmailAudienceDiagnostics = {
   quarantinePlaceholder: number;
   quarantineShared: number;
   quarantineMismatch: number;
+  unsafeIdentityMatches: number;
 };
 
 type PlanAudience =
@@ -197,7 +199,11 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       db.collection(EVENTS_COLLECTION).distinct<string>("memberId", { type: "app_opened" }),
     ]);
 
-  const allEmailedMembers = allMembers.filter((member) => normalizeAudienceEmail(member.email));
+  const membersWithEmail = allMembers.filter((member) => normalizeAudienceEmail(member.email));
+  const unsafeIdentityMembers = membersWithEmail.filter(
+    (member) => !isSafeCampaignMemberEmail(member),
+  );
+  const allEmailedMembers = membersWithEmail.filter(isSafeCampaignMemberEmail);
   const verifiedMembers = allEmailedMembers.filter((member) => member.emailVerified === true);
 
   const blocked = new Set(suppressed.map(normalizeAudienceEmail).filter(Boolean));
@@ -315,6 +321,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       quarantineMismatch: allMembers.filter(
         (member) => member.emailQuarantine?.reason === "aggressive_name_mismatch",
       ).length,
+      unsafeIdentityMatches: unsafeIdentityMembers.length,
     },
   };
 }

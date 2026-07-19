@@ -52,6 +52,7 @@ type CenterData = {
     quarantinePlaceholder: number;
     quarantineShared: number;
     quarantineMismatch: number;
+    unsafeIdentityMatches: number;
   };
   campaigns: Array<{
     id: string;
@@ -96,6 +97,16 @@ type MemberCoverage = {
   quarantinedEmail: string;
   recoveryMethod: string;
   recoveredAt: string;
+  emailSafe: boolean;
+  emailNameScore: number;
+};
+
+const QUARANTINE_REASON_LABELS: Record<string, string> = {
+  placeholder: "placeholder o correo ficticio",
+  shared_across_members: "compartido entre varias fichas",
+  aggressive_name_mismatch: "nombre y correo no coinciden",
+  name_email_mismatch: "nombre y correo no coinciden",
+  shared_without_clear_owner: "sin dueño claro",
 };
 
 const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string }> = [
@@ -679,8 +690,8 @@ export default function EmailCampaignCenter() {
             [data?.diagnostics.membersWithUsableEmail, "Con correo usable", "Verificados y pendientes de verificar"],
             [data?.diagnostics.importedContactEmails, "Contactos reales", "Direcciones únicas recuperadas del Excel"],
             [data?.diagnostics.recoveredMembers, "Fichas recuperadas", "Asignación segura y auditada"],
-            [data?.diagnostics.membersWithoutUsableEmail, "Sin correo usable", "No se pueden incluir en un envío"],
-            [data?.diagnostics.quarantinedMembers, "En cuarentena", "Correo dudoso conservado para revisión"],
+            [data?.diagnostics.membersWithoutUsableEmail, "Sin correo seguro", "No se pueden incluir en un envío"],
+            [(data?.diagnostics.quarantinedMembers ?? 0) + (data?.diagnostics.unsafeIdentityMatches ?? 0), "No seguros", "Aislados; nunca entran en campañas"],
           ].map(([value, label, detail]) => (
             <div key={String(label)} className="border-2 border-white/10 bg-black/40 p-3">
               <div className="text-2xl font-black text-cyan-100">{value ?? "—"}</div>
@@ -690,13 +701,13 @@ export default function EmailCampaignCenter() {
           ))}
         </div>
         <p className="mt-3 text-[11px] font-semibold text-white/45">
-          Cuarentena restante: {data?.diagnostics.quarantinedMembers ?? "—"} fichas · {data?.diagnostics.quarantineShared ?? "—"} compartidos · {data?.diagnostics.quarantineMismatch ?? "—"} sin asignación segura · {data?.diagnostics.quarantinePlaceholder ?? "—"} placeholders.
+          No seguros, fuera de envíos: {data?.diagnostics.quarantinedMembers ?? "—"} en cuarentena · {data?.diagnostics.unsafeIdentityMatches ?? "—"} detectados por nombre/correo · {data?.diagnostics.quarantineShared ?? "—"} compartidos · {data?.diagnostics.quarantinePlaceholder ?? "—"} placeholders.
         </p>
         {coverage && (
           <div className="mt-4 border-2 border-white/10 bg-black/40 p-3">
             <div className="flex flex-wrap gap-2">
               {([
-                ["all", "Todos"], ["sendable", "Con correo"], ["missing", "Sin correo"], ["quarantined", "Cuarentena"],
+                ["all", "Todos"], ["sendable", "Seguros para enviar"], ["missing", "Sin correo"], ["quarantined", "No seguros · no enviar"],
               ] as const).map(([id, label]) => (
                 <button key={id} type="button" onClick={() => setCoverageFilter(id)} className={`min-h-9 border-2 px-3 text-[10px] font-black uppercase ${coverageFilter === id ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/15 text-white/55"}`}>{label}</button>
               ))}
@@ -709,8 +720,11 @@ export default function EmailCampaignCenter() {
                   <div className="min-w-0"><div className="truncate font-black text-white">{member.name}</div><div className={`truncate font-semibold ${member.email ? "text-cyan-100/70" : "text-orange-200/70"}`}>{member.email || "Sin correo usable"}</div></div>
                   <div className="font-semibold text-white/45">{member.rate || member.plan || "Sin tarifa"}{member.sourceStatus ? ` · ${member.sourceStatus}` : ""}</div>
                   <div className="min-w-0 font-semibold text-white/35 lg:text-right">
-                    <div>{member.email ? (member.emailVerified ? "Verificado" : member.recoveryMethod ? "Recuperado del Excel · pendiente de verificar" : "Pendiente de verificar") : member.quarantineReason ? `Cuarentena: ${member.quarantineReason}` : "No venía correo usable"}</div>
+                    <div>{member.email ? (member.emailVerified ? "Verificado" : member.recoveryMethod ? "Recuperado del Excel · coincidencia segura" : "Pendiente de verificar") : member.quarantineReason ? `No enviar: ${QUARANTINE_REASON_LABELS[member.quarantineReason] || member.quarantineReason}` : "No venía correo usable"}</div>
                     {!member.email && member.quarantinedEmail && <div className="truncate text-orange-200/60">Anterior: {member.quarantinedEmail}</div>}
+                    {!member.email && member.quarantineReason && member.emailNameScore > 0 && (
+                      <div className="text-orange-100/45">Coincidencia nombre/correo: {Math.round(member.emailNameScore * 100)}%</div>
+                    )}
                   </div>
                 </div>
               ))}
