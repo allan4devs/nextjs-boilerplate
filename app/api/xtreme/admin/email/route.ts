@@ -3,6 +3,8 @@ import { emailConfigurationError, emailEnabled, sendCampaignEmail } from "@/lib/
 import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit } from "@/lib/xtreme/audit";
 import {
+  assertSafeCampaignCta,
+  extractCampaignRegistrationToken,
   type EmailAudience,
   type EmailCampaignDoc,
   newEmailCampaignId,
@@ -13,6 +15,7 @@ import { buildAudienceEmails, EMAIL_AUDIENCE_IDS } from "@/lib/xtreme/email-audi
 import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { issueCampaignClaimLink } from "@/lib/xtreme/campaign-claim-link";
+import { hashRegistrationToken } from "@/lib/xtreme/registration-token";
 import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
@@ -334,8 +337,9 @@ export async function POST(req: NextRequest) {
         meta: { audience, subject },
       });
 
-      // Drena el primer lote ya en esta request para no depender solo del cron.
-      const process = await processQueuedEmailCampaigns(db, 20, {
+      // Primer lote suave al encolar (~30–40 mails); el cron */5 min termina los ~1000.
+      // Cada uno con token personal validado antes de Resend.
+      const process = await processQueuedEmailCampaigns(db, 15, {
         maxRounds: 2,
         deadlineMs: 45_000,
       });
@@ -359,7 +363,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Correo, asunto, título y mensaje son requeridos." }, { status: 400 });
       }
 
-      const claim = await issueCampaignClaimLink(db, email);
+      let claim = await issueCampaignClaimLink(db, email);
+      // Misma regla que el lote: claim solo cuenta si el token está en Mongo.
+      if (claim?.kind === "claim") {
+        const token = extractCampaignRegistrationToken(claim.path);
+        if (!token) {
+          claim = null;
+        } else {
+          const tokenHash = hashRegistrationToken(token);
+          const pending = await db.collection(PENDING_REGISTRATIONS_COLLECTION).findOne({
+            $or: [{ tokenHash }, { previousTokenHashes: tokenHash }],
+          });
+          if (!pending) claim = null;
+        }
+      }
       const audience = String(body.audience ?? "invite_recoverable");
       const resolved = resolveCampaignCta({
         audience,
@@ -370,6 +387,39 @@ export async function POST(req: NextRequest) {
             : requestedLabel || undefined,
         claim,
       });
+
+      // Misma regla que el lote masivo: no mandar prueba con código inválido.
+      const safety = assertSafeCampaignCta({
+        ctaPath: resolved.ctaPath,
+        linkKind: resolved.linkKind,
+      });
+      if (!safety.ok) {
+        return NextResponse.json(
+          {
+            error: safety.reason,
+            linkKind: resolved.linkKind,
+            ctaPathPreview: resolved.ctaPath.startsWith("/registro/confirmar")
+              ? "/registro/confirmar?token=…"
+              : resolved.ctaPath,
+          },
+          { status: 409 },
+        );
+      }
+      // Prueba de invitación: exigir magic link (no fallback a plantilla bare).
+      if (
+        (audience === "invite_recoverable" || String(audience).startsWith("claim_")) &&
+        resolved.linkKind !== "claim" &&
+        resolved.linkKind !== "app"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "No se pudo generar un enlace personal con token válido para la prueba. Revisá el correo o reintentá.",
+            linkKind: resolved.linkKind,
+          },
+          { status: 409 },
+        );
+      }
 
       const result = await sendCampaignEmail({
         to: email,

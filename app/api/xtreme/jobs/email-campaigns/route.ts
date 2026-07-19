@@ -26,9 +26,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = await getDb();
-    // ~55 s de presupuesto: lotes de 30, varias rondas (≈1000 envíos en ~20–30 min con cron */5).
-    const emailCampaigns = await processQueuedEmailCampaigns(db, 30, {
-      maxRounds: 10,
+    // Envío gradual: lotes chicos + delay por correo (claim + Resend).
+    // ~25/ronda × ~8 rondas ≈ 150–200 por cron de 5 min → ~1000 en 25–40 min.
+    // Cada envío exige magic link con token persistido; si no, reencola sin mandar basura.
+    const emailCampaigns = await processQueuedEmailCampaigns(db, 25, {
+      maxRounds: 8,
       deadlineMs: 55_000,
     });
     return NextResponse.json({

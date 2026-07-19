@@ -6,9 +6,11 @@ import {
   issueCampaignClaimLink,
   type CampaignClaimLink,
 } from "@/lib/xtreme/campaign-claim-link";
+import { hashRegistrationToken } from "@/lib/xtreme/registration-token";
 import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
+  PENDING_REGISTRATIONS_COLLECTION,
 } from "@/lib/xtreme/shared/config";
 
 /** Ruta de confirmación sin ?token= no es un enlace seguro usable. */
@@ -19,10 +21,43 @@ export function isBareRegistroConfirmarPath(path: string | undefined | null) {
 }
 
 /**
+ * Token de registro: createRegistrationToken() = 32 bytes → 64 hex.
+ * Solo aceptamos ese formato para no mandar ?token= basura o truncado.
+ */
+export function extractCampaignRegistrationToken(path: string | undefined | null): string | null {
+  const raw = String(path || "").trim();
+  const match = raw.match(/[?&]token=([^&#]+)/);
+  if (!match?.[1]) return null;
+  try {
+    const token = decodeURIComponent(match[1]).trim();
+    return /^[a-f0-9]{64}$/i.test(token) ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isUsableCampaignClaimPath(path: string | undefined | null) {
+  const raw = String(path || "").trim();
+  if (!raw.startsWith("/registro/confirmar")) return false;
+  return Boolean(extractCampaignRegistrationToken(raw));
+}
+
+/**
+ * True si el path NO debe salir en un correo (código inválido / sin token).
+ * - /registro/confirmar sin token válido
+ * - ?token= que no sea hex de 64 (plantilla admin, basura, truncado)
+ */
+export function isUnsafeCampaignCtaPath(path: string | undefined | null) {
+  const raw = String(path || "").trim();
+  if (!raw.startsWith("/registro/confirmar")) return false;
+  return !isUsableCampaignClaimPath(raw);
+}
+
+/**
  * Resuelve el CTA del correo masivo:
- * - claim → /registro/confirmar?token=… (magic link personal)
+ * - claim → /registro/confirmar?token=… SOLO si el token es el emitido (64 hex)
  * - app → /app (ya verificó y tiene PIN)
- * - fallback → nunca manda /registro/confirmar vacío de token
+ * - fallback → nunca manda /registro/confirmar de plantilla ni con token inventado
  */
 export function resolveCampaignCta(args: {
   audience: string;
@@ -31,7 +66,7 @@ export function resolveCampaignCta(args: {
   claim: CampaignClaimLink | null;
 }): { ctaPath: string; ctaLabel: string; linkKind: "claim" | "app" | "fallback" } {
   const claim = args.claim;
-  if (claim?.kind === "claim" && claim.path.includes("token=")) {
+  if (claim?.kind === "claim" && isUsableCampaignClaimPath(claim.path)) {
     return {
       ctaPath: claim.path,
       ctaLabel:
@@ -49,12 +84,19 @@ export function resolveCampaignCta(args: {
   }
 
   const raw =
-    args.campaignCtaPath && args.campaignCtaPath.startsWith("/")
+    args.campaignCtaPath &&
+    args.campaignCtaPath.startsWith("/") &&
+    !args.campaignCtaPath.startsWith("//")
       ? args.campaignCtaPath
       : "/app";
 
-  // Nunca enviar /registro/confirmar sin token: el form no puede validar el enlace.
-  if (isBareRegistroConfirmarPath(raw) || CLAIM_LINK_AUDIENCES.has(args.audience)) {
+  // Nunca reutilizar ctaPath de plantilla hacia /registro/confirmar
+  // (con o sin ?token=): ese token no es el personal del destinatario.
+  if (
+    raw.startsWith("/registro/confirmar") ||
+    CLAIM_LINK_AUDIENCES.has(args.audience) ||
+    isUnsafeCampaignCtaPath(raw)
+  ) {
     return {
       ctaPath: "/primer-dia#registro",
       ctaLabel: args.campaignCtaLabel || "Iniciar registro seguro",
@@ -67,6 +109,39 @@ export function resolveCampaignCta(args: {
     ctaLabel: args.campaignCtaLabel || "Abrir Xtreme Gym",
     linkKind: "fallback",
   };
+}
+
+/**
+ * Gate final antes de llamar a Resend: no mandar enlaces de confirmación inválidos.
+ * - claim exige path usable con token de 64 hex
+ * - nunca /registro/confirmar sin token válido
+ */
+export function assertSafeCampaignCta(args: {
+  ctaPath: string;
+  linkKind: "claim" | "app" | "fallback";
+}): { ok: true } | { ok: false; reason: string } {
+  const path = String(args.ctaPath || "").trim();
+  if (args.linkKind === "claim") {
+    if (!isUsableCampaignClaimPath(path)) {
+      return {
+        ok: false,
+        reason: "Magic link sin token válido (64 hex); no se envía el correo.",
+      };
+    }
+    return { ok: true };
+  }
+  // linkKind app | fallback: no se permite token de registro en el path.
+  if (
+    isUnsafeCampaignCtaPath(path) ||
+    isBareRegistroConfirmarPath(path) ||
+    /[?&]token=/.test(path)
+  ) {
+    return {
+      ok: false,
+      reason: "CTA con token o /registro/confirmar sin magic link personal; no se envía el correo.",
+    };
+  }
+  return { ok: true };
 }
 
 export type EmailAudience =
@@ -239,10 +314,41 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
     if (!claimed.modifiedCount) continue;
 
     // Magic link personal por destinatario (reintento 1x si falla).
+    // Solo se envía si el token queda persistido en pending_registrations.
     let claim: CampaignClaimLink | null = null;
     for (let attempt = 0; attempt < 2 && !claim; attempt += 1) {
       try {
-        claim = await issueCampaignClaimLink(db, item.email);
+        const issued = await issueCampaignClaimLink(db, item.email);
+        if (issued?.kind === "app") {
+          claim = issued;
+          break;
+        }
+        if (issued?.kind === "claim") {
+          const token = extractCampaignRegistrationToken(issued.path);
+          if (!token) {
+            console.error("CAMPAIGN CLAIM PATH SIN TOKEN", item.email, issued.path);
+          } else {
+            const tokenHash = hashRegistrationToken(token);
+            const pending = await db
+              .collection<{ tokenHash?: string; previousTokenHashes?: string[]; expiresAt?: Date }>(
+                PENDING_REGISTRATIONS_COLLECTION,
+              )
+              .findOne({
+                $or: [{ tokenHash }, { previousTokenHashes: tokenHash }],
+              });
+            if (!pending) {
+              console.error("CAMPAIGN CLAIM NO PERSISTIDO", item.email);
+            } else if (
+              pending.expiresAt &&
+              new Date(pending.expiresAt).getTime() < Date.now()
+            ) {
+              console.error("CAMPAIGN CLAIM EXPIRADO AL EMITIR", item.email);
+            } else {
+              claim = issued;
+              break;
+            }
+          }
+        }
       } catch (err) {
         console.error("CAMPAIGN CLAIM LINK", item.email, attempt, err);
         if (attempt === 0) {
@@ -258,14 +364,36 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
       claim,
     });
     const { ctaPath, ctaLabel, linkKind } = resolved;
+    const safety = assertSafeCampaignCta({ ctaPath, linkKind });
 
-    // Audiencias de activación: sin magic link real no mandamos el correo (mejor reintentar).
-    if (
-      CLAIM_LINK_AUDIENCES.has(campaign.audience) &&
+    // Invitación / activación masiva: SOLO sale con magic link real o /app.
+    // Nunca manda la plantilla bare "/registro/confirmar" ni un token inventado.
+    const isInviteOrClaimAudience = CLAIM_LINK_AUDIENCES.has(campaign.audience);
+    const needsSecureClaim =
+      isInviteOrClaimAudience && linkKind !== "claim" && linkKind !== "app";
+    const unsafeCta = !safety.ok;
+    // Para invite_recoverable y claim_*: exigir claim con token (app solo si ya tiene cuenta).
+    const inviteNeedsToken =
+      (campaign.audience === "invite_recoverable" ||
+        campaign.audience.startsWith("claim_")) &&
       linkKind !== "claim" &&
-      linkKind !== "app"
-    ) {
+      linkKind !== "app";
+
+    if (needsSecureClaim || inviteNeedsToken || unsafeCta) {
       const now = new Date();
+      const errorMsg = !safety.ok
+        ? safety.reason
+        : "No se pudo generar el enlace seguro con token válido; reintento automático.";
+      if (unsafeCta || inviteNeedsToken) {
+        console.error(
+          "CAMPAIGN CTA BLOQUEADO",
+          item.email,
+          campaign.audience,
+          linkKind,
+          ctaPath,
+          errorMsg,
+        );
+      }
       if (item.attempts + 1 < 4) {
         await deliveries.updateOne(
           { deliveryKey: item.deliveryKey },
@@ -275,7 +403,7 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
               updatedAt: now,
               ctaPath,
               linkKind,
-              error: "No se pudo generar el enlace seguro; reintento automático.",
+              error: errorMsg,
             },
           },
         );
@@ -289,17 +417,33 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
               updatedAt: now,
               ctaPath,
               linkKind,
-              error: "No se pudo generar el enlace seguro de registro tras varios intentos.",
+              error:
+                errorMsg ||
+                "No se pudo generar el enlace seguro de registro tras varios intentos.",
             },
           },
         );
       }
-      await new Promise((resolve) => setTimeout(resolve, 180));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       continue;
     }
 
-    if (isBareRegistroConfirmarPath(ctaPath)) {
-      console.error("CAMPAIGN CTA SIN TOKEN", item.email, ctaPath);
+    // Doble chequeo: si es claim, el path del correo debe llevar el token de 64 hex.
+    if (linkKind === "claim" && !isUsableCampaignClaimPath(ctaPath)) {
+      console.error("CAMPAIGN ABORT SEND — claim path inválido", item.email, ctaPath);
+      await deliveries.updateOne(
+        { deliveryKey: item.deliveryKey },
+        {
+          $set: {
+            status: "queued",
+            updatedAt: new Date(),
+            ctaPath,
+            linkKind,
+            error: "Path claim inválido antes de enviar; reintento.",
+          },
+        },
+      );
+      continue;
     }
 
     const result = await sendCampaignEmail({

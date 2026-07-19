@@ -317,8 +317,9 @@ const CLAIM_BASE: CampaignTemplate = {
     "• Promociones y comunidad\n\n" +
     "El enlace es personal y vence en 72 horas. Pura vida - equipo Xtreme Gym, Ciudad Quesada.",
   ctaLabel: "Revisar datos y elegir mi plan",
-  // El procesador de campañas inyecta ?token= por destinatario.
-  // Esta ruta base no se envía sola (sin token se reescribe a registro abierto).
+  // Placeholder de UI: el procesador NUNCA manda esta ruta sola.
+  // Por cada destinatario emite token personal (64 hex), lo guarda en pending
+  // y solo entonces envía /registro/confirmar?token=…. Sin token válido → reintento, no correo.
   ctaPath: "/registro/confirmar",
 };
 
@@ -360,10 +361,12 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     title: "Registrá tu cuenta en la app de Xtreme",
     message:
       "Hola. Este correo aparece en la lista de contactos de Xtreme Gym (Ciudad Quesada).\n\n" +
-      "Si entrenás o entrenaste con nosotros, tocá el enlace y registrate con tu correo y tu cédula (o documento). Creás un PIN de 4 dígitos y quedás listo para usar la app, reservar y ver tu progreso.\n\n" +
-      "Si este correo no es tuyo o no querés recibir mensajes del gym, podés ignorar este mail o darte de baja al final.\n\n" +
-      "El enlace vence en 72 horas. Pura vida - equipo Xtreme Gym.",
+      "Si entrenás o entrenaste con nosotros, tocá el botón de este mensaje: se abre un enlace personal (válido 72 horas) para confirmar tus datos con tu correo y tu cédula (o documento), crear tu PIN de 4 dígitos y entrar a la app.\n\n" +
+      "Pasos: 1) Tocá el botón  2) Revisá o completá nombre, cédula y teléfono  3) Creá tu PIN.\n\n" +
+      "Si este correo no es tuyo o no querés mensajes del gym, ignorá el mail o date de baja al final.\n\n" +
+      "Pura vida - equipo Xtreme Gym, Ciudad Quesada.",
     ctaLabel: "Registrarme con correo y cédula",
+    // El envío real inyecta ?token=… por persona. Sin token no se envía.
     ctaPath: "/registro/confirmar",
   },
   excel_recovered: {
@@ -1030,7 +1033,14 @@ export default function EmailCampaignCenter() {
           </label>
           <div className="mt-3 border-2 border-white/10 bg-black/40 px-3 py-2 text-[11px] font-semibold leading-relaxed text-white/50">
             Plantilla activa: <span className="font-black text-lime-200">{AUDIENCE_LABELS[form.audience]}</span>
-            {" · "}CTA → <span className="text-cyan-200">{activeTemplate.ctaPath}</span>
+            {" · "}CTA base → <span className="text-cyan-200">{activeTemplate.ctaPath}</span>
+            {activeTemplate.ctaPath.startsWith("/registro/confirmar") ? (
+              <span className="mt-1 block text-[10px] font-normal text-zinc-400">
+                Envío real: un magic link personal por correo (
+                <code className="text-lime-200/90">/registro/confirmar?token=…</code>
+                ). Sin token válido en Mongo el mensaje no sale; se reencola.
+              </span>
+            ) : null}
             <p className="mt-1.5 text-[10px] font-semibold text-white/40">
               Diseño profesional: logo Xtreme, mapa de ubicación (clic a Google Maps), fachada y
               accesos rápidos a app / planes.

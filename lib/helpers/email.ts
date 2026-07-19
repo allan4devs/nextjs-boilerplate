@@ -1190,14 +1190,25 @@ export async function sendCampaignEmail(args: {
     )
     .join("");
   // Soporta rutas internas y magic links con query (?token=).
+  // Nunca manda /registro/confirmar sin token hex de 64 (mismo formato que createRegistrationToken).
   const rawPath = String(args.ctaPath || "/app").trim();
   let safePath =
     rawPath.startsWith("/") && !rawPath.startsWith("//") ? rawPath : "/app";
-  if (
-    safePath.startsWith("/registro/confirmar") &&
-    !/[?&]token=/.test(safePath)
-  ) {
-    safePath = "/primer-dia#registro";
+  if (safePath.startsWith("/registro/confirmar")) {
+    const tokenMatch = safePath.match(/[?&]token=([^&#]+)/);
+    let tokenOk = false;
+    if (tokenMatch?.[1]) {
+      try {
+        const token = decodeURIComponent(tokenMatch[1]).trim();
+        tokenOk = /^[a-f0-9]{64}$/i.test(token);
+      } catch {
+        tokenOk = false;
+      }
+    }
+    if (!tokenOk) {
+      console.error("sendCampaignEmail: CTA registro sin token válido → fallback", safePath);
+      safePath = "/primer-dia#registro";
+    }
   }
   const primaryHref = absoluteAppUrl(safePath);
   const isSecureLink = /[?&]token=/.test(safePath) || safePath.includes("/registro/");

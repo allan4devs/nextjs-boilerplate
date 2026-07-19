@@ -171,9 +171,17 @@ export async function issueCampaignClaimLink(
     }
   }
 
+  // Solo devolver claim si el token tiene el formato que verifyToken acepta (64 hex).
+  // Evita que un bug de generación mande ?token= vacío o truncado al correo masivo.
+  if (!/^[a-f0-9]{64}$/i.test(token)) {
+    console.error("CAMPAIGN CLAIM TOKEN INVALID FORMAT", email, token?.length);
+    return null;
+  }
+
+  const path = `/registro/confirmar?token=${encodeURIComponent(token)}`;
   return {
     kind: "claim",
-    path: `/registro/confirmar?token=${encodeURIComponent(token)}`,
+    path,
     token,
     memberKey,
   };
