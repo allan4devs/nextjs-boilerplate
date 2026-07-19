@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { emailConfigurationError, emailEnabled } from "@/lib/helpers/email";
+import { emailConfigurationError, emailEnabled, sendCampaignEmail } from "@/lib/helpers/email";
 import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit } from "@/lib/xtreme/audit";
 import {
@@ -11,6 +11,7 @@ import {
 import { buildAudienceEmails, EMAIL_AUDIENCE_IDS } from "@/lib/xtreme/email-audiences";
 import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
+import { issueCampaignClaimLink } from "@/lib/xtreme/campaign-claim-link";
 import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
@@ -344,6 +345,49 @@ export async function POST(req: NextRequest) {
         recipients: recipients.length,
         process,
       });
+    }
+
+    if (action === "test_campaign") {
+      const email = normalizeEmail(body.email);
+      const subject = String(body.subject ?? "").trim().slice(0, 140);
+      const title = String(body.title ?? "").trim().slice(0, 100);
+      const message = String(body.message ?? "").trim().slice(0, 4000);
+      const requestedLabel = String(body.ctaLabel ?? "").trim().slice(0, 50);
+      const requestedPath = String(body.ctaPath ?? "").trim().slice(0, 160);
+      if (!email || !subject || !title || !message) {
+        return NextResponse.json({ error: "Correo, asunto, título y mensaje son requeridos." }, { status: 400 });
+      }
+
+      let ctaPath = requestedPath.startsWith("/") ? requestedPath : "/app";
+      let ctaLabel = requestedLabel || "Abrir Xtreme Gym";
+      const claim = await issueCampaignClaimLink(db, email);
+      if (claim?.kind === "claim") ctaPath = claim.path;
+      if (claim?.kind === "app") {
+        ctaPath = "/app";
+        ctaLabel = "Entrar a mi cuenta";
+      }
+
+      const result = await sendCampaignEmail({
+        to: email,
+        subject,
+        title,
+        message,
+        ctaLabel,
+        ctaPath,
+        idempotencyKey: `email-template-test:${email}:${Date.now()}`,
+      });
+      await writeAudit(db, {
+        actorRole: "super",
+        action: "email_campaign.test",
+        targetType: "system",
+        targetId: email,
+        summary: result.ok ? "Prueba individual de campaña enviada" : "Falló la prueba individual de campaña",
+        meta: { subject, ok: result.ok, skipped: Boolean(result.skipped), code: result.code || "" },
+      });
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error || "El proveedor rechazó la prueba." }, { status: 502 });
+      }
+      return NextResponse.json({ ok: true, email });
     }
 
     if (action === "process_queue") {

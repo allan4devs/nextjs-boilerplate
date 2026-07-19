@@ -50,8 +50,10 @@ void main() {
   vec3 gold = vec3(0.965, 0.73, 0.02);
   vec3 warm = vec3(1.0, 0.94, 0.72);
   vec3 color = mix(gold, warm, clamp(field * 0.7 + halo * 0.25, 0.0, 1.0));
-  float alpha = ribbon * (0.055 + field * 0.11) + halo * 0.035 + grain;
-  gl_FragColor = vec4(color, clamp(alpha, 0.0, 0.2));
+  float alpha = clamp(ribbon * (0.025 + field * 0.055) + halo * 0.012 + grain * 0.25, 0.0, 0.085);
+  // El canvas usa premultipliedAlpha. Premultiplicar evita el velo amarillo
+  // que algunos navegadores/GPU mostraban aunque alpha fuera muy bajo.
+  gl_FragColor = vec4(color * alpha, alpha);
 }
 `;
 
@@ -141,6 +143,7 @@ export default function CinematicLandingFX() {
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
     gl.useProgram(program);
+    gl.clearColor(0, 0, 0, 0);
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -183,6 +186,7 @@ export default function CinematicLandingFX() {
         gl.uniform2f(resolution, canvas.width, canvas.height);
         gl.uniform2f(pointer, pointerState.x, pointerState.y);
         gl.uniform1f(time, reducedMotion ? 0 : now * 0.001);
+        gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
       }
       if (!reducedMotion) frame = requestAnimationFrame(render);
@@ -211,5 +215,5 @@ export default function CinematicLandingFX() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-[2] h-full w-full opacity-90" aria-hidden="true" />;
+  return <canvas ref={canvasRef} className="cinema-fx-canvas pointer-events-none absolute inset-0 z-[2] h-full w-full" aria-hidden="true" />;
 }

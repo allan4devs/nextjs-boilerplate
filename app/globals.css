@@ -232,11 +232,6 @@ button,
   }
 }
 
-/* Atajo "Sistemas": siempre bajo el notch (no pisa status bar / Dynamic Island). */
-.xg-system-shortcut {
-  top: max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.5rem));
-}
-
 /* Stable bottom surface for app navigation during mobile/PWA scrolling. */
 .xg-app-dock {
   bottom: 0 !important;
@@ -472,6 +467,23 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   will-change: transform;
 }
 
+.cinema-hero-photo {
+  filter: saturate(0.82) contrast(1.12) brightness(0.68);
+  transform: scale(1.01);
+}
+
+.cinema-hero-grade {
+  background:
+    radial-gradient(circle at 74% 38%, rgba(255, 214, 64, 0.08), transparent 23%),
+    linear-gradient(90deg, rgba(3, 3, 3, 0.98) 0%, rgba(3, 3, 3, 0.91) 35%, rgba(3, 3, 3, 0.48) 68%, rgba(3, 3, 3, 0.73) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 32%, rgba(0, 0, 0, 0.94) 100%);
+}
+
+.cinema-fx-canvas {
+  opacity: 0.42;
+  mix-blend-mode: screen;
+}
+
 .cinema-vignette {
   background:
     radial-gradient(circle at 70% 46%, transparent 0 16%, rgba(0, 0, 0, 0.2) 48%, rgba(0, 0, 0, 0.78) 100%),
@@ -484,7 +496,62 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 }
 
 .cinema-live-card {
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(246, 196, 0, 0.04);
+  box-shadow:
+    0 38px 110px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(246, 196, 0, 0.08);
+  transform: translateZ(0) rotate(0.25deg);
+}
+
+.cinema-live-photo {
+  filter: saturate(0.86) contrast(1.14) brightness(0.82);
+  transform: scale(1.015);
+}
+
+.hero-media-carousel {
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.hero-carousel-control {
+  display: inline-grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(5, 5, 5, 0.68);
+  color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.hero-carousel-control:hover,
+.hero-carousel-control:focus-visible {
+  border-color: #f6c400;
+  background: #f6c400;
+  color: #050505;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.hero-carousel-copy {
+  animation: hero-carousel-copy-in 700ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+.hero-carousel-progress {
+  width: 100%;
+  transform-origin: left center;
+  animation: hero-carousel-progress 5.6s linear both;
+}
+
+@keyframes hero-carousel-copy-in {
+  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes hero-carousel-progress {
+  from { transform: scaleX(0); opacity: 0.55; }
+  to { transform: scaleX(1); opacity: 1; }
 }
 
 .cinema-live-card::after,
@@ -541,6 +608,16 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   box-shadow: 0 35px 100px rgba(0, 0, 0, 0.45);
 }
 
+.cinema-scene-photo {
+  filter: saturate(0.84) contrast(1.1) brightness(0.8);
+  opacity: 0.92;
+}
+
+.cinema-image-frame:hover .cinema-scene-photo {
+  filter: saturate(0.95) contrast(1.08) brightness(0.9);
+  opacity: 1;
+}
+
 .cinema-path {
   --spot-x: 50%;
   --spot-y: 50%;
@@ -574,13 +651,37 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   .cinema-vignette {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.92));
   }
+
+  .cinema-hero-photo {
+    filter: saturate(0.76) contrast(1.14) brightness(0.58);
+  }
+
+  .cinema-hero-grade {
+    background:
+      linear-gradient(180deg, rgba(2, 2, 2, 0.56) 0%, rgba(2, 2, 2, 0.72) 42%, rgba(2, 2, 2, 0.97) 100%),
+      linear-gradient(90deg, rgba(2, 2, 2, 0.9), rgba(2, 2, 2, 0.28));
+  }
+
+  .cinema-fx-canvas {
+    opacity: 0.24;
+  }
+}
+
+@media (max-width: 1023px) {
+  .cinema-live-card {
+    width: 100%;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cinema-stage-image,
   .cinema-live-card::after,
   .cinema-image-frame::after,
-  [data-cinema-reveal] {
+  [data-cinema-reveal],
+    .hero-carousel-slide,
+    .hero-carousel-copy,
+    .hero-carousel-progress {
     transition: none !important;
     animation: none !important;
   }

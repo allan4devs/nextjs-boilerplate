@@ -10,7 +10,7 @@ import { pageMetadata } from "../../lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Tu primer día gratis",
   description:
-    "Registrate con tu correo y entrená tu primer día gratis en Xtreme Gym. Después elegís tu plan.",
+    "Registrate con tu correo o cédula y entrená tu primer día gratis en Xtreme Gym. Después elegís tu plan.",
   path: "/primer-dia",
 });
 
@@ -46,8 +46,9 @@ export default function PrimerDiaPage() {
               Tu primer día es <span className="text-[#f6c400]">gratis.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-white/70">
-              Registrate con tu correo y llegá listo para entrenar. Sin contratos ni tarjeta: una
-              visita completa y gratis para saber si Xtreme es para vos. Después elegís tu plan.
+              Registrate con tu correo o cédula y llegá listo para entrenar. Sin contratos ni
+              tarjeta: una visita completa y gratis para saber si Xtreme es para vos. Después
+              elegís tu plan.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a
@@ -86,7 +87,7 @@ export default function PrimerDiaPage() {
               </span>
               <span className="inline-flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4" />
-                Sin tarjeta, solo registrate con tu correo
+                Sin tarjeta: correo o cédula y listo
               </span>
             </div>
           </aside>

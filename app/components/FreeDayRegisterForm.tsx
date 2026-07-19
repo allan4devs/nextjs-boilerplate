@@ -1,16 +1,19 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, CheckCircle2, CreditCard, Loader2, Mail, RefreshCw } from "lucide-react";
+
+type IdentityMode = "email" | "cedula";
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
-function formatCedulaInput(value: string) {
-  const digits = onlyDigits(value).slice(0, 12);
+/** Cédula tica: 9 dígitos → 2-0685-0160 (provincia-tomo-asiento). */
+function formatCrCedula(value: string) {
+  const digits = onlyDigits(value).slice(0, 9);
   if (digits.length <= 1) return digits;
   if (digits.length <= 5) return `${digits.slice(0, 1)}-${digits.slice(1)}`;
   return `${digits.slice(0, 1)}-${digits.slice(1, 5)}-${digits.slice(5)}`;
@@ -18,6 +21,13 @@ function formatCedulaInput(value: string) {
 
 function looksLikeEmail(value: string) {
   return value.includes("@");
+}
+
+function detectMode(value: string): IdentityMode {
+  const raw = value.trim();
+  if (!raw) return "email";
+  if (looksLikeEmail(raw) || /[a-zA-Z]/.test(raw)) return "email";
+  return "cedula";
 }
 
 type FormProps = {
@@ -51,7 +61,9 @@ function FreeDayRegisterFormInner({
   className = "",
 }: FormProps) {
   const searchParams = useSearchParams();
-  const [identity, setIdentity] = useState("");
+  const [mode, setMode] = useState<IdentityMode>("email");
+  const [email, setEmail] = useState("");
+  const [cedula, setCedula] = useState("");
   const [extraEmail, setExtraEmail] = useState("");
   const [needsEmail, setNeedsEmail] = useState(false);
   const [sentTo, setSentTo] = useState("");
@@ -68,32 +80,36 @@ function FreeDayRegisterFormInner({
       searchParams.get("cedula") ||
       searchParams.get("identity") ||
       "";
-    if (fromQuery) {
-      setIdentity(looksLikeEmail(fromQuery) ? fromQuery.trim() : formatCedulaInput(fromQuery));
-    }
+    if (!fromQuery) return;
+    const nextMode = detectMode(fromQuery);
+    setMode(nextMode);
+    if (nextMode === "email") setEmail(fromQuery.trim());
+    else setCedula(formatCrCedula(fromQuery));
   }, [searchParams]);
 
-  const identityHint = useMemo(() => {
-    const raw = identity.trim();
-    if (!raw) return "correo o cédula";
-    if (looksLikeEmail(raw)) return "correo";
-    if (onlyDigits(raw).length >= 6) return "cédula";
-    return "correo o cédula";
-  }, [identity]);
+  const identityForResend = mode === "email" ? email : cedula;
+  const canSubmit =
+    mode === "email"
+      ? email.trim().includes("@")
+      : onlyDigits(cedula).length >= 6 && (!needsEmail || extraEmail.trim().includes("@"));
 
-  async function sendLink(rawIdentity: string, forcedEmail = "") {
+  async function sendLink(opts: {
+    mode: IdentityMode;
+    emailValue: string;
+    cedulaValue: string;
+    forcedEmail?: string;
+  }) {
     setError("");
     setBusy(true);
     try {
-      const trimmed = rawIdentity.trim();
       const payload: Record<string, unknown> = { action: "start", source };
-      if (forcedEmail.trim()) {
-        payload.email = forcedEmail.trim();
-        if (trimmed && !looksLikeEmail(trimmed)) payload.cedula = onlyDigits(trimmed);
-      } else if (looksLikeEmail(trimmed)) {
-        payload.email = trimmed;
+      const forced = (opts.forcedEmail || "").trim();
+
+      if (opts.mode === "email") {
+        payload.email = opts.emailValue.trim();
       } else {
-        payload.cedula = onlyDigits(trimmed);
+        payload.cedula = onlyDigits(opts.cedulaValue);
+        if (forced) payload.email = forced;
       }
 
       const res = await fetch("/api/xtreme/register", {
@@ -113,9 +129,9 @@ function FreeDayRegisterFormInner({
       if (res.ok && json.code !== "needs_email") {
         setNeedsEmail(false);
         setSentTo(
-          looksLikeEmail(trimmed)
-            ? trimmed
-            : forcedEmail.trim() || json.sentToMasked || "tu correo",
+          opts.mode === "email"
+            ? opts.emailValue.trim()
+            : forced || json.sentToMasked || "tu correo",
         );
         setSentMasked(json.sentToMasked || "");
         setFoundProfile(Boolean(json.foundProfile));
@@ -125,12 +141,17 @@ function FreeDayRegisterFormInner({
 
       if (json.code === "needs_email") {
         setNeedsEmail(true);
+        setMode("cedula");
         setError(json.error || "Escribí un correo para enviarte el enlace.");
         return;
       }
 
       if (!res.ok) throw new Error(json.error || "No se pudo enviar el correo.");
-      setSentTo(looksLikeEmail(trimmed) ? trimmed : json.sentToMasked || "tu correo");
+      setSentTo(
+        opts.mode === "email"
+          ? opts.emailValue.trim()
+          : json.sentToMasked || "tu correo",
+      );
       setSentMasked(json.sentToMasked || "");
       setFoundProfile(Boolean(json.foundProfile));
       setDone(true);
@@ -143,11 +164,19 @@ function FreeDayRegisterFormInner({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (needsEmail) {
-      await sendLink(identity, extraEmail);
-      return;
-    }
-    await sendLink(identity);
+    await sendLink({
+      mode,
+      emailValue: email,
+      cedulaValue: cedula,
+      forcedEmail: needsEmail ? extraEmail : "",
+    });
+  }
+
+  function switchMode(next: IdentityMode) {
+    setMode(next);
+    setNeedsEmail(false);
+    setError("");
+    if (next === "email") setExtraEmail("");
   }
 
   if (done) {
@@ -173,7 +202,7 @@ function FreeDayRegisterFormInner({
             <p className="mt-2 text-sm font-semibold leading-6 text-white/65">
               Te enviamos un enlace a{" "}
               <span className="break-all text-[#d8ff3e]">
-                {sentMasked || sentTo || identity}
+                {sentMasked || sentTo || identityForResend}
               </span>
               . Abrilo para confirmar el correo
               {foundProfile
@@ -220,7 +249,14 @@ function FreeDayRegisterFormInner({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void sendLink(identity, needsEmail ? extraEmail : "")}
+                onClick={() =>
+                  void sendLink({
+                    mode,
+                    emailValue: email,
+                    cedulaValue: cedula,
+                    forcedEmail: needsEmail ? extraEmail : "",
+                  })
+                }
                 className="inline-flex min-h-12 items-center gap-2 border border-white/20 px-5 font-black uppercase text-white transition hover:border-[#d8ff3e] disabled:opacity-50"
               >
                 {busy ? (
@@ -255,6 +291,9 @@ function FreeDayRegisterFormInner({
     );
   }
 
+  const digits = onlyDigits(cedula);
+  const cedulaComplete = digits.length === 9;
+
   return (
     <form
       id="registro"
@@ -276,40 +315,136 @@ function FreeDayRegisterFormInner({
         Registrate sin tarjeta
       </h2>
       <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-white/60">
-        Escribí tu correo o tu cédula. Si ya estabas en el gym (import o campaña), cargamos tus
-        datos al abrir el enlace. Ahí confirmás el perfil y creás tu PIN.
+        Usá tu correo o tu cédula tica. Si ya estabas en el gym, cargamos tus datos al abrir el
+        enlace. Ahí confirmás el perfil y creás tu PIN.
       </p>
 
-      <label className="mt-6 block">
-        <span className="mb-1.5 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-white/45">
-          {looksLikeEmail(identity) ? (
-            <Mail className="h-3.5 w-3.5" />
-          ) : (
-            <CreditCard className="h-3.5 w-3.5" />
-          )}
-          Correo o cédula
-        </span>
-        <input
-          type="text"
-          required
-          autoComplete="username"
-          inputMode={looksLikeEmail(identity) || !identity ? "email" : "numeric"}
-          value={identity}
-          onChange={(e) => {
-            const next = e.target.value;
-            setIdentity(looksLikeEmail(next) ? next : formatCedulaInput(next));
-            setNeedsEmail(false);
-            setError("");
-          }}
-          placeholder="tu@correo.com o 1-2345-6789"
-          className="w-full border border-white/15 bg-black/40 px-4 py-3 text-base font-bold text-white outline-none placeholder:text-white/30 focus:border-[#f6c400]"
-        />
-        <span className="mt-1.5 block text-xs font-semibold text-white/35">
-          Detectamos: {identityHint}
-        </span>
-      </label>
+      <div
+        className="mt-6 grid grid-cols-2 gap-1 border border-white/10 bg-black/40 p-1"
+        role="tablist"
+        aria-label="Cómo te registrás"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "email"}
+          onClick={() => switchMode("email")}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs font-black uppercase tracking-wide transition ${
+            mode === "email"
+              ? "bg-[#f6c400] text-black"
+              : "text-white/55 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <Mail className="h-3.5 w-3.5" />
+          Correo
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "cedula"}
+          onClick={() => switchMode("cedula")}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs font-black uppercase tracking-wide transition ${
+            mode === "cedula"
+              ? "bg-[#f6c400] text-black"
+              : "text-white/55 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <CreditCard className="h-3.5 w-3.5" />
+          Cédula
+        </button>
+      </div>
 
-      {needsEmail && (
+      {mode === "email" ? (
+        <label className="mt-4 block">
+          <span className="mb-1.5 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-white/45">
+            <Mail className="h-3.5 w-3.5" />
+            Correo electrónico
+          </span>
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setError("");
+            }}
+            placeholder="tu@correo.com"
+            className="w-full border border-white/15 bg-black/40 px-4 py-3 text-base font-bold text-white outline-none placeholder:text-white/30 focus:border-[#f6c400]"
+          />
+          <span className="mt-1.5 block text-xs font-semibold text-white/35">
+            Te mandamos el enlace a este correo.
+          </span>
+        </label>
+      ) : (
+        <label className="mt-4 block">
+          <span className="mb-1.5 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-white/45">
+            <CreditCard className="h-3.5 w-3.5" />
+            Cédula de identidad (CR)
+          </span>
+          <input
+            type="text"
+            required
+            autoComplete="off"
+            inputMode="numeric"
+            pattern="[0-9\-]*"
+            maxLength={11}
+            value={cedula}
+            onChange={(e) => {
+              setCedula(formatCrCedula(e.target.value));
+              setNeedsEmail(false);
+              setError("");
+            }}
+            placeholder="2-0685-0160"
+            className="w-full border border-white/15 bg-black/40 px-4 py-3 font-mono text-lg font-bold tracking-wide text-white outline-none placeholder:text-white/30 focus:border-[#f6c400]"
+          />
+          <span className="mt-1.5 block text-xs font-semibold text-white/35">
+            Formato tico:{" "}
+            <span className="font-mono text-white/55"># #### ####</span>
+            {" → "}
+            <span className="font-mono text-[#f6c400]/80">2-0685-0160</span>
+            {digits.length > 0 && (
+              <>
+                {" · "}
+                {digits.length}/9 dígitos
+                {cedulaComplete ? " ✓" : ""}
+              </>
+            )}
+          </span>
+          {/* Ayuda visual de los 3 bloques de la cédula */}
+          <div
+            className="mt-3 grid grid-cols-[1fr_2.2fr_2.2fr] gap-2"
+            aria-hidden
+          >
+            {[
+              { label: "Prov.", value: digits.slice(0, 1), slots: 1 },
+              { label: "Tomo", value: digits.slice(1, 5), slots: 4 },
+              { label: "Asiento", value: digits.slice(5, 9), slots: 4 },
+            ].map((block) => (
+              <div
+                key={block.label}
+                className="border border-white/10 bg-black/30 px-2 py-2 text-center"
+              >
+                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/30">
+                  {block.label}
+                </p>
+                <p className="mt-1 font-mono text-sm font-black tracking-[0.2em] text-white/80">
+                  {(block.value + "·".repeat(Math.max(0, block.slots - block.value.length))).slice(
+                    0,
+                    block.slots,
+                  )}
+                </p>
+              </div>
+            ))}
+          </div>
+        </label>
+      )}
+
+      {needsEmail && mode === "cedula" && (
         <label className="mt-4 block">
           <span className="mb-1.5 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-white/45">
             <Mail className="h-3.5 w-3.5" /> Correo para el enlace
@@ -338,7 +473,7 @@ function FreeDayRegisterFormInner({
 
       <button
         type="submit"
-        disabled={busy || !identity.trim() || (needsEmail && !extraEmail.trim())}
+        disabled={busy || !canSubmit}
         className="mt-5 inline-flex min-h-14 w-full items-center justify-center gap-2 bg-[#f6c400] px-6 font-black uppercase text-black transition hover:bg-white disabled:opacity-50 sm:w-auto"
       >
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : null}

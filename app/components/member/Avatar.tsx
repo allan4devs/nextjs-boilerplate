@@ -15,19 +15,28 @@ export default function Avatar({
   className?: string;
   textClass?: string;
 }) {
+  // Caja con tamaño fijo + overflow: la foto nunca se “sale” del círculo
+  // (imgs grandes en flex min-width:auto suelen romper layouts estrechos).
+  const boxClass = `${className} relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full`;
+
   if (photoUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={photoUrl}
-        alt={name}
-        className={`${className} shrink-0 rounded-full border border-[#d8ff3e]/40 object-cover`}
-      />
+      <span className={`${boxClass} border border-[#d8ff3e]/40 bg-black/50`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={photoUrl}
+          alt={name}
+          className="absolute inset-0 block h-full w-full max-h-full max-w-full object-cover"
+          draggable={false}
+        />
+      </span>
     );
   }
+
   return (
     <span
-      className={`${className} grid shrink-0 place-items-center rounded-full bg-[#d8ff3e] font-black text-black ${textClass}`}
+      className={`${boxClass} bg-[#d8ff3e] font-black text-black ${textClass}`}
+      aria-label={name}
     >
       {initialsOf(name)}
     </span>

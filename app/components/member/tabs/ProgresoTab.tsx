@@ -234,8 +234,17 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
               <div key={workout.id} className="border border-white/10 bg-black/20 p-3">
                 <p className="font-black uppercase">{workout.trainingName}</p>
                 <p className="mt-1 text-xs font-semibold text-white/45">
-                  {workout.completedDate} - {workout.minutes} min - {workout.intensity}
+                  {workout.completedDate} · {workout.minutes > 0 ? `${workout.minutes} min` : "Sin duración"} · {workout.intensity}
                 </p>
+                {!!workout.exercises?.length && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {workout.exercises.map((exercise) => (
+                      <span key={exercise.id} className="border border-cyan-300/25 bg-cyan-300/[.06] px-2 py-1 text-[10px] font-black uppercase text-cyan-100/70">
+                        {exercise.exerciseName}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))
           ) : (

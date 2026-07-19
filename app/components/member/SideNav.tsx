@@ -82,7 +82,9 @@ export default function SideNav({ os }: { os: MemberOs }) {
                 closeNav();
                 setOsModal(null);
               }}
-              className={`flex h-14 w-full items-center gap-3 border-[3px] px-2 text-left transition ${
+              className={`flex h-14 w-full min-w-0 items-center overflow-hidden border-[3px] text-left transition ${
+                navOpen ? "gap-3 px-2" : "justify-center gap-0 px-1 lg:px-0"
+              } ${
                 tab === "perfil"
                   ? "border-[#d8ff3e] bg-[#d8ff3e]/15"
                   : "border-white/10 hover:border-[#d8ff3e]/40 hover:bg-white/[.05]"
@@ -91,10 +93,10 @@ export default function SideNav({ os }: { os: MemberOs }) {
               <Avatar
                 name={memberName}
                 photoUrl={currentMember.photoUrl}
-                className="h-11 w-11"
+                className={navOpen ? "h-10 w-10" : "h-9 w-9"}
                 textClass="text-xs"
               />
-              <span className={`min-w-0 flex-1 ${navOpen ? "block" : "lg:hidden"}`}>
+              <span className={`min-w-0 flex-1 overflow-hidden ${navOpen ? "block" : "lg:hidden"}`}>
                 <span className="block truncate text-xs font-black uppercase">{memberName}</span>
                 <span className="text-[11px] font-bold text-[#d8ff3e]">Ver perfil</span>
               </span>

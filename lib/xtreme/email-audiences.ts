@@ -2,6 +2,12 @@
  * Audiencias del centro de correos (super admin).
  * Regla de negocio: el correo es la llave de contacto; la cédula del import
  * no es fuente de verdad (muchas vienen mal del reimport).
+ *
+ * Categorías separadas de activación:
+ * - claim_profile: todos sin verificar (seguros)
+ * - claim_recovered: sin verificar + recovery del Excel/cuarentena
+ * - claim_native: sin verificar con correo nativo (no recovery)
+ * - excel_recovered: todos con emailRecovery (historial de alineación)
  */
 import type { Db } from "mongodb";
 import { EVENTS_COLLECTION } from "@/lib/xtreme/events";
@@ -14,9 +20,13 @@ import {
   type PendingRegistrationDoc,
 } from "@/lib/xtreme/shared";
 import type { EmailAudience } from "@/lib/xtreme/email-campaigns";
-import { isSafeCampaignMemberEmail } from "@/lib/xtreme/email-identity";
+import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
 
 export const EMAIL_AUDIENCE_IDS = [
+  "claim_recovered",
+  "claim_native",
+  "claim_profile",
+  "excel_recovered",
   "imported",
   "unregistered",
   "never_registered",
@@ -24,7 +34,6 @@ export const EMAIL_AUDIENCE_IDS = [
   "never_opened",
   "inactive",
   "members",
-  "claim_profile",
   "winback_90",
   "winback_180",
   "winback_365",
@@ -40,7 +49,7 @@ export const EMAIL_AUDIENCE_IDS = [
   "all",
 ] as const satisfies readonly EmailAudience[];
 
-type ContactDoc = { email: string; status?: string };
+type ContactDoc = { email: string; status?: string; category?: string; safetyReason?: string };
 
 export type EmailAudienceDiagnostics = {
   totalMembers: number;
@@ -55,6 +64,11 @@ export type EmailAudienceDiagnostics = {
   quarantineShared: number;
   quarantineMismatch: number;
   unsafeIdentityMatches: number;
+  /** Fichas sin correo usable que aún tienen previousEmail en cuarentena. */
+  quarantineWithPreviousEmail: number;
+  /** Recovery por categoría de script. */
+  recoveredFromQuarantine: number;
+  recoveredFromExcel: number;
 };
 
 type PlanAudience =
@@ -73,13 +87,12 @@ export function normalizeAudienceEmail(value: unknown) {
 }
 
 function planAudience(planValue: unknown, rateValue?: unknown): PlanAudience {
-  const normalize = (value: unknown) => String(value ?? "")
-    .trim()
-    .toLocaleLowerCase("es-CR")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-  // En estado.xlsx, Plan suele ser "Regular/Regular1" y la periodicidad real
-  // vive en "x Tarifa". Priorizamos esa columna para no perder categorías.
+  const normalize = (value: unknown) =>
+    String(value ?? "")
+      .trim()
+      .toLocaleLowerCase("es-CR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
   const rate = normalize(rateValue);
   const plan = `${rate} ${normalize(planValue)}`.trim();
   if (!plan || plan === "—" || plan.includes("sin plan")) return "no_plan";
@@ -118,9 +131,7 @@ export function isPossibleForeignMember(member: {
 }) {
   const name = String(member.memberName || member.normalizedName || "").toLocaleUpperCase("es-CR");
   const d = cedulaDigits(member.cedula);
-  // DIMEX / documentos largos
   if (d.length >= 10) return true;
-  // 8 dígitos frecuentes en docs no-nacionales mal capturados
   if (d.length === 8) return true;
   if (
     /\b(HOFFMEISTER|JOHANSSON|SCHMIDT|SCHNEIDER|MULLER|SMITH|JONES|WILLIAMS|BROWN|MILLER|WILSON|THOMAS|JACKSON|ANDERSON|TAYLOR|MOORE|MCCOY|LOGAN|GRIMM|STAELE|YOANGEL|ENGELS|BISMARK|ARAFAT|KEILYN|KEYLOR|YERLIN|YENDRY|MAIKEL|MAYKEL|NGUYEN|KIM)\b/i.test(
@@ -132,13 +143,6 @@ export function isPossibleForeignMember(member: {
   return false;
 }
 
-/**
- * Correos usables para campañas de reenganche/claim:
- * - con email en ficha
- * - solo correos que no estén en 2+ fichas (evita el desastre del import cruzado)
- * - no suprimidos
- * - preferimos incluir no verificados (el correo es la vía para que reclamen y corrijan cédula)
- */
 function uniqueMemberEmails(
   members: Array<{ email?: string; emailVerified?: boolean; normalizedName?: string }>,
   blocked: Set<string>,
@@ -156,6 +160,14 @@ function uniqueMemberEmails(
   return unique;
 }
 
+function recoveryCategory(member: MemberDoc) {
+  const method = String(member.emailRecovery?.method || "");
+  const category = String(member.emailRecovery?.category || "");
+  if (category === "quarantine_realign" || method.includes("quarantine")) return "quarantine";
+  if (member.emailRecovery) return "excel";
+  return "";
+}
+
 export type AudienceEmailMap = Record<EmailAudience, string[]> & {
   suppressed: number;
   diagnostics: EmailAudienceDiagnostics;
@@ -169,7 +181,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       db
         .collection<ContactDoc>(EMAIL_CONTACTS_COLLECTION)
         .find({ status: "active" })
-        .project({ email: 1 })
+        .project({ email: 1, category: 1, safetyReason: 1 })
         .toArray(),
       db
         .collection<MemberDoc>(MEMBERS_COLLECTION)
@@ -230,7 +242,9 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       .map((row) => row.email),
   );
   const unregistered = imported.filter((email) => !registered.has(email) && !waiting.has(email));
-  const neverRegistered = clean([...imported, ...pendingEmails]).filter((email) => !registered.has(email));
+  const neverRegistered = clean([...imported, ...pendingEmails]).filter(
+    (email) => !registered.has(email),
+  );
 
   const planBuckets: Record<PlanAudience, string[]> = {
     plan_week: [],
@@ -251,25 +265,38 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
 
   const uniqueEmails = uniqueMemberEmails(allEmailedMembers, blocked);
 
-  // Las categorías por plan también deben ser seguras: un correo compartido
-  // entre fichas no se usa hasta que un admin resuelva a quién pertenece.
   for (const key of Object.keys(planBuckets) as PlanAudience[]) {
     planBuckets[key] = planBuckets[key].filter((email) => uniqueEmails.has(email));
   }
 
   const claimProfile: string[] = [];
+  const claimRecovered: string[] = [];
+  const claimNative: string[] = [];
+  const excelRecovered: string[] = [];
   const winback90: string[] = [];
   const winback180: string[] = [];
   const winback365: string[] = [];
   const possibleForeign: string[] = [];
 
+  let recoveredFromQuarantine = 0;
+  let recoveredFromExcel = 0;
+
   for (const member of allEmailedMembers) {
     const email = normalizeAudienceEmail(member.email);
     if (!email || !uniqueEmails.has(email) || blocked.has(email)) continue;
 
-    // Nunca activaron correo → deben reclamar ficha y corregir nombre/cédula.
+    const hasRecovery = Boolean(member.emailRecovery);
+    const recCat = recoveryCategory(member);
+    if (hasRecovery) {
+      excelRecovered.push(email);
+      if (recCat === "quarantine") recoveredFromQuarantine += 1;
+      else recoveredFromExcel += 1;
+    }
+
     if (member.emailVerified !== true) {
       claimProfile.push(email);
+      if (hasRecovery) claimRecovered.push(email);
+      else claimNative.push(email);
     }
 
     if (isPossibleForeignMember(member)) {
@@ -285,7 +312,16 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     }
   }
 
+  const quarantineWithPreviousEmail = allMembers.filter((member) => {
+    if (!member.emailQuarantine) return false;
+    return Boolean(normalizeAudienceEmail(member.emailQuarantine.previousEmail));
+  }).length;
+
   return {
+    claim_recovered: clean(claimRecovered),
+    claim_native: clean(claimNative),
+    claim_profile: clean(claimProfile),
+    excel_recovered: clean(excelRecovered),
     imported,
     unregistered,
     never_registered: neverRegistered,
@@ -293,7 +329,6 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     never_opened: neverOpened,
     inactive,
     members: memberEmails,
-    claim_profile: clean(claimProfile),
     winback_90: clean(winback90),
     winback_180: clean(winback180),
     winback_365: clean(winback365),
@@ -301,7 +336,13 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     ...(Object.fromEntries(
       Object.entries(planBuckets).map(([key, emails]) => [key, clean(emails)]),
     ) as Record<PlanAudience, string[]>),
-    all: clean([...imported, ...pendingEmails, ...memberEmails, ...claimProfile]),
+    all: clean([
+      ...imported,
+      ...pendingEmails,
+      ...memberEmails,
+      ...claimProfile,
+      ...excelRecovered,
+    ]),
     suppressed: blocked.size,
     diagnostics: {
       totalMembers: allMembers.length,
@@ -319,9 +360,17 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
         (member) => member.emailQuarantine?.reason === "shared_across_members",
       ).length,
       quarantineMismatch: allMembers.filter(
-        (member) => member.emailQuarantine?.reason === "aggressive_name_mismatch",
+        (member) =>
+          member.emailQuarantine?.reason === "aggressive_name_mismatch" ||
+          member.emailQuarantine?.reason === "name_email_mismatch",
       ).length,
       unsafeIdentityMatches: unsafeIdentityMembers.length,
+      quarantineWithPreviousEmail,
+      recoveredFromQuarantine,
+      recoveredFromExcel,
     },
   };
 }
+
+/** Score helper re-export for admin coverage. */
+export { memberEmailNameScore };

@@ -8,11 +8,11 @@ import {
   CalendarCheck,
   Dumbbell,
   MapPin,
-  ScanLine,
   Smartphone,
   Sparkles,
 } from "lucide-react";
 import CinematicLandingFX from "../components/CinematicLandingFX";
+import HeroMediaCarousel from "../components/HeroMediaCarousel";
 import CtaBand from "../components/CtaBand";
 import JsonLd from "../components/JsonLd";
 import LandingTrack from "../components/LandingTrack";
@@ -91,11 +91,10 @@ export default function ExtremeGymLandingPage() {
             priority
             quality={82}
             sizes="100vw"
-            className="object-cover object-[62%_center]"
+            className="cinema-hero-photo object-cover object-[62%_center]"
           />
         </div>
-        <div className="absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(4,4,4,.98)_0%,rgba(4,4,4,.91)_38%,rgba(4,4,4,.52)_70%,rgba(4,4,4,.68)_100%)]" />
-        <div className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(0,0,0,.2),transparent_30%,rgba(0,0,0,.92)_100%)]" />
+        <div className="cinema-hero-grade absolute inset-0 z-[1]" />
         <div className="cinema-vignette absolute inset-0 z-[1]" />
         <CinematicLandingFX />
 
@@ -148,27 +147,9 @@ export default function ExtremeGymLandingPage() {
 
             <aside
               data-cinema-reveal
-              className="cinema-live-card relative hidden self-end overflow-hidden border border-white/15 bg-black/35 p-2 backdrop-blur-md lg:block"
+              className="cinema-live-card relative self-end overflow-hidden border border-white/20 bg-[#080808]/88 p-2"
             >
-              <div className="relative aspect-[4/5] overflow-hidden">
-                <Image
-                  src="/xtreme/maquinas-xtreme-amarillas.webp"
-                  alt="Máquinas amarillas de Xtreme Gym"
-                  fill
-                  sizes="360px"
-                  className="object-cover opacity-75"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
-                <div className="absolute left-4 right-4 top-4 flex items-center justify-between text-[9px] font-black uppercase tracking-[.18em]">
-                  <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4 text-[#f6c400]" /> Piso principal</span>
-                  <span className="text-[#f6c400]">Live</span>
-                </div>
-                <div className="absolute inset-x-4 bottom-4">
-                  <p className="text-3xl font-black uppercase leading-none">El trabajo se nota.</p>
-                  <div className="mt-4 h-px bg-white/20"><div className="h-px w-2/3 bg-[#f6c400]" /></div>
-                  <p className="mt-3 text-[10px] font-bold uppercase tracking-[.15em] text-white/55">Fuerza · cardio · funcional</p>
-                </div>
-              </div>
+              <HeroMediaCarousel />
             </aside>
           </div>
 
@@ -215,7 +196,7 @@ export default function ExtremeGymLandingPage() {
                       alt={scene.alt}
                       fill
                       sizes="(max-width: 1024px) 100vw, 50vw"
-                      className="object-cover opacity-80 transition duration-1000 hover:scale-[1.025] hover:opacity-95"
+                      className="cinema-scene-photo object-cover transition duration-1000 hover:scale-[1.025]"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/20" />
                     <span className="absolute left-5 top-5 text-[10px] font-black uppercase tracking-[.22em] text-[#f6c400]">Scene {scene.number}</span>

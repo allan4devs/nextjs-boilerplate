@@ -2,14 +2,14 @@
 
 /**
  * Dock inferior (solo mobile).
- * Perfil vive en el TopHud (arriba) para no chocar con el atajo de sistemas.
+ * Perfil vive en SideNav para no duplicar accesos en la barra superior.
  */
 
 import { GameDockItem } from "../GameOS";
 import { TABS } from "./constants";
 import type { MemberOs } from "./useMemberOs";
 
-/** Tabs del dock: sin perfil (ese va arriba). */
+/** Tabs del dock: sin perfil (ese vive en SideNav). */
 const DOCK_TABS = TABS.filter((item) => item.id !== "perfil" && item.id !== "maquinas");
 
 export default function BottomDock({ os, showChat = false }: { os: MemberOs; showChat?: boolean }) {

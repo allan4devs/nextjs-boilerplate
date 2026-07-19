@@ -1,10 +1,9 @@
 "use client";
 
-/** HUD superior fijo: stats, perfil (arriba) y acciones rápidas. */
+/** HUD superior fijo: progreso y acciones rápidas. El perfil vive en SideNav. */
 
-import { Flame, Menu, Star, Target, UserRound, Zap } from "lucide-react";
+import { Flame, Menu, Star, Target, Zap } from "lucide-react";
 import { GameButton, GameHudPill } from "../GameOS";
-import Avatar from "./Avatar";
 import type { MemberOs } from "./useMemberOs";
 
 export default function TopHud({ os }: { os: MemberOs }) {
@@ -17,10 +16,6 @@ export default function TopHud({ os }: { os: MemberOs }) {
     weekDoneCount,
     weeklyGoal,
     setOsModal,
-    setTab,
-    tab,
-    memberName,
-    currentMember,
   } = os;
 
   return (
@@ -75,34 +70,6 @@ export default function TopHud({ os }: { os: MemberOs }) {
               className="max-[360px]:hidden"
               onClick={() => setOsModal({ kind: "week" })}
             />
-            {/* Perfil arriba: evita pelear con el dock. Sistemas van en el menú (mobile). */}
-            <button
-              type="button"
-              data-tour="tab-perfil"
-              onClick={() => {
-                setTab("perfil");
-                setOsModal(null);
-              }}
-              aria-label="Abrir perfil"
-              aria-pressed={tab === "perfil"}
-              title="Perfil"
-              className={`ml-0.5 grid h-10 w-10 shrink-0 place-items-center border-[3px] transition sm:h-11 sm:w-11 ${
-                tab === "perfil"
-                  ? "border-[#d8ff3e] bg-[#d8ff3e] text-black shadow-[0_0_16px_rgba(216,255,62,0.35)]"
-                  : "border-white/25 bg-black/50 text-white hover:border-[#d8ff3e]/60"
-              }`}
-            >
-              {memberName ? (
-                <Avatar
-                  name={memberName}
-                  photoUrl={currentMember.photoUrl}
-                  className="h-7 w-7 sm:h-8 sm:w-8"
-                  textClass="text-[10px]"
-                />
-              ) : (
-                <UserRound className="h-5 w-5" />
-              )}
-            </button>
             {/* Solo desktop: hueco para el atajo flotante "Sistemas" */}
             <span className="hidden w-28 shrink-0 lg:block" aria-hidden />
           </div>

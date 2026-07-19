@@ -5,19 +5,21 @@
  * membresia, ocupacion, logros y check-in rapido de entreno.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ExtremeGymCheckout from "@/app/ExtremeGymCheckout";
 import Link from "next/link";
 import {
   Award,
   CalendarClock,
   Check,
+  ClipboardList,
   CreditCard,
   Dumbbell,
   ExternalLink,
   Flame,
   Loader2,
   Lock,
+  MousePointerClick,
   Play,
   Plus,
   Snowflake,
@@ -25,6 +27,7 @@ import {
   Target,
   Timer,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import {
@@ -46,6 +49,19 @@ import { findMachineGuide, FREE_WORKOUT } from "./constants";
 import { youtubeThumb, youtubeVideoId } from "./catalog/machines";
 import { dayLabel, membershipPlanDays, membershipRemainingPct, todayIso } from "./utils";
 import type { MemberOs } from "./useMemberOs";
+
+const FREE_ACTIVITY_OPTIONS = [
+  "Peso libre",
+  "Máquinas",
+  "Cardio",
+  "Funcional",
+  "Pierna",
+  "Tren superior",
+  "Core",
+  "Movilidad",
+] as const;
+
+type QuickWorkoutMode = "quick" | "free" | "plan";
 
 /** "2026-07-11" → 11 (sin pasar por Date: evita corrimientos de zona horaria). */
 function dayOfMonth(date: string) {
@@ -196,17 +212,21 @@ export default function OsModals({ os }: { os: MemberOs }) {
     unlockedCount,
     achievements,
     serverBadges,
-    selectedTraining,
-    quickTraining,
     trainedToday,
     savingTrainingId,
     completeTraining,
-    completedToday,
+    startPlanWorkout,
+    setTab,
     memberName,
     reloadFullMember,
     fetchPayments,
   } = os;
   const [savingGoal, setSavingGoal] = useState<number | null>(null);
+  const [quickMode, setQuickMode] = useState<QuickWorkoutMode>("quick");
+  const [freeMinutes, setFreeMinutes] = useState(45);
+  const [freeActivities, setFreeActivities] = useState<string[]>([]);
+  const [customActivity, setCustomActivity] = useState("");
+  const [selectedPlanItemId, setSelectedPlanItemId] = useState("");
   const selectedMachine =
     osModal?.kind === "machine" ? findMachineGuide(osModal.machineId) : null;
   const today = todayIso();
@@ -218,6 +238,54 @@ export default function OsModals({ os }: { os: MemberOs }) {
   const membershipTotalDays = membershipPlanDays(currentMember.membership.plan);
   const membershipDaysRemaining = Math.max(0, currentMember.membership.daysRemaining);
   const membershipProgress = membershipRemainingPct(membershipDaysRemaining, membershipTotalDays);
+  const pendingPlanItems = currentMember.trainingPlan?.items.filter((item) => !item.done) ?? [];
+  const selectedPlanItem = pendingPlanItems.find((item) => item.id === selectedPlanItemId) ?? pendingPlanItems[0];
+  const quickWorkoutOpen = osModal?.kind === "quick-train" || osModal?.kind === "training";
+
+  useEffect(() => {
+    if (!quickWorkoutOpen) return;
+    setQuickMode(currentMember.activePlanWorkout ? "plan" : "quick");
+    setFreeMinutes(45);
+    setFreeActivities([]);
+    setCustomActivity("");
+    setSelectedPlanItemId(pendingPlanItems[0]?.id ?? "");
+  }, [currentMember.activePlanWorkout, currentMember.trainingPlan, quickWorkoutOpen]);
+
+  function addCustomActivity() {
+    const value = customActivity.trim().slice(0, 80);
+    if (!value || freeActivities.some((item) => item.toLocaleLowerCase("es-CR") === value.toLocaleLowerCase("es-CR"))) return;
+    setFreeActivities((current) => [...current, value].slice(0, 10));
+    setCustomActivity("");
+  }
+
+  async function submitQuickWorkout() {
+    if (trainedToday || savingTrainingId) return;
+    if (quickMode === "plan") {
+      if (currentMember.activePlanWorkout) {
+        setTab("entrenar");
+        closeOsModal();
+        return;
+      }
+      if (!selectedPlanItem) return;
+      const started = await startPlanWorkout(selectedPlanItem);
+      if (started) {
+        setTab("entrenar");
+        closeOsModal();
+      }
+      return;
+    }
+
+    const quick = quickMode === "quick";
+    const training = quick
+      ? { ...FREE_WORKOUT, id: "quick-mark", name: "Entreno marcado", minutes: 0, intensity: "Sin detalle" }
+      : { ...FREE_WORKOUT, minutes: freeMinutes };
+    const saved = await completeTraining(training, {
+      minutes: quick ? 0 : freeMinutes,
+      activities: quick ? [] : freeActivities,
+      allowWithPendingPlan: true,
+    });
+    if (saved) closeOsModal();
+  }
   const handleCheckoutSuccess = useCallback(async () => {
     closeOsModal();
     await Promise.all([
@@ -429,7 +497,7 @@ export default function OsModals({ os }: { os: MemberOs }) {
                     key={date}
                     type="button"
                     disabled={!canMark}
-                    onClick={() => void completeTraining(quickTraining)}
+                    onClick={() => setOsModal({ kind: "quick-train" })}
                     aria-label={
                       done
                         ? `${dayLabel(date)} ${dayOfMonth(date)}: entreno hecho`
@@ -710,13 +778,13 @@ export default function OsModals({ os }: { os: MemberOs }) {
       </GameModal>
 
       <GameModal
-        open={osModal?.kind === "quick-train" || osModal?.kind === "training"}
+        open={quickWorkoutOpen}
         onClose={closeOsModal}
         title="Marcar entreno"
-        subtitle="Racha y XP del día"
+        subtitle="Rápido, libre o plan del entrenador"
         icon={Dumbbell}
         tone="orange"
-        size="md"
+        size="lg"
         footer={
           <div className="grid gap-2 sm:grid-cols-2">
             <GameButton variant="ghost" full onClick={closeOsModal}>
@@ -725,46 +793,199 @@ export default function OsModals({ os }: { os: MemberOs }) {
             <GameButton
               full
               variant="lime"
-              disabled={!unlocked || trainedToday || Boolean(savingTrainingId)}
-              onClick={() => {
-                // Entreno libre: no es check-in de clase. Clases = Entrenar → Clases.
-                if (!trainedToday) void completeTraining(FREE_WORKOUT);
-                closeOsModal();
-              }}
+              disabled={
+                !unlocked ||
+                trainedToday ||
+                Boolean(savingTrainingId) ||
+                (quickMode === "plan" && !currentMember.activePlanWorkout && !selectedPlanItem)
+              }
+              onClick={() => void submitQuickWorkout()}
             >
               {savingTrainingId ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : trainedToday ? (
                 <Check className="h-4 w-4" />
+              ) : quickMode === "plan" ? (
+                <ClipboardList className="h-4 w-4" />
+              ) : quickMode === "quick" ? (
+                <MousePointerClick className="h-4 w-4" />
               ) : (
                 <Flame className="h-4 w-4" />
               )}
-              {trainedToday ? "Ya marcado" : "Marcar entreno libre"}
+              {trainedToday
+                ? "Ya marcado"
+                : quickMode === "plan"
+                  ? currentMember.activePlanWorkout
+                    ? "Continuar entreno"
+                    : "Empezar sesión del plan"
+                  : quickMode === "quick"
+                    ? "Marcar con un clic"
+                    : "Guardar entreno libre"}
             </GameButton>
           </div>
         }
       >
-        <div className="space-y-3">
+        <div className="space-y-4">
           <GameCallout tone="lime" icon={Flame}>
-            Sumás racha + XP por tu sesión de hoy. Si venís a una clase grupal, reservá y hacé
-            check-in en Entrenar → Clases.
+            Elegí cuánto detalle querés guardar. La racha y el XP se suman cuando la sesión queda finalizada.
           </GameCallout>
-          <div className="flex items-center gap-3 border-[3px] border-[#d8ff3e]/40 bg-[#d8ff3e]/10 p-3">
-            <span
-              className={`grid h-11 w-11 place-items-center bg-gradient-to-br ${FREE_WORKOUT.color} text-black`}
-            >
-              <FREE_WORKOUT.icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black uppercase">{FREE_WORKOUT.name}</p>
-              <p className="text-[11px] font-bold text-white/45">
-                {FREE_WORKOUT.time} · {FREE_WORKOUT.minutes} min
-              </p>
-            </div>
-            {completedToday.has(FREE_WORKOUT.id) && (
-              <Check className="h-5 w-5 text-[#d8ff3e]" />
-            )}
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            {([
+              { id: "quick", label: "Un clic", hint: "Sin minutos ni lista", icon: MousePointerClick },
+              { id: "free", label: "Entreno libre", hint: "Minutos + lo que hiciste", icon: Flame },
+              { id: "plan", label: "Plan entrenador", hint: currentMember.trainingPlan ? "Elegí una sesión" : "Sin plan asignado", icon: ClipboardList },
+            ] as const).map((option) => {
+              const Icon = option.icon;
+              const disabled = option.id !== "plan" && Boolean(currentMember.activePlanWorkout);
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => setQuickMode(option.id)}
+                  className={`min-h-24 border-[3px] p-3 text-left transition ${
+                    quickMode === option.id
+                      ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+                      : "border-white/15 bg-black/30 text-white hover:border-white/35"
+                  } disabled:cursor-not-allowed disabled:opacity-30`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="mt-3 block text-xs font-black uppercase">{option.label}</span>
+                  <span className={`mt-1 block text-[10px] font-bold ${quickMode === option.id ? "text-black/55" : "text-white/38"}`}>{option.hint}</span>
+                </button>
+              );
+            })}
           </div>
+
+          {quickMode === "quick" && (
+            <div className="flex items-center gap-3 border-[3px] border-cyan-300/35 bg-cyan-300/[.06] p-4">
+              <span className="grid h-12 w-12 shrink-0 place-items-center bg-cyan-300 text-black">
+                <MousePointerClick className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-black uppercase">Solo marcar que entrenaste</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-white/45">
+                  Guarda la sesión con 0 minutos y sin inventar actividades. Después podés verla en Progreso.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {quickMode === "free" && (
+            <div className="space-y-4 border-[3px] border-orange-300/35 bg-orange-300/[.05] p-4">
+              <div>
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <GameLabel tone="orange">Duración</GameLabel>
+                    <p className="mt-1 text-3xl font-black tabular-nums">{freeMinutes} <span className="text-sm text-white/40">min</span></p>
+                  </div>
+                  <input
+                    type="number"
+                    min="5"
+                    max="240"
+                    step="5"
+                    value={freeMinutes}
+                    onChange={(event) => setFreeMinutes(Math.max(5, Math.min(240, Number(event.target.value) || 5)))}
+                    aria-label="Minutos del entreno"
+                    className="h-11 w-24 border-[3px] border-white/20 bg-black px-3 text-center font-black tabular-nums outline-none focus:border-orange-300"
+                  />
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="180"
+                  step="5"
+                  value={Math.min(180, freeMinutes)}
+                  onChange={(event) => setFreeMinutes(Number(event.target.value))}
+                  className="mt-3 w-full accent-orange-300"
+                  aria-label="Ajustar duración"
+                />
+                <div className="mt-2 grid grid-cols-5 gap-1.5">
+                  {[15, 30, 45, 60, 90].map((minutes) => (
+                    <button key={minutes} type="button" onClick={() => setFreeMinutes(minutes)} className={`min-h-9 border-2 text-[10px] font-black ${freeMinutes === minutes ? "border-orange-300 bg-orange-300 text-black" : "border-white/12 text-white/45"}`}>{minutes}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <GameLabel tone="lime">¿Qué hiciste?</GameLabel>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {FREE_ACTIVITY_OPTIONS.map((activity) => {
+                    const selected = freeActivities.includes(activity);
+                    return (
+                      <button
+                        key={activity}
+                        type="button"
+                        onClick={() => setFreeActivities((current) => selected ? current.filter((item) => item !== activity) : [...current, activity].slice(0, 10))}
+                        className={`min-h-10 border-2 px-3 text-[10px] font-black uppercase transition ${selected ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/15 text-white/55 hover:border-white/35"}`}
+                      >
+                        {selected && <Check className="mr-1 inline h-3.5 w-3.5" />}{activity}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={customActivity}
+                    onChange={(event) => setCustomActivity(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") { event.preventDefault(); addCustomActivity(); }
+                    }}
+                    placeholder="Agregar otra actividad"
+                    maxLength={80}
+                    className="min-h-11 min-w-0 flex-1 border-[3px] border-white/15 bg-black px-3 text-sm font-semibold outline-none focus:border-[#d8ff3e]"
+                  />
+                  <button type="button" onClick={addCustomActivity} disabled={!customActivity.trim()} className="grid h-11 w-11 shrink-0 place-items-center bg-white text-black disabled:opacity-35" aria-label="Agregar actividad">
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+                {!!freeActivities.length && (
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    <p className="text-[10px] font-black uppercase text-white/35">Lista a guardar · {freeActivities.length}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {freeActivities.map((activity) => (
+                        <button key={activity} type="button" onClick={() => setFreeActivities((current) => current.filter((item) => item !== activity))} className="inline-flex min-h-9 items-center gap-1.5 border border-[#d8ff3e]/35 bg-[#d8ff3e]/10 px-2.5 text-[10px] font-black uppercase text-[#eaff93]">
+                          {activity}<X className="h-3 w-3" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {quickMode === "plan" && (
+            <div className="space-y-2 border-[3px] border-cyan-300/30 bg-cyan-300/[.04] p-3">
+              {currentMember.activePlanWorkout ? (
+                <div className="flex items-center gap-3 bg-cyan-300 p-3 text-black">
+                  <ClipboardList className="h-6 w-6 shrink-0" />
+                  <div><p className="font-black uppercase">Entreno en curso</p><p className="text-xs font-bold text-black/60">{currentMember.activePlanWorkout.trainingName}</p></div>
+                </div>
+              ) : pendingPlanItems.length ? (
+                pendingPlanItems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedPlanItemId(item.id)}
+                    className={`flex w-full items-start gap-3 border-[3px] p-3 text-left transition ${selectedPlanItem?.id === item.id ? "border-cyan-300 bg-cyan-300/15" : "border-white/12 bg-black/25"}`}
+                  >
+                    <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${selectedPlanItem?.id === item.id ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/25"}`}>{selectedPlanItem?.id === item.id && <Check className="h-3 w-3" />}</span>
+                    <span className="min-w-0"><span className="block font-black uppercase">{item.focus || item.day || "Sesión del plan"}</span><span className="mt-1 block text-xs font-semibold text-white/42">{item.exercises || `${item.targetMinutes || 45} min asignados`}</span></span>
+                  </button>
+                ))
+              ) : (
+                <p className="p-4 text-sm font-semibold text-white/45">No tenés sesiones pendientes en el plan del entrenador.</p>
+              )}
+            </div>
+          )}
+
+          {trainedToday && (
+            <div className="flex items-center gap-3 border-[3px] border-[#d8ff3e]/40 bg-[#d8ff3e]/10 p-3 text-sm font-black uppercase text-[#eaff93]">
+              <Check className="h-5 w-5" /> El entreno de hoy ya está marcado
+            </div>
+          )}
         </div>
       </GameModal>
     </>

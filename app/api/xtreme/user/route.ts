@@ -481,7 +481,8 @@ export async function PATCH(req: NextRequest) {
     const trainingId = String(body.trainingId ?? "").trim();
     const trainingName = String(body.trainingName ?? "").trim();
     const intensity = String(body.intensity ?? "").trim();
-    const minutes = Math.max(1, Math.min(240, Number(body.minutes) || 45));
+    const rawMinutes = body.minutes === undefined ? 45 : Number(body.minutes);
+    const minutes = Math.max(0, Math.min(240, Number.isFinite(rawMinutes) ? rawMinutes : 45));
     const completedDate = normalizeIsoDate(body.completedDate);
     const db = await getDb();
     const memberRepository = createMongoMemberRepository(db);
@@ -911,6 +912,7 @@ export async function PATCH(req: NextRequest) {
         trainingName,
         intensity,
         minutes,
+        exercises: sanitizeWorkoutExercises(body.exercises),
       },
     );
 

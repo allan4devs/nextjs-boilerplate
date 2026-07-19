@@ -972,16 +972,19 @@ export function useMemberOs() {
     void saveProfileField({ notificationPrefs: next }, MSG.ok.emailPrefsSaved);
   }
 
-  async function completeTraining(training: Training) {
-    if (!unlocked) return;
+  async function completeTraining(
+    training: Training,
+    options?: { minutes?: number; activities?: string[]; allowWithPendingPlan?: boolean },
+  ) {
+    if (!unlocked) return false;
     if (
       currentMember.activePlanWorkout ||
-      currentMember.trainingPlan?.items.some((item) => !item.done)
+      (!options?.allowWithPendingPlan && currentMember.trainingPlan?.items.some((item) => !item.done))
     ) {
       setTab("entrenar");
       setError("");
       setMessage("Completá primero la sesión asignada en tu plan.");
-      return;
+      return false;
     }
     setError("");
     setMessage("");
@@ -996,8 +999,19 @@ export function useMemberOs() {
           memberName,
           trainingId: training.id,
           trainingName: training.name,
-          intensity: training.intensity,
-          minutes: training.minutes,
+          intensity: options?.activities?.length ? "Personalizado" : training.intensity,
+          minutes: options?.minutes ?? training.minutes,
+          exercises: (options?.activities ?? []).map((activity, index) => ({
+            id: `free-${Date.now()}-${index}`,
+            machineId: "",
+            machineName: "",
+            exerciseName: activity,
+            sets: 0,
+            reps: 0,
+            weightKg: 0,
+            seconds: 0,
+            notes: "",
+          })),
           completedDate: todayIso(),
         }),
       });
@@ -1010,8 +1024,10 @@ export function useMemberOs() {
         tab: "entrenar",
         label: training.name,
       });
+      return true;
     } catch (err) {
       requirePinAgain(err, MSG.errors.logTraining);
+      return false;
     } finally {
       setSavingTrainingId("");
     }
@@ -1175,7 +1191,7 @@ export function useMemberOs() {
   }
 
   async function startPlanWorkout(item: PlanItem) {
-    if (!unlocked || item.done) return;
+    if (!unlocked || item.done) return false;
     setError("");
     setMessage("");
     setSavingTrainingId(`plan-${item.id}`);
@@ -1189,8 +1205,10 @@ export function useMemberOs() {
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
       setMessage(`Entreno iniciado: ${item.focus || item.day}.`);
+      return true;
     } catch (err) {
       requirePinAgain(err, "No se pudo iniciar el entreno del plan.");
+      return false;
     } finally {
       setSavingTrainingId("");
     }

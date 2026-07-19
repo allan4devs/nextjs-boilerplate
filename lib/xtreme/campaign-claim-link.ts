@@ -25,6 +25,9 @@ import {
  */
 export const CLAIM_LINK_AUDIENCES = new Set([
   "claim_profile",
+  "claim_recovered",
+  "claim_native",
+  "excel_recovered",
   "never_registered",
   "unregistered",
   "imported",

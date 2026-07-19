@@ -419,11 +419,21 @@ export default function ExtremeGymCheckout({
   return (
     <section
       id="inscripcion"
-      className={memberCheckout ? "relative text-white" : compact ? "relative scroll-mt-20 overflow-hidden border-y border-white/10 bg-[#080808] px-5 py-8 text-white sm:px-8 lg:py-10" : "relative scroll-mt-20 overflow-hidden border-y border-black/20 bg-[#f6c400] px-5 py-14 text-black sm:px-8 lg:py-20"}
-      style={{
-        backgroundImage: "linear-gradient(90deg, rgba(0,0,0,.18) 1px, transparent 1px)",
-        backgroundSize: "54px 100%",
-      }}
+      className={
+        memberCheckout
+          ? "relative text-white"
+          : compact
+            ? "relative scroll-mt-20 overflow-hidden border-y border-white/10 bg-transparent px-5 py-8 text-white sm:px-8 lg:py-10"
+            : "relative scroll-mt-20 overflow-hidden border-y border-black/20 bg-[#f6c400] px-5 py-14 text-black sm:px-8 lg:py-20"
+      }
+      style={
+        memberCheckout || compact
+          ? undefined
+          : {
+              backgroundImage: "linear-gradient(90deg, rgba(0,0,0,.18) 1px, transparent 1px)",
+              backgroundSize: "54px 100%",
+            }
+      }
     >
       <div className={memberCheckout ? "relative" : compact ? "relative mx-auto max-w-7xl" : "relative mx-auto max-w-5xl"}>
         {!compact ? (

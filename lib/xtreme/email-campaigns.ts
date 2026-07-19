@@ -18,8 +18,14 @@ export type EmailAudience =
   | "never_opened"
   | "inactive"
   | "members"
-  /** Ficha con correo pero sin emailVerified: reclamar y corregir nombre/cédula del import. */
+  /** Todos los sin verificar (seguros para enviar). */
   | "claim_profile"
+  /** Sin verificar + correo recuperado del Excel / cuarentena realineada. */
+  | "claim_recovered"
+  /** Sin verificar con correo nativo en ficha (no vino de recovery script). */
+  | "claim_native"
+  /** Cualquier ficha con emailRecovery (verificado o no). */
+  | "excel_recovered"
   | "winback_90"
   | "winback_180"
   | "winback_365"

@@ -12,6 +12,9 @@ type AudienceId =
   | "inactive"
   | "members"
   | "claim_profile"
+  | "claim_recovered"
+  | "claim_native"
+  | "excel_recovered"
   | "winback_90"
   | "winback_180"
   | "winback_365"
@@ -53,6 +56,9 @@ type CenterData = {
     quarantineShared: number;
     quarantineMismatch: number;
     unsafeIdentityMatches: number;
+    quarantineWithPreviousEmail?: number;
+    recoveredFromQuarantine?: number;
+    recoveredFromExcel?: number;
   };
   campaigns: Array<{
     id: string;
@@ -109,48 +115,152 @@ const QUARANTINE_REASON_LABELS: Record<string, string> = {
   shared_without_clear_owner: "sin dueño claro",
 };
 
-const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string }> = [
+const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: string }> = [
+  {
+    id: "claim_recovered",
+    label: "Activar · Excel / cuarentena",
+    detail:
+      "Sin verificar, correo alineado por nombre y apellidos del Excel o re-sacado de cuarentena. Mejor lista para la campaña de activación masiva.",
+    group: "Activación",
+  },
+  {
+    id: "claim_native",
+    label: "Activar · correo nativo",
+    detail: "Sin verificar con correo que ya venía en la ficha (no pasó por el script de recovery).",
+    group: "Activación",
+  },
   {
     id: "claim_profile",
-    label: "Verificar correo (sin verificar)",
-    detail: "Correos en ficha sin verificar. Ideal para invitar a activar la app.",
+    label: "Activar · todos sin verificar",
+    detail: "Unión de Excel-alineados + nativos. Ideal si querés un solo envío de claim.",
+    group: "Activación",
+  },
+  {
+    id: "excel_recovered",
+    label: "Alineados del Excel",
+    detail: "Todas las fichas con emailRecovery (script). Pueden estar verificadas o no.",
+    group: "Activación",
   },
   {
     id: "winback_90",
     label: "Win-back 90–179 d",
-    detail: "Membresía vencida hace 90–179 días, con correo único en ficha. Ideal para volver pronto.",
+    detail: "Membresía vencida hace 90–179 días, con correo único en ficha.",
+    group: "Win-back",
   },
   {
     id: "winback_180",
     label: "Win-back 180–364 d",
-    detail: "Vencidos hace 6–12 meses con correo. Recordatorio más fuerte de regresar.",
+    detail: "Vencidos hace 6–12 meses con correo usable.",
+    group: "Win-back",
   },
   {
     id: "winback_365",
     label: "Win-back +1 año",
-    detail: "Vencidos hace más de un año. Invitá a reactivar el acceso.",
+    detail: "Vencidos hace más de un año.",
+    group: "Win-back",
   },
   {
     id: "possible_foreign",
     label: "Posibles extranjeros",
     detail: "Señal blanda (DIMEX / doc 8–12 dígitos / nombres). Activación por correo.",
+    group: "Segmentos",
   },
-  { id: "never_registered", label: "Nunca registrados", detail: "Contactos o invitaciones pendientes sin perfil verificado" },
-  { id: "unregistered", label: "Importados sin registro", detail: "Contactos de la lista importada sin perfil ni invitación" },
-  { id: "pending", label: "Registro pendiente", detail: "Pidieron acceso, pero aún no confirmaron su correo" },
-  { id: "never_opened", label: "Nunca entraron a la app", detail: "Socios con correo verificado sin ninguna apertura de la app" },
-  { id: "inactive", label: "Sin abrir app 14 d", detail: "Socios verificados sin apertura en los últimos 14 días" },
-  { id: "members", label: "Socios verificados", detail: "Perfiles con correo ya verificado" },
-  { id: "plan_week", label: "Plan semanal", detail: "Correos únicos con tarifa semanal; recupera x Tarifa del Excel" },
-  { id: "plan_fortnight", label: "Plan quincenal", detail: "Correos únicos con tarifa quincenal; recupera x Tarifa del Excel" },
-  { id: "plan_month", label: "Plan mensual", detail: "Correos únicos con tarifa mensual; recupera x Tarifa del Excel" },
-  { id: "plan_quarter", label: "Plan trimestral", detail: "Correos únicos con plan trimestral" },
-  { id: "plan_free_day", label: "Diario / primer día", detail: "Tarifa diaria o plan de primer día gratis" },
-  { id: "plan_senior", label: "Adultos mayores", detail: "Plan o clases de adultos mayores con correo usable" },
-  { id: "no_plan", label: "Sin plan", detail: "Correos usables sin tipo de plan ni tarifa asignada" },
-  { id: "plan_other", label: "Otros planes", detail: "Planes especiales o matrícula fuera de las categorías principales" },
-  { id: "imported", label: "Lista importada", detail: "Contactos activos pegados o cargados desde una hoja" },
-  { id: "all", label: "Todos, sin duplicados", detail: "Importados, pendientes, claim y socios consolidados" },
+  {
+    id: "never_registered",
+    label: "Nunca registrados",
+    detail: "Contactos o invitaciones pendientes sin perfil verificado.",
+    group: "Segmentos",
+  },
+  {
+    id: "unregistered",
+    label: "Importados sin registro",
+    detail: "Lista importada sin perfil ni invitación pendiente.",
+    group: "Segmentos",
+  },
+  {
+    id: "pending",
+    label: "Registro pendiente",
+    detail: "Pidieron acceso y aún no confirmaron el correo.",
+    group: "Segmentos",
+  },
+  {
+    id: "never_opened",
+    label: "Nunca entraron a la app",
+    detail: "Verificados sin ninguna apertura de la app.",
+    group: "Segmentos",
+  },
+  {
+    id: "inactive",
+    label: "Sin abrir app 14 d",
+    detail: "Verificados sin apertura en los últimos 14 días.",
+    group: "Segmentos",
+  },
+  {
+    id: "members",
+    label: "Socios verificados",
+    detail: "Perfiles con correo ya verificado.",
+    group: "Segmentos",
+  },
+  {
+    id: "plan_week",
+    label: "Plan semanal",
+    detail: "Correos únicos con tarifa semanal (x Tarifa del Excel).",
+    group: "Planes",
+  },
+  {
+    id: "plan_fortnight",
+    label: "Plan quincenal",
+    detail: "Correos únicos con tarifa quincenal.",
+    group: "Planes",
+  },
+  {
+    id: "plan_month",
+    label: "Plan mensual",
+    detail: "Correos únicos con tarifa mensual.",
+    group: "Planes",
+  },
+  {
+    id: "plan_quarter",
+    label: "Plan trimestral",
+    detail: "Correos únicos con plan trimestral.",
+    group: "Planes",
+  },
+  {
+    id: "plan_free_day",
+    label: "Diario / primer día",
+    detail: "Tarifa diaria o plan de primer día gratis.",
+    group: "Planes",
+  },
+  {
+    id: "plan_senior",
+    label: "Adultos mayores",
+    detail: "Plan o clases de adultos mayores con correo usable.",
+    group: "Planes",
+  },
+  {
+    id: "no_plan",
+    label: "Sin plan",
+    detail: "Correos usables sin tipo de plan ni tarifa.",
+    group: "Planes",
+  },
+  {
+    id: "plan_other",
+    label: "Otros planes",
+    detail: "Planes especiales o matrícula fuera de las categorías principales.",
+    group: "Planes",
+  },
+  {
+    id: "imported",
+    label: "Lista importada",
+    detail: "Contactos activos de hoja / import.",
+    group: "Listas",
+  },
+  {
+    id: "all",
+    label: "Todos, sin duplicados",
+    detail: "Importados, pendientes, claim y socios consolidados.",
+    group: "Listas",
+  },
 ];
 const AUDIENCE_LABELS = Object.fromEntries(AUDIENCES.map((item) => [item.id, item.label])) as Record<AudienceId, string>;
 const OPT_OUT_REASON_LABELS: Record<string, string> = {
@@ -177,17 +287,52 @@ type CampaignTemplate = {
 };
 
 /** Plantillas listas por audiencia — tono tico, claro y positivo. */
+const CLAIM_BASE: CampaignTemplate = {
+  subject: "Activá tu plan en Xtreme Gym cuando querás",
+  title: "Tu cuenta ya está lista en Xtreme Gym Ciudad Quesada",
+  message:
+    "Hola. Ya tenés un perfil en Xtreme Gym, pero tu correo todavía no está verificado y queremos que revisés los datos que tenemos asociados.\n\n" +
+    "Cuando estés listo, activá tu cuenta y elegí el plan que mejor te funcione. Vas a poder disfrutar de más beneficios Xtreme:\n" +
+    "• App de socios\n" +
+    "• Reservas de clases\n" +
+    "• Niveles, entrenamientos y máquinas\n" +
+    "• Seguimiento de salud y progreso\n" +
+    "• Promociones y comunidad\n\n" +
+    "El enlace es personal y vence en 72 horas. Pura vida — equipo Xtreme Gym, Ciudad Quesada.",
+  ctaLabel: "Revisar datos y elegir mi plan",
+  ctaPath: "/registro/confirmar",
+};
+
 const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
-  claim_profile: {
-    subject: "Activá tu acceso a Xtreme Gym",
-    title: "Te estamos esperando en la app",
+  claim_profile: CLAIM_BASE,
+  claim_recovered: {
+    ...CLAIM_BASE,
+    subject: "Confirmá tus datos en Xtreme Gym",
+    title: "Encontramos tu ficha — activá la app",
     message:
-      "Hola. Este correo está en Xtreme Gym y solo falta activar tu acceso a la app de socios.\n\n" +
-      "Tocá el botón de este correo (es tu enlace personal). Vas a ver los datos que ya teníamos asociados a vos: nombre, teléfono y cédula. Podés dejarlos o corregirlos, y después creás tu PIN de 4 dígitos.\n\n" +
-      "Con la app reservás clases, marcás entrenos y usás tu carné digital.\n\n" +
-      "El enlace vence en 72 horas. Pura vida — equipo Xtreme, Ciudad Quesada.",
-    ctaLabel: "Verificar mis datos y activar",
-    ctaPath: "/registro/confirmar",
+      "Hola. Según la lista del gym, este correo te pertenece y ya teníamos tu nombre en Xtreme Gym.\n\n" +
+      "Tocá el enlace personal: vas a ver nombre, teléfono y cédula para confirmarlos o corregirlos, y creás tu PIN de 4 dígitos.\n\n" +
+      "Así dejás la cuenta lista para reservar clases y usar la app.\n\n" +
+      "El enlace vence en 72 horas. Pura vida — Xtreme Gym, Ciudad Quesada.",
+    ctaLabel: "Confirmar mis datos",
+  },
+  claim_native: {
+    ...CLAIM_BASE,
+    subject: "Activá tu correo en Xtreme Gym",
+    title: "Falta un paso para entrar a la app",
+    message:
+      "Hola. Tu correo ya está en la ficha de Xtreme Gym, pero todavía no lo verificaste.\n\n" +
+      "Con el enlace de este mensaje completás o corregís tus datos y creás tu PIN.\n\n" +
+      "Pura vida — equipo Xtreme.",
+  },
+  excel_recovered: {
+    ...CLAIM_BASE,
+    subject: "Tu correo en Xtreme Gym",
+    title: "Actualizamos el contacto de tu ficha",
+    message:
+      "Hola. Asociamos este correo a tu ficha en Xtreme Gym a partir de la lista del gimnasio (nombre y apellidos).\n\n" +
+      "Si todavía no activaste la app, usá el enlace para revisar tus datos y crear tu PIN. Si ya tenés acceso, podés entrar directo a la app.\n\n" +
+      "Pura vida — Xtreme Gym, Ciudad Quesada.",
   },
   winback_90: {
     subject: "Te extrañamos en Xtreme — volvé cuando quieras",
@@ -388,10 +533,10 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
   },
 };
 
-const DEFAULT_AUDIENCE: AudienceId = "claim_profile";
+const DEFAULT_AUDIENCE: AudienceId = "claim_recovered";
 
 function templateFor(audience: AudienceId): CampaignTemplate {
-  return CAMPAIGN_TEMPLATES[audience] ?? CAMPAIGN_TEMPLATES.claim_profile;
+  return CAMPAIGN_TEMPLATES[audience] ?? CAMPAIGN_TEMPLATES.claim_recovered;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -443,6 +588,7 @@ export default function EmailCampaignCenter() {
   const [sheet, setSheet] = useState("");
   const [importConsent, setImportConsent] = useState(false);
   const [campaignConsent, setCampaignConsent] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -456,7 +602,7 @@ export default function EmailCampaignCenter() {
   const [form, setForm] = useState(() => {
     const seed = templateFor("claim_profile");
     return {
-      audience: "claim_profile" as AudienceId,
+      audience: "claim_recovered" as AudienceId,
       subject: seed.subject,
       title: seed.title,
       message: seed.message,
@@ -603,6 +749,26 @@ export default function EmailCampaignCenter() {
     finally { setBusy(""); }
   }
 
+  async function sendTestCampaign() {
+    const email = testEmail.trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) return setError("Ingresá un correo válido para la prueba.");
+    setBusy("test-campaign"); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/xtreme/admin/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "test_campaign", ...form, email }),
+      });
+      const json = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !json.ok) throw new Error(json.error || "No se pudo enviar la prueba.");
+      setNotice(`Prueba enviada únicamente a ${email}. No se creó una campaña.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo enviar la prueba.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function processQueueNow() {
     setBusy("process"); setError(""); setNotice("");
     try {
@@ -690,6 +856,8 @@ export default function EmailCampaignCenter() {
             [data?.diagnostics.membersWithUsableEmail, "Con correo usable", "Verificados y pendientes de verificar"],
             [data?.diagnostics.importedContactEmails, "Contactos reales", "Direcciones únicas recuperadas del Excel"],
             [data?.diagnostics.recoveredMembers, "Fichas recuperadas", "Asignación segura y auditada"],
+            [data?.diagnostics.recoveredFromExcel, "Desde Excel", "Alineados por nombre/apellidos"],
+            [data?.diagnostics.recoveredFromQuarantine, "Desde cuarentena", "Re-sacados con match de nombre"],
             [data?.diagnostics.membersWithoutUsableEmail, "Sin correo seguro", "No se pueden incluir en un envío"],
             [(data?.diagnostics.quarantinedMembers ?? 0) + (data?.diagnostics.unsafeIdentityMatches ?? 0), "No seguros", "Aislados; nunca entran en campañas"],
           ].map(([value, label, detail]) => (
@@ -701,7 +869,7 @@ export default function EmailCampaignCenter() {
           ))}
         </div>
         <p className="mt-3 text-[11px] font-semibold text-white/45">
-          No seguros, fuera de envíos: {data?.diagnostics.quarantinedMembers ?? "—"} en cuarentena · {data?.diagnostics.unsafeIdentityMatches ?? "—"} detectados por nombre/correo · {data?.diagnostics.quarantineShared ?? "—"} compartidos · {data?.diagnostics.quarantinePlaceholder ?? "—"} placeholders.
+          No seguros: {data?.diagnostics.quarantinedMembers ?? "—"} en cuarentena · {data?.diagnostics.quarantineWithPreviousEmail ?? "—"} con correo anterior guardado · {data?.diagnostics.unsafeIdentityMatches ?? "—"} nombre/correo dudoso · {data?.diagnostics.quarantineShared ?? "—"} compartidos · {data?.diagnostics.quarantinePlaceholder ?? "—"} placeholders. Corré el script de recovery para realinear.
         </p>
         {coverage && (
           <div className="mt-4 border-2 border-white/10 bg-black/40 p-3">
@@ -733,10 +901,39 @@ export default function EmailCampaignCenter() {
         )}
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {AUDIENCES.map((item) => <div key={item.id} className="border-2 border-white/15 bg-[#0c0c0c] p-4"><div className="text-2xl font-black text-lime-200">{data?.audiences[item.id] ?? "—"}</div><div className="mt-1 text-xs font-black uppercase">{item.label}</div><p className="mt-2 text-xs font-semibold leading-relaxed text-white/40">{item.detail}</p></div>)}
-      </div>
-      <p className="text-xs font-bold text-white/40">Bajas/supresiones protegidas: {data?.audiences.suppressed ?? "—"}</p>
+      {(["Activación", "Win-back", "Segmentos", "Planes", "Listas"] as const).map((group) => {
+        const items = AUDIENCES.filter((item) => item.group === group);
+        if (!items.length) return null;
+        return (
+          <section key={group} className="space-y-3">
+            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-white/45">{group}</h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className={`border-2 bg-[#0c0c0c] p-4 ${
+                    group === "Activación"
+                      ? "border-lime-300/35"
+                      : "border-white/15"
+                  }`}
+                >
+                  <div className="text-2xl font-black text-lime-200">
+                    {data?.audiences[item.id] ?? "—"}
+                  </div>
+                  <div className="mt-1 text-xs font-black uppercase">{item.label}</div>
+                  <p className="mt-2 text-xs font-semibold leading-relaxed text-white/40">
+                    {item.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+      <p className="text-xs font-bold text-white/40">
+        Bajas/supresiones protegidas: {data?.audiences.suppressed ?? "—"} · Preferí «Activar · Excel /
+        cuarentena» para la campaña masiva de claim.
+      </p>
 
       <div className="grid gap-5 xl:grid-cols-2">
         <section className="border-[3px] border-white/15 bg-[#0c0c0c] p-4 sm:p-5">
@@ -875,6 +1072,28 @@ export default function EmailCampaignCenter() {
             <input type="checkbox" checked={campaignConsent} onChange={(event) => setCampaignConsent(event.target.checked)} className="mt-0.5 h-4 w-4 accent-lime-300" />
             <span>Revisé asunto, contenido, audiencia y permiso. Entiendo que esto crea una campaña real en cola.</span>
           </label>
+          <div className="mt-4 border-2 border-cyan-300/30 bg-cyan-300/[0.04] p-3">
+            <div className="text-[10px] font-black uppercase tracking-widest text-cyan-200">Prueba individual</div>
+            <p className="mt-1 text-xs font-semibold text-white/45">Usa el contenido de arriba y no crea una campaña ni toca la audiencia.</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(event) => setTestEmail(event.target.value)}
+                placeholder="correo@ejemplo.com"
+                className="min-h-11 border-2 border-white/20 bg-black px-3 text-sm font-bold text-white outline-none focus:border-cyan-300"
+              />
+              <button
+                type="button"
+                disabled={!EMAIL_RE.test(testEmail.trim()) || Boolean(busy)}
+                onClick={() => void sendTestCampaign()}
+                className="inline-flex min-h-11 items-center justify-center gap-2 bg-cyan-300 px-4 text-xs font-black uppercase text-black disabled:opacity-40"
+              >
+                {busy === "test-campaign" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Enviar solo prueba
+              </button>
+            </div>
+          </div>
           <button
             type="button"
             disabled={!campaignConsent || !form.subject || !form.title || !form.message || recipientsBusy || Boolean(busy)}

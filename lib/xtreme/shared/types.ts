@@ -173,6 +173,9 @@ export type MemberDoc = {
     score?: number;
     previousEmail?: string | null;
     domainChange?: string | null;
+    matchMethod?: string;
+    /** excel_align | quarantine_realign */
+    category?: string;
   };
   /** Datos conservados del Excel histórico. No son identidad verificada. */
   legacyImport?: {
