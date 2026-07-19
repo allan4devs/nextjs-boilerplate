@@ -8,6 +8,8 @@
  *   activo (campañas de activación / primer día).
  * - claim_active_plan: sin verificar CON plan vigente del Excel (solo
  *   confirmar datos/PIN; no mezclar con activación de sin plan).
+ * - invite_recoverable: TODOS los correos recuperables (contactos + fichas +
+ *   cuarentena) sin exigir match de nombre. Invitación a registrarse.
  * - excel_recovered: todos con emailRecovery (historial de alineación)
  */
 import type { Db } from "mongodb";
@@ -28,6 +30,7 @@ export const EMAIL_AUDIENCE_IDS = [
   "claim_native",
   "claim_profile",
   "claim_active_plan",
+  "invite_recoverable",
   "excel_recovered",
   "imported",
   "unregistered",
@@ -71,6 +74,8 @@ export type EmailAudienceDiagnostics = {
   /** Recovery por categoría de script. */
   recoveredFromQuarantine: number;
   recoveredFromExcel: number;
+  /** Correos únicos invitables (invite_recoverable), sin match de nombre. */
+  inviteRecoverableEmails: number;
 };
 
 type PlanAudience =
@@ -86,6 +91,24 @@ type PlanAudience =
 export function normalizeAudienceEmail(value: unknown) {
   const email = String(value ?? "").trim().toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+}
+
+/** Placeholders obvios del Excel histórico (no se invitan). */
+export function isPlaceholderCampaignEmail(emailValue: unknown) {
+  const email = normalizeAudienceEmail(emailValue);
+  if (!email) return true;
+  const [local = "", domain = ""] = email.split("@");
+  return (
+    /^(sin|no|nulo|nada|ningun|ninguno|prueba|test|noindica|noaplica)([._-]?(correo|email|mail|tiene|aplica))?\d*$/i.test(
+      local,
+    ) ||
+    /sin(correo|email|mail)/i.test(local) ||
+    /^(cliente|clientes|cleinte|cleintes|clinete|clinetes)[._-]?sin/i.test(local) ||
+    /clientes?in/i.test(local) ||
+    /^(correo|email|mail|sincorreo|nada)\.(com|net)$/i.test(domain) ||
+    /^(a|x)@(a|x)\./i.test(email) ||
+    local.length < 2
+  );
 }
 
 function planAudience(planValue: unknown, rateValue?: unknown): PlanAudience {
@@ -191,12 +214,18 @@ export type AudienceEmailMap = Record<EmailAudience, string[]> & {
 export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   const todayIso = new Date().toISOString().slice(0, 10);
 
-  const [contacts, allMembers, pending, suppressed, recentlyActive, everActive] =
+  const [contacts, allContacts, allMembers, pending, suppressed, recentlyActive, everActive] =
     await Promise.all([
       db
         .collection<ContactDoc>(EMAIL_CONTACTS_COLLECTION)
         .find({ status: "active" })
         .project({ email: 1, category: 1, safetyReason: 1 })
+        .toArray(),
+      // Incluye active + quarantined del script de recovery (no unsubscribed).
+      db
+        .collection<ContactDoc>(EMAIL_CONTACTS_COLLECTION)
+        .find({ status: { $ne: "unsubscribed" } })
+        .project({ email: 1, status: 1 })
         .toArray(),
       db
         .collection<MemberDoc>(MEMBERS_COLLECTION)
@@ -232,6 +261,13 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   );
   const allEmailedMembers = membersWithEmail.filter(isSafeCampaignMemberEmail);
   const verifiedMembers = allEmailedMembers.filter((member) => member.emailVerified === true);
+  // Verificados de verdad (aunque el correo no pase el filtro de nombre).
+  const verifiedEmailsStrict = new Set(
+    allMembers
+      .filter((member) => member.emailVerified === true)
+      .map((member) => normalizeAudienceEmail(member.email))
+      .filter(Boolean),
+  );
 
   const blocked = new Set(suppressed.map(normalizeAudienceEmail).filter(Boolean));
   const clean = (values: unknown[]) => [
@@ -243,6 +279,26 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   const pendingEmails = clean(pending.map((row) => row.email));
   const registered = new Set(memberEmails);
   const waiting = new Set(pendingEmails);
+
+  /**
+   * Lista masiva de invitación: todos los correos recuperables sin match de nombre.
+   * Fuentes: contactos (active/quarantined), email en ficha, previousEmail en cuarentena.
+   * Fuera: verificados, suppressions, placeholders.
+   */
+  const inviteRecoverableRaw: string[] = [];
+  for (const row of allContacts) {
+    const email = normalizeAudienceEmail(row.email);
+    if (email) inviteRecoverableRaw.push(email);
+  }
+  for (const member of allMembers) {
+    const email = normalizeAudienceEmail(member.email);
+    if (email) inviteRecoverableRaw.push(email);
+    const prev = normalizeAudienceEmail(member.emailQuarantine?.previousEmail);
+    if (prev) inviteRecoverableRaw.push(prev);
+  }
+  const inviteRecoverable = clean(inviteRecoverableRaw).filter(
+    (email) => !verifiedEmailsStrict.has(email) && !isPlaceholderCampaignEmail(email),
+  );
   const activeKeys = new Set(recentlyActive);
   const everActiveKeys = new Set(everActive);
 
@@ -343,6 +399,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     claim_native: clean(claimNative),
     claim_profile: clean(claimProfile),
     claim_active_plan: clean(claimActivePlan),
+    invite_recoverable: inviteRecoverable,
     excel_recovered: clean(excelRecovered),
     imported,
     unregistered,
@@ -364,6 +421,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       ...memberEmails,
       ...claimProfile,
       ...claimActivePlan,
+      ...inviteRecoverable,
       ...excelRecovered,
     ]),
     suppressed: blocked.size,
@@ -391,6 +449,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       quarantineWithPreviousEmail,
       recoveredFromQuarantine,
       recoveredFromExcel,
+      inviteRecoverableEmails: inviteRecoverable.length,
     },
   };
 }

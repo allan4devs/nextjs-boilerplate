@@ -15,6 +15,7 @@ type AudienceId =
   | "claim_recovered"
   | "claim_native"
   | "claim_active_plan"
+  | "invite_recoverable"
   | "excel_recovered"
   | "winback_90"
   | "winback_180"
@@ -60,6 +61,7 @@ type CenterData = {
     quarantineWithPreviousEmail?: number;
     recoveredFromQuarantine?: number;
     recoveredFromExcel?: number;
+    inviteRecoverableEmails?: number;
   };
   campaigns: Array<{
     id: string;
@@ -142,6 +144,13 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     detail:
       "Sin verificar pero con plan vigente (semanal/quincenal/mensual/senior del Excel). Solo confirmar datos y PIN; no mezclar con activación.",
     group: "Confirmación",
+  },
+  {
+    id: "invite_recoverable",
+    label: "Invitar · correos recuperables",
+    detail:
+      "TODOS los correos válidos del Excel/contactos/fichas/cuarentena, sin exigir match de nombre. Excluye verificados, bajas y placeholders. Campaña para ver quién se registra con correo y cédula.",
+    group: "Invitación masiva",
   },
   {
     id: "excel_recovered",
@@ -342,6 +351,17 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
       "No es una venta nueva: es solo para que uses la app con lo que ya pagaste.\n\n" +
       "El enlace vence en 72 horas. Pura vida — Xtreme Gym, Ciudad Quesada.",
     ctaLabel: "Confirmar mis datos",
+    ctaPath: "/registro/confirmar",
+  },
+  invite_recoverable: {
+    subject: "Activá tu acceso a Xtreme Gym con tu correo",
+    title: "Registrá tu cuenta en la app de Xtreme",
+    message:
+      "Hola. Este correo aparece en la lista de contactos de Xtreme Gym (Ciudad Quesada).\n\n" +
+      "Si entrenás o entrenaste con nosotros, tocá el enlace y registrate con tu correo y tu cédula (o documento). Creás un PIN de 4 dígitos y quedás listo para usar la app, reservar y ver tu progreso.\n\n" +
+      "Si este correo no es tuyo o no querés recibir mensajes del gym, podés ignorar este mail o darte de baja al final.\n\n" +
+      "El enlace vence en 72 horas. Pura vida — equipo Xtreme Gym.",
+    ctaLabel: "Registrarme con correo y cédula",
     ctaPath: "/registro/confirmar",
   },
   excel_recovered: {
@@ -874,11 +894,12 @@ export default function EmailCampaignCenter() {
             [data?.diagnostics.totalMembers, "Socios en la base", "Incluye los importados del Excel"],
             [data?.diagnostics.membersWithUsableEmail, "Con correo usable", "Verificados y pendientes de verificar"],
             [data?.diagnostics.importedContactEmails, "Contactos reales", "Direcciones únicas recuperadas del Excel"],
+            [data?.diagnostics.inviteRecoverableEmails ?? data?.audiences.invite_recoverable, "Invitables (sin nombre)", "Todos los correos recuperables para campaña masiva"],
             [data?.diagnostics.recoveredMembers, "Fichas recuperadas", "Asignación segura y auditada"],
             [data?.diagnostics.recoveredFromExcel, "Desde Excel", "Alineados por nombre/apellidos"],
             [data?.diagnostics.recoveredFromQuarantine, "Desde cuarentena", "Re-sacados con match de nombre"],
-            [data?.diagnostics.membersWithoutUsableEmail, "Sin correo seguro", "No se pueden incluir en un envío"],
-            [(data?.diagnostics.quarantinedMembers ?? 0) + (data?.diagnostics.unsafeIdentityMatches ?? 0), "No seguros", "Aislados; nunca entran en campañas"],
+            [data?.diagnostics.membersWithoutUsableEmail, "Sin correo seguro", "No se pueden incluir en un envío seguro"],
+            [(data?.diagnostics.quarantinedMembers ?? 0) + (data?.diagnostics.unsafeIdentityMatches ?? 0), "No seguros (claim)", "Aislados de activación con match; sí entran en invitación masiva"],
           ].map(([value, label, detail]) => (
             <div key={String(label)} className="border-2 border-white/10 bg-black/40 p-3">
               <div className="text-2xl font-black text-cyan-100">{value ?? "—"}</div>

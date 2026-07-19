@@ -29,6 +29,12 @@ export type EmailAudience =
    * Separados de activación: ya tienen membresía; solo confirman datos/PIN.
    */
   | "claim_active_plan"
+  /**
+   * Invitación masiva: todos los correos recuperables del Excel/contactos/fichas
+   * sin exigir match de nombre. Excluye verificados, bajas y placeholders.
+   * Para ver quién entra y se registra con correo + cédula.
+   */
+  | "invite_recoverable"
   /** Cualquier ficha con emailRecovery (verificado o no). */
   | "excel_recovered"
   | "winback_90"

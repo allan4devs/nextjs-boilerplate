@@ -28,6 +28,7 @@ export const CLAIM_LINK_AUDIENCES = new Set([
   "claim_recovered",
   "claim_native",
   "claim_active_plan",
+  "invite_recoverable",
   "excel_recovered",
   "never_registered",
   "unregistered",
