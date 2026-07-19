@@ -162,6 +162,23 @@ export type MemberDoc = {
     at?: Date;
     source?: string;
   };
+  /** Datos conservados del Excel histórico. No son identidad verificada. */
+  legacyImport?: {
+    source?: string;
+    importedAt?: Date;
+    subscriptionVerification?: string;
+    canonicalSourceStatus?: string;
+    canonicalRate?: string;
+    rowCount?: number;
+    rows?: Array<{
+      row?: number;
+      sourceStatus?: string;
+      rate?: string;
+      rawEmail?: string;
+      [key: string]: unknown;
+    }>;
+    emailAssignment?: Record<string, unknown>;
+  };
   createdAt?: Date;
   updatedAt?: Date;
 };

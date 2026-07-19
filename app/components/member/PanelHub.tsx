@@ -9,6 +9,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
+import { trackAction } from "@/app/lib/analytics/session-client";
 
 export type HubTileTone = "lime" | "cyan" | "orange" | "yellow" | "white" | "red";
 
@@ -103,6 +104,11 @@ export default function PanelHub({
   const setSelected = (id: string | null) => {
     if (activeId === undefined) setInternalId(id);
     onActiveChange?.(id);
+    const panel = id ? panels.find((entry) => entry.id === id) : null;
+    trackAction(id ? "member_hub_opened" : "member_hub_closed", {
+      label: panel?.label ?? title ?? "Hub",
+      meta: id ? { panel: id } : undefined,
+    });
   };
 
   const active = panels.find((p) => p.id === selectedId) ?? null;
@@ -142,6 +148,7 @@ export default function PanelHub({
                 key={panel.id}
                 type="button"
                 onClick={() => setSelected(panel.id)}
+                data-analytics={`Panel: ${panel.label}`}
                 aria-pressed={isOn}
                 className={`min-w-[108px] shrink-0 border-[3px] p-2.5 text-left transition ${
                   isOn ? tone.active : `${tone.idle} text-white`
@@ -165,6 +172,7 @@ export default function PanelHub({
                 key={panel.id}
                 type="button"
                 onClick={() => setSelected(panel.id)}
+                data-analytics={`Panel: ${panel.label}`}
                 className={`group relative flex min-h-[118px] flex-col items-start justify-between border-[3px] p-3.5 text-left shadow-[4px_4px_0_rgba(0,0,0,.5)] transition active:translate-x-px active:translate-y-px active:shadow-none sm:min-h-[132px] sm:p-4 ${tone.idle}`}
               >
                 {panel.badge && (

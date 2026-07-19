@@ -12,6 +12,7 @@ import {
   Camera,
   CreditCard,
   Goal,
+  HelpCircle,
   Loader2,
   LogOut,
   Pin,
@@ -576,6 +577,41 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
               </span>
             </span>
           </a>
+        </div>
+      ),
+    },
+    {
+      id: "ayuda",
+      label: "Ayuda y legal",
+      hint: "App, normas y privacidad",
+      icon: HelpCircle,
+      tone: "yellow",
+      content: (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold leading-6 text-white/55">
+            Guías del Member OS, normas del gym, condiciones de uso y privacidad.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[
+              { href: "/ayuda", label: "Centro de ayuda", detail: "PIN, reservas, primer día" },
+              { href: "/preguntas", label: "Preguntas", detail: "FAQ antes de venir" },
+              { href: "/normas", label: "Normas del gym", detail: "Convivencia y equipo" },
+              { href: "/terminos", label: "Condiciones", detail: "Uso del servicio y app" },
+              { href: "/privacidad", label: "Privacidad", detail: "Tus datos y opciones" },
+              { href: "/contacto", label: "Contacto", detail: "WhatsApp y horario" },
+            ].map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                className="border border-white/12 bg-black/30 px-3 py-3 transition hover:border-[#d8ff3e]/50"
+              >
+                <span className="block text-xs font-black uppercase text-[#d8ff3e]">{item.label}</span>
+                <span className="mt-1 block text-[11px] font-semibold text-white/45">{item.detail}</span>
+              </a>
+            ))}
+          </div>
         </div>
       ),
     },

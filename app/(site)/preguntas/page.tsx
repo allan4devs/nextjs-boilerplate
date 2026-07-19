@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import PageHero from "../../components/PageHero";
 import CtaBand from "../../components/CtaBand";
 import JsonLd from "../../components/JsonLd";
+import { LegalDocNav } from "../../components/LegalDoc";
 import { FAQS, waLink } from "../../lib/site";
 import { faqJsonLd, pageMetadata } from "../../lib/seo";
 import { MessageCircle } from "lucide-react";
@@ -21,10 +23,12 @@ export default function PreguntasPage() {
         eyebrow="Preguntas"
         title="Lo que la gente"
         highlight="pregunta antes de llegar."
-        text="Revisá las respuestas y conocé los planes disponibles para empezar a tu ritmo."
+        text="Respuestas cortas sobre planes, app, PIN, reservas y tu primera visita. Para el detalle legal y las normas, usá el Centro de ayuda."
         image="/xtreme/recepcion-sala-espera.webp"
         imageAlt="Recepción y sala de espera de Xtreme Gym"
-      />
+      >
+        <LegalDocNav current="preguntas" />
+      </PageHero>
 
       <section className="px-5 py-16 sm:px-8 lg:py-20">
         <div className="mx-auto max-w-4xl">
@@ -42,13 +46,21 @@ export default function PreguntasPage() {
             ))}
           </div>
 
-          <a
-            href={waLink("Hola Xtreme Gym, tengo una pregunta antes de empezar.")}
-            className="mt-10 inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
-          >
-            Preguntar por WhatsApp
-            <MessageCircle className="h-4 w-4" />
-          </a>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <a
+              href={waLink("Hola Xtreme Gym, tengo una pregunta antes de empezar.")}
+              className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white"
+            >
+              Preguntar por WhatsApp
+              <MessageCircle className="h-4 w-4" />
+            </a>
+            <Link
+              href="/ayuda"
+              className="inline-flex min-h-12 items-center border border-white/20 px-5 font-black uppercase text-white transition hover:border-[#f6c400]"
+            >
+              Centro de ayuda
+            </Link>
+          </div>
         </div>
       </section>
 

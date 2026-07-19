@@ -21,8 +21,8 @@ export default function SiteFooter() {
   if (isOsSurface(pathname)) return null;
 
   const english = pathname === "/en" || pathname.startsWith("/en/");
-  const navLabels = ["Training", "Prices", "Seniors", "App", "FAQ", "Contact"];
-  const englishHrefs = ["/en/training", "/en/prices", "/en/seniors", "/app", "/en/faq", "/en/contact"];
+  const navLabels = ["Training", "Prices", "Seniors", "App", "Help", "Contact"];
+  const englishHrefs = ["/en/training", "/en/prices", "/en/seniors", "/app", "/ayuda", "/en/contact"];
 
   const showMobileCta = !pathname.startsWith("/gracias") && !pathname.startsWith("/registro");
 
@@ -83,12 +83,33 @@ export default function SiteFooter() {
           </nav>
         </div>
 
-        <div className="mx-auto mt-10 flex max-w-7xl flex-col gap-3 border-t border-white/10 pt-6 text-sm font-bold text-white/40 sm:flex-row sm:items-center sm:justify-between">
-          <span>Xtreme Gym - Ciudad Quesada, Barrio San Pablo</span>
-          <span className="inline-flex items-center gap-2">
-            <Star className="h-4 w-4 text-[#f6c400]" />
-            {english ? "Habits, movement and progress" : "Hábitos, movimiento y progreso"}
-          </span>
+        <div className="mx-auto mt-10 max-w-7xl border-t border-white/10 pt-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm font-bold text-white/40">
+              Xtreme Gym · Ciudad Quesada, Barrio San Pablo
+            </span>
+            <span className="inline-flex items-center gap-2 text-sm font-bold text-white/40">
+              <Star className="h-4 w-4 text-[#f6c400]" />
+              {english ? "Habits, movement and progress" : "Hábitos, movimiento y progreso"}
+            </span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-black uppercase tracking-[0.12em] text-white/35">
+            <Link href="/ayuda" className="transition hover:text-[#f6c400]">
+              {english ? "Help" : "Ayuda"}
+            </Link>
+            <Link href="/preguntas" className="transition hover:text-[#f6c400]">
+              {english ? "FAQ" : "Preguntas"}
+            </Link>
+            <Link href="/normas" className="transition hover:text-[#f6c400]">
+              {english ? "House rules" : "Normas"}
+            </Link>
+            <Link href="/terminos" className="transition hover:text-[#f6c400]">
+              {english ? "Terms" : "Condiciones"}
+            </Link>
+            <Link href="/privacidad" className="transition hover:text-[#f6c400]">
+              {english ? "Privacy" : "Privacidad"}
+            </Link>
+          </div>
         </div>
       </footer>
 

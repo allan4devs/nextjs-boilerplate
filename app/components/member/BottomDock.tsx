@@ -17,7 +17,7 @@ export default function BottomDock({ os, showChat = false }: { os: MemberOs; sho
 
   return (
     <nav
-      className={`xg-app-dock xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden ${showChat ? "pr-[20%]" : ""}`}
+      className={`xg-app-dock xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden ${showChat ? "xg-app-dock-with-chat" : ""}`}
       aria-label="Navegación principal"
     >
       {DOCK_TABS.map((item) => (

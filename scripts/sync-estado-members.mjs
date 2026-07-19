@@ -1,7 +1,7 @@
 /**
- * Sincroniza plan, fecha de vencimiento y cedula desde estado.xlsx hacia
- * socios que YA existen en Mongo. El Excel es la fuente de verdad para esos
- * tres campos; no crea socios ni modifica correo, telefono u otros datos.
+ * Sincroniza plan, tarifa, estado histórico, fecha de vencimiento y cédula
+ * desde estado.xlsx hacia socios que YA existen en Mongo. No crea socios ni
+ * modifica correos: el Excel tiene placeholders y correos cruzados.
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { MongoClient } from "mongodb";
@@ -70,6 +70,7 @@ for (let index = 0; index < rows.length; index += 1) {
     memberName,
     sourceStatus: clean(row.Estado),
     plan: clean(row.Plan),
+    rate: clean(row["x Tarifa"]),
     cedula: digits(row.Cedula),
     expiresOn: excelDate(row["Fecha vence"]),
   };
@@ -98,7 +99,7 @@ try {
   const db = client.db(process.env.MONGODB_DB?.trim() || "xtreme_gym");
   const collection = db.collection("xtreme_gym_members");
   const members = await collection
-    .find({}, { projection: { memberName: 1, normalizedName: 1, cedula: 1, membership: 1 } })
+    .find({}, { projection: { memberName: 1, normalizedName: 1, cedula: 1, membership: 1, legacyImport: 1 } })
     .toArray();
 
   const mongoByName = new Map();
@@ -145,11 +146,16 @@ try {
     }
 
     const member = hits[0];
+    const rate = canonical.rate || group.find((item) => item.rate)?.rate || "";
     const { daysRemaining, status } = membershipStatus(canonical.expiresOn);
     const set = {
       "membership.plan": canonical.plan,
       "membership.nextBillingDate": canonical.expiresOn,
       "membership.status": status,
+      "legacyImport.source": "scripts/estado.xlsx",
+      "legacyImport.canonicalSourceStatus": canonical.sourceStatus,
+      "legacyImport.canonicalRate": rate,
+      "legacyImport.rowCount": group.length,
       updatedAt: now,
     };
     if (cedula) set.cedula = cedula;
@@ -158,9 +164,21 @@ try {
       plan: clean(member.membership?.plan),
       expiresOn: clean(member.membership?.nextBillingDate),
       cedula: digits(member.cedula),
+      rate: clean(member.legacyImport?.canonicalRate),
+      sourceStatus: clean(member.legacyImport?.canonicalSourceStatus),
     };
-    const after = { plan: canonical.plan, expiresOn: canonical.expiresOn, cedula: cedula || before.cedula };
-    const changed = before.plan !== after.plan || before.expiresOn !== after.expiresOn || before.cedula !== after.cedula;
+    const after = {
+      plan: canonical.plan,
+      expiresOn: canonical.expiresOn,
+      cedula: cedula || before.cedula,
+      rate,
+      sourceStatus: canonical.sourceStatus,
+    };
+    const changed = before.plan !== after.plan ||
+      before.expiresOn !== after.expiresOn ||
+      before.cedula !== after.cedula ||
+      before.rate !== after.rate ||
+      before.sourceStatus !== after.sourceStatus;
     changes.push({
       _id: member._id,
       key: normalizedName(member.normalizedName) || key,
@@ -212,8 +230,18 @@ try {
     writeResult,
     changes: changed.map(({ _id, key, set, before, after, ...item }) => ({
       ...item,
-      before: { plan: before.plan, expiresOn: before.expiresOn },
-      after: { plan: after.plan, expiresOn: after.expiresOn },
+      before: {
+        plan: before.plan,
+        expiresOn: before.expiresOn,
+        rate: before.rate,
+        sourceStatus: before.sourceStatus,
+      },
+      after: {
+        plan: after.plan,
+        expiresOn: after.expiresOn,
+        rate: after.rate,
+        sourceStatus: after.sourceStatus,
+      },
       cedulaChanged: before.cedula !== after.cedula,
     })),
     unmatchedExcel,

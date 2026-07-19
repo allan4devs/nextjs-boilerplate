@@ -48,7 +48,7 @@ try {
     $headers[$column] = Get-CellValue $cell $sharedStrings
   }
 
-  $required = @("Nombre", "Apellidos", "Plan", "Cedula", "Fecha vence")
+  $required = @("Estado", "Nombre", "Apellidos", "Plan", "Cedula", "Fecha vence", "Correo", "x Tarifa")
   foreach ($name in $required) {
     if ($headers.Values -notcontains $name) { throw "Falta la columna requerida: $name" }
   }

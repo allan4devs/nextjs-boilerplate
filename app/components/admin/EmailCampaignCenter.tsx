@@ -27,6 +27,17 @@ type AudienceId =
   | "all";
 type CenterData = {
   audiences: Record<AudienceId, number> & { suppressed: number };
+  diagnostics: {
+    totalMembers: number;
+    membersWithUsableEmail: number;
+    membersWithoutUsableEmail: number;
+    verifiedMembers: number;
+    unverifiedMembers: number;
+    quarantinedMembers: number;
+    quarantinePlaceholder: number;
+    quarantineShared: number;
+    quarantineMismatch: number;
+  };
   campaigns: Array<{
     id: string;
     subject: string;
@@ -57,12 +68,22 @@ type RecipientPreview = {
   nextBillingDate: string;
 };
 
+type MemberCoverage = {
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  plan: string;
+  rate: string;
+  sourceStatus: string;
+  quarantineReason: string;
+  quarantinedEmail: string;
+};
+
 const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string }> = [
   {
     id: "claim_profile",
     label: "Verificar correo (sin verificar)",
-    detail:
-      "Correos en ficha sin verificar. Plantilla: verificar mail y confirmar nombre completo, teléfono y cédula/ID (el reimport suele traerlos mal).",
+    detail: "Correos en ficha sin verificar. Ideal para invitar a activar la app.",
   },
   {
     id: "winback_90",
@@ -77,28 +98,27 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string }> = [
   {
     id: "winback_365",
     label: "Win-back +1 año",
-    detail: "Vencidos hace más de un año. Muy antiguos; invitalos a reactivar y corregir datos.",
+    detail: "Vencidos hace más de un año. Invitá a reactivar el acceso.",
   },
   {
     id: "possible_foreign",
     label: "Posibles extranjeros",
-    detail:
-      "Señal blanda (DIMEX / doc 8–12 dígitos / nombres). No uses cédula como verdad: el correo confirma y corrige datos.",
+    detail: "Señal blanda (DIMEX / doc 8–12 dígitos / nombres). Activación por correo.",
   },
-  { id: "never_registered", label: "Nunca registrados", detail: "Contactos importados o con invitación pendiente que todavía no tienen perfil verificado" },
-  { id: "unregistered", label: "Importados sin registro", detail: "Contactos de la lista importada que no tienen perfil ni invitación pendiente" },
+  { id: "never_registered", label: "Nunca registrados", detail: "Contactos o invitaciones pendientes sin perfil verificado" },
+  { id: "unregistered", label: "Importados sin registro", detail: "Contactos de la lista importada sin perfil ni invitación" },
   { id: "pending", label: "Registro pendiente", detail: "Pidieron acceso, pero aún no confirmaron su correo" },
   { id: "never_opened", label: "Nunca entraron a la app", detail: "Socios con correo verificado sin ninguna apertura de la app" },
   { id: "inactive", label: "Sin abrir app 14 d", detail: "Socios verificados sin apertura en los últimos 14 días" },
-  { id: "members", label: "Socios verificados", detail: "Perfiles con correo ya verificado (seguro para avisos de cuenta)" },
-  { id: "plan_week", label: "Plan semanal", detail: "Socios verificados con plan semanal" },
-  { id: "plan_fortnight", label: "Plan quincenal", detail: "Socios verificados con plan quincenal" },
-  { id: "plan_month", label: "Plan mensual", detail: "Socios verificados con plan mensual" },
-  { id: "plan_quarter", label: "Plan trimestral", detail: "Socios verificados con plan trimestral" },
-  { id: "plan_free_day", label: "Primer día gratis", detail: "Socios verificados con plan de primer día gratis" },
-  { id: "plan_senior", label: "Adultos mayores", detail: "Socios verificados con plan o clases de adultos mayores" },
-  { id: "no_plan", label: "Sin plan", detail: "Socios verificados sin tipo de plan asignado" },
-  { id: "plan_other", label: "Otros planes", detail: "Socios verificados con un plan fuera de las categorías principales" },
+  { id: "members", label: "Socios verificados", detail: "Perfiles con correo ya verificado" },
+  { id: "plan_week", label: "Plan semanal", detail: "Correos únicos con tarifa semanal; recupera x Tarifa del Excel" },
+  { id: "plan_fortnight", label: "Plan quincenal", detail: "Correos únicos con tarifa quincenal; recupera x Tarifa del Excel" },
+  { id: "plan_month", label: "Plan mensual", detail: "Correos únicos con tarifa mensual; recupera x Tarifa del Excel" },
+  { id: "plan_quarter", label: "Plan trimestral", detail: "Correos únicos con plan trimestral" },
+  { id: "plan_free_day", label: "Diario / primer día", detail: "Tarifa diaria o plan de primer día gratis" },
+  { id: "plan_senior", label: "Adultos mayores", detail: "Plan o clases de adultos mayores con correo usable" },
+  { id: "no_plan", label: "Sin plan", detail: "Correos usables sin tipo de plan ni tarifa asignada" },
+  { id: "plan_other", label: "Otros planes", detail: "Planes especiales o matrícula fuera de las categorías principales" },
   { id: "imported", label: "Lista importada", detail: "Contactos activos pegados o cargados desde una hoja" },
   { id: "all", label: "Todos, sin duplicados", detail: "Importados, pendientes, claim y socios consolidados" },
 ];
@@ -126,36 +146,28 @@ type CampaignTemplate = {
   ctaPath: string;
 };
 
-const CLAIM_REMINDER =
-  "Importante: tu correo es la llave de la cuenta. Nombre, teléfono y cédula del sistema viejo pueden venir mal por el reimport. Al verificar el correo, revisá y corregí los tres vos mismo.";
-
-/** Plantillas listas por audiencia — tono tico, claro, sin regalar promesas falsas. */
+/** Plantillas listas por audiencia — tono tico, claro y positivo. */
 const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
   claim_profile: {
-    subject: "Verificá tu correo en Xtreme Gym (nombre, teléfono y cédula)",
-    title: "Falta un paso: verificar este correo",
+    subject: "Activá tu acceso a Xtreme Gym",
+    title: "Te estamos esperando en la app",
     message:
-      "Hola. Este correo aparece en Xtreme Gym, pero todavía no está verificado.\n\n" +
-      "Queremos que actives tu cuenta de forma segura. El sistema viejo trajo muchos datos mal (sobre todo cédulas). Por eso el primer paso es el correo, no la cédula del archivo.\n\n" +
+      "Hola. Este correo está en Xtreme Gym y solo falta activar tu acceso.\n\n" +
       "Qué tenés que hacer:\n" +
-      "1) Pedí en recepción o al admin un enlace de invitación a ESTE correo (o abrí el que ya te mandamos).\n" +
-      "2) Al abrirlo, verificás el correo y revisás tres datos:\n" +
-      "   • Nombre completo (como en tu cédula o pasaporte)\n" +
-      "   • Teléfono (con WhatsApp si podés)\n" +
-      "   • Cédula o documento de identidad (corregí si el import la tenía mal)\n" +
-      "3) Creás tu PIN de 4 dígitos y entrás a la app.\n\n" +
-      `${CLAIM_REMINDER}\n\n` +
-      "Si este correo no es tuyo, ignorá el mensaje o desuscribite al pie. Pura vida — equipo Xtreme, Ciudad Quesada.",
-    ctaLabel: "Ir a la app / activar",
+      "1) Pedí en recepción un enlace a ESTE correo (o abrí el que ya te mandamos).\n" +
+      "2) Confirmá nombre, teléfono y cédula.\n" +
+      "3) Creá tu PIN de 4 dígitos y entrás a la app.\n\n" +
+      "Con la app reservás clases, marcás entrenos y usás tu carné digital.\n\n" +
+      "Pura vida — equipo Xtreme, Ciudad Quesada.",
+    ctaLabel: "Ir a la app",
     ctaPath: "/app",
   },
   winback_90: {
-    subject: "Te extrañamos en Xtreme — volvé en 2 minutos",
+    subject: "Te extrañamos en Xtreme — volvé cuando quieras",
     title: "Tu membresía venció hace poco",
     message:
       "Hola. Hace unos meses se te venció el plan en Xtreme Gym y nos encantaría verte de nuevo en el piso.\n\n" +
-      `${CLAIM_REMINDER}\n\n` +
-      "Si todavía no activaste la app: pedí el enlace a este correo, revisá nombre y cédula, y reactivamos tu plan en recepción o en Precios.\n\n" +
+      "Activá la app con este correo o pasá a recepción / Precios para reactivar tu plan.\n\n" +
       "Ciudad Quesada · Barrio San Pablo. Pura vida.",
     ctaLabel: "Ver planes y volver",
     ctaPath: "/precios",
@@ -164,71 +176,66 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     subject: "¿Volvemos a entrenar en Xtreme Gym?",
     title: "Medio año sin verte en el gym",
     message:
-      "Hola. Hace entre 6 y 12 meses se te venció la membresía en Xtreme Gym.\n\n" +
-      "El gym sigue con fuerza, máquinas y app de socios. Si querés regresar, este correo es tu contacto: " +
-      "activá la cuenta con un enlace de invitación, corregí nombre y cédula (el reimport a menudo las traía mal) y elegí plan de nuevo.\n\n" +
-      `${CLAIM_REMINDER}`,
+      "Hola. Hace un tiempo se te venció la membresía en Xtreme Gym.\n\n" +
+      "El gym sigue con fuerza, máquinas y app de socios. Si querés regresar, activá tu acceso y elegí plan de nuevo.\n\n" +
+      "Te esperamos en Ciudad Quesada.",
     ctaLabel: "Quiero volver",
     ctaPath: "/precios",
   },
   winback_365: {
-    subject: "Xtreme Gym te recuerda — hace más de un año",
+    subject: "Xtreme Gym te recuerda",
     title: "Siempre hay un buen día para volver",
     message:
-      "Hola. Hace más de un año que tu plan en Xtreme Gym no está activo. Si en algún momento entrenaste con nosotros, la puerta sigue abierta.\n\n" +
-      "Estamos renovando la forma de entrar: el correo manda, y al activar tu ficha vos confirmás que el nombre y la cédula estén bien (no confíes en la cédula vieja del sistema anterior).\n\n" +
+      "Hola. Hace un buen rato que tu plan en Xtreme Gym no está activo. Si en algún momento entrenaste con nosotros, la puerta sigue abierta.\n\n" +
       "Escribinos, pasá a recepción o mirá los planes. Te esperamos en Ciudad Quesada.",
     ctaLabel: "Ver Xtreme de nuevo",
     ctaPath: "/",
   },
   possible_foreign: {
-    subject: "Xtreme Gym · confirmá tu acceso (documento / residencia)",
-    title: "Activá tu cuenta con tu correo",
+    subject: "Activá tu acceso a Xtreme Gym",
+    title: "Tu cuenta con tu correo",
     message:
-      "Hola. Este mensaje es para personas en nuestra base que pueden tener documento de residencia u otro doc (no solo cédula nacional CR).\n\n" +
-      "En la app nueva, el primer ingreso no se basa en la cédula del archivo viejo: usás el enlace a tu correo, revisás nombre y número de documento, y los corregís si hace falta.\n\n" +
-      `${CLAIM_REMINDER}\n\n` +
-      "Si necesitás ayuda con el documento en recepción, con gusto te atendemos.",
+      "Hola. En Xtreme Gym podés activar tu acceso con este correo, sin importar si usás cédula nacional u otro documento.\n\n" +
+      "Abrí el enlace de invitación, confirmá tus datos y creá tu PIN. Si necesitás ayuda en recepción, con gusto te atendemos.",
     ctaLabel: "Ir a la app",
     ctaPath: "/app",
   },
   never_registered: {
     subject: "Tu acceso a Xtreme Gym te está esperando",
-    title: "Activá tu cuenta por correo",
+    title: "Activá tu cuenta",
     message:
-      "Hola. En Xtreme Gym ya tenés contacto o ficha, pero todavía no activaste el acceso a la app.\n\n" +
-      `${CLAIM_REMINDER}\n\n` +
-      "Pedí o abrí el enlace de invitación a este correo, corregí nombre y cédula, creá tu PIN y listo. Así reservás y usás el carné digital.",
+      "Hola. En Xtreme Gym ya tenés contacto, pero todavía no activaste el acceso a la app.\n\n" +
+      "Pedí o abrí el enlace a este correo, completá tu perfil, creá tu PIN y listo. Así reservás y usás tu carné digital.",
     ctaLabel: "Activar mi acceso",
     ctaPath: "/app",
   },
   unregistered: {
-    subject: "Volvé a Xtreme Gym — tu cupo te espera en Ciudad Quesada",
+    subject: "Volvé a Xtreme Gym — Ciudad Quesada",
     title: "Te extrañamos en el piso",
     message:
       "Hola. Estamos armando de nuevo la comunidad de Xtreme Gym con app, reservas y planes claros.\n\n" +
-      "Si entrenabas con nosotros o te dejaron en la lista del gym, registrate con tu correo (no con una cédula del archivo viejo). Al confirmar, vos ponés nombre y cédula correctos.\n\n" +
+      "Si entrenabas con nosotros, registrate con tu correo y activá tu acceso.\n\n" +
       "Primer día gratis si es tu primera vez, o elegí plan. Barrio San Pablo, Ciudad Quesada.",
     ctaLabel: "Quiero mi primer día gratis",
     ctaPath: "/primer-dia",
   },
   pending: {
     subject: "Te falta un paso: confirmá tu correo en Xtreme",
-    title: "Tu registro quedó a medias",
+    title: "Terminá tu registro",
     message:
-      "Hola. Empezaste el registro en Xtreme Gym pero todavía no confirmaste el correo.\n\n" +
-      "Sin ese paso no podés crear tu PIN. Abrí el enlace del correo anterior (si venció, regístrate de nuevo) y al completar el perfil revisá que nombre y cédula estén bien.\n\n" +
-      `${CLAIM_REMINDER}`,
+      "Hola. Empezaste el registro en Xtreme Gym y solo falta confirmar el correo.\n\n" +
+      "Abrí el enlace del correo anterior (si venció, regístrate de nuevo), completá tu perfil y creá tu PIN.\n\n" +
+      "¡Nos vemos en el gym!",
     ctaLabel: "Terminar mi registro",
     ctaPath: "/primer-dia",
   },
   never_opened: {
     subject: "Ya tenés cuenta en Xtreme — abrí la app",
-    title: "Tu Member OS te está esperando",
+    title: "Tu app te está esperando",
     message:
-      "Hola. Tu correo ya está verificado en Xtreme Gym, pero todavía no abriste la app.\n\n" +
-      "Entrá con la cédula que confirmaste al registrarte (no una del Excel viejo si la corregiste) y tu PIN. Si nunca creaste el PIN, pedí código al correo o ayuda en recepción.\n\n" +
-      "Cualquier duda escribinos por WhatsApp o pasá por el gym.",
+      "Hola. Tu correo ya está listo en Xtreme Gym, pero todavía no abriste la app.\n\n" +
+      "Entrá con tu cédula y tu PIN. Si todavía no creaste el PIN, pedí el código al correo desde la app.\n\n" +
+      "Cualquier duda, WhatsApp o recepción. Pura vida.",
     ctaLabel: "Abrir mi app",
     ctaPath: "/app",
   },
@@ -237,17 +244,17 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     title: "Tu racha te extraña",
     message:
       "Hola. Hace un tiempo no abrís la app ni marcás entrenos en Xtreme Gym.\n\n" +
-      "El piso sigue listo. Entrá a la app, revisá tu plan o pasá a recepción. Si tu cédula o nombre se ven raros, actualizalos en Perfil — el reimport del sistema viejo a veces fallaba.\n\n" +
+      "El piso sigue listo. Entrá a la app, revisá tu plan o pasá a recepción.\n\n" +
       "Cuando quieras, te recibimos en Ciudad Quesada. Pura vida.",
     ctaLabel: "Volver a la app",
     ctaPath: "/app",
   },
   members: {
-    subject: "Novedades Xtreme Gym — tu app y el gym",
+    subject: "Novedades Xtreme Gym",
     title: "Para vos que ya sos de la casa",
     message:
-      "Hola. Este correo es para socios con correo ya verificado en Xtreme Gym.\n\n" +
-      "Con la app reservás clases, marcás entrenos y llevás tu carné digital. Si algo del perfil (nombre o cédula) quedó mal del sistema viejo, corregilo en Perfil o en recepción.\n\n" +
+      "Hola. Este correo es para socios con acceso activo en Xtreme Gym.\n\n" +
+      "Con la app reservás clases, marcás entrenos y llevás tu carné digital.\n\n" +
       "Gracias por entrenar con nosotros. Nos vemos en el piso.",
     ctaLabel: "Ir a mi app",
     ctaPath: "/app",
@@ -415,6 +422,10 @@ export default function EmailCampaignCenter() {
   const [recipients, setRecipients] = useState<RecipientPreview[]>([]);
   const [recipientsBusy, setRecipientsBusy] = useState(false);
   const [recipientSearch, setRecipientSearch] = useState("");
+  const [coverage, setCoverage] = useState<MemberCoverage[] | null>(null);
+  const [coverageBusy, setCoverageBusy] = useState(false);
+  const [coverageSearch, setCoverageSearch] = useState("");
+  const [coverageFilter, setCoverageFilter] = useState<"all" | "sendable" | "missing" | "quarantined">("all");
   const [form, setForm] = useState(() => {
     const seed = templateFor("claim_profile");
     return {
@@ -436,6 +447,16 @@ export default function EmailCampaignCenter() {
       `${item.name} ${item.email} ${item.source} ${item.plan}`.toLocaleLowerCase("es-CR").includes(query),
     );
   }, [recipientSearch, recipients]);
+  const filteredCoverage = useMemo(() => {
+    const query = coverageSearch.trim().toLocaleLowerCase("es-CR");
+    return (coverage ?? []).filter((item) => {
+      if (coverageFilter === "sendable" && !item.email) return false;
+      if (coverageFilter === "missing" && item.email) return false;
+      if (coverageFilter === "quarantined" && !item.quarantineReason) return false;
+      return !query || `${item.name} ${item.email} ${item.quarantinedEmail} ${item.plan} ${item.rate} ${item.sourceStatus}`
+        .toLocaleLowerCase("es-CR").includes(query);
+    });
+  }, [coverage, coverageFilter, coverageSearch]);
 
   function applyTemplate(audience: AudienceId = form.audience) {
     const next = templateFor(audience);
@@ -467,6 +488,21 @@ export default function EmailCampaignCenter() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  async function loadCoverage() {
+    setCoverageBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/xtreme/admin/email?coverage=1", { cache: "no-store" });
+      const json = (await response.json()) as { memberCoverage?: MemberCoverage[]; error?: string };
+      if (!response.ok) throw new Error(json.error || "No se pudo cargar la auditoría.");
+      setCoverage(json.memberCoverage ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cargar la auditoría.");
+    } finally {
+      setCoverageBusy(false);
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -532,14 +568,71 @@ export default function EmailCampaignCenter() {
             <h2 className="font-black uppercase">Centro de correos</h2>
           </div>
           <p className="mt-2 max-w-3xl text-sm font-semibold text-white/55">
-            Importá contactos, armá audiencias y enviá en lotes. El correo es la fuente de
-            verdad para reclamar ficha; la cédula del reimport no manda. Bajas se excluyen solas.
+            Importá contactos, armá audiencias y enviá en lotes. Las bajas de marketing se
+            excluyen solas; recibos y códigos de cuenta siempre se entregan.
           </p>
         </div>
         <button type="button" onClick={() => void load()} className="inline-flex min-h-11 items-center gap-2 border-2 border-white/20 px-3 text-xs font-black uppercase"><RefreshCw className={`h-4 w-4 ${busy === "load" ? "animate-spin" : ""}`} />Actualizar</button>
       </div>
 
       {(notice || error) && <div className={`border-[3px] px-4 py-3 text-sm font-bold ${error ? "border-red-400/50 bg-red-500/10 text-red-200" : "border-lime-300/50 bg-lime-300/10 text-lime-100"}`}>{error || notice}</div>}
+
+      <section className="border-[3px] border-cyan-300/30 bg-cyan-300/[0.04] p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-black uppercase text-cyan-100">Cobertura real de la base</h3>
+            <p className="mt-2 max-w-3xl text-xs font-semibold leading-relaxed text-white/50">
+              Un socio sin correo no está borrado ni oculto: sigue en la base, pero no puede recibir campañas. Los conteos de abajo separan fichas de socios y destinatarios reales.
+            </p>
+          </div>
+          <button type="button" disabled={coverageBusy} onClick={() => void loadCoverage()} className="inline-flex min-h-10 items-center gap-2 border-2 border-cyan-300/40 px-3 text-[10px] font-black uppercase text-cyan-100 disabled:opacity-40">
+            {coverageBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+            {coverage ? "Recargar auditoría" : "Ver los socios"}
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            [data?.diagnostics.totalMembers, "Socios en la base", "Incluye los importados del Excel"],
+            [data?.diagnostics.membersWithUsableEmail, "Con correo usable", "Verificados y pendientes de verificar"],
+            [data?.diagnostics.membersWithoutUsableEmail, "Sin correo usable", "No se pueden incluir en un envío"],
+            [data?.diagnostics.quarantinedMembers, "En cuarentena", "Correo dudoso conservado para revisión"],
+          ].map(([value, label, detail]) => (
+            <div key={String(label)} className="border-2 border-white/10 bg-black/40 p-3">
+              <div className="text-2xl font-black text-cyan-100">{value ?? "—"}</div>
+              <div className="mt-1 text-[10px] font-black uppercase tracking-wide text-white">{label}</div>
+              <div className="mt-1 text-[10px] font-semibold text-white/35">{detail}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] font-semibold text-white/45">
+          Cuarentena: {data?.diagnostics.quarantineShared ?? "—"} compartidos entre fichas · {data?.diagnostics.quarantineMismatch ?? "—"} no coincidían con el nombre · {data?.diagnostics.quarantinePlaceholder ?? "—"} eran placeholders como “sin correo”.
+        </p>
+        {coverage && (
+          <div className="mt-4 border-2 border-white/10 bg-black/40 p-3">
+            <div className="flex flex-wrap gap-2">
+              {([
+                ["all", "Todos"], ["sendable", "Con correo"], ["missing", "Sin correo"], ["quarantined", "Cuarentena"],
+              ] as const).map(([id, label]) => (
+                <button key={id} type="button" onClick={() => setCoverageFilter(id)} className={`min-h-9 border-2 px-3 text-[10px] font-black uppercase ${coverageFilter === id ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/15 text-white/55"}`}>{label}</button>
+              ))}
+            </div>
+            <input value={coverageSearch} onChange={(event) => setCoverageSearch(event.target.value)} placeholder="Buscar nombre, correo, plan, tarifa o estado del Excel" className="mt-3 min-h-10 w-full border-2 border-white/15 bg-black px-3 text-xs font-semibold text-white outline-none focus:border-cyan-300" />
+            <div className="mt-2 text-[10px] font-black uppercase text-cyan-100">{filteredCoverage.length} de {coverage.length} socios</div>
+            <div className="mt-2 max-h-80 overflow-y-auto border border-white/10">
+              {filteredCoverage.map((member, index) => (
+                <div key={`${member.name}-${member.email}-${index}`} className="grid gap-1 border-b border-white/10 px-3 py-2 text-xs last:border-b-0 lg:grid-cols-[1.2fr_1fr_1fr] lg:items-center">
+                  <div className="min-w-0"><div className="truncate font-black text-white">{member.name}</div><div className={`truncate font-semibold ${member.email ? "text-cyan-100/70" : "text-orange-200/70"}`}>{member.email || "Sin correo usable"}</div></div>
+                  <div className="font-semibold text-white/45">{member.rate || member.plan || "Sin tarifa"}{member.sourceStatus ? ` · ${member.sourceStatus}` : ""}</div>
+                  <div className="min-w-0 font-semibold text-white/35 lg:text-right">
+                    <div>{member.email ? (member.emailVerified ? "Verificado" : "Pendiente de verificar") : member.quarantineReason ? `Cuarentena: ${member.quarantineReason}` : "No venía correo usable"}</div>
+                    {!member.email && member.quarantinedEmail && <div className="truncate text-orange-200/60">Anterior: {member.quarantinedEmail}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {AUDIENCES.map((item) => <div key={item.id} className="border-2 border-white/15 bg-[#0c0c0c] p-4"><div className="text-2xl font-black text-lime-200">{data?.audiences[item.id] ?? "—"}</div><div className="mt-1 text-xs font-black uppercase">{item.label}</div><p className="mt-2 text-xs font-semibold leading-relaxed text-white/40">{item.detail}</p></div>)}

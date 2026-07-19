@@ -94,12 +94,17 @@ export async function POST(req: NextRequest) {
             : result.code === "cutoff" || result.code === "wrong_class"
               ? 409
               : 400;
+      const needsAccess =
+        result.code === "payment_required" ||
+        result.code === "expired" ||
+        result.code === "limit_reached";
       return NextResponse.json(
         {
           error: result.message,
           code: result.code,
-          paymentRequired: result.code === "payment_required" || result.code === "expired",
-          checkoutOptionId: "day-pass",
+          paymentRequired: needsAccess,
+          checkoutOptionId:
+            result.code === "expired" || result.code === "limit_reached" ? "month" : "day-pass",
           trainingId,
           trainingDate,
           reservations: await sessionSnapshot(db, trainingDate, sessionOrErr.memberKey),

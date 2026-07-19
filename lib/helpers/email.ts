@@ -87,6 +87,8 @@ export async function sendEmail(args: {
   to: string | string[];
   subject: string;
   html: string;
+  /** Texto plano: mejora entrega y lectura del código OTP en clientes simples. */
+  text?: string;
   cc?: string[];
   optional?: boolean;
   managePreferences?: boolean;
@@ -135,9 +137,9 @@ export async function sendEmail(args: {
       ? absoluteAppUrl("/api/xtreme/email-preferences?token=" + encodeURIComponent(token))
       : "";
     const preferencesHtml = preferencesUrl
-      ? '<p style="margin:14px 0 0;color:#8a8a84;font-size:12px;line-height:1.6;">Si prefieres no recibir recordatorios o novedades, <a href="' +
+      ? '<p style="margin:14px 0 0;color:#8a8a84;font-size:12px;line-height:1.6;">Para administrar recordatorios o novedades, <a href="' +
         escapeHtml(preferencesUrl) +
-        '" style="color:#555;text-decoration:underline;">administra tus correos o desuscribete aqui</a>. Los recibos y avisos de seguridad seguiran disponibles.</p>'
+        '" style="color:#555;text-decoration:underline;">tocá acá</a>. Los recibos y avisos de la cuenta siguen disponibles.</p>'
       : "";
     const html = args.html.replace(PREFERENCES_BLOCK, preferencesHtml);
 
@@ -153,6 +155,7 @@ export async function sendEmail(args: {
         to,
         subject: args.subject,
         html,
+        ...(args.text?.trim() ? { text: args.text.trim() } : {}),
         ...(args.cc?.length ? { cc: args.cc } : {}),
         ...(oneClickUrl
           ? {
@@ -196,12 +199,12 @@ function layout(title: string, bodyHtml: string) {
         Xtreme Gym
       </div>
       <div style="background:#ffffff;border:1px solid #e5e5e0;border-top:none;padding:24px;">
-        <h1 style="margin:0 0 16px;font-size:20px;text-transform:uppercase;">${title}</h1>
+        <h1 style="margin:0 0 16px;font-size:20px;line-height:1.25;text-transform:uppercase;">${title}</h1>
         ${bodyHtml}
-        <div style="margin-top:24px;padding-top:18px;border-top:1px solid #e5e5e0;">
-          <p style="margin:0 0 8px;font-size:13px;font-weight:bold;">Encuentranos en ${escapeHtml(BUSINESS.location)}</p>
+        <div style="margin-top:28px;padding-top:18px;border-top:1px solid #e5e5e0;">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:bold;">Encontranos en ${escapeHtml(BUSINESS.location)}</p>
           <p style="margin:0;font-size:12px;line-height:1.8;">
-            <a href="${escapeHtml(BUSINESS.maps)}" style="color:#111;font-weight:bold;">Como llegar en Maps</a>
+            <a href="${escapeHtml(BUSINESS.maps)}" style="color:#111;font-weight:bold;">Cómo llegar</a>
             &nbsp;·&nbsp;
             <a href="https://wa.me/${escapeHtml(BUSINESS.whatsapp)}" style="color:#111;font-weight:bold;">WhatsApp ${escapeHtml(BUSINESS.phone)}</a>
             &nbsp;·&nbsp;
@@ -212,19 +215,75 @@ function layout(title: string, bodyHtml: string) {
           ${PREFERENCES_BLOCK}
         </div>
       </div>
-      <p style="color:#8a8a84;font-size:12px;margin-top:14px;">
-        Xtreme Gym · Ciudad Quesada · Siempre seras bienvenido. Este correo se genero automaticamente.
+      <p style="color:#8a8a84;font-size:12px;margin-top:14px;line-height:1.5;">
+        Xtreme Gym · Ciudad Quesada · Siempre serás bienvenido/a. Este correo se generó automáticamente.
       </p>
     </div>
   </body>
 </html>`;
 }
 
+function p(html: string) {
+  return `<p style="margin:0 0 14px;font-size:14px;line-height:1.65;color:#222;">${html}</p>`;
+}
+
+function muted(html: string) {
+  return `<p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:#6b6b66;">${html}</p>`;
+}
+
+function ctaButton(label: string, href: string) {
+  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin:8px 0 4px;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;">${escapeHtml(label)}</a>`;
+}
+
+function secondaryButton(label: string, href: string) {
+  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin:8px 8px 4px 0;background:#f6c400;color:#0b0b0b;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">${escapeHtml(label)}</a>`;
+}
+
+function codeBox(value: string, opts?: { large?: boolean }) {
+  const size = opts?.large ? 34 : 28;
+  const spacing = opts?.large ? 10 : 6;
+  return `<div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:20px 16px;font-size:${size}px;font-weight:900;letter-spacing:${spacing}px;margin:12px 0 16px;font-family:Consolas,'Courier New',monospace;">${escapeHtml(value)}</div>`;
+}
+
+function infoCard(html: string) {
+  return `<div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:14px 16px;font-size:13px;line-height:1.65;margin:0 0 16px;color:#222;">${html}</div>`;
+}
+
+function steps(items: string[]) {
+  const rows = items
+    .map(
+      (item, index) => `<tr>
+      <td style="padding:6px 12px 6px 0;vertical-align:top;width:32px;">
+        <span style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:#0b0b0b;color:#d8ff3e;font-weight:900;font-size:13px;">${index + 1}</span>
+      </td>
+      <td style="padding:6px 0;font-size:14px;line-height:1.6;color:#222;">${item}</td>
+    </tr>`,
+    )
+    .join("");
+  return `<table style="border-collapse:collapse;margin:4px 0 16px;width:100%;">${rows}</table>`;
+}
+
+function linkFallback(href: string) {
+  return muted(
+    `Si el botón no abre, copiá este enlace:<br><span style="word-break:break-all;color:#333;">${escapeHtml(href)}</span>`,
+  );
+}
+
 function row(label: string, value: string) {
   return `<tr>
-    <td style="padding:6px 12px 6px 0;color:#6b6b66;font-size:14px;white-space:nowrap;">${label}</td>
-    <td style="padding:6px 0;font-size:14px;font-weight:bold;">${value}</td>
+    <td style="padding:6px 12px 6px 0;color:#6b6b66;font-size:14px;white-space:nowrap;vertical-align:top;">${label}</td>
+    <td style="padding:6px 0;font-size:14px;font-weight:bold;color:#111;">${value}</td>
   </tr>`;
+}
+
+function detailsTable(rowsHtml: string) {
+  return `<table style="border-collapse:collapse;margin:4px 0 16px;">${rowsHtml}</table>`;
+}
+
+function helpFooter() {
+  return muted(
+    `¿Dudas? WhatsApp <a href="https://wa.me/${escapeHtml(BUSINESS.whatsapp)}" style="color:#555;font-weight:bold;">${escapeHtml(BUSINESS.phone)}</a> o recepción en ${escapeHtml(BUSINESS.location)}.`,
+  );
 }
 
 /** Correo con link magico para confirmar la cuenta antes de completar el perfil. */
@@ -238,16 +297,48 @@ export async function sendRegistrationConfirmEmail(args: {
     `/registro/confirmar?token=${encodeURIComponent(args.token)}`,
     args.baseUrl,
   );
+  const hours = Math.max(1, Math.round(args.expiresMinutes / 60));
+  const expiresLabel =
+    args.expiresMinutes >= 60
+      ? `${hours} hora${hours === 1 ? "" : "s"}`
+      : `${args.expiresMinutes} minutos`;
+
   return sendEmail({
     to: args.to,
-    subject: "Completá tu acceso a la app — Xtreme Gym",
+    managePreferences: false,
+    subject: "Confirmá tu correo y activá tu acceso — Xtreme Gym",
+    text: [
+      "¡Pura vida! Gracias por registrarte en Xtreme Gym.",
+      "",
+      "Para activar tu acceso (todo en un solo paso):",
+      "1) Abrí el enlace y confirmá este correo",
+      "2) Completá nombre, teléfono y cédula",
+      "3) Creá tu PIN de 4 dígitos en la misma pantalla",
+      "",
+      `Enlace (vence en ${expiresLabel}):`,
+      href,
+      "",
+      "Después entrás a la app con cédula + PIN.",
+      `WhatsApp: ${BUSINESS.phone}`,
+    ].join("\n"),
     html: layout(
-      "Confirmá tu correo y entrá a la app",
-      `<p style="font-size:14px;line-height:1.6;">Gracias por registrarte en Xtreme Gym. Confirmá tu correo para continuar y completar tu perfil (nombre, cédula y teléfono):</p>
-      <p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>
-      <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Completar mi perfil y entrar a la app</a>
-      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Si el botón no funciona, copiá este enlace:<br><span style="word-break:break-all;">${escapeHtml(href)}</span></p>
-      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El enlace vence en ${args.expiresMinutes} minutos. Si no fuiste vos, ignorá este correo.</p>`,
+      "Confirmá tu correo",
+      [
+        p("¡Pura vida! Gracias por registrarte en <strong>Xtreme Gym</strong>."),
+        p("Con este enlace activás tu acceso completo: correo, perfil y PIN, en un solo paso."),
+        infoCard(
+          "<strong>Qué vas a hacer</strong><br>Confirmar este correo, completar tus datos y crear tu PIN de 4 dígitos. Después entrás a la app con cédula + PIN.",
+        ),
+        steps([
+          "Tocá el botón y abrí el formulario seguro.",
+          "Completá <strong>nombre</strong>, <strong>teléfono</strong> y <strong>cédula</strong>.",
+          "Creá tu <strong>PIN de 4 dígitos</strong> en la misma pantalla.",
+        ]),
+        ctaButton("Completar registro y crear PIN", href),
+        linkFallback(href),
+        muted(`Este enlace es personal y vence en <strong>${expiresLabel}</strong>.`),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -282,34 +373,52 @@ export async function sendStaffMemberAppInviteEmail(args: {
     `/registro/confirmar?token=${encodeURIComponent(args.token)}`,
     args.baseUrl,
   );
-  const who = args.source === "admin" ? "Xtreme Gym" : "Recepción de Xtreme Gym";
-  const hello = args.memberName
-    ? `Hola ${escapeHtml(args.memberName)}. `
-    : "";
-  const bound = Boolean(args.memberName);
+  const who = args.source === "admin" ? "el equipo de Xtreme Gym" : "recepción de Xtreme Gym";
+  const name = args.memberName?.trim() || "";
+  const hello = name ? `Hola ${escapeHtml(name)}. ` : "¡Hola! ";
+  const bound = Boolean(name);
+  const expiresLabel = `${args.expiresHours} hora${args.expiresHours === 1 ? "" : "s"}`;
+
   return sendEmail({
     to: args.to,
+    managePreferences: false,
     subject: bound
-      ? "Verificá tu correo · revisá nombre, teléfono y cédula · Xtreme Gym"
-      : "Te invitaron a la app de Xtreme Gym",
+      ? `${name}, activá tu app de Xtreme Gym`
+      : "Tu invitación a la app de Xtreme Gym",
+    text: [
+      `${name ? `Hola ${name}.` : "¡Hola!"} Te invitó ${who} a la app de socios.`,
+      "",
+      "Pasos (todo en una pantalla):",
+      "1) Abrí el enlace y confirmá este correo",
+      "2) Revisá o completá nombre, teléfono y cédula",
+      "3) Creá tu PIN de 4 dígitos",
+      "",
+      `Enlace (vence en ${expiresLabel}):`,
+      href,
+      "",
+      "Después entrás con cédula + PIN: reservas, entrenos y carné digital.",
+      `WhatsApp: ${BUSINESS.phone}`,
+    ].join("\n"),
     html: layout(
-      bound ? "Verificá tu correo y tus datos" : "Tu invitación a Xtreme Gym",
-      `<p style="font-size:14px;line-height:1.6;">${hello}${escapeHtml(who)} te invitó a ${
-        bound ? "verificar este correo y activar tu acceso" : "crear tu acceso personal"
-      } a la app.</p>
-      <p style="font-size:14px;line-height:1.6;"><strong>Tu correo es la llave de la cuenta.</strong> Al abrir el enlace vas a confirmar el mail y revisar tres datos del sistema viejo (pueden venir mal por el reimport):</p>
-      <ul style="font-size:14px;line-height:1.7;padding-left:20px;margin:12px 0;">
-        <li><strong>Nombre completo</strong></li>
-        <li><strong>Teléfono</strong></li>
-        <li><strong>Cédula / documento de identidad</strong></li>
-      </ul>
-      <p style="font-size:14px;line-height:1.6;">Corregí lo que esté mal, guardá, y después creás tu PIN. Esta invitación no activa un plan ni incluye el primer día gratis.</p>
-      <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:13px;line-height:1.6;margin:16px 0;"><strong>Recordá:</strong> no entres a ciegas con la cédula del archivo viejo. Primero verificá el correo y confirmá nombre, teléfono e ID.</div>
-      <p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>
-      <a href="${escapeHtml(href)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">${
-        bound ? "Verificar correo y mis datos" : "Aceptar invitación y crear mi cuenta"
-      }</a>
-      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">Este enlace es personal, se usa una sola vez y vence en ${args.expiresHours} horas. Si no solicitaste esta invitación, podés ignorar el correo.</p>`,
+      bound ? "Activá tu app de socio" : "Tu invitación a Xtreme Gym",
+      [
+        p(`${hello}Te invitó <strong>${escapeHtml(who)}</strong> a la app de socios.`),
+        p(
+          "Con el enlace confirmás este correo, dejás listos tus datos y creás tu PIN — todo junto. Después entrás con cédula + PIN.",
+        ),
+        infoCard(
+          "<strong>En la app vas a poder</strong><br>Reservar clases · Marcar entrenos · Cuidar tu racha · Usar tu carné digital",
+        ),
+        steps([
+          "Abrí el enlace seguro.",
+          "Completá o confirmá <strong>nombre</strong>, <strong>teléfono</strong> y <strong>cédula</strong>.",
+          "Creá tu <strong>PIN de 4 dígitos</strong> en la misma pantalla.",
+        ]),
+        ctaButton(bound ? "Activar mi acceso" : "Aceptar invitación", href),
+        linkFallback(href),
+        muted(`Enlace personal, de un solo uso. Vence en <strong>${expiresLabel}</strong>.`),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -327,24 +436,49 @@ export async function sendPaymentAppInviteEmail(args: {
     "/registro/confirmar?token=" + encodeURIComponent(args.token),
     args.baseUrl,
   );
-  const body =
-    '<p style="font-size:14px;line-height:1.6;">Hola ' +
-    escapeHtml(args.memberName) +
-    ". Recibimos tu pago de <strong>" +
-    escapeHtml(args.optionLabel) +
-    "</strong> y conservamos el correo confirmado durante el pago para proteger tu acceso.</p>" +
-    '<p style="font-size:14px;line-height:1.6;">Ahora completá tu perfil de socio. La cédula se solicita solamente dentro del enlace seguro; nunca la pedimos en el correo ni antes de pagar.</p>' +
-    '<p style="margin:12px 0 0;font-size:12px;font-weight:bold;color:#555;">Destino seguro: www.xtremecr.com</p>' +
-    '<a href="' +
-    escapeHtml(href) +
-    '" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Completar mi perfil y entrar a la app</a>' +
-    '<p style="font-size:13px;line-height:1.6;color:#6b6b66;">Este enlace es personal, se usa una sola vez y vence en ' +
-    args.expiresHours +
-    " horas. No lo compartás. Si no reconocés el pago, escribinos de inmediato.</p>";
+  const expiresLabel = `${args.expiresHours} hora${args.expiresHours === 1 ? "" : "s"}`;
+
   return sendEmail({
     to: args.to,
-    subject: "Completá tu acceso a la app — Xtreme Gym",
-    html: layout("Tu pago ya está ligado a este correo", body),
+    managePreferences: false,
+    subject: `Pago recibido · completá tu perfil — Xtreme Gym`,
+    text: [
+      `Hola ${args.memberName}.`,
+      "",
+      `Recibimos tu pago de ${args.optionLabel}.`,
+      "Completá tu perfil para entrar a la app de socios:",
+      "",
+      "1) Confirmá este correo con el enlace",
+      "2) Completá cédula y datos del perfil",
+      "3) Creá tu PIN de 4 dígitos",
+      "",
+      `Enlace (vence en ${expiresLabel}):`,
+      href,
+      "",
+      `WhatsApp: ${BUSINESS.phone}`,
+    ].join("\n"),
+    html: layout(
+      "Pago recibido · activá tu acceso",
+      [
+        p(`Hola <strong>${escapeHtml(args.memberName)}</strong>. ¡Gracias por tu pago!`),
+        detailsTable(
+          row("Concepto", escapeHtml(args.optionLabel)) +
+            row("Siguiente paso", "Completar perfil y crear PIN"),
+        ),
+        p(
+          "Tu pago ya está ligado a este correo. Solo falta completar el perfil para usar la app, el carné digital y las reservas.",
+        ),
+        steps([
+          "Tocá el botón y confirmá este correo.",
+          "Completá tu <strong>cédula</strong> y datos de contacto.",
+          "Creá tu <strong>PIN de 4 dígitos</strong> en la app.",
+        ]),
+        ctaButton("Completar mi perfil", href),
+        linkFallback(href),
+        muted(`Enlace personal. Vence en <strong>${expiresLabel}</strong>.`),
+        helpFooter(),
+      ].join(""),
+    ),
   });
 }
 
@@ -354,26 +488,58 @@ export async function sendWelcomeEmail(args: {
   accessCode: string;
   cedula?: string;
 }) {
-  const step = (n: number, html: string) =>
-    `<tr>
-      <td style="padding:6px 12px 6px 0;vertical-align:top;"><span style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:#0b0b0b;color:#d8ff3e;font-weight:900;font-size:13px;">${n}</span></td>
-      <td style="padding:6px 0;font-size:14px;line-height:1.6;">${html}</td>
-    </tr>`;
+  const appUrl = absoluteAppUrl("/app");
+  const cedulaLine = args.cedula
+    ? `Ingresá tu cédula <strong>${escapeHtml(args.cedula)}</strong>.`
+    : "Ingresá la cédula con la que te registraste.";
+
   return sendEmail({
     to: args.to,
-    subject: "Bienvenido a Xtreme Gym — tu perfil quedó listo",
+    managePreferences: false,
+    subject: `¡Listo, ${args.memberName}! Tu perfil en Xtreme Gym`,
+    text: [
+      `¡Pura vida, ${args.memberName}!`,
+      "",
+      "Tu perfil de socio quedó activo y tu PIN ya está creado.",
+      "",
+      `Código de ingreso en recepción: ${args.accessCode}`,
+      args.cedula ? `Cédula: ${args.cedula}` : "",
+      "",
+      "Cómo entrar a la app:",
+      "1) Abrí la app",
+      "2) Digita tu cédula",
+      "3) Ingresá el PIN que creaste al registrarte",
+      "",
+      `App: ${appUrl}`,
+      "",
+      "En la app: reservas, entrenos, racha, progreso y carné digital.",
+      "Si olvidás el PIN, pedí un código a este correo desde la app.",
+      `WhatsApp: ${BUSINESS.phone}`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
     html: layout(
-      `Bienvenido, ${escapeHtml(args.memberName)}`,
-      `<p style="font-size:14px;line-height:1.6;">Tu perfil de socio quedó creado. Con este código podés hacer check-in en recepción o en la pantalla de ingreso:</p>
-      <div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:16px;font-size:26px;font-weight:900;letter-spacing:6px;margin:16px 0;">${escapeHtml(args.accessCode)}</div>
-      <p style="font-size:14px;line-height:1.6;font-weight:bold;text-transform:uppercase;">Cómo entrar a tu app de socio</p>
-      <table style="border-collapse:collapse;margin:4px 0 8px;">
-        ${step(1, `Abrí la app con el botón de abajo (guardala en tu pantalla de inicio para tenerla a mano).`)}
-        ${step(2, args.cedula ? `Digitá tu cédula <strong>${escapeHtml(args.cedula)}</strong> para entrar a tu perfil.` : `Digitá tu cédula para entrar a tu perfil.`)}
-        ${step(3, `Creá tu PIN de 4 dígitos la primera vez; con él protegés tu perfil.`)}
-      </table>
-      ${appButton("Entrar a mi app")}
-      <p style="font-size:14px;line-height:1.6;margin-top:16px;">En la app podés reservar clases, marcar entrenos, cuidar tu racha y seguir tu progreso corporal. ¡Pura vida y nos vemos en el gym!</p>`,
+      `¡Pura vida, ${escapeHtml(args.memberName)}!`,
+      [
+        p(
+          "Tu perfil de socio en <strong>Xtreme Gym</strong> quedó listo y tu <strong>PIN ya está creado</strong>. Guardá este correo: tiene tu código de ingreso.",
+        ),
+        p("<strong>Tu código de ingreso</strong> (recepción o pantalla de ingreso)"),
+        codeBox(args.accessCode),
+        infoCard(
+          "<strong>Cómo entrar a la app</strong><br>Cédula + el PIN que creaste al registrarte. Si lo olvidás, recuperarlo desde la app con este correo.",
+        ),
+        steps([
+          `Abrí la app: <a href="${escapeHtml(appUrl)}" style="color:#111;font-weight:bold;">${escapeHtml(appUrl.replace(/^https?:\/\//, ""))}</a>`,
+          cedulaLine,
+          "Ingresá tu <strong>PIN de 4 dígitos</strong>.",
+        ]),
+        ctaButton("Entrar a mi app", appUrl),
+        p(
+          "En la app podés <strong>reservar clases</strong>, <strong>marcar entrenos</strong>, cuidar tu <strong>racha</strong> y seguir tu <strong>progreso</strong>.",
+        ),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -393,25 +559,52 @@ export async function sendPaymentReceiptEmail(args: {
     paypal: "En línea",
     cash: "Efectivo",
     transfer: "Transferencia",
-    sinpe: "SINPE Movil",
+    sinpe: "SINPE Móvil",
     other: "Otro",
   };
+  const amount = `CRC ${args.amountCrc.toLocaleString("es-CR")}${
+    args.amountUsd ? ` · USD ${args.amountUsd.toFixed(2)}` : ""
+  }`;
+  const appUrl = absoluteAppUrl("/app");
+
   return sendEmail({
     to: args.to,
     cc: reservationCc(),
+    managePreferences: false,
     subject: `Recibo Xtreme Gym — ${args.optionLabel}`,
+    text: [
+      `Hola ${args.customerName}. Gracias por tu pago en Xtreme Gym.`,
+      "",
+      `Concepto: ${args.optionLabel}`,
+      `Monto: ${amount}`,
+      `Método: ${methodLabel[args.method] ?? args.method}`,
+      `Fecha: ${args.date}`,
+      args.reference ? `Referencia: ${args.reference}` : "",
+      args.nextBillingDate ? `Membresía activa hasta: ${args.nextBillingDate}` : "",
+      "",
+      `App: ${appUrl}`,
+      `WhatsApp: ${BUSINESS.phone}`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
     html: layout(
       "Recibo de pago",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.customerName)}, gracias por tu pago. Este es tu comprobante:</p>
-      <table style="border-collapse:collapse;margin:12px 0;">
-        ${row("Concepto", escapeHtml(args.optionLabel))}
-        ${row("Monto", `CRC ${args.amountCrc.toLocaleString("es-CR")}${args.amountUsd ? ` (USD ${args.amountUsd.toFixed(2)})` : ""}`)}
-        ${row("Metodo", escapeHtml(methodLabel[args.method] ?? args.method))}
-        ${row("Fecha", escapeHtml(args.date))}
-        ${args.reference ? row("Referencia", escapeHtml(args.reference)) : ""}
-        ${args.nextBillingDate ? row("Membresia activa hasta", escapeHtml(args.nextBillingDate)) : ""}
-      </table>
-      <p style="font-size:14px;line-height:1.6;">Cualquier consulta, con gusto en recepcion.</p>`,
+      [
+        p(`Hola <strong>${escapeHtml(args.customerName)}</strong>. Gracias por tu pago. Este es tu comprobante:`),
+        detailsTable(
+          row("Concepto", escapeHtml(args.optionLabel)) +
+            row("Monto", escapeHtml(amount)) +
+            row("Método", escapeHtml(methodLabel[args.method] ?? args.method)) +
+            row("Fecha", escapeHtml(args.date)) +
+            (args.reference ? row("Referencia", escapeHtml(args.reference)) : "") +
+            (args.nextBillingDate
+              ? row("Membresía activa hasta", escapeHtml(args.nextBillingDate))
+              : ""),
+        ),
+        p("Podés revisar tu plan y tu carné digital en la app."),
+        ctaButton("Abrir mi app", appUrl),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -422,18 +615,33 @@ export async function sendReservationEmail(args: {
   trainingName: string;
   trainingDate: string;
 }) {
+  const appUrl = absoluteAppUrl("/app");
   return sendEmail({
     to: args.to,
     cc: reservationCc(),
+    managePreferences: false,
     subject: `Reserva confirmada — ${args.trainingName} (${args.trainingDate})`,
+    text: [
+      `Hola ${args.memberName}. Tu cupo quedó reservado.`,
+      "",
+      `Clase: ${args.trainingName}`,
+      `Fecha: ${args.trainingDate}`,
+      "",
+      "Llegá 5 minutos antes. Si no podés ir, cancelá desde la app.",
+      `App: ${appUrl}`,
+    ].join("\n"),
     html: layout(
       "Reserva confirmada",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}, tu cupo quedó reservado:</p>
-      <table style="border-collapse:collapse;margin:12px 0;">
-        ${row("Clase", escapeHtml(args.trainingName))}
-        ${row("Fecha", escapeHtml(args.trainingDate))}
-      </table>
-      <p style="font-size:14px;line-height:1.6;">Llegá 5 minutos antes. Si no podés asistir, cancelá desde la app para liberar el cupo.</p>`,
+      [
+        p(`Hola <strong>${escapeHtml(args.memberName)}</strong>. Tu cupo quedó reservado:`),
+        detailsTable(
+          row("Clase", escapeHtml(args.trainingName)) +
+            row("Fecha", escapeHtml(args.trainingDate)),
+        ),
+        p("Llegá 5 minutos antes. Si no podés asistir, cancelá desde la app para liberar el cupo."),
+        ctaButton("Ver mis reservas", appUrl),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -443,19 +651,54 @@ export async function sendPinChangedEmail(args: {
   memberName: string;
   kind: "set" | "changed" | "recovered";
 }) {
-  const detail =
+  const appUrl = absoluteAppUrl("/app");
+  const copy =
     args.kind === "set"
-      ? "Se creó un PIN para tu perfil."
+      ? {
+          subject: "PIN creado — ya podés entrar a tu app · Xtreme Gym",
+          title: "Tu PIN quedó creado",
+          lead: "Creaste el PIN de 4 dígitos de tu perfil.",
+          next: "A partir de ahora entrás a la app con tu cédula y este PIN.",
+        }
       : args.kind === "changed"
-        ? "Tu PIN fue cambiado."
-        : "Tu PIN fue restablecido usando tu contacto de recuperación.";
+        ? {
+            subject: "PIN actualizado · Xtreme Gym",
+            title: "Tu PIN se actualizó",
+            lead: "Cambiaste el PIN de tu perfil.",
+            next: "La próxima vez usá el PIN nuevo para entrar.",
+          }
+        : {
+            subject: "PIN restablecido · Xtreme Gym",
+            title: "Tu PIN se restableció",
+            lead: "Restableciste el PIN de tu perfil con el código del correo.",
+            next: "Guardalo en un lugar seguro. Con cédula + PIN entrás a la app.",
+          };
+
   return sendEmail({
     to: args.to,
-    subject: "Aviso de seguridad — PIN de tu perfil Xtreme",
+    managePreferences: false,
+    subject: copy.subject,
+    text: [
+      `Hola ${args.memberName}.`,
+      "",
+      copy.lead,
+      copy.next,
+      "",
+      "El PIN es personal. No lo compartas.",
+      `App: ${appUrl}`,
+      `WhatsApp recepción: ${BUSINESS.phone}`,
+    ].join("\n"),
     html: layout(
-      "Aviso de seguridad",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. ${detail}</p>
-      <p style="font-size:14px;line-height:1.6;">Si no hiciste este cambio, avisá de inmediato en recepción para bloquear el perfil.</p>`,
+      copy.title,
+      [
+        p(`Hola <strong>${escapeHtml(args.memberName)}</strong>. ${copy.lead}`),
+        p(copy.next),
+        infoCard(
+          "<strong>Recordá</strong><br>Tu PIN es personal y de 4 dígitos. Si lo olvidás, en la app podés pedir un código a este correo para recuperarlo.",
+        ),
+        ctaButton("Abrir mi app", appUrl),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -509,8 +752,7 @@ export async function sendCustomReminderEmail(args: {
 }
 
 function appButton(label: string, path = "/app") {
-  const href = absoluteAppUrl(path);
-  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin-top:12px;background:#0b0b0b;color:#d8ff3e;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">${escapeHtml(label)}</a>`;
+  return ctaButton(label, absoluteAppUrl(path));
 }
 
 export async function sendStreakRiskEmail(args: {
@@ -552,19 +794,39 @@ export async function sendAdminGrantedPlanEmail(args: {
   plan: string;
   endsOn: string;
 }) {
+  const appUrl = absoluteAppUrl("/app");
   return sendEmail({
     to: args.to,
     managePreferences: false,
     subject: `Tu plan ${args.plan} ya está activo — Xtreme Gym`,
+    text: [
+      `Hola ${args.memberName}.`,
+      "",
+      `El equipo de Xtreme Gym activó tu plan ${args.plan}.`,
+      `Acceso hasta: ${args.endsOn}`,
+      "",
+      "Entrá a la app con tu cédula y PIN para reservar, marcar entrenos y usar tu carné digital.",
+      `App: ${appUrl}`,
+      `WhatsApp: ${BUSINESS.phone}`,
+    ].join("\n"),
     html: layout(
-      "Tu acceso está activo",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. El equipo de Xtreme Gym activó para vos el plan <strong>${escapeHtml(args.plan)}</strong>.</p>
-      <table style="border-collapse:collapse;margin:12px 0;">
-        ${row("Plan", escapeHtml(args.plan))}
-        ${row("Acceso hasta", escapeHtml(args.endsOn))}
-      </table>
-      <p style="font-size:14px;line-height:1.6;">Ya podés entrar a la app, usar tu carné digital, reservar y seguir tu progreso.</p>
-      ${appButton("Abrir mi app")}`,
+      "Tu plan ya está activo",
+      [
+        p(
+          `Hola <strong>${escapeHtml(args.memberName)}</strong>. El equipo de Xtreme Gym activó tu acceso.`,
+        ),
+        detailsTable(
+          row("Plan", escapeHtml(args.plan)) + row("Acceso hasta", escapeHtml(args.endsOn)),
+        ),
+        p("Ya podés entrar a la app, usar tu carné digital, reservar clases y seguir tu progreso."),
+        steps([
+          "Abrí la app con el botón de abajo.",
+          "Ingresá con tu <strong>cédula</strong> y tu <strong>PIN</strong>.",
+          "Si todavía no tenés PIN, pedí el código a este correo desde la app.",
+        ]),
+        ctaButton("Abrir mi app", appUrl),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -613,17 +875,47 @@ export async function sendFreeDayPendingReminderEmail(args: {
   expiresHours: number;
 }) {
   const restartUrl = absoluteAppUrl("/primer-dia#registro");
+  const expiresLabel = `${args.expiresHours} hora${args.expiresHours === 1 ? "" : "s"}`;
+
   return sendEmail({
     to: args.to,
     optional: true,
-    subject: "Todavía podés activar tu primer día gratis — Xtreme Gym",
+    subject: "Terminá tu registro · primer día gratis en Xtreme",
+    text: [
+      "Pediste tu primer día gratis en Xtreme Gym.",
+      "Te falta un paso: confirmar el correo y completar el perfil.",
+      "",
+      "1) Confirmá el correo",
+      "2) Completá nombre, teléfono y cédula",
+      "3) Creá tu PIN en la app",
+      "",
+      `Enlace (vence en ${expiresLabel}):`,
+      args.confirmUrl,
+      "",
+      `O empezá de nuevo: ${restartUrl}`,
+      `WhatsApp: ${BUSINESS.phone}`,
+    ].join("\n"),
     html: layout(
-      "Tu acceso sigue esperándote",
-      `<p style="font-size:14px;line-height:1.6;">Hace un par de días pediste tu <strong>primer día gratis</strong> en Xtreme Gym, pero todavía no completás el perfil para entrar a la app.</p>
-      <p style="font-size:14px;line-height:1.6;">Te enviamos un enlace nuevo para confirmar tu correo, agregar tu cédula y crear tu PIN. Después podés reservar, marcar entrenos y usar tu carné digital.</p>
-      <div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:12px 16px;font-size:13px;line-height:1.6;margin:16px 0;"><strong>Sin tarjeta:</strong> este paso solo activa tu día de prueba. Pagás cuando quieras continuar.</div>
-      <a href="${escapeHtml(args.confirmUrl)}" style="display:inline-block;margin:16px 0;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;">Completar mi perfil y entrar a la app</a>
-      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El enlace vence en ${args.expiresHours} horas. Si preferís empezar de nuevo, <a href="${escapeHtml(restartUrl)}" style="color:#555;text-decoration:underline;">registrate otra vez acá</a>.</p>`,
+      "Terminá tu registro",
+      [
+        p(
+          "Pediste tu <strong>primer día gratis</strong> en Xtreme Gym. Te falta un paso para entrar a la app.",
+        ),
+        infoCard(
+          "<strong>Sin tarjeta en este paso</strong><br>Solo activás tu acceso de prueba. Pagás cuando quieras continuar con un plan.",
+        ),
+        steps([
+          "Confirmá este correo con el botón.",
+          "Completá <strong>nombre</strong>, <strong>teléfono</strong> y <strong>cédula</strong>.",
+          "Creá tu <strong>PIN de 4 dígitos</strong> en la app.",
+        ]),
+        ctaButton("Completar mi perfil", args.confirmUrl),
+        linkFallback(args.confirmUrl),
+        muted(
+          `El enlace vence en <strong>${expiresLabel}</strong>. También podés <a href="${escapeHtml(restartUrl)}" style="color:#555;text-decoration:underline;">empezar de nuevo acá</a>.`,
+        ),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -638,14 +930,29 @@ export async function sendFreeDayUpgradeReminderEmail(args: {
   return sendEmail({
     to: args.to,
     optional: true,
-    subject: "¿Seguimos entrenando? Tu app de socio te espera — Xtreme Gym",
+    subject: "¿Seguimos entrenando? Elegí tu plan en Xtreme",
+    text: [
+      `Hola ${args.memberName}.`,
+      "Ya activaste tu primer día gratis y la app de socios.",
+      "Si te gustó el gym, elegí semana, quincena o mes.",
+      "",
+      `App: ${args.appUrl}`,
+      `Planes: ${args.pricesUrl}`,
+      `WhatsApp: ${BUSINESS.phone}`,
+    ].join("\n"),
     html: layout(
       "Tu próximo paso en Xtreme",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Hace un par de días activaste tu acceso con el <strong>primer día gratis</strong> y ya podés usar la app de socios.</p>
-      <p style="font-size:14px;line-height:1.6;">Si te gustó el ambiente, elegí semana, quincena o mes y seguí con rachas, reservas y seguimiento de progreso. El mensual es el que más conviene por día.</p>
-      <a href="${escapeHtml(args.appUrl)}" style="display:inline-block;margin:16px 8px 0 0;background:#0b0b0b;color:#d8ff3e;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">Entrar a mi app</a>
-      <a href="${escapeHtml(args.pricesUrl)}" style="display:inline-block;margin:16px 0 0;background:#f6c400;color:#0b0b0b;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">Ver planes e inscribirme</a>
-      <p style="font-size:13px;line-height:1.6;color:#6b6b66;margin-top:16px;">¿Tenés dudas? Escribinos por WhatsApp o vení a recepción en Ciudad Quesada. Pura vida.</p>`,
+      [
+        p(
+          `Hola <strong>${escapeHtml(args.memberName)}</strong>. Ya tenés la app con el <strong>primer día gratis</strong>.`,
+        ),
+        p(
+          "Si te gustó el ambiente, elegí semana, quincena o mes y seguí con reservas, rachas y progreso. El mensual suele ser el que más rinde por día.",
+        ),
+        ctaButton("Entrar a mi app", args.appUrl),
+        secondaryButton("Ver planes", args.pricesUrl),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }
@@ -692,21 +999,76 @@ export async function sendMonthlyRecapEmail(args: {
   });
 }
 
-/** Codigo de un solo uso para recuperar el PIN (Fase 3). */
+/**
+ * Código de un solo uso para crear o recuperar el PIN.
+ * Incluye HTML + texto plano para que el código se lea en cualquier cliente.
+ */
 export async function sendPinRecoveryOtpEmail(args: {
   to: string;
   memberName: string;
   code: string;
   expiresMinutes: number;
+  /** pin_setup = primera vez; pin_recovery = olvidó el PIN */
+  purpose?: "pin_setup" | "pin_recovery";
 }) {
+  const code = String(args.code ?? "").replace(/\D/g, "").slice(0, 6);
+  const setup = args.purpose === "pin_setup";
+  const appUrl = absoluteAppUrl("/app");
+  const title = setup ? "Tu código para crear el PIN" : "Tu código para recuperar el PIN";
+  const lead = setup
+    ? "Pediste un código para <strong>crear</strong> tu PIN de seguridad en la app."
+    : "Pediste un código para <strong>recuperar</strong> tu PIN de la app.";
+  const action = setup
+    ? "Volvé a la app, escribí este código y creá tu PIN de 4 dígitos."
+    : "Volvé a la app, escribí este código y elegí un PIN nuevo de 4 dígitos.";
+  const spaced = code.split("").join(" ");
+
   return sendEmail({
     to: args.to,
-    subject: "Código para recuperar tu PIN — Xtreme Gym",
+    managePreferences: false,
+    subject: setup ? `Código para crear tu PIN: ${code}` : `Código para recuperar tu PIN: ${code}`,
+    text: [
+      `Hola ${args.memberName}.`,
+      "",
+      setup
+        ? "Tu código para crear el PIN de Xtreme Gym:"
+        : "Tu código para recuperar el PIN de Xtreme Gym:",
+      "",
+      `CODIGO: ${code}`,
+      "",
+      action.replace(/<\/?strong>/g, ""),
+      `Vence en ${args.expiresMinutes} minutos.`,
+      "",
+      "Pasos:",
+      "1) Abrí la app",
+      "2) Pegá el código de 6 dígitos",
+      "3) Creá / confirmá tu PIN de 4 dígitos",
+      "",
+      `App: ${appUrl}`,
+      "No compartas este código. Si no lo pediste, ignorá el correo.",
+      `WhatsApp: ${BUSINESS.phone}`,
+    ].join("\n"),
     html: layout(
-      "Recuperar PIN",
-      `<p style="font-size:14px;line-height:1.6;">Hola ${escapeHtml(args.memberName)}. Usá este código para restablecer tu PIN de 4 dígitos:</p>
-      <div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:16px;font-size:28px;font-weight:900;letter-spacing:8px;margin:16px 0;">${escapeHtml(args.code)}</div>
-      <p style="font-size:14px;line-height:1.6;">Vence en ${args.expiresMinutes} minutos. Si no lo pediste, ignorá este correo y avisá en recepción.</p>`,
+      title,
+      [
+        p(`Hola <strong>${escapeHtml(args.memberName)}</strong>. ${lead}`),
+        p("<strong style=\"display:block;margin-bottom:4px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#555;\">Tu código de 6 dígitos</strong>"),
+        codeBox(spaced, { large: true }),
+        `<p style="text-align:center;font-size:20px;font-weight:900;color:#111;margin:0 0 16px;letter-spacing:0.2em;">${escapeHtml(code)}</p>`,
+        p(action),
+        steps([
+          "Abrí la app de Xtreme (mismo celular o navegador donde pediste el código).",
+          "Escribí el <strong>código de 6 dígitos</strong> de este correo.",
+          setup
+            ? "Creá y confirmá tu <strong>PIN de 4 dígitos</strong>."
+            : "Elegí y confirmá tu <strong>nuevo PIN de 4 dígitos</strong>.",
+        ]),
+        infoCard(
+          `<strong>Vence en ${args.expiresMinutes} minutos</strong><br>Un solo uso. No lo reenvíes ni lo compartas. Si no pediste este código, podés ignorar el correo.`,
+        ),
+        ctaButton("Abrir la app", appUrl),
+        helpFooter(),
+      ].join(""),
     ),
   });
 }

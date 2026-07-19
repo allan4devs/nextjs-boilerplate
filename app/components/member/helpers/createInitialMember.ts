@@ -14,6 +14,7 @@ export function initialMember(name = ""): Member {
     phone: "",
     email: "",
     cedula: "",
+    emailVerified: false,
     photoUrl: "",
     workouts: [],
     streak: 0,

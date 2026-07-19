@@ -21,11 +21,13 @@ import {
   ENTITLEMENT_LEDGER_COLLECTION,
   BOOKINGS_COLLECTION,
   RESERVATIONS_COLLECTION,
+  PINS_COLLECTION,
   type MemberDoc,
   type PendingRegistrationDoc,
   addDays,
   cedulaDigits,
   formatAccessCode,
+  hashPin,
   isValidEmail,
   matchCedula,
   memberAccessCode,
@@ -39,6 +41,7 @@ import {
 import {
   attachSessionCookie,
   createMemberSession,
+  revokeAllMemberSessions,
 } from "@/lib/xtreme/session";
 import {
   authAttemptStatus,
@@ -191,14 +194,16 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
 
   return NextResponse.json({
     ok: true,
-    message: "Te enviamos un correo para confirmar tu cuenta.",
+    message:
+      "Te enviamos un enlace para confirmar tu correo, completar el perfil y crear tu PIN. Revisá tu bandeja (y spam).",
+    expiresMinutes: TOKEN_TTL_MIN,
   });
 }
 
 /** Paso 2a — validar el token sin completar el perfil (para mostrar el form). */
 async function verifyToken(token: string) {
   if (!token) {
-    return { error: "Falta el token de confirmacion.", status: 400 as const };
+    return { error: "Falta el enlace de confirmación. Pedí uno nuevo desde el registro.", status: 400 as const };
   }
   const db = await getDb();
   const collection = db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION);
@@ -207,9 +212,17 @@ async function verifyToken(token: string) {
     $or: [{ tokenHash }, { previousTokenHashes: tokenHash }],
   });
 
-  if (!pending) return { error: "Enlace invalido o ya usado.", status: 404 as const };
+  if (!pending) {
+    return {
+      error: "Este enlace no es válido o ya se usó. Pedí uno nuevo desde el registro.",
+      status: 404 as const,
+    };
+  }
   if (pending.expiresAt.getTime() < Date.now()) {
-    return { error: "El enlace vencio. Registrese de nuevo.", status: 410 as const };
+    return {
+      error: "Este enlace venció. Pedí uno nuevo desde el registro o recepción.",
+      status: 410 as const,
+    };
   }
   return { pending, db };
 }
@@ -227,19 +240,33 @@ export async function GET(req: NextRequest) {
       : null;
     if (!member) {
       return NextResponse.json(
-        { error: "El perfil asociado a este enlace no esta disponible. Contactá recepción." },
+        { error: "El perfil de este enlace no está disponible. Contactá recepción." },
         { status: 409 },
       );
     }
-    return NextResponse.json({
+    // Reabrir el enlace después de completar: reemite sesión para ir directo a la app.
+    const { token: sessionToken, expiresAt: sessionExpires } = await createMemberSession(
+      verified.db,
+      {
+        memberKey: normalizedName,
+        memberName: member.memberName || normalizedName,
+      },
+    );
+    const res = NextResponse.json({
       ok: true,
       completed: true,
       memberName: member.memberName,
       accessCode: formatAccessCode(memberAccessCode(normalizedName)),
+      freeFirstDay:
+        verified.pending.source === "primer-dia" || verified.pending.source === "app",
       paidRegistration: verified.pending.source === "paypal",
       invitedRegistration:
         verified.pending.source === "reception" || verified.pending.source === "admin",
+      session: true,
+      hasPinSet: true,
     });
+    attachSessionCookie(res, sessionToken, sessionExpires);
+    return res;
   }
   const boundKey = normalizeKey(verified.pending.expectedMemberKey || "");
   const boundProfile = Boolean(boundKey);
@@ -271,9 +298,9 @@ export async function GET(req: NextRequest) {
     email: verified.pending.email,
     source: verified.pending.source,
     boundProfile,
-    /** Primer claim: el import puede traer cédula/nombre/tel mal — se pueden corregir. */
     neverRegistered,
-    canEditName: verified.pending.source !== "paypal",
+    // PayPal: el nombre del pago se puede corregir, pero preferimos el precargado.
+    canEditName: true,
     canEditCedula: true,
     canEditPhone: true,
     ...prefill,
@@ -312,11 +339,15 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
       : null;
     if (!member) {
       return NextResponse.json(
-        { error: "El perfil asociado a este enlace no esta disponible. Contactá recepción." },
+        { error: "El perfil de este enlace no está disponible. Contactá recepción." },
         { status: 409 },
       );
     }
-    return NextResponse.json({
+    const { token: sessionToken, expiresAt: sessionExpires } = await createMemberSession(db, {
+      memberKey: normalizedName,
+      memberName: member.memberName || normalizedName,
+    });
+    const res = NextResponse.json({
       ok: true,
       memberName: member.memberName,
       accessCode: formatAccessCode(memberAccessCode(normalizedName)),
@@ -324,7 +355,11 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
       paidRegistration: pending.source === "paypal",
       invitedRegistration: pending.source === "reception" || pending.source === "admin",
       alreadyCompleted: true,
+      session: true,
+      hasPinSet: true,
     });
+    attachSessionCookie(res, sessionToken, sessionExpires);
+    return res;
   }
 
   // Invitación ligada a ficha existente (PayPal, super admin, recepción con socio).
@@ -351,15 +386,16 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
   let existing = boundExisting;
   let neverRegistered = !existing || existing.emailVerified !== true;
 
-  // PayPal: nombre queda atado al pago. Invitación/import: el socio corrige basura del Excel.
-  const memberName = paidInvite
-    ? normalizeName(pending.expectedMemberName) || normalizeName(existing?.memberName)
-    : normalizeName(body.memberName) ||
-      normalizeName(pending.expectedMemberName) ||
-      normalizeName(existing?.memberName);
+  // El enlace prueba propiedad del correo, pero el socio decide si conserva o
+  // corrige lo precargado. La key ligada a la ficha/pago se mantiene estable.
+  const memberName = normalizeName(body.memberName) ||
+    normalizeName(pending.expectedMemberName) ||
+    normalizeName(existing?.memberName);
   const cedula = normalizeCedula(body.cedula);
   const phone = normalizePhone(body.phone);
   const goal = String(body.goal ?? "").trim().slice(0, 80);
+  const pin = String(body.pin ?? "").trim();
+  const pinConfirm = String(body.pinConfirm ?? "").trim();
   const email = pending.email;
   const digits = cedulaDigits(cedula);
 
@@ -377,6 +413,21 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
       { error: "El teléfono es requerido (mínimo 8 dígitos)." },
       { status: 400 },
     );
+  }
+  if (!/^\d{4}$/.test(pin)) {
+    return NextResponse.json(
+      { error: "Elegí un PIN de exactamente 4 dígitos." },
+      { status: 400 },
+    );
+  }
+  if (pin === "0000" || pin === "1234") {
+    return NextResponse.json(
+      { error: "Elegí un PIN más seguro. Evitá combinaciones como 0000 o 1234." },
+      { status: 400 },
+    );
+  }
+  if (pin !== pinConfirm) {
+    return NextResponse.json({ error: "Los dos PIN no coinciden." }, { status: 400 });
   }
 
   // Identidad estable: ficha importada/pago conserva su key; alta nueva usa el nombre.
@@ -633,6 +684,31 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     });
   }
 
+  // El primer acceso termina en esta misma pantalla: guardamos el PIN después
+  // de resolver la identidad, pero antes de consumir el enlace. Así, si esta
+  // escritura falla, el usuario puede reintentar con el mismo token.
+  const credentialKeys = new Set<string>([normalizedName]);
+  if (previousBoundKey) credentialKeys.add(previousBoundKey);
+  await Promise.all([...credentialKeys].map((key) => revokeAllMemberSessions(db, key)));
+  if (previousBoundKey && previousBoundKey !== normalizedName) {
+    await db.collection(PINS_COLLECTION).deleteMany({ normalizedName: previousBoundKey });
+  }
+  await db.collection(PINS_COLLECTION).updateOne(
+    { normalizedName },
+    {
+      $set: {
+        normalizedName,
+        memberName,
+        pinHash: hashPin(pin, normalizedName),
+        setBy: "magic_link_registration",
+        setAt: now,
+        updatedAt: now,
+      },
+      $setOnInsert: { createdAt: now },
+    },
+    { upsert: true },
+  );
+
   // Consumir el registro pendiente (token de un solo uso).
   await db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION).updateOne(
     { email },
@@ -641,6 +717,7 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
 
   const accessCode = formatAccessCode(memberAccessCode(normalizedName));
   const profileWasReady = Boolean(existing?.emailVerified && existing?.cedula);
+
   if (!profileWasReady) {
     await sendWelcomeEmail({ to: email, memberName, accessCode, cedula });
     await recordEvent(db, {
@@ -678,7 +755,7 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     },
   });
 
-  // Sesión HttpOnly al confirmar el enlace: solo quien abrió el mail puede setear PIN en /app.
+  // Sesión HttpOnly: el socio ya tiene PIN y puede entrar a /app sin otro paso.
   const { token: sessionToken, expiresAt: sessionExpires } = await createMemberSession(db, {
     memberKey: normalizedName,
     memberName,
@@ -691,7 +768,9 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     paidRegistration: paidInvite,
     invitedRegistration: staffInvite,
     session: true,
-    canSetPin: true,
+    canSetPin: false,
+    hasPinSet: true,
+    credentialsReady: true,
     profileCorrected: Boolean(existing && neverRegistered),
     claimedExistingCedula,
   });

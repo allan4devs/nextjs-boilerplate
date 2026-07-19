@@ -1,9 +1,18 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Dumbbell, Loader2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Dumbbell,
+  KeyRound,
+  Loader2,
+  ShieldCheck,
+  UserRound,
+  XCircle,
+} from "lucide-react";
+import { CEDULA_KEY, STORAGE_KEY } from "@/app/components/member/storage/keys";
 
 type VerifyState =
   | { phase: "loading" }
@@ -22,9 +31,72 @@ type VerifyState =
       accessCode: string;
       paidRegistration: boolean;
       invitedRegistration: boolean;
+      freeFirstDay?: boolean;
       profileCorrected?: boolean;
       claimedExistingCedula?: boolean;
+      alreadyCompleted?: boolean;
     };
+
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function formatCedulaDisplay(value: string) {
+  const digits = onlyDigits(value).slice(0, 12);
+  if (digits.length <= 1) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 1)}-${digits.slice(1)}`;
+  return `${digits.slice(0, 1)}-${digits.slice(1, 5)}-${digits.slice(5)}`;
+}
+
+function formatPhoneDisplay(value: string) {
+  const digits = onlyDigits(value).slice(0, 12);
+  if (digits.length <= 4) return digits;
+  return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+}
+
+function StepRail({ active }: { active: 1 | 2 | 3 }) {
+  const items = [
+    { n: 1 as const, label: "Correo" },
+    { n: 2 as const, label: "Datos" },
+    { n: 3 as const, label: "PIN" },
+  ];
+  return (
+    <div className="mb-6 flex items-center gap-2">
+      {items.map((item, index) => {
+        const done = active > item.n;
+        const current = active === item.n;
+        return (
+          <div key={item.n} className="flex flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
+              <span
+                className={`grid h-8 w-8 place-items-center text-xs font-black ${
+                  done || current
+                    ? "bg-[#d8ff3e] text-black"
+                    : "border border-white/20 text-white/40"
+                }`}
+              >
+                {done ? "✓" : item.n}
+              </span>
+              <span
+                className={`text-[10px] font-black uppercase tracking-wide ${
+                  current ? "text-[#d8ff3e]" : done ? "text-white/70" : "text-white/35"
+                }`}
+              >
+                {item.label}
+              </span>
+            </div>
+            {index < items.length - 1 && (
+              <div
+                className={`mb-4 h-0.5 flex-1 ${done ? "bg-[#d8ff3e]/70" : "bg-white/10"}`}
+                aria-hidden
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function ConfirmInner() {
   const params = useSearchParams();
@@ -35,20 +107,25 @@ function ConfirmInner() {
   const [cedula, setCedula] = useState("");
   const [phone, setPhone] = useState("");
   const [goal, setGoal] = useState("");
+  const [pin, setPin] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [showPin, setShowPin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
+  const [fieldHints, setFieldHints] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
     if (!token) {
-      setState({ phase: "invalid", error: "Falta el token de confirmacion." });
+      setState({ phase: "invalid", error: "Falta el enlace de confirmación. Pedí uno nuevo." });
       return;
     }
     (async () => {
       try {
         const res = await fetch(`/api/xtreme/register?token=${encodeURIComponent(token)}`, {
           cache: "no-store",
+          credentials: "same-origin",
         });
         const json = (await res.json()) as {
           email?: string;
@@ -61,6 +138,7 @@ function ConfirmInner() {
           accessCode?: string;
           paidRegistration?: boolean;
           invitedRegistration?: boolean;
+          freeFirstDay?: boolean;
           boundProfile?: boolean;
           neverRegistered?: boolean;
           canEditName?: boolean;
@@ -74,16 +152,21 @@ function ConfirmInner() {
             accessCode: json.accessCode || "",
             paidRegistration: Boolean(json.paidRegistration),
             invitedRegistration: Boolean(json.invitedRegistration),
+            freeFirstDay: Boolean(json.freeFirstDay),
+            alreadyCompleted: true,
           });
           return;
         }
         if (!res.ok || !json.email) {
-          setState({ phase: "invalid", error: json.error || "Enlace invalido." });
+          setState({
+            phase: "invalid",
+            error: json.error || "Este enlace no es válido o ya venció.",
+          });
           return;
         }
         if (json.memberName) setMemberName(json.memberName);
-        if (json.cedula) setCedula(json.cedula);
-        if (json.phone) setPhone(json.phone);
+        if (json.cedula) setCedula(formatCedulaDisplay(json.cedula));
+        if (json.phone) setPhone(formatPhoneDisplay(json.phone));
         if (json.goal) setGoal(json.goal);
         setState({
           phase: "form",
@@ -94,7 +177,12 @@ function ConfirmInner() {
           canEditName: json.canEditName !== false,
         });
       } catch {
-        if (!cancelled) setState({ phase: "invalid", error: "Error de conexion." });
+        if (!cancelled) {
+          setState({
+            phase: "invalid",
+            error: "No pudimos validar el enlace. Revisá tu conexión e intentá de nuevo.",
+          });
+        }
       }
     })();
     return () => {
@@ -102,10 +190,42 @@ function ConfirmInner() {
     };
   }, [token]);
 
+  const sourceLabel = useMemo(() => {
+    if (state.phase !== "form") return "";
+    if (state.source === "paypal") return "Pago confirmado";
+    if (state.source === "reception") return "Invitación de recepción";
+    if (state.source === "admin") return "Invitación del gimnasio";
+    if (state.source === "primer-dia") return "Primer día gratis";
+    return "Registro por correo";
+  }, [state]);
+
+  function validateClient() {
+    const hints: Record<string, string> = {};
+    if (!memberName.trim() || memberName.trim().length < 3) {
+      hints.memberName = "Escribí tu nombre completo.";
+    }
+    if (onlyDigits(cedula).length < 6) {
+      hints.cedula = "La cédula o documento necesita al menos 6 dígitos.";
+    }
+    if (onlyDigits(phone).length < 8) {
+      hints.phone = "El teléfono necesita al menos 8 dígitos.";
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      hints.pin = "El PIN debe ser exactamente 4 dígitos.";
+    } else if (pin === "0000" || pin === "1234") {
+      hints.pin = "Elegí un PIN más seguro (evitá 0000 o 1234).";
+    }
+    if (pin && pin !== pinConfirm) {
+      hints.pinConfirm = "Los dos PIN no coinciden.";
+    }
+    setFieldHints(hints);
+    return Object.keys(hints).length === 0;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!memberName.trim() || !cedula.trim() || !phone.trim()) {
-      setError("Completá nombre, cédula y teléfono.");
+    if (!validateClient()) {
+      setError("Revisá los campos marcados.");
       return;
     }
     setSubmitting(true);
@@ -116,7 +236,16 @@ function ConfirmInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ action: "confirm", token, memberName, cedula, phone, goal }),
+        body: JSON.stringify({
+          action: "confirm",
+          token,
+          memberName: memberName.trim(),
+          cedula: onlyDigits(cedula),
+          phone: onlyDigits(phone),
+          goal: goal.trim(),
+          pin,
+          pinConfirm,
+        }),
       });
       const json = (await res.json()) as {
         ok?: boolean;
@@ -124,6 +253,7 @@ function ConfirmInner() {
         accessCode?: string;
         paidRegistration?: boolean;
         invitedRegistration?: boolean;
+        freeFirstDay?: boolean;
         profileCorrected?: boolean;
         claimedExistingCedula?: boolean;
         code?: string;
@@ -134,46 +264,53 @@ function ConfirmInner() {
         setErrorCode(json.code || "");
         return;
       }
+
+      const finalName = json.memberName || memberName.trim();
+      try {
+        window.localStorage.setItem(STORAGE_KEY, finalName);
+        window.localStorage.setItem(CEDULA_KEY, onlyDigits(cedula));
+      } catch {
+        // localStorage puede fallar en modo privado
+      }
+
       setState({
         phase: "done",
-        memberName: json.memberName || memberName,
+        memberName: finalName,
         accessCode: json.accessCode || "",
         paidRegistration: Boolean(json.paidRegistration),
         invitedRegistration: Boolean(json.invitedRegistration),
+        freeFirstDay: Boolean(json.freeFirstDay),
         profileCorrected: Boolean(json.profileCorrected),
         claimedExistingCedula: Boolean(json.claimedExistingCedula),
       });
     } catch {
-      setError("Error de conexion.");
+      setError("Error de conexión. Intentá de nuevo.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  const sourceLabel =
-    state.phase === "form"
-      ? state.source === "paypal"
-        ? "Pago y correo confirmados"
-        : state.source === "reception"
-          ? "Invitación de recepción"
-          : state.source === "admin"
-            ? "Invitación del gimnasio"
-            : "Correo confirmado"
-      : "";
+  const pinReady = pin.length === 4 && pinConfirm.length === 4 && pin === pinConfirm;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[#0b0b0b] px-5 py-14 text-white">
+    <main className="grid min-h-screen place-items-center bg-[#0b0b0b] px-5 py-12 text-white sm:py-14">
       <div className="w-full max-w-md">
         <div className="mb-8 flex items-center gap-3">
           <span className="grid h-12 w-12 place-items-center bg-[#d8ff3e] text-black">
             <Dumbbell className="h-7 w-7" />
           </span>
-          <span className="text-lg font-black uppercase tracking-[0.2em]">Xtreme Gym</span>
+          <div>
+            <span className="text-lg font-black uppercase tracking-[0.2em]">Xtreme Gym</span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+              Activar acceso
+            </p>
+          </div>
         </div>
 
         {state.phase === "loading" && (
-          <div className="grid place-items-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+          <div className="grid place-items-center border border-white/10 bg-[#111] py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
+            <p className="mt-4 text-sm font-bold text-white/50">Validando tu enlace…</p>
           </div>
         )}
 
@@ -181,114 +318,197 @@ function ConfirmInner() {
           <div className="border border-red-500/30 bg-red-500/10 p-6">
             <div className="flex items-center gap-2 text-red-400">
               <XCircle className="h-5 w-5" />
-              <p className="font-black uppercase">Enlace no valido</p>
+              <p className="font-black uppercase">Enlace no válido</p>
             </div>
-            <p className="mt-3 text-sm font-semibold text-white/70">{state.error}</p>
-            <Link
-              href="/primer-dia#reservar"
-              className="mt-6 inline-flex bg-[#d8ff3e] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
-            >
-              Registrarme de nuevo
-            </Link>
+            <p className="mt-3 text-sm font-semibold leading-6 text-white/70">{state.error}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/primer-dia#registro"
+                className="inline-flex bg-[#d8ff3e] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
+              >
+                Pedir enlace nuevo
+              </Link>
+              <Link
+                href="/app"
+                className="inline-flex border border-white/20 px-5 py-3 text-sm font-black uppercase text-white transition hover:border-[#d8ff3e]"
+              >
+                Ir a la app
+              </Link>
+            </div>
           </div>
         )}
 
         {state.phase === "form" && (
-          <form onSubmit={submit} className="border border-white/10 bg-[#111] p-6">
+          <form onSubmit={submit} className="border border-white/10 bg-[#111] p-5 sm:p-6" noValidate>
+            <StepRail active={2} />
+
             <div className="flex items-center gap-2 text-[#d8ff3e]">
               <CheckCircle2 className="h-5 w-5" />
               <p className="text-xs font-black uppercase tracking-[0.18em]">{sourceLabel}</p>
             </div>
             <h1 className="mt-3 text-3xl font-black uppercase leading-none">
-              {state.boundProfile && state.neverRegistered
-                ? "Verificá correo y tus datos"
-                : "Completá tu perfil"}
+              Completá tu perfil
             </h1>
             <p className="mt-2 text-sm font-semibold text-white/60">
-              Correo a verificar: <span className="text-[#d8ff3e]">{state.email}</span>
+              Correo: <span className="text-[#d8ff3e]">{state.email}</span>
             </p>
 
-            <div className="mt-4 border border-orange-300/35 bg-orange-300/10 px-3 py-3 text-sm font-semibold text-orange-100">
-              <strong>Checklist:</strong> al guardar, este correo queda verificado y tenés que
-              confirmar que estén bien:
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-orange-50/95">
-                <li>Nombre completo</li>
-                <li>Teléfono</li>
-                <li>Cédula / documento de identidad</li>
-              </ul>
-              {state.boundProfile && state.neverRegistered ? (
-                <p className="mt-2 text-orange-50/90">
-                  El reimport del sistema viejo suele traer cédulas mal. No las tomés como verdad:
-                  corregí acá lo que haga falta.
-                </p>
-              ) : (
-                <p className="mt-2 text-orange-50/90">
-                  Usá tus datos reales. No copies datos ajenos ni del archivo viejo del gym.
-                </p>
-              )}
+            <div className="mt-4 border border-[#d8ff3e]/25 bg-[#d8ff3e]/10 px-3 py-3 text-sm font-semibold leading-6 text-white/80">
+              {state.boundProfile
+                ? "Traemos lo que ya teníamos de tu ficha. Revisalo y dejá listos tus datos reales."
+                : "Con estos datos activás tu cuenta y creás el PIN para entrar a la app."}
+              <p className="mt-2 text-white/60">Al guardar, el correo queda verificado y el PIN listo.</p>
             </div>
 
-            <label className="mt-6 block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
-                1 · Nombre completo
-              </span>
-              <input
-                autoComplete="name"
-                value={memberName}
-                onChange={(e) => setMemberName(e.target.value)}
-                readOnly={!state.canEditName}
-                className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e] read-only:cursor-not-allowed read-only:text-white/55"
-                placeholder="Nombre y apellidos como en tu cédula"
-              />
-              {!state.canEditName && (
-                <span className="mt-2 block text-xs font-semibold text-white/40">
-                  Usamos el nombre ligado al pago para evitar que el acceso se asigne a otra persona.
+            <section className="mt-6">
+              <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/50">
+                <UserRound className="h-3.5 w-3.5 text-[#d8ff3e]" />
+                Tus datos
+              </div>
+
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
+                  Nombre completo
                 </span>
+                <input
+                  autoComplete="name"
+                  autoFocus
+                  value={memberName}
+                  onChange={(e) => setMemberName(e.target.value)}
+                  readOnly={!state.canEditName}
+                  className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e] read-only:cursor-not-allowed read-only:text-white/55"
+                  placeholder="Nombre y apellidos"
+                />
+                {fieldHints.memberName && (
+                  <span className="mt-1 block text-xs font-bold text-red-300">{fieldHints.memberName}</span>
+                )}
+                {!state.canEditName && (
+                  <span className="mt-1 block text-xs font-semibold text-white/40">
+                    Usamos el nombre ligado a tu pago.
+                  </span>
+                )}
+              </label>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
+                  Teléfono
+                </span>
+                <input
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhoneDisplay(e.target.value))}
+                  className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
+                  placeholder="8898 4000"
+                />
+                {fieldHints.phone ? (
+                  <span className="mt-1 block text-xs font-bold text-red-300">{fieldHints.phone}</span>
+                ) : (
+                  <span className="mt-1 block text-xs font-semibold text-white/40">
+                    Preferible con WhatsApp.
+                  </span>
+                )}
+              </label>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
+                  Cédula / documento
+                </span>
+                <input
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={cedula}
+                  onChange={(e) => setCedula(formatCedulaDisplay(e.target.value))}
+                  className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
+                  placeholder="1-2345-6789"
+                />
+                {fieldHints.cedula ? (
+                  <span className="mt-1 block text-xs font-bold text-red-300">{fieldHints.cedula}</span>
+                ) : (
+                  <span className="mt-1 block text-xs font-semibold text-white/40">
+                    Con esta ID + tu PIN entrás a la app.
+                  </span>
+                )}
+              </label>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
+                  Objetivo (opcional)
+                </span>
+                <input
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
+                  placeholder="Ganar fuerza, bajar grasa…"
+                />
+              </label>
+            </section>
+
+            <section className="mt-6 border-t border-white/10 pt-5">
+              <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[#d8ff3e]">
+                <KeyRound className="h-3.5 w-3.5" />
+                Tu PIN de acceso
+              </div>
+              <p className="text-xs font-semibold leading-relaxed text-white/45">
+                4 dígitos para proteger tu perfil. Solo se crea una vez; si lo olvidás, lo recuperás
+                con este correo.
+              </p>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label>
+                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
+                    PIN
+                  </span>
+                  <input
+                    type={showPin ? "text" : "password"}
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    maxLength={4}
+                    value={pin}
+                    onChange={(e) => setPin(onlyDigits(e.target.value).slice(0, 4))}
+                    className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 text-center text-xl font-black tracking-[0.4em] outline-none focus:border-[#d8ff3e]"
+                    placeholder="••••"
+                  />
+                  {fieldHints.pin && (
+                    <span className="mt-1 block text-xs font-bold text-red-300">{fieldHints.pin}</span>
+                  )}
+                </label>
+                <label>
+                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
+                    Repetí el PIN
+                  </span>
+                  <input
+                    type={showPin ? "text" : "password"}
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    maxLength={4}
+                    value={pinConfirm}
+                    onChange={(e) => setPinConfirm(onlyDigits(e.target.value).slice(0, 4))}
+                    className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 text-center text-xl font-black tracking-[0.4em] outline-none focus:border-[#d8ff3e]"
+                    placeholder="••••"
+                  />
+                  {fieldHints.pinConfirm && (
+                    <span className="mt-1 block text-xs font-bold text-red-300">
+                      {fieldHints.pinConfirm}
+                    </span>
+                  )}
+                </label>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPin((v) => !v)}
+                className="mt-3 text-xs font-bold uppercase tracking-wide text-white/45 underline-offset-2 hover:text-white hover:underline"
+              >
+                {showPin ? "Ocultar PIN" : "Mostrar PIN"}
+              </button>
+
+              {pinReady && (
+                <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-[#d8ff3e]">
+                  <ShieldCheck className="h-3.5 w-3.5" /> PIN listo
+                </p>
               )}
-            </label>
-            <label className="mt-4 block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
-                2 · Teléfono
-              </span>
-              <input
-                inputMode="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
-                placeholder="8898 4000"
-              />
-              <span className="mt-2 block text-xs font-semibold text-white/40">
-                Preferible con WhatsApp. Recepción te puede contactar si hace falta.
-              </span>
-            </label>
-            <label className="mt-4 block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
-                3 · Cédula / documento de identidad
-              </span>
-              <input
-                inputMode="numeric"
-                value={cedula}
-                onChange={(e) => setCedula(e.target.value)}
-                className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
-                placeholder="1-2345-6789 o documento de residencia"
-              />
-              <span className="mt-2 block text-xs font-semibold text-white/40">
-                Si el import la traía mal, poné la correcta. Después entrás a la app con esta ID +
-                PIN.
-              </span>
-            </label>
-            <label className="mt-4 block">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-white/50">
-                Objetivo (opcional)
-              </span>
-              <input
-                value={goal}
-                onChange={(e) => setGoal(e.target.value)}
-                className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
-                placeholder="Ganar fuerza, bajar grasa..."
-              />
-            </label>
+            </section>
 
             {error && (
               <div className="mt-4 border border-red-500/30 bg-red-500/10 px-3 py-3 text-sm font-bold text-red-300">
@@ -299,7 +519,7 @@ function ConfirmInner() {
                     href="/contacto"
                     className="mt-3 inline-flex border border-red-300/40 px-3 py-2 text-xs font-black uppercase text-white transition hover:bg-white hover:text-black"
                   >
-                    Contactar recepción sin salir del proceso
+                    Contactar recepción
                   </Link>
                 )}
               </div>
@@ -312,48 +532,68 @@ function ConfirmInner() {
             >
               {submitting ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
-              ) : state.boundProfile && state.neverRegistered ? (
-                "Verificar correo y confirmar mis datos"
               ) : (
-                "Crear mi cuenta"
+                "Activar cuenta y crear PIN"
               )}
             </button>
+            <p className="mt-3 text-center text-[11px] font-semibold text-white/35">
+              Al continuar aceptás crear tu acceso de socio en Xtreme Gym.
+            </p>
           </form>
         )}
 
         {state.phase === "done" && (
           <div className="border border-[#d8ff3e]/30 bg-[#d8ff3e]/5 p-6 text-center">
+            <StepRail active={3} />
             <CheckCircle2 className="mx-auto h-12 w-12 text-[#d8ff3e]" />
             <h1 className="mt-4 text-3xl font-black uppercase leading-none">
               ¡Listo, {state.memberName.split(" ")[0]}!
             </h1>
-            <p className="mt-3 text-sm font-semibold text-white/70">
-              {state.paidRegistration
-                ? state.claimedExistingCedula
-                  ? "Encontramos tu ficha anterior por cédula y la unimos con el pago y el correo confirmado. No perdiste la membresía ni se creó una cuenta duplicada."
-                  : "Tu pago, correo y cédula quedaron unidos de forma segura. Ya podés entrar a la app y crear tu PIN."
-                : state.invitedRegistration
-                  ? state.profileCorrected
-                    ? "Tus datos quedaron corregidos y el correo verificado. Ya podés entrar a la app y crear tu PIN."
-                    : "Tu cuenta quedó creada y ya podés entrar a la app. Esta invitación no activa un plan ni incluye el primer día gratis; podés elegir una membresía cuando querás."
-                  : "Tu cuenta quedó creada. Tu primer día es gratis: presentate en recepción con tu nombre."}
+            <p className="mt-3 text-sm font-semibold leading-6 text-white/70">
+              {state.alreadyCompleted
+                ? "Tu cuenta ya estaba activa. Entrá a la app con tu cédula y PIN."
+                : state.paidRegistration
+                  ? state.claimedExistingCedula
+                    ? "Unimos tu pago con tu ficha. Correo, cédula y PIN quedaron listos."
+                    : "Pago, correo y PIN quedaron unidos. Ya podés entrar a la app."
+                  : state.invitedRegistration
+                    ? "Tu cuenta y PIN quedaron listos. Podés elegir un plan cuando quieras."
+                    : state.freeFirstDay !== false
+                      ? "Tu cuenta y PIN quedaron listos. Tu primer día es gratis: presentate en recepción."
+                      : "Tu cuenta y PIN quedaron listos. Ya podés entrar a la app."}
             </p>
+
             {state.accessCode && (
               <div className="mt-5 bg-[#0b0b0b] px-4 py-4">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-white/45">
-                  Tu código de acceso
+                  Código de ingreso en recepción
                 </p>
                 <p className="mt-1 text-2xl font-black tracking-[0.3em] text-[#d8ff3e]">
                   {state.accessCode}
                 </p>
               </div>
             )}
+
+            <div className="mt-5 border border-white/10 bg-black/30 px-4 py-3 text-left text-sm font-semibold text-white/65">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#d8ff3e]">
+                Cómo entrar a la app
+              </p>
+              <ol className="mt-2 list-decimal space-y-1 pl-4">
+                <li>Abrí la app</li>
+                <li>Ingresá tu cédula</li>
+                <li>Usá el PIN que acabás de crear</li>
+              </ol>
+            </div>
+
             <Link
               href="/app"
-              className="mt-6 inline-flex bg-[#d8ff3e] px-6 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
+              className="mt-6 inline-flex w-full items-center justify-center bg-[#d8ff3e] px-6 py-4 text-sm font-black uppercase text-black transition hover:bg-white sm:w-auto"
             >
-              Abrir mi app
+              Entrar a mi app
             </Link>
+            <p className="mt-4 text-xs font-semibold text-white/40">
+              También te mandamos un correo de bienvenida con estos datos.
+            </p>
           </div>
         )}
       </div>

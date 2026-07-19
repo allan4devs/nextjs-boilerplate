@@ -286,6 +286,7 @@ type AdminData = {
         tab?: string;
         action?: string;
         label?: string;
+        meta?: Record<string, string | number | boolean | null>;
       }>;
     }>;
   } | null;
@@ -2427,6 +2428,13 @@ export default function XtremeAdminPage() {
                                       {ev.tab ? ` · tab ${ev.tab}` : ""}
                                       {ev.action ? ` · ${ev.action}` : ""}
                                       {ev.label ? ` · “${ev.label}”` : ""}
+                                      {ev.meta && (
+                                        <span className="mt-1 block font-mono text-[10px] text-cyan-200/70">
+                                          {Object.entries(ev.meta)
+                                            .map(([key, value]) => `${key}=${String(value)}`)
+                                            .join(" · ")}
+                                        </span>
+                                      )}
                                     </span>
                                   </li>
                                 ))}

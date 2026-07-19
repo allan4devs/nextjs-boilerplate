@@ -173,7 +173,12 @@ export function trackTabView(tab: string, path?: string) {
 
 export function trackAction(
   action: string,
-  opts?: { label?: string; path?: string; tab?: string },
+  opts?: {
+    label?: string;
+    path?: string;
+    tab?: string;
+    meta?: Record<string, string | number | boolean | null>;
+  },
 ) {
   trackUsage({
     type: "action",
@@ -181,6 +186,7 @@ export function trackAction(
     label: opts?.label,
     path: opts?.path ?? (typeof window !== "undefined" ? window.location.pathname : undefined),
     tab: opts?.tab,
+    meta: opts?.meta,
   });
 }
 

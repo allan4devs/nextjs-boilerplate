@@ -4,6 +4,14 @@ import { useEffect, useRef } from "react";
 
 const KEYBOARD_THRESHOLD_PX = 120;
 
+function isIosLikeDevice() {
+  const ua = navigator.userAgent;
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 function isEditableTarget(target: EventTarget | null): target is HTMLElement {
   return (
     target instanceof HTMLElement &&
@@ -21,6 +29,14 @@ export default function MobileViewportRuntime() {
   useEffect(() => {
     const root = document.documentElement;
     const viewport = window.visualViewport;
+    const ios = isIosLikeDevice();
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      ("standalone" in navigator &&
+        Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
+
+    root.dataset.xgPlatform = ios ? "ios" : "other";
+    root.dataset.xgDisplayMode = standalone ? "standalone" : "browser";
 
     const visibleHeight = () => Math.round(viewport?.height ?? window.innerHeight);
     const updateViewport = () => {
@@ -75,6 +91,8 @@ export default function MobileViewportRuntime() {
       root.style.removeProperty("--xg-visual-viewport-height");
       root.style.removeProperty("--xg-visual-viewport-offset");
       delete root.dataset.xgKeyboard;
+      delete root.dataset.xgPlatform;
+      delete root.dataset.xgDisplayMode;
     };
   }, []);
 

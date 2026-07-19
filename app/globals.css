@@ -202,12 +202,58 @@ button,
 /* Stable bottom surface for app navigation during mobile/PWA scrolling. */
 .xg-app-dock {
   bottom: 0 !important;
+  padding-inline-start: max(0px, env(safe-area-inset-left, 0px));
+  padding-inline-end: max(0px, env(safe-area-inset-right, 0px));
   isolation: isolate;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   will-change: transform;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.xg-app-dock-with-chat {
+  padding-inline-end: max(20%, env(safe-area-inset-right, 0px));
+}
+
+/* En mobile/PWA el OS es un viewport cerrado: solo el panel de contenido
+   scrollea. Esto evita que el body haga rubber-band por detrás del dock y
+   que position:fixed se despegue al cambiar el viewport visual de iOS. */
+@media (max-width: 1023px) {
+  .xg-member-os {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    height: auto;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .xg-member-os > .xg-os-content {
+    width: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .xg-member-os > .xg-app-dock,
+  .xg-member-os .xg-member-chat-dock {
+    position: absolute;
+  }
+
+  /* Safari/iOS conserva un layout viewport distinto al viewport visible al
+     contraer sus barras. El shell sigue visualViewport para que el dock quede
+     realmente pegado abajo tanto en Safari como en la PWA instalada. */
+  html[data-xg-platform="ios"] .xg-member-os {
+    inset: var(--xg-visual-viewport-offset) 0 auto;
+    height: var(--xg-visual-viewport-height);
+    min-height: 0;
+  }
 }
 
 @media (display-mode: standalone) {
@@ -322,7 +368,11 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 /* Member chat occupies the fifth dock slot instead of floating above navigation. */
 .xg-member-chat-dock {
   inset-inline: 0;
-  bottom: env(safe-area-inset-bottom, 0px);
+  bottom: 0;
+  padding-inline-start: max(0px, env(safe-area-inset-left, 0px));
+  padding-inline-end: max(0px, env(safe-area-inset-right, 0px));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to right, transparent 0 80%, rgba(10, 10, 10, 0.98) 80% 100%);
 }
 
 @media (min-width: 768px) {
@@ -342,6 +392,8 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
     right: 1.5rem;
     bottom: 1.5rem;
     width: auto;
+    padding-bottom: 0;
+    background: transparent;
   }
 }
 

@@ -34,19 +34,23 @@ declare global {
 }
 
 const CHECKOUT_NOTES: Record<string, string> = {
+  "day-pass": "Un día de acceso · ideal para reservar una clase hoy.",
   week: "Una semana para activar el hábito.",
   fortnight: "Buen ritmo para sostener el progreso.",
   month: "La opción principal para entrenar constante.",
   senior: "Tres clases por semana para bienestar y movimiento.",
 };
 
-/** Paid-only catalog — every option requires PayPal checkout. */
-const CHECKOUT_OPTIONS: CheckoutOption[] = XTREME_CHECKOUT_OPTIONS
-  .filter((option) => option.id !== "day-pass")
-  .map((option) => ({ ...option, note: CHECKOUT_NOTES[option.id] ?? "" }));
+/** Paid catalog. Pase del día solo en Member OS (reservas sin plan). */
+function buildCheckoutOptions(includeDayPass: boolean): CheckoutOption[] {
+  return XTREME_CHECKOUT_OPTIONS
+    .filter((option) => includeDayPass || option.id !== "day-pass")
+    .map((option) => ({ ...option, note: CHECKOUT_NOTES[option.id] ?? "" }));
+}
 
 const MAIN_OPTION_IDS = new Set(["week", "fortnight", "month"]);
-const PLAN_DAYS: Record<string, number> = { week: 7, fortnight: 15, month: 30 };
+const MEMBER_OPTION_IDS = new Set(["day-pass", "week", "fortnight", "month"]);
+const PLAN_DAYS: Record<string, number> = { "day-pass": 1, week: 7, fortnight: 15, month: 30 };
 const CHECKOUT_FORM_KEY = "xtreme-checkout-form";
 const GROUP_CLASS_LINK =
   "https://wa.me/" +
@@ -59,11 +63,12 @@ function perDayLabel(priceCrc: number, days: number) {
   return value.toLocaleString("es-CR");
 }
 
-function isValidOptionId(value: string | null | undefined) {
-  return CHECKOUT_OPTIONS.some((option) => option.id === value);
+function isValidOptionId(value: string | null | undefined, options: CheckoutOption[]) {
+  return options.some((option) => option.id === value);
 }
 
 const PRICE_PERIOD: Record<string, { es: string; en: string }> = {
+  "day-pass": { es: "por día", en: "per day" },
   week: { es: "por semana", en: "per week" },
   fortnight: { es: "por quincena", en: "per fortnight" },
   month: { es: "por mes", en: "per month" },
@@ -104,7 +109,16 @@ export default function ExtremeGymCheckout({
   onSuccess?: (result: CheckoutSuccess) => void | Promise<void>;
 }) {
   const english = locale === "en";
+  const CHECKOUT_OPTIONS = useMemo(
+    () => buildCheckoutOptions(memberCheckout),
+    [memberCheckout],
+  );
   const englishOptions: Record<string, { label: string; category: string; note: string }> = {
+    "day-pass": {
+      label: "Day pass",
+      category: "Class",
+      note: "One day of access — great to book a class today.",
+    },
     week: { label: "Weekly plan", category: "Plan", note: "One week to build momentum." },
     fortnight: { label: "Fortnightly plan", category: "Plan", note: "A solid rhythm for consistent progress." },
     month: { label: "Monthly plan", category: "Plan", note: "The main option for consistent training." },
@@ -113,11 +127,13 @@ export default function ExtremeGymCheckout({
   const optionText = (option: CheckoutOption) => english ? englishOptions[option.id] : option;
   const searchParams = useSearchParams();
   const planFromUrl = searchParams.get("plan");
-  const resolvedInitialOption = isValidOptionId(planFromUrl)
+  const resolvedInitialOption = isValidOptionId(planFromUrl, CHECKOUT_OPTIONS)
     ? planFromUrl!
-    : isValidOptionId(initialOption)
+    : isValidOptionId(initialOption, CHECKOUT_OPTIONS)
       ? initialOption
-      : "month";
+      : memberCheckout
+        ? "day-pass"
+        : "month";
   const [selectedId, setSelectedId] = useState(resolvedInitialOption);
   const [form, setForm] = useState<FormState>(() => ({
     name: memberCustomer?.name ?? "",
@@ -152,9 +168,9 @@ export default function ExtremeGymCheckout({
   }, [form, formReady, selected]);
 
   useEffect(() => {
-    if (!isValidOptionId(planFromUrl)) return;
+    if (!isValidOptionId(planFromUrl, CHECKOUT_OPTIONS)) return;
     setSelectedId(planFromUrl!);
-  }, [planFromUrl]);
+  }, [CHECKOUT_OPTIONS, planFromUrl]);
 
   useEffect(() => {
     if (memberCheckout) return;
@@ -461,8 +477,10 @@ export default function ExtremeGymCheckout({
           </>
         ) : null}
 
-        <div className={memberCheckout ? "grid gap-3 sm:grid-cols-3" : compact ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-4" : "mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"}>
-          {CHECKOUT_OPTIONS.filter((option) => MAIN_OPTION_IDS.has(option.id)).map((option) => {
+        <div className={memberCheckout ? "grid gap-3 sm:grid-cols-2" : compact ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-4" : "mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"}>
+          {CHECKOUT_OPTIONS.filter((option) =>
+            (memberCheckout ? MEMBER_OPTION_IDS : MAIN_OPTION_IDS).has(option.id),
+          ).map((option) => {
             const active = selected.id === option.id;
             const featured = option.id === "month";
             const price = option.priceLabel.replace("CRC ", "");
@@ -726,6 +744,37 @@ export default function ExtremeGymCheckout({
               {english
                 ? "Your access is activated automatically as soon as the online payment is approved."
                 : "Tu acceso se activa automáticamente apenas se confirma el pago en línea."}
+            </p>
+            <p className="mt-2 text-[11px] font-semibold leading-5 text-black/45">
+              {english ? (
+                <>
+                  By paying you accept our{" "}
+                  <a href="/terminos" className="underline underline-offset-2">
+                    Terms
+                  </a>{" "}
+                  and{" "}
+                  <a href="/privacidad" className="underline underline-offset-2">
+                    Privacy Policy
+                  </a>
+                  .
+                </>
+              ) : (
+                <>
+                  Al pagar aceptás las{" "}
+                  <a href="/terminos" className="underline underline-offset-2">
+                    Condiciones de uso
+                  </a>{" "}
+                  y la{" "}
+                  <a href="/privacidad" className="underline underline-offset-2">
+                    Privacidad
+                  </a>
+                  . Normas del gym en{" "}
+                  <a href="/normas" className="underline underline-offset-2">
+                    /normas
+                  </a>
+                  .
+                </>
+              )}
             </p>
             </>}
           </div>

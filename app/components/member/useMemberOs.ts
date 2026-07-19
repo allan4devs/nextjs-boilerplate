@@ -1042,18 +1042,39 @@ export function useMemberOs() {
         checkoutOptionId?: string;
       };
       if (!response.ok) {
-        if (data.paymentRequired || response.status === 402) {
-          setError(data.error || MSG.errors.planRequired);
-          setMessage("");
-          // Soft nudge: open first-day offer
-          if (typeof window !== "undefined") {
-            // Keep user in app; show clear next step
-          }
-        } else {
-          throw new Error(data.error ?? MSG.errors.reserve);
-        }
         if (data.reservations) setReservations(data.reservations);
-        return;
+        const code = String(data.code || "");
+        if (
+          data.paymentRequired ||
+          response.status === 402 ||
+          code === "payment_required" ||
+          code === "expired" ||
+          code === "limit_reached"
+        ) {
+          const reason =
+            code === "expired"
+              ? "expired"
+              : code === "limit_reached"
+                ? "limit_reached"
+                : "payment_required";
+          const fallback =
+            reason === "expired"
+              ? MSG.errors.planExpired
+              : reason === "limit_reached"
+                ? MSG.errors.planLimit
+                : MSG.errors.planRequired;
+          setError("");
+          setMessage("");
+          setOsModal({
+            kind: "access-required",
+            reason,
+            message: data.error || fallback,
+            trainingName: training.name,
+            checkoutOptionId: data.checkoutOptionId || "day-pass",
+          });
+          return;
+        }
+        throw new Error(data.error ?? MSG.errors.reserve);
       }
       setReservations(data.reservations ?? {});
       await loadGymStatus();

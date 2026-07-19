@@ -43,6 +43,39 @@ type SuppressionDoc = {
 
 type RecipientContactDoc = { email: string; name?: string };
 
+async function buildMemberCoverage(db: Awaited<ReturnType<typeof getDb>>) {
+  const members = await db.collection<MemberDoc>(MEMBERS_COLLECTION)
+    .find({})
+    .project({
+      memberName: 1,
+      normalizedName: 1,
+      email: 1,
+      emailVerified: 1,
+      membership: 1,
+      emailQuarantine: 1,
+      legacyImport: 1,
+    })
+    .toArray();
+
+  return members.map((member) => {
+    const rate =
+      member.legacyImport?.canonicalRate ||
+      member.legacyImport?.rows?.find((row: { rate?: string }) => String(row.rate || "").trim())
+        ?.rate ||
+      "";
+    return {
+      name: String(member.memberName || member.normalizedName || "Sin nombre").trim(),
+      email: normalizeEmail(member.email),
+      emailVerified: member.emailVerified === true,
+      plan: String(member.membership?.plan || "").trim(),
+      rate: String(rate).trim(),
+      sourceStatus: String(member.legacyImport?.canonicalSourceStatus || "").trim(),
+      quarantineReason: String(member.emailQuarantine?.reason || "").trim(),
+      quarantinedEmail: normalizeEmail(member.emailQuarantine?.previousEmail),
+    };
+  }).sort((left, right) => left.name.localeCompare(right.name, "es-CR", { sensitivity: "base" }));
+}
+
 function recipientSource(options: { member: boolean; pending: boolean; imported: boolean }) {
   return [
     options.member ? "Socio" : "",
@@ -137,18 +170,22 @@ export async function GET(req: NextRequest) {
       EMAIL_AUDIENCE_IDS.map((id) => [id, audiences[id]?.length ?? 0]),
     ) as Record<EmailAudience, number>;
     const requestedAudience = String(req.nextUrl.searchParams.get("audience") || "") as EmailAudience;
+    const includeCoverage = req.nextUrl.searchParams.get("coverage") === "1";
     const recipientList = AUDIENCES.has(requestedAudience)
       ? await buildRecipientList(db, audiences[requestedAudience] ?? [])
       : undefined;
+    const memberCoverage = includeCoverage ? await buildMemberCoverage(db) : undefined;
     return NextResponse.json({
       ok: true,
       audiences: {
         ...counts,
         suppressed: audiences.suppressed,
       },
+      diagnostics: audiences.diagnostics,
       campaigns: campaigns.map((campaign) => ({ ...campaign, _id: undefined })),
       unsubscribes: unsubscribes.map((item) => ({ ...item, _id: undefined })),
       ...(recipientList ? { recipientList, recipientAudience: requestedAudience } : {}),
+      ...(memberCoverage ? { memberCoverage } : {}),
     });
   } catch (error) {
     console.error("XTREME ADMIN EMAIL GET", error);

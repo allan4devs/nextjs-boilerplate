@@ -66,7 +66,7 @@ export default function ExtremeGymSite() {
   }, [setMessage, setError]);
 
   return (
-    <main className="relative min-h-screen bg-[#050505] text-white selection:bg-[#d8ff3e] selection:text-black">
+    <main className="xg-member-os relative min-h-screen bg-[#050505] text-white selection:bg-[#d8ff3e] selection:text-black">
       {/* Fondo ambiental del OS: rejilla HUD + glows */}
       <div aria-hidden className="xg-atmosphere" />
       {celebration && !showPin && (

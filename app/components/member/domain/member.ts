@@ -114,6 +114,8 @@ export type Member = {
   phone: string;
   email: string;
   cedula?: string;
+  /** Correo confirmado por enlace mágico / invitación. */
+  emailVerified?: boolean;
   photoUrl: string;
   workouts: Workout[];
   streak: number;

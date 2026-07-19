@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -23,6 +23,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
+import { trackAction } from "@/app/lib/analytics/session-client";
 import { BarTrendChart, CHART_LIME } from "../../../charts";
 import { GameLabel } from "../../../GameOS";
 import { StreakRing, XpBar } from "../../../gamification";
@@ -32,6 +33,11 @@ import type {
 } from "../../view-models/useResumenViewModel";
 import ActiveVisitPanel from "./ActiveVisitPanel";
 import GymBenefitsShowcase from "./GymBenefitsShowcase";
+import {
+  MEMBER_HOME_ALGORITHM_VERSION,
+  rankMemberHomePanels,
+  type MemberHomePanelId,
+} from "./home-priority";
 
 type Props = {
   model: ResumenViewModel;
@@ -585,4 +591,260 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
   );
 }
 
-export const MemberHomeDashboard = memo(MemberHomeDashboardComponent);
+function TrainingNowPanel({ model, actions }: Props) {
+  if (model.trainingPlan) return <TrainerPlan model={model} actions={actions} />;
+  return (
+    <section className="border-[3px] border-[#d8ff3e]/45 bg-[#d8ff3e]/[.055] p-4 shadow-[5px_5px_0_rgba(216,255,62,.16)] sm:p-5">
+      <SectionHeading eyebrow="Tu movimiento de hoy" title="EntrenÃ¡ a tu manera" icon={Dumbbell} />
+      <p className="max-w-2xl text-sm font-bold text-white/50">
+        TodavÃ­a no tenÃ©s un plan asignado. PodÃ©s registrar un entreno rÃ¡pido ahora y tu trainer podrÃ¡ ver tu constancia.
+      </p>
+      <button
+        type="button"
+        onClick={actions.markTodayTraining}
+        disabled={model.todayTraining.disabled}
+        data-analytics="Inicio: registrar entreno"
+        className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#d8ff3e] px-5 text-sm font-black uppercase text-black transition hover:bg-white disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30 sm:w-auto"
+      >
+        {model.todayTraining.saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Dumbbell className="h-4 w-4" />}
+        {model.todayTraining.actionLabel}
+      </button>
+    </section>
+  );
+}
+
+function MemberHomeDashboardV2({ model, actions }: Props) {
+  type PanelOption = {
+    id: MemberHomePanelId;
+    label: string;
+    hint: string;
+    icon: typeof Activity;
+    content: React.ReactNode;
+    score: number;
+    reason: string;
+  };
+
+  const panels = useMemo<PanelOption[]>(() => {
+    const relevantClasses = model.classes.filter(
+      (classItem) => classItem.isMine || (classItem.isToday && !classItem.hasStarted),
+    );
+    const membershipNeedsAttention = Boolean(
+      model.membership &&
+        (model.membership.daysRemaining <= 7 ||
+          !model.membership.status.toLowerCase().includes("activ")),
+    );
+    const weekDone = model.gamification?.days.filter((day) => day.done).length ?? 0;
+    const weeklyGoal = model.streak?.weeklyGoal ?? 3;
+    const options: Array<Omit<PanelOption, "score" | "reason">> = [];
+
+    if (model.activeVisit) {
+      options.push({
+        id: "visit",
+        label: "Estoy dentro",
+        hint: `${model.activeVisit.elapsedMinutes} min Â· salida`,
+        icon: Clock3,
+        content: <ActiveVisitPanel visit={model.activeVisit} onCheckout={actions.registerCheckout} />,
+      });
+    }
+    if (membershipNeedsAttention && model.membership) {
+      options.push({
+        id: "membership",
+        label: "Renovar",
+        hint: `${model.membership.daysRemaining} dÃ­as`,
+        icon: CreditCard,
+        content: <MembershipHero model={model} actions={actions} />,
+      });
+    }
+    if (!model.todayTraining.completed || (model.trainingPlan?.pendingCount ?? 0) > 0) {
+      options.push({
+        id: "training",
+        label: model.todayTraining.actionLabel,
+        hint: model.trainingPlan?.pendingCount
+          ? `${model.trainingPlan.pendingCount} pendiente${model.trainingPlan.pendingCount === 1 ? "" : "s"}`
+          : "Entreno rÃ¡pido",
+        icon: Dumbbell,
+        content: <TrainingNowPanel model={model} actions={actions} />,
+      });
+    }
+    if (relevantClasses.length > 0) {
+      options.push({
+        id: "classes",
+        label: "Clases hoy",
+        hint: relevantClasses.some((classItem) => classItem.isMine) ? "TenÃ©s reserva" : "Ver cupos",
+        icon: Sparkles,
+        content: <ClassesPanel model={model} actions={actions} />,
+      });
+    }
+    if (model.gamification && weekDone < weeklyGoal) {
+      options.push({
+        id: "week",
+        label: "Meta semanal",
+        hint: `${weekDone}/${weeklyGoal} entrenos`,
+        icon: CalendarDays,
+        content: <WeekCard model={model} actions={actions} />,
+      });
+    }
+    if (model.streak && model.gamification && (model.streak.value > 0 || model.gamification.xp > 0)) {
+      options.push({
+        id: "momentum",
+        label: "Racha y nivel",
+        hint: `${model.streak.value} dÃ­as`,
+        icon: Medal,
+        content: <LevelAndStreak model={model} actions={actions} />,
+      });
+    }
+    if (model.progress.workoutsThisMonth > 0 || model.progress.latestWeight !== null) {
+      options.push({
+        id: "progress",
+        label: "Mi progreso",
+        hint: `${model.progress.workoutsThisMonth} este mes`,
+        icon: Activity,
+        content: <ProgressPanel model={model} actions={actions} />,
+      });
+    }
+    options.push({
+      id: "occupancy",
+      label: "Gym en vivo",
+      hint: `${model.occupancy.percentage}% ocupado`,
+      icon: Gauge,
+      content: (
+        <button
+          type="button"
+          onClick={actions.openOccupancy}
+          data-analytics="Inicio: abrir ocupaciÃ³n"
+          className="relative min-h-44 w-full overflow-hidden border-[3px] border-cyan-300/45 bg-gradient-to-br from-cyan-300/[.1] to-[#0b0b0b] p-4 text-left shadow-[5px_5px_0_rgba(34,211,238,.15)] sm:p-5"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div><GameLabel tone="cyan">Gym en vivo</GameLabel><h2 className="mt-3 text-4xl font-black uppercase">{model.occupancy.level}</h2></div>
+            <span className="relative flex h-4 w-4"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300/60" /><span className="relative inline-flex h-4 w-4 rounded-full bg-cyan-300" /></span>
+          </div>
+          <div className="mt-6 flex items-end justify-between gap-3"><strong className="text-5xl font-black tracking-[-.06em]">{model.occupancy.percentage}%</strong><Gauge className="mb-1 h-9 w-9 text-cyan-300" /></div>
+          <p className="mt-4 flex items-center gap-2 text-xs font-bold text-white/50"><Users className="h-4 w-4" /> {model.occupancy.detail}</p>
+        </button>
+      ),
+    });
+    options.push({
+      id: "gym",
+      label: "Tu gym",
+      hint: "Zonas Â· VIP Â· mediciÃ³n",
+      icon: MapPin,
+      content: <GymBenefitsShowcase onGoTab={actions.goTab} />,
+    });
+
+    const priorities = rankMemberHomePanels(
+      options.map((panel) => panel.id),
+      {
+        activeVisit: Boolean(model.activeVisit),
+        membershipDaysRemaining: model.membership?.daysRemaining ?? null,
+        membershipActive: Boolean(model.membership?.status.toLowerCase().includes("activ")),
+        hasActiveWorkout: model.todayTraining.actionLabel === "Continuar entreno",
+        trainedToday: model.todayTraining.completed,
+        pendingPlanItems: model.trainingPlan?.pendingCount ?? 0,
+        hasReservedClassToday: relevantClasses.some((classItem) => classItem.isMine),
+        hasAvailableClassToday: relevantClasses.some(
+          (classItem) => !classItem.isMine && !classItem.isFull && !classItem.hasStarted,
+        ),
+        weekDone,
+        weeklyGoal,
+        streak: model.streak?.value ?? 0,
+      },
+    );
+    const ranked = new Map(priorities.map((priority) => [priority.id, priority]));
+    return options
+      .map((panel) => ({ ...panel, ...ranked.get(panel.id)! }))
+      .sort((a, b) => b.score - a.score);
+  }, [actions, model]);
+
+  const [selectedPanel, setSelectedPanel] = useState<MemberHomePanelId | null>(null);
+  const activePanel = panels.find((panel) => panel.id === selectedPanel) ?? panels[0] ?? null;
+  const recommendedPanel = panels[0] ?? null;
+  const trackedRecommendation = useRef("");
+
+  useEffect(() => {
+    if (!recommendedPanel) return;
+    const key = `${MEMBER_HOME_ALGORITHM_VERSION}:${recommendedPanel.id}:${recommendedPanel.score}`;
+    if (trackedRecommendation.current === key) return;
+    trackedRecommendation.current = key;
+    trackAction("home_priority_shown", {
+      tab: "resumen",
+      label: recommendedPanel.label,
+      meta: {
+        algorithm: MEMBER_HOME_ALGORITHM_VERSION,
+        panel: recommendedPanel.id,
+        score: recommendedPanel.score,
+        reason: recommendedPanel.reason,
+      },
+    });
+  }, [recommendedPanel]);
+
+  const selectPanel = (panel: PanelOption, position: number) => {
+    setSelectedPanel(panel.id);
+    trackAction("home_priority_selected", {
+      tab: "resumen",
+      label: panel.label,
+      meta: {
+        algorithm: MEMBER_HOME_ALGORITHM_VERSION,
+        panel: panel.id,
+        score: panel.score,
+        position,
+        recommended: position === 1,
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      <header className="overflow-hidden border-[3px] border-[#d8ff3e]/35 bg-gradient-to-br from-[#d8ff3e]/[.10] via-[#0b0b0b] to-[#0b0b0b] p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="max-w-2xl">
+            <p className="text-[9px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">Para vos, ahora</p>
+            <h1 className="mt-1 text-xl font-black uppercase sm:text-3xl">{recommendedPanel?.label ?? "Todo al dÃ­a"}</h1>
+            <p className="mt-2 text-xs font-bold leading-relaxed text-white/55 sm:text-sm">
+              {recommendedPanel?.reason ?? "No tenÃ©s acciones pendientes por ahora."}
+            </p>
+          </div>
+          <span className="border-2 border-[#d8ff3e]/30 bg-black/35 px-2 py-1 text-[9px] font-black uppercase tracking-[.14em] text-[#eaff93]">Recomendado</span>
+        </div>
+
+        <div className="mt-5 border-t border-white/10 pt-4">
+          <p className="mb-2 text-[9px] font-black uppercase tracking-[.18em] text-white/35">Todos tus accesos</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {panels.map((panel, index) => {
+              const Icon = panel.icon;
+              const active = panel.id === activePanel?.id;
+              return (
+                <button
+                  key={panel.id}
+                  type="button"
+                  onClick={() => selectPanel(panel, index + 1)}
+                  aria-pressed={active}
+                  data-analytics={`Inicio: ${panel.label}`}
+                  className={`flex min-h-16 items-center gap-3 border-[3px] p-3 text-left transition active:translate-y-px ${active ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/10 bg-black/30 text-white hover:border-white/30"}`}
+                >
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center border-2 ${active ? "border-black/20 bg-black/10" : "border-white/10 bg-white/[.05]"}`}><Icon className="h-5 w-5" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-black uppercase">{panel.label}</span>
+                    <span className={`mt-1 block truncate text-[10px] font-bold ${active ? "text-black/55" : "text-white/40"}`}>{panel.hint}</span>
+                  </span>
+                  {index === 0 && <span className={`text-[8px] font-black uppercase ${active ? "text-black/55" : "text-[#d8ff3e]"}`}>Ahora</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </header>
+
+      {activePanel && (
+        <div className="xg-tab-in" aria-live="polite">
+          <div className="mb-2 flex items-center justify-between gap-3 px-0.5">
+            <p className="text-[9px] font-black uppercase tracking-[.18em] text-white/35">Detalle seleccionado</p>
+            <p className="text-[9px] font-black uppercase text-[#d8ff3e]">{activePanel.label}</p>
+          </div>
+          {activePanel.content}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export const MemberHomeDashboard = memo(MemberHomeDashboardV2);

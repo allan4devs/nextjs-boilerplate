@@ -27,7 +27,7 @@ export const NAV_LINKS = [
   { href: "/precios", label: "Precios", icon: Tag, description: "Primer día gratis y planes para inscribirte" },
   { href: "/adultos-mayores", label: "Adultos", icon: HeartPulse, description: "Tres clases por semana con acompañamiento" },
   { href: "/app", label: "App", icon: Smartphone, description: "Reservas, rachas y carné digital" },
-  { href: "/preguntas", label: "Preguntas", icon: HelpCircle, description: "Dudas frecuentes antes de empezar" },
+  { href: "/ayuda", label: "Ayuda", icon: HelpCircle, description: "App, normas, condiciones y privacidad" },
   { href: "/contacto", label: "Contacto", icon: MapPin, description: "Horario, teléfono y ubicación" },
 ];
 
@@ -225,17 +225,17 @@ export const FAQS = [
   {
     question: "¿El área infantil tiene servicio de cuido?",
     answer:
-      "No. Es un espacio pensado para niños, pero deben permanecer bajo la supervisión y responsabilidad de la persona adulta que los acompaña.",
+      "No. Es un espacio pensado para niños, pero deben permanecer bajo la supervisión y responsabilidad de la persona adulta que los acompaña. Ver también Normas del gym.",
   },
   {
     question: "¿Puedo ir solo un día para probar?",
     answer:
-      "Sí. Tu primer día es gratis: solo registrate en la app para conocer el ambiente, entrenar y confirmar si querés continuar con semana, quincena o mensualidad.",
+      "Sí. Tu primer día es gratis: registrate con tu correo, completá el perfil y el PIN, y presentate en el gym. Después podés elegir semana, quincena o mensualidad.",
   },
   {
     question: "¿Cómo pago mi plan?",
     answer:
-      "En línea desde la página de precios: elegís día, semana, quincena o mes, pagás de forma segura y el acceso se activa apenas se confirma el cobro.",
+      "En línea desde Precios o desde la app: elegís día, semana, quincena o mes, pagás de forma segura y el acceso se activa al confirmar el cobro.",
   },
   {
     question: "¿La clase de adultos mayores es para principiantes?",
@@ -245,7 +245,17 @@ export const FAQS = [
   {
     question: "¿Para qué sirve la app de socios?",
     answer:
-      "La app ayuda a reservar, revisar membresía, cuidar la racha, ver progreso y mantener más claro el hábito de entrenamiento.",
+      "Para entrar con cédula + PIN, reservar clases, ver membresía, carné digital, rachas, progreso y avisos. Guía completa en Ayuda.",
+  },
+  {
+    question: "¿Olvidé mi PIN de la app?",
+    answer:
+      "En la pantalla del PIN tocá «Olvidé mi PIN», pedí el código al correo verificado de la cuenta y creá un PIN nuevo. El PIN se configura una sola vez al inicio; después solo se cambia o se recupera.",
+  },
+  {
+    question: "¿Por qué no me deja reservar una clase?",
+    answer:
+      "Las reservas necesitan un plan activo, un pase del día o el primer día gratis vigente. Si ya estás en la app sin plan, al tocar Reservar te ofrecemos activar el acceso ahí mismo.",
   },
   {
     question: "¿Necesito experiencia previa para entrenar?",
@@ -260,11 +270,16 @@ export const FAQS = [
   {
     question: "¿Puedo pagar en línea?",
     answer:
-      "Sí. Entrá a la página de precios, elegí el plan que mejor te funcione y completá la inscripción con pago en línea.",
+      "Sí. Entrá a Precios o usá el checkout dentro de la app, elegí el plan y completá el pago en línea.",
   },
   {
     question: "¿Cuál es el horario del gimnasio?",
     answer:
       "Lunes a viernes de 5:00 AM a 10:00 PM, sábados de 6:00 AM a 6:00 PM y domingos de 7:00 AM a 1:00 PM.",
+  },
+  {
+    question: "¿Dónde veo las normas y la privacidad?",
+    answer:
+      "En el Centro de ayuda (/ayuda) tenés Normas del gym, Condiciones de uso y Política de privacidad. También están en el pie del sitio.",
   },
 ];

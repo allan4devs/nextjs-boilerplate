@@ -7,8 +7,10 @@
 
 import { useCallback, useState } from "react";
 import ExtremeGymCheckout from "@/app/ExtremeGymCheckout";
+import Link from "next/link";
 import {
   Award,
+  CalendarClock,
   Check,
   CreditCard,
   Dumbbell,
@@ -217,11 +219,23 @@ export default function OsModals({ os }: { os: MemberOs }) {
   const membershipDaysRemaining = Math.max(0, currentMember.membership.daysRemaining);
   const membershipProgress = membershipRemainingPct(membershipDaysRemaining, membershipTotalDays);
   const handleCheckoutSuccess = useCallback(async () => {
+    closeOsModal();
     await Promise.all([
       reloadFullMember(memberName, currentMember.cedula),
       fetchPayments(),
     ]);
-  }, [currentMember.cedula, fetchPayments, memberName, reloadFullMember]);
+  }, [closeOsModal, currentMember.cedula, fetchPayments, memberName, reloadFullMember]);
+
+  const accessModal = osModal?.kind === "access-required" ? osModal : null;
+  const accessTitle =
+    accessModal?.reason === "expired"
+      ? "Tu plan no cubre hoy"
+      : accessModal?.reason === "limit_reached"
+        ? "Se acabaron tus cupos"
+        : "Activá tu acceso para reservar";
+  const accessSubtitle = accessModal?.trainingName
+    ? `Clase: ${accessModal.trainingName}`
+    : "Reservas de clase";
 
   return (
     <>
@@ -499,9 +513,80 @@ export default function OsModals({ os }: { os: MemberOs }) {
       </GameModal>
 
       <GameModal
+        open={osModal?.kind === "access-required"}
+        onClose={closeOsModal}
+        title={accessTitle}
+        subtitle={accessSubtitle}
+        icon={CalendarClock}
+        tone="orange"
+        size="lg"
+      >
+        {accessModal && (
+          <div className="space-y-4">
+            <GameCallout tone="orange" icon={Lock}>
+              <span className="font-bold">{accessModal.message}</span>
+            </GameCallout>
+
+            <p className="text-sm font-semibold leading-6 text-white/60">
+              Ya estás en la app: solo falta un plan o un pase para reservar cupo. Elegí una opción y
+              después volvé a tocar <strong className="text-white">Reservar</strong>.
+            </p>
+
+            <div className="grid gap-2">
+              <GameButton
+                full
+                onClick={() =>
+                  setOsModal({
+                    kind: "checkout",
+                    planId:
+                      accessModal.checkoutOptionId === "week" ||
+                      accessModal.checkoutOptionId === "fortnight" ||
+                      accessModal.checkoutOptionId === "month"
+                        ? accessModal.checkoutOptionId
+                        : "day-pass",
+                  })
+                }
+              >
+                <CreditCard className="h-4 w-4" />
+                {accessModal.reason === "expired"
+                  ? "Renovar o comprar plan"
+                  : "Pase del día o plan · pagar acá"}
+              </GameButton>
+              <GameButton
+                full
+                variant="ghost"
+                onClick={() => setOsModal({ kind: "checkout", planId: "month" })}
+              >
+                Plan mensual (mejor precio)
+              </GameButton>
+              {!currentMember.emailVerified && (
+                <Link
+                  href="/primer-dia#registro"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-white/15 px-4 text-xs font-black uppercase tracking-wide text-[#d8ff3e] transition hover:border-[#d8ff3e]"
+                >
+                  Primer día gratis · activar con correo
+                </Link>
+              )}
+              <Link
+                href="/precios#inscripcion"
+                className="inline-flex min-h-11 items-center justify-center gap-2 text-xs font-black uppercase tracking-wide text-white/45 transition hover:text-white"
+              >
+                Ver todos los planes <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            <p className="text-[11px] font-semibold leading-5 text-white/35">
+              ¿Dudas? Pasá por recepción o escribinos por WhatsApp. Si ya pagaste y no te deja
+              reservar, pedí que te revisen el acceso.
+            </p>
+          </div>
+        )}
+      </GameModal>
+
+      <GameModal
         open={osModal?.kind === "checkout"}
         onClose={closeOsModal}
-        title="Renovar membresía"
+        title="Activar acceso"
         subtitle="Pago en línea · sin salir del Member OS"
         icon={CreditCard}
         tone="lime"

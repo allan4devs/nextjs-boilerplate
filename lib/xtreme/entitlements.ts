@@ -106,7 +106,8 @@ export function canBook(
       return {
         allowed: false,
         reason: "payment_required",
-        message: "Necesita un plan activo o su primer dia gratis para reservar.",
+        message:
+          "Para reservar una clase necesitás un plan activo o un pase del día. Podés activarlo acá mismo en la app.",
       };
     }
     const limited = entitlements.some(
@@ -116,13 +117,15 @@ export function canBook(
       return {
         allowed: false,
         reason: "limit_reached",
-        message: "Ya uso los cupos incluidos en su pase. Compre otro o active un plan.",
+        message:
+          "Ya usaste los cupos de tu pase. Activá un plan o comprá otro pase del día para seguir reservando.",
       };
     }
     return {
       allowed: false,
       reason: "expired",
-      message: "Su membresia o pase no cubre esta fecha. Renueve o compre un pase del dia.",
+      message:
+        "Tu membresía o pase no cubre hoy. Renová tu plan o comprá un pase del día para reservar.",
     };
   }
 

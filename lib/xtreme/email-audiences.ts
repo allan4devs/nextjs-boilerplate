@@ -41,6 +41,18 @@ export const EMAIL_AUDIENCE_IDS = [
 
 type ContactDoc = { email: string; status?: string };
 
+export type EmailAudienceDiagnostics = {
+  totalMembers: number;
+  membersWithUsableEmail: number;
+  membersWithoutUsableEmail: number;
+  verifiedMembers: number;
+  unverifiedMembers: number;
+  quarantinedMembers: number;
+  quarantinePlaceholder: number;
+  quarantineShared: number;
+  quarantineMismatch: number;
+};
+
 type PlanAudience =
   | "plan_week"
   | "plan_fortnight"
@@ -56,13 +68,19 @@ export function normalizeAudienceEmail(value: unknown) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
 }
 
-function planAudience(value: unknown): PlanAudience {
-  const plan = String(value ?? "")
+function planAudience(planValue: unknown, rateValue?: unknown): PlanAudience {
+  const normalize = (value: unknown) => String(value ?? "")
     .trim()
     .toLocaleLowerCase("es-CR")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+  // En estado.xlsx, Plan suele ser "Regular/Regular1" y la periodicidad real
+  // vive en "x Tarifa". Priorizamos esa columna para no perder categorías.
+  const rate = normalize(rateValue);
+  const plan = `${rate} ${normalize(planValue)}`.trim();
   if (!plan || plan === "—" || plan.includes("sin plan")) return "no_plan";
+  if (rate.includes("matricula")) return "plan_other";
+  if (rate.includes("diario")) return "plan_free_day";
   if (plan.includes("primer dia") || plan.includes("free day")) return "plan_free_day";
   if (plan.includes("adulto") || plan.includes("senior")) return "plan_senior";
   if (plan.includes("trimestr") || plan.includes("quarter")) return "plan_quarter";
@@ -70,6 +88,11 @@ function planAudience(value: unknown): PlanAudience {
   if (plan.includes("seman") || plan.includes("week")) return "plan_week";
   if (plan.includes("mensual") || plan.includes("monthly") || plan.includes("month")) return "plan_month";
   return "plan_other";
+}
+
+function legacyRate(member: MemberDoc) {
+  if (member.legacyImport?.canonicalRate) return member.legacyImport.canonicalRate;
+  return member.legacyImport?.rows?.find((row) => String(row.rate || "").trim())?.rate || "";
 }
 
 function daysSinceIso(iso: string | undefined, todayIso: string) {
@@ -129,12 +152,15 @@ function uniqueMemberEmails(
   return unique;
 }
 
-export type AudienceEmailMap = Record<EmailAudience, string[]> & { suppressed: number };
+export type AudienceEmailMap = Record<EmailAudience, string[]> & {
+  suppressed: number;
+  diagnostics: EmailAudienceDiagnostics;
+};
 
 export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   const todayIso = new Date().toISOString().slice(0, 10);
 
-  const [contacts, verifiedMembers, allEmailedMembers, pending, suppressed, recentlyActive, everActive] =
+  const [contacts, allMembers, pending, suppressed, recentlyActive, everActive] =
     await Promise.all([
       db
         .collection<ContactDoc>(EMAIL_CONTACTS_COLLECTION)
@@ -143,13 +169,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
         .toArray(),
       db
         .collection<MemberDoc>(MEMBERS_COLLECTION)
-        .find({ email: { $exists: true, $ne: "" }, emailVerified: true })
-        .project({ email: 1, normalizedName: 1, membership: 1, memberName: 1, cedula: 1 })
-        .toArray(),
-      // Claim / win-back: correo en ficha (verificado o no). La cédula del import no manda.
-      db
-        .collection<MemberDoc>(MEMBERS_COLLECTION)
-        .find({ email: { $exists: true, $type: "string", $ne: "" } })
+        .find({})
         .project({
           email: 1,
           emailVerified: 1,
@@ -157,6 +177,8 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
           membership: 1,
           memberName: 1,
           cedula: 1,
+          emailQuarantine: 1,
+          legacyImport: 1,
         })
         .toArray(),
       db
@@ -171,6 +193,9 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       }),
       db.collection(EVENTS_COLLECTION).distinct<string>("memberId", { type: "app_opened" }),
     ]);
+
+  const allEmailedMembers = allMembers.filter((member) => normalizeAudienceEmail(member.email));
+  const verifiedMembers = allEmailedMembers.filter((member) => member.emailVerified === true);
 
   const blocked = new Set(suppressed.map(normalizeAudienceEmail).filter(Boolean));
   const clean = (values: unknown[]) => [
@@ -208,12 +233,20 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     plan_other: [],
     no_plan: [],
   };
-  for (const member of verifiedMembers) {
+  for (const member of allEmailedMembers) {
     const email = normalizeAudienceEmail(member.email);
-    if (email && !blocked.has(email)) planBuckets[planAudience(member.membership?.plan)].push(email);
+    if (email && !blocked.has(email)) {
+      planBuckets[planAudience(member.membership?.plan, legacyRate(member))].push(email);
+    }
   }
 
   const uniqueEmails = uniqueMemberEmails(allEmailedMembers, blocked);
+
+  // Las categorías por plan también deben ser seguras: un correo compartido
+  // entre fichas no se usa hasta que un admin resuelva a quién pertenece.
+  for (const key of Object.keys(planBuckets) as PlanAudience[]) {
+    planBuckets[key] = planBuckets[key].filter((email) => uniqueEmails.has(email));
+  }
 
   const claimProfile: string[] = [];
   const winback90: string[] = [];
@@ -261,5 +294,22 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     ) as Record<PlanAudience, string[]>),
     all: clean([...imported, ...pendingEmails, ...memberEmails, ...claimProfile]),
     suppressed: blocked.size,
+    diagnostics: {
+      totalMembers: allMembers.length,
+      membersWithUsableEmail: allEmailedMembers.length,
+      membersWithoutUsableEmail: allMembers.length - allEmailedMembers.length,
+      verifiedMembers: verifiedMembers.length,
+      unverifiedMembers: allEmailedMembers.length - verifiedMembers.length,
+      quarantinedMembers: allMembers.filter((member) => member.emailQuarantine).length,
+      quarantinePlaceholder: allMembers.filter(
+        (member) => member.emailQuarantine?.reason === "placeholder",
+      ).length,
+      quarantineShared: allMembers.filter(
+        (member) => member.emailQuarantine?.reason === "shared_across_members",
+      ).length,
+      quarantineMismatch: allMembers.filter(
+        (member) => member.emailQuarantine?.reason === "aggressive_name_mismatch",
+      ).length,
+    },
   };
 }

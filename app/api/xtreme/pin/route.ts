@@ -249,6 +249,7 @@ export async function POST(req: NextRequest) {
         memberName: member.memberName || memberName,
         code,
         expiresMinutes: OTP_TTL_MIN,
+        purpose,
       });
 
       if (!sent.ok) {
@@ -286,12 +287,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PIN invalido." }, { status: 400 });
     }
 
-    // --- Primer PIN: solo dueño del enlace (sesión post-registro), OTP al correo verificado, o staff ---
+    // --- Primer PIN (una sola vez): sesión post-enlace, OTP al correo verificado, o staff ---
+    // No se puede "reconfigurar" con set: después solo change (PIN actual) o recover (OTP).
     if (action === "set") {
-      const existing = await col.findOne({ normalizedName });
+      const existing = await col.findOne({ normalizedName }, { projection: { pinHash: 1 } });
       if (existing?.pinHash) {
+        await trackAccess("pin_created", "failed", "already_set");
         return NextResponse.json(
-          { error: "Este usuario ya tiene PIN.", hasPinSet: true },
+          {
+            error: "Este usuario ya tiene PIN. Ingresalo o recuperarlo con el código del correo.",
+            hasPinSet: true,
+            code: "pin_already_set",
+          },
           { status: 409 },
         );
       }
@@ -310,12 +317,14 @@ export async function POST(req: NextRequest) {
       const memberSession = await resolveMemberSession(req);
       const staff = await resolveStaffSession(req, "reception");
       const staffOk = Boolean(staff?.role);
+      // Token válido: cookie de sesión emitida al confirmar el enlace mágico / registro.
       const sessionOk = Boolean(memberSession && memberSession.memberKey === normalizedName);
 
       let otpOk = false;
       if (otpCode.length === 6) {
         const consumed = await consumeOtp("pin_setup", otpCode);
         if (!consumed.ok) {
+          await trackAccess("pin_created", "failed", "otp_invalid");
           return NextResponse.json({ error: consumed.error }, { status: consumed.status });
         }
         if (!memberEmailIsTrusted(member)) {
@@ -328,6 +337,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (!sessionOk && !otpOk && !staffOk) {
+        await trackAccess("pin_created", "failed", "token_required");
         if (memberEmailIsTrusted(member)) {
           return NextResponse.json(
             {
@@ -351,27 +361,71 @@ export async function POST(req: NextRequest) {
       }
 
       const now = new Date();
-      await col.updateOne(
-        { normalizedName },
-        {
-          $set: {
+      const setBy = sessionOk ? "magic_link_session" : otpOk ? "otp" : "staff";
+      const pinHashValue = hashPin(pin, normalizedName);
+
+      // Escritura atómica: solo si aún no hay pinHash (evita carrera de doble set).
+      // Si ya existe doc con PIN, el filtro no matchea y el upsert choca el índice único.
+      let created = false;
+      try {
+        const write = await col.updateOne(
+          {
             normalizedName,
-            memberName: member.memberName || memberName,
-            pinHash: hashPin(pin, normalizedName),
-            updatedAt: now,
+            $or: [{ pinHash: { $exists: false } }, { pinHash: null }, { pinHash: "" }],
           },
-          $setOnInsert: { createdAt: now },
-        },
-        { upsert: true },
-      );
+          {
+            $set: {
+              normalizedName,
+              memberName: member.memberName || memberName,
+              pinHash: pinHashValue,
+              updatedAt: now,
+              setBy,
+              setAt: now,
+            },
+            $setOnInsert: { createdAt: now },
+          },
+          { upsert: true },
+        );
+        created = write.upsertedCount > 0 || write.modifiedCount > 0 || write.matchedCount > 0;
+      } catch (err) {
+        const code = (err as { code?: number })?.code;
+        if (code === 11000) {
+          await trackAccess("pin_created", "failed", "already_set_race");
+          return NextResponse.json(
+            {
+              error: "Este usuario ya tiene PIN. Ingresalo o recuperarlo con el código del correo.",
+              hasPinSet: true,
+              code: "pin_already_set",
+            },
+            { status: 409 },
+          );
+        }
+        throw err;
+      }
+
+      if (!created) {
+        const again = await col.findOne({ normalizedName }, { projection: { pinHash: 1 } });
+        if (again?.pinHash) {
+          await trackAccess("pin_created", "failed", "already_set");
+          return NextResponse.json(
+            {
+              error: "Este usuario ya tiene PIN. Ingresalo o recuperarlo con el código del correo.",
+              hasPinSet: true,
+              code: "pin_already_set",
+            },
+            { status: 409 },
+          );
+        }
+        return NextResponse.json({ error: "No se pudo crear el PIN. Intentá de nuevo." }, { status: 500 });
+      }
 
       await notifyPinEvent("set");
-      await trackAccess("pin_created", "success", sessionOk ? "magic_link_session" : otpOk ? "otp" : "staff");
+      await trackAccess("pin_created", "success", setBy);
       return withMemberSession(
         db,
         req,
         { memberKey: normalizedName, memberName: member.memberName || memberName },
-        { ok: true, hasPinSet: true },
+        { ok: true, hasPinSet: true, created: true },
         { rotateAll: true },
       );
     }

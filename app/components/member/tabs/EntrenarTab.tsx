@@ -12,6 +12,7 @@ import {
   Check,
   ChevronRight,
   ClipboardList,
+  CreditCard,
   Dumbbell,
   Loader2,
   Sparkles,
@@ -19,7 +20,7 @@ import {
   Video,
 } from "lucide-react";
 import { classCheckInWindow } from "@/lib/xtreme/class-schedule";
-import { GameLabel } from "../../GameOS";
+import { GameButton, GameCallout, GameLabel } from "../../GameOS";
 import { GOALS, ROUTINES, TRAININGS } from "../constants";
 import { todayIso } from "../utils";
 import type { MemberOs } from "../useMemberOs";
@@ -257,6 +258,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
     completeTraining,
     reserveTraining,
     cancelReservation,
+    setOsModal,
   } = os;
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -266,6 +268,12 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
   const hasPlan = Boolean(currentMember.trainingPlan);
   const activeWorkout = Boolean(currentMember.activePlanWorkout);
   const today = todayIso();
+  const membership = currentMember.membership;
+  const needsAccess =
+    unlocked &&
+    (membership.status === "expired" ||
+      membership.plan === "Sin plan activo" ||
+      membership.daysRemaining < 0);
 
   const clasesContent = (
     <div className="space-y-3">
@@ -277,6 +285,41 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
           {doneCount}/{TRAININGS.length} hechos
         </p>
       </div>
+
+      {needsAccess && (
+        <GameCallout tone="orange" icon={CreditCard}>
+          <div className="space-y-2">
+            <p className="text-sm font-bold leading-snug text-white/85">
+              Para reservar clases necesitás un plan activo o un pase del día.
+            </p>
+            <p className="text-xs font-semibold text-white/50">
+              Ya estás en la app: activá el acceso y después tocá Reservar en la clase que
+              querés.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <GameButton
+                onClick={() => setOsModal({ kind: "checkout", planId: "day-pass" })}
+              >
+                Activar acceso
+              </GameButton>
+              <GameButton
+                variant="ghost"
+                onClick={() => setOsModal({ kind: "checkout", planId: "month" })}
+              >
+                Plan mensual
+              </GameButton>
+            </div>
+          </div>
+        </GameCallout>
+      )}
+
+      {!needsAccess && unlocked && (
+        <p className="text-xs font-semibold leading-5 text-white/40">
+          Tocá una clase → <strong className="text-white/60">Reservar</strong> antes de que
+          inicie. Después hacé check-in 30 min antes.
+        </p>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
         {TRAININGS.map((training) => {
           const reservation = reservations[training.id] ?? {

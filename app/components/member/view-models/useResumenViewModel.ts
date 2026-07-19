@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { classStartAt, classTimeLabel } from "@/lib/xtreme/class-schedule";
 import { TRAININGS, type TabId } from "../constants";
 import type { MemberOs } from "../useMemberOs";
@@ -173,6 +173,19 @@ export function useResumenViewModel(os: MemberOs): {
     isRegisteringCheckout,
     registerCheckout,
   } = os;
+
+  const shownRecommendationRef = useRef("");
+  useEffect(() => {
+    if (!unlocked || !nextBestAction) return;
+    const key = `${memberName}:${nextBestAction.kind}:${nextBestAction.title}`;
+    if (shownRecommendationRef.current === key) return;
+    shownRecommendationRef.current = key;
+    void trackMemberEvent("recommendation_shown", memberName, {
+      kind: nextBestAction.kind,
+      priority: nextBestAction.priority,
+      version: "nba-v0",
+    }).catch(() => {});
+  }, [memberName, nextBestAction, unlocked]);
 
   const model = useMemo<ResumenViewModel>(() => {
     const today = todayIso();

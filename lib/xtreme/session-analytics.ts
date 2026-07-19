@@ -26,6 +26,7 @@ export type SessionTimelineItem = {
   tab?: string;
   action?: string;
   label?: string;
+  meta?: Record<string, string | number | boolean | null>;
 };
 
 export type SessionLogDoc = {
@@ -51,7 +52,7 @@ export type SessionLogDoc = {
   language?: string;
   viewport?: string;
   referrer?: string;
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
 };
 
 export type ClientSessionEvent = {
@@ -81,11 +82,29 @@ const MAX_PATH_LEN = 160;
 const MAX_LABEL_LEN = 80;
 const MAX_ACTION_LEN = 64;
 const MAX_TAB_LEN = 40;
+const MAX_META_KEYS = 8;
+const MAX_META_KEY_LEN = 40;
+const MAX_META_STRING_LEN = 120;
 
 function clampStr(value: unknown, max: number): string | undefined {
   if (value == null) return undefined;
   const s = String(value).trim().slice(0, max);
   return s || undefined;
+}
+
+function sanitizeMeta(
+  raw: unknown,
+): Record<string, string | number | boolean | null> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const clean: Record<string, string | number | boolean | null> = {};
+  for (const [rawKey, value] of Object.entries(raw as Record<string, unknown>).slice(0, MAX_META_KEYS)) {
+    const key = clampStr(rawKey, MAX_META_KEY_LEN);
+    if (!key) continue;
+    if (typeof value === "string") clean[key] = value.slice(0, MAX_META_STRING_LEN);
+    else if (typeof value === "number" && Number.isFinite(value)) clean[key] = value;
+    else if (typeof value === "boolean" || value === null) clean[key] = value;
+  }
+  return Object.keys(clean).length > 0 ? clean : undefined;
 }
 
 function parseAt(raw: unknown, fallback: Date): Date {
@@ -179,6 +198,7 @@ export async function ingestSessionBatch(
     const tab = clampStr(raw.tab, MAX_TAB_LEN);
     const action = clampStr(raw.action, MAX_ACTION_LEN);
     const label = clampStr(raw.label, MAX_LABEL_LEN);
+    const meta = sanitizeMeta(raw.meta);
 
     if (path) {
       exitPath = path;
@@ -216,6 +236,7 @@ export async function ingestSessionBatch(
       tab,
       action,
       label,
+      meta,
     });
   }
 
@@ -248,7 +269,7 @@ export async function ingestSessionBatch(
     language: clampStr(args.client?.language, 32) || existing?.language,
     viewport: clampStr(args.client?.viewport, 32) || existing?.viewport,
     referrer: clampStr(args.client?.referrer, 200) || existing?.referrer,
-    schemaVersion: 1,
+    schemaVersion: 2,
   };
 
   try {
@@ -300,6 +321,7 @@ export type UsageBitacoraSnapshot = {
       tab?: string;
       action?: string;
       label?: string;
+      meta?: Record<string, string | number | boolean | null>;
     }>;
   }>;
 };
@@ -407,6 +429,7 @@ export async function computeUsageBitacora(
         tab: t.tab,
         action: t.action,
         label: t.label,
+        meta: t.meta,
       })),
   }));
 
