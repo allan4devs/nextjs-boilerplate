@@ -372,7 +372,10 @@ async function verifyToken(token: string) {
       status: 404 as const,
     };
   }
-  if (pending.expiresAt.getTime() < Date.now()) {
+  const expiresMs = pending.expiresAt
+    ? new Date(pending.expiresAt as Date | string).getTime()
+    : NaN;
+  if (!Number.isFinite(expiresMs) || expiresMs < Date.now()) {
     return {
       error: "Este enlace venció. Pedí uno nuevo desde el registro o recepción.",
       status: 410 as const,

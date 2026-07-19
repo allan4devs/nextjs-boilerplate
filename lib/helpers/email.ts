@@ -427,11 +427,11 @@ function linkFallback(href: string) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 12px;border:1px solid #e0e0da;background:#fafaf8;">
   <tr>
     <td style="padding:12px 14px;">
-      <p style="margin:0 0 6px;font-size:10px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">Tu enlace seguro</p>
+      <p style="margin:0 0 6px;font-size:10px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">Enlace personal</p>
       <p style="margin:0;font-size:12px;line-height:1.5;word-break:break-all;color:#333;font-family:Consolas,'Courier New',monospace;">
         <a href="${escapeHtml(href)}" style="color:#0b0b0b;font-weight:700;text-decoration:underline;">${escapeHtml(href)}</a>
       </p>
-      <p style="margin:8px 0 0;font-size:12px;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">Si el botón no responde, tocá o copiá este enlace.</p>
+      <p style="margin:8px 0 0;font-size:12px;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">Si el botón no abre, usá este enlace. Es personal y vence en 72 horas.</p>
     </td>
   </tr>
 </table>`;
@@ -1219,7 +1219,10 @@ export async function sendCampaignEmail(args: {
 
   const guideNote = isSecureLink
     ? infoCard(
-        "<strong>Qué hacer ahora</strong><br>1) Tocá el botón negro<br>2) Confirmá tus datos<br>3) Creá tu PIN de 4 dígitos",
+        "<strong>Cómo activar tu acceso</strong><br>" +
+          "1) Tocá el botón negro de abajo<br>" +
+          "2) Revisá o completá nombre, cédula y teléfono<br>" +
+          "3) Creá tu PIN de 4 dígitos e ingresá a la app",
       )
     : "";
 

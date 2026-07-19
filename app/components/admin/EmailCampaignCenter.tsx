@@ -357,15 +357,14 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     ctaPath: "/registro/confirmar",
   },
   invite_recoverable: {
-    subject: "Activá tu acceso a Xtreme Gym con tu correo",
-    title: "Registrá tu cuenta en la app de Xtreme",
+    subject: "Tu invitación a la app de Xtreme Gym",
+    title: "Confirmá tus datos y creá tu acceso",
     message:
-      "Hola. Este correo aparece en la lista de contactos de Xtreme Gym (Ciudad Quesada).\n\n" +
-      "Si entrenás o entrenaste con nosotros, tocá el botón de este mensaje: se abre un enlace personal (válido 72 horas) para confirmar tus datos con tu correo y tu cédula (o documento), crear tu PIN de 4 dígitos y entrar a la app.\n\n" +
-      "Pasos: 1) Tocá el botón  2) Revisá o completá nombre, cédula y teléfono  3) Creá tu PIN.\n\n" +
-      "Si este correo no es tuyo o no querés mensajes del gym, ignorá el mail o date de baja al final.\n\n" +
-      "Pura vida - equipo Xtreme Gym, Ciudad Quesada.",
-    ctaLabel: "Registrarme con correo y cédula",
+      "Hola. Te escribimos de Xtreme Gym en Ciudad Quesada porque este correo figura en nuestra lista de contactos del gimnasio.\n\n" +
+      "Si entrenás con nosotros o lo hiciste antes, te invitamos a activar tu cuenta en la app de socios. Es gratis y te toma un momento: con el botón de abajo abrís un enlace personal (válido por 72 horas), revisás o completás tus datos y elegís un PIN de 4 dígitos. Después entrás con tu cédula y ese PIN.\n\n" +
+      "Vas a poder reservar clases, seguir tu progreso y usar las herramientas del gym desde el celular.\n\n" +
+      "Si este mensaje no es para vos, podés ignorarlo o darte de baja con el enlace al final del correo. Equipo Xtreme Gym · Ciudad Quesada.",
+    ctaLabel: "Confirmar mis datos y crear PIN",
     // El envío real inyecta ?token=… por persona. Sin token no se envía.
     ctaPath: "/registro/confirmar",
   },
