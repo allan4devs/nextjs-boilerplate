@@ -11,7 +11,12 @@ declare global {
     gtag?: (
       command: "event",
       eventName: "conversion",
-      parameters: { send_to: string; transaction_id: string },
+      parameters: {
+        send_to: string;
+        transaction_id: string;
+        value?: number;
+        currency?: string;
+      },
     ) => void;
   }
 }
@@ -32,13 +37,19 @@ export default function GraciasContent() {
   const appInviteSent = params.get("registro") === "correo";
 
   useEffect(() => {
-    if (!reference) return;
-
     const sendConversion = () => {
       if (typeof window.gtag !== "function") return false;
 
+      if (reference) {
+        window.gtag("event", "conversion", {
+          send_to: "AW-18319195306/ydJACN7ShNAcEKr5op9E",
+          transaction_id: reference,
+        });
+      }
       window.gtag("event", "conversion", {
-        send_to: "AW-18319195306/ydJACN7ShNAcEKr5op9E",
+        send_to: "AW-18016737230/kutICJqkposcEM6vho9D",
+        value: 1.0,
+        currency: "USD",
         transaction_id: reference,
       });
       return true;
