@@ -3,10 +3,11 @@
  * Regla de negocio: el correo es la llave de contacto; la cédula del import
  * no es fuente de verdad (muchas vienen mal del reimport).
  *
- * Categorías separadas de activación:
- * - claim_profile: todos sin verificar (seguros)
- * - claim_recovered: sin verificar + recovery del Excel/cuarentena
- * - claim_native: sin verificar con correo nativo (no recovery)
+ * Categorías de activación / confirmación:
+ * - claim_profile / claim_recovered / claim_native: sin verificar y SIN plan
+ *   activo (campañas de activación / primer día).
+ * - claim_active_plan: sin verificar CON plan vigente del Excel (solo
+ *   confirmar datos/PIN; no mezclar con activación de sin plan).
  * - excel_recovered: todos con emailRecovery (historial de alineación)
  */
 import type { Db } from "mongodb";
@@ -26,6 +27,7 @@ export const EMAIL_AUDIENCE_IDS = [
   "claim_recovered",
   "claim_native",
   "claim_profile",
+  "claim_active_plan",
   "excel_recovered",
   "imported",
   "unregistered",
@@ -94,17 +96,30 @@ function planAudience(planValue: unknown, rateValue?: unknown): PlanAudience {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
   const rate = normalize(rateValue);
-  const plan = `${rate} ${normalize(planValue)}`.trim();
+  const planOnly = normalize(planValue);
+  const plan = `${rate} ${planOnly}`.trim();
   if (!plan || plan === "—" || plan.includes("sin plan")) return "no_plan";
-  if (rate.includes("matricula")) return "plan_other";
-  if (rate.includes("diario")) return "plan_free_day";
+  if (rate.includes("matricula") || planOnly.includes("matricula")) return "plan_other";
+  if (rate.includes("diario") || planOnly.includes("pase del dia")) return "plan_free_day";
   if (plan.includes("primer dia") || plan.includes("free day")) return "plan_free_day";
   if (plan.includes("adulto") || plan.includes("senior")) return "plan_senior";
   if (plan.includes("trimestr") || plan.includes("quarter")) return "plan_quarter";
   if (plan.includes("quincen") || plan.includes("fortnight")) return "plan_fortnight";
   if (plan.includes("seman") || plan.includes("week")) return "plan_week";
   if (plan.includes("mensual") || plan.includes("monthly") || plan.includes("month")) return "plan_month";
+  // Regular / Regular1 del Excel histórico (antes de normalizar a Xtreme *).
+  if (planOnly.includes("regular")) return "plan_month";
   return "plan_other";
+}
+
+/** Plan de membresía vigente hoy (no primer día gratis / sin plan). */
+function hasActivePaidPlan(member: MemberDoc, todayIso: string) {
+  const plan = String(member.membership?.plan || "").trim();
+  if (!plan || plan === "—" || /sin plan/i.test(plan)) return false;
+  if (/primer\s*d[ií]a/i.test(plan) || /free\s*day/i.test(plan)) return false;
+  const endsOn = String(member.membership?.nextBillingDate || "").slice(0, 10);
+  if (!endsOn) return false;
+  return endsOn >= todayIso;
 }
 
 function legacyRate(member: MemberDoc) {
@@ -272,6 +287,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   const claimProfile: string[] = [];
   const claimRecovered: string[] = [];
   const claimNative: string[] = [];
+  const claimActivePlan: string[] = [];
   const excelRecovered: string[] = [];
   const winback90: string[] = [];
   const winback180: string[] = [];
@@ -294,18 +310,23 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     }
 
     if (member.emailVerified !== true) {
-      claimProfile.push(email);
-      if (hasRecovery) claimRecovered.push(email);
-      else claimNative.push(email);
+      // Con plan vigente del Excel → lista aparte (confirmación de datos, no activación).
+      if (hasActivePaidPlan(member, todayIso)) {
+        claimActivePlan.push(email);
+      } else {
+        claimProfile.push(email);
+        if (hasRecovery) claimRecovered.push(email);
+        else claimNative.push(email);
+      }
     }
 
     if (isPossibleForeignMember(member)) {
       possibleForeign.push(email);
     }
 
-    const status = member.membership?.status || "";
     const daysExpired = daysSinceIso(member.membership?.nextBillingDate, todayIso);
-    if (status === "expired" && daysExpired != null) {
+    // Win-back solo si realmente está vencido por fecha (no por status stale).
+    if (daysExpired != null && daysExpired > 0) {
       if (daysExpired >= 365) winback365.push(email);
       else if (daysExpired >= 180) winback180.push(email);
       else if (daysExpired >= 90) winback90.push(email);
@@ -321,6 +342,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     claim_recovered: clean(claimRecovered),
     claim_native: clean(claimNative),
     claim_profile: clean(claimProfile),
+    claim_active_plan: clean(claimActivePlan),
     excel_recovered: clean(excelRecovered),
     imported,
     unregistered,
@@ -341,6 +363,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       ...pendingEmails,
       ...memberEmails,
       ...claimProfile,
+      ...claimActivePlan,
       ...excelRecovered,
     ]),
     suppressed: blocked.size,

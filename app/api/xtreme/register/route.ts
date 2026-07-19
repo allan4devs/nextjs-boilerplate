@@ -32,6 +32,7 @@ import {
   isValidEmail,
   matchCedula,
   memberAccessCode,
+  membershipStatus,
   normalizeCedula,
   normalizeEmail,
   normalizeKey,
@@ -762,6 +763,15 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     } as MemberDoc["profileClaim"];
   }
 
+  // Usar fecha de vencimiento real (no status stale) para no pisar planes del Excel.
+  const existingMembership = existing?.membership
+    ? membershipStatus(existing.membership)
+    : null;
+  const existingPlanUsable =
+    Boolean(existingMembership) &&
+    existingMembership!.daysRemaining >= 0 &&
+    !/sin plan/i.test(existingMembership!.plan || "");
+
   if (!existing) {
     // Staff (recepción/admin manual) crea cuenta sin plan.
     // Campaña / primer-día / app: primer día gratis para poder usar la app.
@@ -783,9 +793,10 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
   } else if (
     (campaignInvite || pending.source === "primer-dia" || pending.source === "app") &&
     existing &&
-    (!existing.membership || existing.membership.status === "expired")
+    !existingPlanUsable
   ) {
     // Ficha importada sin plan usable: al activar por campaña/registro, dar primer día.
+    // Si ya tiene plan vigente (Excel/pago), se conserva tal cual.
     set.membership = createFreeFirstDayMembership(today);
   }
 
@@ -878,7 +889,7 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     set.membership &&
       !staffInvite &&
       !paidInvite &&
-      (!existing || !existing.membership || existing.membership.status === "expired"),
+      (!existing || !existingPlanUsable),
   );
   if (freeFirstDay) {
     await grantFreeFirstDayIfEligible(db, normalizedName, today);

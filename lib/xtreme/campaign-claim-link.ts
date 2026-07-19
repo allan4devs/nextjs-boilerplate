@@ -27,6 +27,7 @@ export const CLAIM_LINK_AUDIENCES = new Set([
   "claim_profile",
   "claim_recovered",
   "claim_native",
+  "claim_active_plan",
   "excel_recovered",
   "never_registered",
   "unregistered",
@@ -39,6 +40,10 @@ export const CLAIM_LINK_AUDIENCES = new Set([
   "inactive",
   "never_opened",
   "no_plan",
+  "plan_week",
+  "plan_fortnight",
+  "plan_month",
+  "plan_senior",
   "all",
 ]);
 

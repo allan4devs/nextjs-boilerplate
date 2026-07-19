@@ -18,12 +18,17 @@ export type EmailAudience =
   | "never_opened"
   | "inactive"
   | "members"
-  /** Todos los sin verificar (seguros para enviar). */
+  /** Todos los sin verificar SIN plan activo (seguros para activación). */
   | "claim_profile"
-  /** Sin verificar + correo recuperado del Excel / cuarentena realineada. */
+  /** Sin verificar + recovery Excel/cuarentena, SIN plan activo. */
   | "claim_recovered"
-  /** Sin verificar con correo nativo en ficha (no vino de recovery script). */
+  /** Sin verificar con correo nativo, SIN plan activo. */
   | "claim_native"
+  /**
+   * Sin verificar + plan vigente (semanal/quincenal/mensual/senior).
+   * Separados de activación: ya tienen membresía; solo confirman datos/PIN.
+   */
+  | "claim_active_plan"
   /** Cualquier ficha con emailRecovery (verificado o no). */
   | "excel_recovered"
   | "winback_90"

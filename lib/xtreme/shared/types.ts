@@ -183,7 +183,10 @@ export type MemberDoc = {
     importedAt?: Date;
     subscriptionVerification?: string;
     canonicalSourceStatus?: string;
+    /** x Tarifa del Excel (Semanal / Quincenal / Mensual / …). */
     canonicalRate?: string;
+    /** Plan crudo del Excel (Regular / Regular1 / Adulto Mayor). */
+    canonicalExcelPlan?: string;
     rowCount?: number;
     rows?: Array<{
       row?: number;

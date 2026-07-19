@@ -14,6 +14,7 @@ type AudienceId =
   | "claim_profile"
   | "claim_recovered"
   | "claim_native"
+  | "claim_active_plan"
   | "excel_recovered"
   | "winback_90"
   | "winback_180"
@@ -120,20 +121,27 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     id: "claim_recovered",
     label: "Activar · Excel / cuarentena",
     detail:
-      "Sin verificar, correo alineado por nombre y apellidos del Excel o re-sacado de cuarentena. Mejor lista para la campaña de activación masiva.",
+      "Sin verificar y sin plan activo. Correo alineado por Excel/cuarentena. Campaña de activación (primer día / sin membresía).",
     group: "Activación",
   },
   {
     id: "claim_native",
     label: "Activar · correo nativo",
-    detail: "Sin verificar con correo que ya venía en la ficha (no pasó por el script de recovery).",
+    detail: "Sin verificar, sin plan activo, con correo nativo en ficha (no recovery).",
     group: "Activación",
   },
   {
     id: "claim_profile",
-    label: "Activar · todos sin verificar",
-    detail: "Unión de Excel-alineados + nativos. Ideal si querés un solo envío de claim.",
+    label: "Activar · todos sin plan",
+    detail: "Todos sin verificar y sin plan activo (Excel + nativos). No incluye quienes ya tienen membresía vigente.",
     group: "Activación",
+  },
+  {
+    id: "claim_active_plan",
+    label: "Confirmar · ya con plan",
+    detail:
+      "Sin verificar pero con plan vigente (semanal/quincenal/mensual/senior del Excel). Solo confirmar datos y PIN; no mezclar con activación.",
+    group: "Confirmación",
   },
   {
     id: "excel_recovered",
@@ -324,6 +332,17 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
       "Hola. Tu correo ya está en la ficha de Xtreme Gym, pero todavía no lo verificaste.\n\n" +
       "Con el enlace de este mensaje completás o corregís tus datos y creás tu PIN.\n\n" +
       "Pura vida — equipo Xtreme.",
+  },
+  claim_active_plan: {
+    subject: "Tu plan en Xtreme ya está activo — confirmá tus datos",
+    title: "Ya tenés plan: solo falta confirmar la cuenta",
+    message:
+      "Hola. En Xtreme Gym ya figurás con un plan vigente (semana, quincena, mes o adultos mayores).\n\n" +
+      "Con este enlace revisás nombre, teléfono y cédula, y creás tu PIN de 4 dígitos. Al entrar a la app vas a ver tu plan tal como está en recepción.\n\n" +
+      "No es una venta nueva: es solo para que uses la app con lo que ya pagaste.\n\n" +
+      "El enlace vence en 72 horas. Pura vida — Xtreme Gym, Ciudad Quesada.",
+    ctaLabel: "Confirmar mis datos",
+    ctaPath: "/registro/confirmar",
   },
   excel_recovered: {
     ...CLAIM_BASE,

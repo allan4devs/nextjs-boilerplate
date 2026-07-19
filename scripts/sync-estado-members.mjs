@@ -2,6 +2,10 @@
  * Sincroniza plan, tarifa, estado histórico, fecha de vencimiento y cédula
  * desde estado.xlsx hacia socios que YA existen en Mongo. No crea socios ni
  * modifica correos: el Excel tiene placeholders y correos cruzados.
+ *
+ * El Excel usa Plan = "Regular" / "Regular1" / "Adulto Mayor" (tipo de cliente)
+ * y "x Tarifa" = Semanal / Quincenal / Mensual / Diario. Aquí se normaliza a
+ * las etiquetas del Member OS (Xtreme Semanal/Quincenal/Mensual, etc.).
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { MongoClient } from "mongodb";
@@ -36,6 +40,13 @@ function digits(value, max = 20) {
   return clean(value).replace(/\D/g, "").slice(0, max);
 }
 
+function normalizeText(value) {
+  return clean(value)
+    .toLocaleLowerCase("es-CR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function excelDate(value) {
   const serial = Number(value);
   if (!Number.isFinite(serial) || serial < 1) return "";
@@ -52,6 +63,26 @@ function membershipStatus(nextBillingDate) {
   );
   const status = daysRemaining < 0 ? "expired" : daysRemaining <= 5 ? "warning" : "active";
   return { daysRemaining, status };
+}
+
+/**
+ * Mapea Plan + x Tarifa del Excel → etiqueta del Member OS / admin.
+ * Prioridad: Adulto Mayor → tarifa (semanal/quincenal/mensual/diario) → default mensual en Regular*.
+ */
+function mapCanonicalPlan(excelPlan, rate) {
+  const p = normalizeText(excelPlan);
+  const r = normalizeText(rate);
+
+  if (p.includes("adulto") || p.includes("senior")) return "Clase adultos mayores";
+  if (r.includes("seman") || r.includes("week")) return "Xtreme Semanal";
+  if (r.includes("quincen") || r.includes("fortnight")) return "Xtreme Quincenal";
+  if (r.includes("mensual") || r.includes("month")) return "Xtreme Mensual";
+  if (r.includes("diari") || r.includes("day pass") || r === "day") return "Pase del día";
+  if (r.includes("matricula")) return "Matrícula";
+  // Sin tarifa legible: Regular / Regular1 → mensual (mayoría del histórico).
+  if (p.includes("regular")) return "Xtreme Mensual";
+  if (excelPlan) return excelPlan;
+  return "Xtreme Mensual";
 }
 
 function isJunkName(key) {
@@ -147,14 +178,20 @@ try {
 
     const member = hits[0];
     const rate = canonical.rate || group.find((item) => item.rate)?.rate || "";
+    const mappedPlan = mapCanonicalPlan(canonical.plan, rate);
     const { daysRemaining, status } = membershipStatus(canonical.expiresOn);
+    const startedAt =
+      clean(member.membership?.startedAt) ||
+      (daysRemaining >= 0 ? today : canonical.expiresOn);
     const set = {
-      "membership.plan": canonical.plan,
+      "membership.plan": mappedPlan,
       "membership.nextBillingDate": canonical.expiresOn,
       "membership.status": status,
+      "membership.startedAt": startedAt,
       "legacyImport.source": "scripts/estado.xlsx",
       "legacyImport.canonicalSourceStatus": canonical.sourceStatus,
       "legacyImport.canonicalRate": rate,
+      "legacyImport.canonicalExcelPlan": canonical.plan,
       "legacyImport.rowCount": group.length,
       updatedAt: now,
     };
@@ -166,19 +203,22 @@ try {
       cedula: digits(member.cedula),
       rate: clean(member.legacyImport?.canonicalRate),
       sourceStatus: clean(member.legacyImport?.canonicalSourceStatus),
+      excelPlan: clean(member.legacyImport?.canonicalExcelPlan),
     };
     const after = {
-      plan: canonical.plan,
+      plan: mappedPlan,
       expiresOn: canonical.expiresOn,
       cedula: cedula || before.cedula,
       rate,
       sourceStatus: canonical.sourceStatus,
+      excelPlan: canonical.plan,
     };
     const changed = before.plan !== after.plan ||
       before.expiresOn !== after.expiresOn ||
       before.cedula !== after.cedula ||
       before.rate !== after.rate ||
-      before.sourceStatus !== after.sourceStatus;
+      before.sourceStatus !== after.sourceStatus ||
+      before.excelPlan !== after.excelPlan;
     changes.push({
       _id: member._id,
       key: normalizedName(member.normalizedName) || key,
@@ -195,6 +235,16 @@ try {
   }
 
   const changed = changes.filter((item) => item.changed);
+  const activeMapped = changes.filter((item) => item.daysRemaining >= 0);
+  const planBuckets = { week: 0, fortnight: 0, month: 0, senior: 0, other: 0 };
+  for (const item of activeMapped) {
+    const plan = normalizeText(item.after.plan);
+    if (plan.includes("seman")) planBuckets.week += 1;
+    else if (plan.includes("quincen")) planBuckets.fortnight += 1;
+    else if (plan.includes("mensual") || plan.includes("month")) planBuckets.month += 1;
+    else if (plan.includes("adulto") || plan.includes("senior")) planBuckets.senior += 1;
+    else planBuckets.other += 1;
+  }
   const summary = {
     mode: apply ? "apply" : "dry-run",
     spreadsheetRows: rows.length,
@@ -203,6 +253,8 @@ try {
     exactNameMatches: changes.length,
     changesNeeded: changed.length,
     alreadyAligned: changes.length - changed.length,
+    activePlansMapped: activeMapped.length,
+    activePlanBuckets: planBuckets,
     unmatchedExcelNames: unmatchedExcel.length,
     ambiguousMongoMatches: ambiguousMongo.length,
     invalidExcelRows: invalidExcel.length,
@@ -235,12 +287,14 @@ try {
         expiresOn: before.expiresOn,
         rate: before.rate,
         sourceStatus: before.sourceStatus,
+        excelPlan: before.excelPlan,
       },
       after: {
         plan: after.plan,
         expiresOn: after.expiresOn,
         rate: after.rate,
         sourceStatus: after.sourceStatus,
+        excelPlan: after.excelPlan,
       },
       cedulaChanged: before.cedula !== after.cedula,
     })),
