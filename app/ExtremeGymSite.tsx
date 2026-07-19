@@ -113,12 +113,18 @@ export default function ExtremeGymSite() {
       <BottomDock os={os} showChat={Boolean(unlocked && memberName)} />
 
       <section
-        className={`xg-os-content relative mx-auto max-w-[1600px] px-3 py-4 transition-[padding] sm:px-6 sm:py-5 ${
+        className={`xg-os-content relative mx-auto max-w-[1600px] px-3 py-3 transition-[padding] sm:px-6 sm:py-5 ${
           navOpen ? "lg:pl-[268px] lg:pr-10" : "lg:pl-[104px] lg:pr-10"
         }`}
       >
+        {/* Ancla del primer paso del tour: zona superior del contenido. */}
+        <span
+          data-tour="tour-welcome"
+          className="pointer-events-none absolute left-1/2 top-4 block h-12 w-[min(280px,70vw)] -translate-x-1/2 opacity-0"
+          aria-hidden
+        />
         {isLoading ? (
-          <div className="grid min-h-[420px] place-items-center border-[3px] border-white/15 bg-[#0c0c0c]">
+          <div className="grid min-h-[min(420px,55dvh)] place-items-center border-[3px] border-white/15 bg-[#0c0c0c]">
             <div className="text-center">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#d8ff3e]" />
               <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-white/45">

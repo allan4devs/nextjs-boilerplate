@@ -45,6 +45,8 @@ export type EmailAudienceDiagnostics = {
   totalMembers: number;
   membersWithUsableEmail: number;
   membersWithoutUsableEmail: number;
+  importedContactEmails: number;
+  recoveredMembers: number;
   verifiedMembers: number;
   unverifiedMembers: number;
   quarantinedMembers: number;
@@ -178,6 +180,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
           memberName: 1,
           cedula: 1,
           emailQuarantine: 1,
+          emailRecovery: 1,
           legacyImport: 1,
         })
         .toArray(),
@@ -298,6 +301,8 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       totalMembers: allMembers.length,
       membersWithUsableEmail: allEmailedMembers.length,
       membersWithoutUsableEmail: allMembers.length - allEmailedMembers.length,
+      importedContactEmails: imported.length,
+      recoveredMembers: allMembers.filter((member) => member.emailRecovery).length,
       verifiedMembers: verifiedMembers.length,
       unverifiedMembers: allEmailedMembers.length - verifiedMembers.length,
       quarantinedMembers: allMembers.filter((member) => member.emailQuarantine).length,

@@ -55,6 +55,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
               label="Racha"
               value={effectiveStreak}
               tone="orange"
+              compact
               onClick={() => setOsModal({ kind: "streak" })}
             />
             <GameHudPill
@@ -62,6 +63,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
               label="Nv"
               value={level}
               tone="cyan"
+              compact
               onClick={() => setOsModal({ kind: "level" })}
             />
             <GameHudPill
@@ -69,9 +71,11 @@ export default function TopHud({ os }: { os: MemberOs }) {
               label="Sem"
               value={`${weekDoneCount}/${weeklyGoal}`}
               tone="lime"
+              compact
+              className="max-[360px]:hidden"
               onClick={() => setOsModal({ kind: "week" })}
             />
-            {/* Perfil arriba: evita pelear con el dock y con "Sistemas" */}
+            {/* Perfil arriba: evita pelear con el dock. Sistemas van en el menú (mobile). */}
             <button
               type="button"
               data-tour="tab-perfil"
@@ -99,13 +103,13 @@ export default function TopHud({ os }: { os: MemberOs }) {
                 <UserRound className="h-5 w-5" />
               )}
             </button>
-            {/* Espacio para el atajo global "Sistemas" (fixed top-right en layout) */}
-            <span className="w-11 shrink-0 sm:w-36" aria-hidden />
+            {/* Solo desktop: hueco para el atajo flotante "Sistemas" */}
+            <span className="hidden w-28 shrink-0 lg:block" aria-hidden />
           </div>
         )}
         {!unlocked && (
           <div className="ml-auto flex items-center gap-2">
-            <span className="w-11 shrink-0 sm:w-36" aria-hidden />
+            <span className="hidden w-28 shrink-0 lg:block" aria-hidden />
           </div>
         )}
       </div>

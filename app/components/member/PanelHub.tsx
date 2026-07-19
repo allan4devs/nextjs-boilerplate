@@ -21,6 +21,8 @@ export type HubPanel = {
   tone?: HubTileTone;
   /** Chip pequeño en la esquina (ej. "On", "3", "Hoy"). */
   badge?: string;
+  /** Ancla del onboarding tour (`data-tour`). */
+  tourId?: string;
   content: ReactNode;
 };
 
@@ -149,6 +151,7 @@ export default function PanelHub({
                 type="button"
                 onClick={() => setSelected(panel.id)}
                 data-analytics={`Panel: ${panel.label}`}
+                data-tour={panel.tourId}
                 aria-pressed={isOn}
                 className={`min-w-[108px] shrink-0 border-[3px] p-2.5 text-left transition ${
                   isOn ? tone.active : `${tone.idle} text-white`
@@ -173,7 +176,8 @@ export default function PanelHub({
                 type="button"
                 onClick={() => setSelected(panel.id)}
                 data-analytics={`Panel: ${panel.label}`}
-                className={`group relative flex min-h-[118px] flex-col items-start justify-between border-[3px] p-3.5 text-left shadow-[4px_4px_0_rgba(0,0,0,.5)] transition active:translate-x-px active:translate-y-px active:shadow-none sm:min-h-[132px] sm:p-4 ${tone.idle}`}
+                data-tour={panel.tourId}
+                className={`group relative flex min-h-[108px] flex-col items-start justify-between border-[3px] p-3 text-left shadow-[4px_4px_0_rgba(0,0,0,.5)] transition active:translate-x-px active:translate-y-px active:shadow-none sm:min-h-[132px] sm:p-4 ${tone.idle}`}
               >
                 {panel.badge && (
                   <span className="absolute right-2 top-2 border border-white/20 bg-black/50 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white/70">

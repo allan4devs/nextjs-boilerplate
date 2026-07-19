@@ -199,6 +199,44 @@ button,
   padding-top: max(0px, env(safe-area-inset-top, 0px));
 }
 
+/*
+ * Side drawer (Member OS): en iPhone no puede pegarse al y=0 porque choca
+ * con status bar / Dynamic Island / controles del browser. Baja con safe-area
+ * y deja margen inferior. En desktop (lg) vuelve a full-height del rail.
+ */
+.xg-side-nav {
+  top: max(0.5rem, env(safe-area-inset-top, 0px));
+  bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  max-height: none;
+  border-radius: 0 10px 10px 0;
+  overflow: hidden;
+}
+
+.xg-side-nav-header {
+  padding-top: 0;
+}
+
+.xg-side-nav-footer {
+  padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+  .xg-side-nav {
+    top: 0;
+    bottom: 0;
+    border-radius: 0;
+  }
+
+  .xg-side-nav-footer {
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Atajo "Sistemas": siempre bajo el notch (no pisa status bar / Dynamic Island). */
+.xg-system-shortcut {
+  top: max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.5rem));
+}
+
 /* Stable bottom surface for app navigation during mobile/PWA scrolling. */
 .xg-app-dock {
   bottom: 0 !important;
@@ -340,7 +378,14 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 
 /* Dock keeps content readable above bottom nav on mobile */
 .xg-os-content {
-  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  scroll-padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+  scroll-padding-top: 4.5rem;
+}
+
+/* Tour bubble stays above the dock on small screens */
+.xg-tour-bubble-mobile {
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Marketing móvil: barra pegada al viewport real y elementos flotantes sin choque. */

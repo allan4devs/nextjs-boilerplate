@@ -87,15 +87,15 @@ function MembershipHero({ model, actions }: Props) {
               {membership.status}
             </span>
           </div>
-          <div className="mt-4 flex items-end gap-3">
-            <strong className="text-5xl font-black leading-[.78] tracking-[-.07em] sm:text-7xl">
+          <div className="mt-3 flex items-end gap-2 sm:mt-4 sm:gap-3">
+            <strong className="text-4xl font-black leading-[.78] tracking-[-.07em] sm:text-7xl">
               {membership.daysRemaining}
             </strong>
-            <span className="pb-1 text-sm font-black uppercase tracking-[.18em] opacity-70">
+            <span className="pb-0.5 text-xs font-black uppercase tracking-[.14em] opacity-70 sm:pb-1 sm:text-sm sm:tracking-[.18em]">
               días<br />disponibles
             </span>
           </div>
-          <h1 className="mt-4 text-xl font-black uppercase sm:text-3xl">{membership.plan}</h1>
+          <h1 className="mt-3 text-lg font-black uppercase sm:mt-4 sm:text-3xl">{membership.plan}</h1>
           <p className="mt-2 text-sm font-bold opacity-70">Activo hasta {membership.nextBillingDate}</p>
           <div className="mt-4 max-w-2xl">
             <div className="flex justify-between text-[9px] font-black uppercase tracking-[.15em] opacity-70">

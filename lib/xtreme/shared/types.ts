@@ -162,6 +162,16 @@ export type MemberDoc = {
     at?: Date;
     source?: string;
   };
+  /** Trazabilidad de una recuperacion conservadora desde el Excel historico. */
+  emailRecovery?: {
+    at: Date;
+    source: string;
+    sourceRow?: number;
+    method?: string;
+    score?: number;
+    previousEmail?: string | null;
+    domainChange?: string | null;
+  };
   /** Datos conservados del Excel histórico. No son identidad verificada. */
   legacyImport?: {
     source?: string;

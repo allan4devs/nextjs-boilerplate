@@ -53,6 +53,7 @@ async function buildMemberCoverage(db: Awaited<ReturnType<typeof getDb>>) {
       emailVerified: 1,
       membership: 1,
       emailQuarantine: 1,
+      emailRecovery: 1,
       legacyImport: 1,
     })
     .toArray();
@@ -72,6 +73,8 @@ async function buildMemberCoverage(db: Awaited<ReturnType<typeof getDb>>) {
       sourceStatus: String(member.legacyImport?.canonicalSourceStatus || "").trim(),
       quarantineReason: String(member.emailQuarantine?.reason || "").trim(),
       quarantinedEmail: normalizeEmail(member.emailQuarantine?.previousEmail),
+      recoveryMethod: String(member.emailRecovery?.method || "").trim(),
+      recoveredAt: member.emailRecovery?.at ? new Date(member.emailRecovery.at).toISOString() : "",
     };
   }).sort((left, right) => left.name.localeCompare(right.name, "es-CR", { sensitivity: "base" }));
 }

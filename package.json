@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "import:estado": "powershell -ExecutionPolicy Bypass -File scripts/sync-estado-members.ps1",
+    "recover:emails": "powershell -ExecutionPolicy Bypass -File scripts/sync-estado-members.ps1 -RecoverEmails",
     "check:encoding": "node scripts/check-encoding.mjs"
   },
   "dependencies": {

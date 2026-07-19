@@ -1,10 +1,16 @@
 param(
   [switch]$Apply,
+  [switch]$RecoverEmails,
   [string]$Workbook = (Join-Path $PSScriptRoot "estado.xlsx"),
-  [string]$Report = (Join-Path $PSScriptRoot "estado-sync-report.json")
+  [string]$Report = ""
 )
 
 $ErrorActionPreference = "Stop"
+
+if (-not $Report) {
+  $reportName = if ($RecoverEmails) { "email-recovery-report.json" } else { "estado-sync-report.json" }
+  $Report = Join-Path $PSScriptRoot $reportName
+}
 
 if (-not (Test-Path -LiteralPath $Workbook -PathType Leaf)) {
   throw "No existe el archivo: $Workbook"
@@ -72,9 +78,10 @@ try {
 }
 
 try {
+  $nodeScript = if ($RecoverEmails) { "recover-member-emails.mjs" } else { "sync-estado-members.mjs" }
   $arguments = @(
     "--env-file=.env",
-    (Join-Path $PSScriptRoot "sync-estado-members.mjs"),
+    (Join-Path $PSScriptRoot $nodeScript),
     "--input", $tempJson,
     "--report", $Report
   )

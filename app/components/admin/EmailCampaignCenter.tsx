@@ -31,6 +31,8 @@ type CenterData = {
     totalMembers: number;
     membersWithUsableEmail: number;
     membersWithoutUsableEmail: number;
+    importedContactEmails: number;
+    recoveredMembers: number;
     verifiedMembers: number;
     unverifiedMembers: number;
     quarantinedMembers: number;
@@ -77,6 +79,8 @@ type MemberCoverage = {
   sourceStatus: string;
   quarantineReason: string;
   quarantinedEmail: string;
+  recoveryMethod: string;
+  recoveredAt: string;
 };
 
 const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string }> = [
@@ -590,10 +594,12 @@ export default function EmailCampaignCenter() {
             {coverage ? "Recargar auditoría" : "Ver los socios"}
           </button>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           {[
             [data?.diagnostics.totalMembers, "Socios en la base", "Incluye los importados del Excel"],
             [data?.diagnostics.membersWithUsableEmail, "Con correo usable", "Verificados y pendientes de verificar"],
+            [data?.diagnostics.importedContactEmails, "Contactos reales", "Direcciones únicas recuperadas del Excel"],
+            [data?.diagnostics.recoveredMembers, "Fichas recuperadas", "Asignación segura y auditada"],
             [data?.diagnostics.membersWithoutUsableEmail, "Sin correo usable", "No se pueden incluir en un envío"],
             [data?.diagnostics.quarantinedMembers, "En cuarentena", "Correo dudoso conservado para revisión"],
           ].map(([value, label, detail]) => (
@@ -605,7 +611,7 @@ export default function EmailCampaignCenter() {
           ))}
         </div>
         <p className="mt-3 text-[11px] font-semibold text-white/45">
-          Cuarentena: {data?.diagnostics.quarantineShared ?? "—"} compartidos entre fichas · {data?.diagnostics.quarantineMismatch ?? "—"} no coincidían con el nombre · {data?.diagnostics.quarantinePlaceholder ?? "—"} eran placeholders como “sin correo”.
+          Cuarentena restante: {data?.diagnostics.quarantinedMembers ?? "—"} fichas · {data?.diagnostics.quarantineShared ?? "—"} compartidos · {data?.diagnostics.quarantineMismatch ?? "—"} sin asignación segura · {data?.diagnostics.quarantinePlaceholder ?? "—"} placeholders.
         </p>
         {coverage && (
           <div className="mt-4 border-2 border-white/10 bg-black/40 p-3">
@@ -624,7 +630,7 @@ export default function EmailCampaignCenter() {
                   <div className="min-w-0"><div className="truncate font-black text-white">{member.name}</div><div className={`truncate font-semibold ${member.email ? "text-cyan-100/70" : "text-orange-200/70"}`}>{member.email || "Sin correo usable"}</div></div>
                   <div className="font-semibold text-white/45">{member.rate || member.plan || "Sin tarifa"}{member.sourceStatus ? ` · ${member.sourceStatus}` : ""}</div>
                   <div className="min-w-0 font-semibold text-white/35 lg:text-right">
-                    <div>{member.email ? (member.emailVerified ? "Verificado" : "Pendiente de verificar") : member.quarantineReason ? `Cuarentena: ${member.quarantineReason}` : "No venía correo usable"}</div>
+                    <div>{member.email ? (member.emailVerified ? "Verificado" : member.recoveryMethod ? "Recuperado del Excel · pendiente de verificar" : "Pendiente de verificar") : member.quarantineReason ? `Cuarentena: ${member.quarantineReason}` : "No venía correo usable"}</div>
                     {!member.email && member.quarantinedEmail && <div className="truncate text-orange-200/60">Anterior: {member.quarantinedEmail}</div>}
                   </div>
                 </div>
@@ -693,6 +699,10 @@ export default function EmailCampaignCenter() {
           <div className="mt-3 border-2 border-white/10 bg-black/40 px-3 py-2 text-[11px] font-semibold leading-relaxed text-white/50">
             Plantilla activa: <span className="font-black text-lime-200">{AUDIENCE_LABELS[form.audience]}</span>
             {" · "}CTA → <span className="text-cyan-200">{activeTemplate.ctaPath}</span>
+            <p className="mt-1.5 text-[10px] font-semibold text-white/40">
+              Diseño profesional: logo Xtreme, mapa de ubicación (clic a Google Maps), fachada y
+              accesos rápidos a app / planes.
+            </p>
           </div>
           <div className="mt-3 border-2 border-cyan-300/25 bg-cyan-300/[0.04] p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">

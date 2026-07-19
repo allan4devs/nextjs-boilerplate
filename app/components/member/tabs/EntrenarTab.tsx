@@ -434,6 +434,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
       icon: Dumbbell,
       tone: "orange",
       badge: doneCount > 0 ? `${doneCount}` : undefined,
+      tourId: "tour-clases",
       content: clasesContent,
     },
     {
@@ -464,9 +465,9 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
           if (id !== "clases") setOpenTrainingId(null);
         }}
         title="Entrenar"
-        subtitle="Tocá un cuadro grande. Reservá, hacé check-in o seguí tu plan."
+        subtitle="Tocá un cuadro. Reservá, check-in o seguí tu plan."
         header={
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {[
               {
                 label: "Hoy",

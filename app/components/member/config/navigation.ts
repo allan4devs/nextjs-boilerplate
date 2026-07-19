@@ -19,10 +19,10 @@ export const TABS = [
 export type TabId = (typeof TABS)[number]["id"];
 
 export const TAB_SUBTITLES: Record<TabId, string> = {
-  vida: "Readiness, habitos, retos, metas y records",
-  resumen: "Tu base de operaciones — toca los paneles",
+  vida: "Hábitos, sueño, retos y readiness",
+  resumen: "Membresía, racha y próximo paso",
   entrenar: "Plan, clases y check-in del día",
-  maquinas: "Toca una máquina para abrir la guía",
+  maquinas: "Guía de máquinas con video",
   progreso: "Logros, medidas y ranking",
-  perfil: "Carné, preferencias y seguridad",
+  perfil: "Carné, PIN, avisos y ayuda",
 };

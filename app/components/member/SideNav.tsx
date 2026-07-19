@@ -2,12 +2,16 @@
 
 /**
  * Navegacion lateral (desktop colapsable + drawer mobile):
- * tabs del OS, perfil del socio y mini-login por cedula.
+ * tabs del OS, perfil, sistemas y mini-login por cedula.
+ *
+ * Mobile/iPhone: el drawer respeta safe-area (notch / Dynamic Island)
+ * y el selector de sistemas vive aquí (no flota en el top).
  */
 
 import Link from "next/link";
 import { ArrowRight, House, UserRound, X } from "lucide-react";
 import { GameButton } from "../GameOS";
+import SystemLinks from "../SystemLinks";
 import Avatar from "./Avatar";
 import { TABS } from "./constants";
 import { formatCedulaInput } from "./utils";
@@ -30,29 +34,36 @@ export default function SideNav({ os }: { os: MemberOs }) {
     resetMember,
   } = os;
 
+  const closeNav = () => setNavOpen(false);
+
   return (
     <>
       {navOpen && (
         <button
           type="button"
           aria-label="Cerrar navegación"
-          onClick={() => setNavOpen(false)}
+          onClick={closeNav}
           className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r-[3px] border-white/15 bg-[#090909] shadow-[8px_0_0_rgba(0,0,0,.45)] transition-[width,transform] duration-300 ${
-          navOpen ? "translate-x-0 lg:w-[240px]" : "-translate-x-full lg:w-[72px] lg:translate-x-0"
+        className={`xg-side-nav fixed left-0 z-50 flex w-[min(272px,88vw)] flex-col border-r-[3px] border-white/15 bg-[#090909] shadow-[8px_0_0_rgba(0,0,0,.45)] transition-[width,transform] duration-300 lg:w-[72px] ${
+          navOpen
+            ? "translate-x-0 lg:w-[240px]"
+            : "-translate-x-full lg:w-[72px] lg:translate-x-0"
         }`}
       >
-        <div className="flex h-14 items-center justify-between border-b-[3px] border-white/15 bg-[#d8ff3e]/10 px-3">
+        {/* Header: en mobile queda bajo el notch; en desktop al tope del rail */}
+        <div className="xg-side-nav-header flex h-14 shrink-0 items-center justify-between border-b-[3px] border-white/15 bg-[#d8ff3e]/10 px-3">
           <div className={navOpen ? "block" : "lg:hidden"}>
-            <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">Xtreme Gym</p>
+            <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">
+              Xtreme Gym
+            </p>
             <p className="text-sm font-black uppercase">Member OS</p>
           </div>
           <button
             type="button"
-            onClick={() => setNavOpen(false)}
+            onClick={closeNav}
             className="grid h-10 w-10 place-items-center border-[3px] border-white/15 text-white/60 lg:hidden"
             aria-label="Cerrar navegación"
           >
@@ -60,16 +71,16 @@ export default function SideNav({ os }: { os: MemberOs }) {
           </button>
         </div>
 
-        {/* Perfil arriba del menú (no abajo del todo) */}
-        <div className="border-b-[3px] border-white/15 p-2">
+        {/* Perfil arriba del menú */}
+        <div className="shrink-0 border-b-[3px] border-white/15 p-2">
           {memberName ? (
             <button
               type="button"
               title="Ver perfil"
-              data-tour="tab-perfil"
+              data-tour="tab-perfil-nav"
               onClick={() => {
                 setTab("perfil");
-                setNavOpen(false);
+                closeNav();
                 setOsModal(null);
               }}
               className={`flex h-14 w-full items-center gap-3 border-[3px] px-2 text-left transition ${
@@ -78,7 +89,12 @@ export default function SideNav({ os }: { os: MemberOs }) {
                   : "border-white/10 hover:border-[#d8ff3e]/40 hover:bg-white/[.05]"
               }`}
             >
-              <Avatar name={memberName} photoUrl={currentMember.photoUrl} className="h-11 w-11" textClass="text-xs" />
+              <Avatar
+                name={memberName}
+                photoUrl={currentMember.photoUrl}
+                className="h-11 w-11"
+                textClass="text-xs"
+              />
               <span className={`min-w-0 flex-1 ${navOpen ? "block" : "lg:hidden"}`}>
                 <span className="block truncate text-xs font-black uppercase">{memberName}</span>
                 <span className="text-[11px] font-bold text-[#d8ff3e]">Ver perfil</span>
@@ -110,7 +126,7 @@ export default function SideNav({ os }: { os: MemberOs }) {
               onSubmit={(event) => {
                 event.preventDefault();
                 setShowLogin(false);
-                setNavOpen(false);
+                closeNav();
                 void startMemberByCedula(memberCedulaInput, false);
               }}
             >
@@ -132,7 +148,7 @@ export default function SideNav({ os }: { os: MemberOs }) {
           )}
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 py-3">
           {TABS.filter((item) => item.id !== "perfil").map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
@@ -144,10 +160,10 @@ export default function SideNav({ os }: { os: MemberOs }) {
                 title={item.label}
                 onClick={() => {
                   setTab(item.id);
-                  setNavOpen(false);
+                  closeNav();
                   setOsModal(null);
                 }}
-                className={`flex h-14 w-full items-center gap-3 border-[3px] px-3 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] ${
+                className={`flex h-12 w-full items-center gap-3 border-[3px] px-3 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] sm:h-14 ${
                   active
                     ? "border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#d8ff3e] shadow-[0_0_18px_rgba(216,255,62,0.18)]"
                     : "border-transparent text-white/50 hover:border-white/15 hover:bg-white/[.05] hover:text-white"
@@ -158,13 +174,22 @@ export default function SideNav({ os }: { os: MemberOs }) {
               </button>
             );
           })}
+
+          {/* Sistemas: en mobile siempre (drawer abierto); en desktop solo con rail expandido */}
+          <div
+            className={`mt-3 border-t border-white/10 pt-3 ${
+              navOpen ? "block" : "hidden lg:hidden"
+            }`}
+          >
+            <SystemLinks onNavigate={closeNav} />
+          </div>
         </nav>
 
-        <div className="border-t-[3px] border-white/15 p-2">
+        <div className="xg-side-nav-footer shrink-0 border-t-[3px] border-white/15 p-2">
           <Link
             href="/"
             title="Ir al sitio Xtreme Gym"
-            onClick={() => setNavOpen(false)}
+            onClick={closeNav}
             className="flex min-h-12 w-full items-center justify-center gap-3 border-[3px] border-white/10 px-2 text-xs font-black uppercase tracking-[.1em] text-white/50 transition hover:border-[#d8ff3e]/40 hover:text-white"
           >
             <House className="h-4 w-4 shrink-0" />
@@ -174,12 +199,12 @@ export default function SideNav({ os }: { os: MemberOs }) {
             <button
               type="button"
               onClick={() => {
-                setNavOpen(false);
+                closeNav();
                 setShowLogin(false);
                 resetMember();
               }}
               title="Cerrar sesion"
-              className={`mt-3 w-full border-[3px] border-red-400/25 py-2 text-xs font-black uppercase text-red-200/70 transition hover:border-red-400/50 hover:text-red-200 ${
+              className={`mt-2 w-full border-[3px] border-red-400/25 py-2 text-xs font-black uppercase text-red-200/70 transition hover:border-red-400/50 hover:text-red-200 ${
                 navOpen ? "block" : "lg:hidden"
               }`}
             >

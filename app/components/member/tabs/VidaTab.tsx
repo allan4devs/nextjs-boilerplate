@@ -145,17 +145,22 @@ export default function VidaTab({ os }: { os: MemberOs }) {
   }
 
   return (
-    <div className="xg-tab-in space-y-4">
-      <section className="relative overflow-hidden border-[3px] border-cyan-300/45 bg-gradient-to-br from-cyan-300/[.12] via-[#0b0b0b] to-[#d8ff3e]/[.07] p-4 shadow-[6px_6px_0_rgba(34,211,238,.13)] sm:p-6">
+    <div className="xg-tab-in space-y-3 sm:space-y-4" data-tour="tour-vida-hub">
+      <section className="relative overflow-hidden border-[3px] border-cyan-300/45 bg-gradient-to-br from-cyan-300/[.12] via-[#0b0b0b] to-[#d8ff3e]/[.07] p-3 shadow-[6px_6px_0_rgba(34,211,238,.13)] sm:p-6">
         <div aria-hidden className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-300/10 blur-3xl" />
-        <div className="relative grid gap-5 md:grid-cols-[auto_1fr] md:items-center">
-          <div className="grid h-36 w-36 place-items-center border-[5px] border-cyan-300/45 bg-black/35 text-center">
-            <div><p className={`text-5xl font-black ${readinessTone}`}>{readiness}</p><p className="text-[9px] font-black uppercase tracking-[.18em] text-white/40">Readiness</p></div>
+        <div className="relative grid gap-4 sm:gap-5 md:grid-cols-[auto_1fr] md:items-center">
+          <div className="mx-auto grid h-28 w-28 place-items-center border-[4px] border-cyan-300/45 bg-black/35 text-center sm:h-36 sm:w-36 sm:border-[5px]">
+            <div>
+              <p className={`text-4xl font-black sm:text-5xl ${readinessTone}`}>{readiness}</p>
+              <p className="text-[9px] font-black uppercase tracking-[.18em] text-white/40">Readiness</p>
+            </div>
           </div>
           <div>
             <GameLabel tone="cyan">Vida Xtreme</GameLabel>
-            <h1 className="mt-2 text-3xl font-black uppercase sm:text-4xl">Tu rendimiento empieza fuera del gym</h1>
-            <p className="mt-3 max-w-2xl text-sm font-bold leading-6 text-white/55">Registra como llegas, construye habitos y convierte tus avances diarios en decisiones simples.</p>
+            <h1 className="mt-2 text-2xl font-black uppercase sm:text-4xl">Tu rendimiento empieza fuera del gym</h1>
+            <p className="mt-2 text-sm font-bold leading-6 text-white/55 sm:mt-3">
+              Registrá cómo llegás, construí hábitos y convertí tus avances diarios en decisiones simples.
+            </p>
             <div className="mt-4 flex items-start gap-3 border-l-4 border-[#d8ff3e] bg-black/30 p-3">
               <BatteryCharging className="mt-0.5 h-5 w-5 shrink-0 text-[#d8ff3e]" />
               <p className="text-sm font-bold text-white/70">{recoveryTip}</p>

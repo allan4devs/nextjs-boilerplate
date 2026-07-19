@@ -42,3 +42,4 @@ next-env.d.ts
 .next-dev.log
 .next-dev.err.log
 .env*.local
+scripts/email-recovery-report.json
