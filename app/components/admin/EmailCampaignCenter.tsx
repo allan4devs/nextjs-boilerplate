@@ -16,6 +16,7 @@ type AudienceId =
   | "claim_native"
   | "claim_active_plan"
   | "invite_recoverable"
+  | "unverified_not_sent"
   | "excel_recovered"
   | "winback_90"
   | "winback_180"
@@ -39,6 +40,8 @@ type CampaignProcessSummary = {
   campaignId?: string;
   error?: string;
   rounds?: number;
+  reclaimed?: number;
+  alreadySentSkipped?: number;
 };
 
 type CenterData = {
@@ -62,6 +65,8 @@ type CenterData = {
     recoveredFromQuarantine?: number;
     recoveredFromExcel?: number;
     inviteRecoverableEmails?: number;
+    unverifiedNotSentEmails?: number;
+    alreadyCampaignSentEmails?: number;
   };
   campaigns: Array<{
     id: string;
@@ -193,7 +198,14 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     id: "invite_recoverable",
     label: "Invitar · correos recuperables",
     detail:
-      "TODOS los correos válidos del Excel/contactos/fichas/cuarentena, sin exigir match de nombre. Excluye verificados, bajas y placeholders. Campaña para ver quién se registra con correo y cédula.",
+      "TODOS los correos válidos del Excel/contactos/fichas/cuarentena, sin exigir match de nombre. Excluye verificados, bajas y placeholders. Al encolar se sacan automáticamente los que YA recibieron un envío.",
+    group: "Invitación masiva",
+  },
+  {
+    id: "unverified_not_sent",
+    label: "No verificados · no enviados",
+    detail:
+      "Solo sin verificar que NUNCA recibieron un correo de campaña. Usá esta lista para el siguiente lote limpio (no re-invita a quien ya se le mandó).",
     group: "Invitación masiva",
   },
   {
@@ -410,6 +422,17 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
       "Si este mensaje no es para vos, podés ignorarlo o darte de baja con el enlace al final del correo. Equipo Xtreme Gym · Ciudad Quesada.",
     ctaLabel: "Confirmar mis datos y crear PIN",
     // El envío real inyecta ?token=… por persona. Sin token no se envía.
+    ctaPath: "/registro/confirmar",
+  },
+  unverified_not_sent: {
+    subject: "Tu invitación a la app de Xtreme Gym",
+    title: "Confirmá tus datos y creá tu acceso",
+    message:
+      "Hola. Te escribimos de Xtreme Gym en Ciudad Quesada porque este correo figura en nuestra lista de contactos del gimnasio.\n\n" +
+      "Si entrenás con nosotros o lo hiciste antes, te invitamos a activar tu cuenta en la app de socios. Es gratis y te toma un momento: con el botón de abajo abrís un enlace personal (válido por 72 horas), revisás o completás tus datos y elegís un PIN de 4 dígitos. Después entrás con tu cédula y ese PIN.\n\n" +
+      "Vas a poder reservar clases, seguir tu progreso y usar las herramientas del gym desde el celular.\n\n" +
+      "Si este mensaje no es para vos, podés ignorarlo o darte de baja con el enlace al final del correo. Equipo Xtreme Gym · Ciudad Quesada.",
+    ctaLabel: "Confirmar mis datos y crear PIN",
     ctaPath: "/registro/confirmar",
   },
   excel_recovered: {
@@ -938,22 +961,27 @@ export default function EmailCampaignCenter() {
       });
       const json = (await response.json()) as {
         recipients?: number;
+        excludedAlreadySent?: number;
         process?: CampaignProcessSummary;
         error?: string;
       };
       if (!response.ok) throw new Error(json.error || "No se pudo crear la campaña.");
       const process = json.process;
+      const excluded =
+        json.excludedAlreadySent && json.excludedAlreadySent > 0
+          ? ` (${json.excludedAlreadySent} ya enviados excluidos)`
+          : "";
       if (process && !process.configured) {
         setError(
-          `Campaña en cola (${json.recipients} destinos) pero el servidor no puede enviar: ${process.error || "revisá EMAIL_SENDING_ENABLED / Resend"}.`,
+          `Campaña en cola (${json.recipients} destinos${excluded}) pero el servidor no puede enviar: ${process.error || "revisá EMAIL_SENDING_ENABLED / Resend"}.`,
         );
-      } else if (process && process.processed > 0) {
+      } else if (process && (process.processed > 0 || process.sent > 0)) {
         setNotice(
-          `Campaña en cola para ${json.recipients} destinatarios. Primer lote: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos. El resto sigue cada ~5 min o con «Procesar cola».`,
+          `Campaña en cola para ${json.recipients} destinatarios${excluded}. Primer lote: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos. El resto sigue cada ~5 min o con «Procesar cola».`,
         );
       } else {
         setNotice(
-          `Campaña en cola para ${json.recipients} destinatarios. El envío continúa en lotes automáticos (~cada 5 min) o con «Procesar cola ahora».`,
+          `Campaña en cola para ${json.recipients} destinatarios${excluded}. El envío continúa en lotes automáticos (~cada 5 min) o con «Procesar cola ahora».`,
         );
       }
       setCampaignConsent(false); await load();
@@ -998,11 +1026,19 @@ export default function EmailCampaignCenter() {
       const process = json.process;
       if (!process?.configured) {
         setError(process?.error || "El servidor no tiene el correo configurado para envíos.");
-      } else if (!process.processed) {
-        setNotice("No había correos pendientes en la cola.");
+      } else if (
+        !process.processed &&
+        !process.sent &&
+        !process.reclaimed &&
+        !process.alreadySentSkipped
+      ) {
+        setNotice("No había correos pendientes en la cola (o la campaña ya terminó).");
       } else {
         setNotice(
-          `Lote procesado: ${process.sent} enviados · ${process.failed} fallidos · ${process.skipped} omitidos (${process.processed} revisados${process.rounds ? `, ${process.rounds} rondas` : ""}). Si quedan pendientes, volvé a tocar «Procesar cola».`,
+          `Cola: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos` +
+            (process.reclaimed ? `, ${process.reclaimed} desbloqueados` : "") +
+            (process.alreadySentSkipped ? `, ${process.alreadySentSkipped} ya-enviados sacados` : "") +
+            `. Seguís con «Procesar cola» o el cron (~5 min).`,
         );
       }
       await load();
@@ -1067,7 +1103,9 @@ export default function EmailCampaignCenter() {
             [data?.diagnostics.totalMembers, "Socios en la base", "Incluye los importados del Excel"],
             [data?.diagnostics.membersWithUsableEmail, "Con correo usable", "Verificados y pendientes de verificar"],
             [data?.diagnostics.importedContactEmails, "Contactos reales", "Direcciones únicas recuperadas del Excel"],
-            [data?.diagnostics.inviteRecoverableEmails ?? data?.audiences.invite_recoverable, "Invitables (sin nombre)", "Todos los correos recuperables para campaña masiva"],
+            [data?.diagnostics.inviteRecoverableEmails ?? data?.audiences.invite_recoverable, "Invitables (todos)", "Recuperables sin verificar (al encolar se excluyen ya enviados)"],
+            [data?.diagnostics.unverifiedNotSentEmails ?? data?.audiences.unverified_not_sent, "No verif. · no enviados", "Solo los que nunca recibieron un correo de campaña"],
+            [data?.diagnostics.alreadyCampaignSentEmails, "Ya enviados", "Recibieron al menos un envío exitoso de campaña"],
             [data?.diagnostics.recoveredMembers, "Fichas recuperadas", "Asignación segura y auditada"],
             [data?.diagnostics.recoveredFromExcel, "Desde Excel", "Alineados por nombre/apellidos"],
             [data?.diagnostics.recoveredFromQuarantine, "Desde cuarentena", "Re-sacados con match de nombre"],

@@ -170,6 +170,11 @@ export type EmailAudience =
    * Para ver quién entra y se registra con correo + cédula.
    */
   | "invite_recoverable"
+  /**
+   * Sin verificar y que NUNCA recibieron un correo de campaña con status sent.
+   * Lista limpia para el siguiente lote (no re-invitar a quien ya se le mandó).
+   */
+  | "unverified_not_sent"
   /** Cualquier ficha con emailRecovery (verificado o no). */
   | "excel_recovered"
   | "winback_90"
@@ -236,13 +241,82 @@ export type ProcessCampaignsResult = {
   campaignId?: string;
   error?: string;
   rounds?: number;
+  reclaimed?: number;
+  alreadySentSkipped?: number;
 };
 
 export function newEmailCampaignId() {
   return `email-${randomUUID()}`;
 }
 
-async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCampaignsResult> {
+/** Correos que ya recibieron al menos un envío exitoso de campaña. */
+export async function listAlreadyCampaignSentEmails(db: Db): Promise<Set<string>> {
+  const emails = await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).distinct("email", {
+    status: "sent",
+  });
+  return new Set(
+    emails
+      .map((e) => String(e || "").trim().toLowerCase())
+      .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
+  );
+}
+
+/**
+ * Recupera deliveries colgados en "sending" (timeout de Vercel / crash a mitad).
+ * maxAgeMs bajo = el admin desbloquea más rápido.
+ */
+export async function reclaimStuckCampaignDeliveries(
+  db: Db,
+  options?: { campaignId?: string; maxAgeMs?: number; forceAll?: boolean },
+): Promise<number> {
+  const maxAgeMs = options?.forceAll ? 0 : (options?.maxAgeMs ?? 90_000);
+  const cutoff = new Date(Date.now() - maxAgeMs);
+  const filter: Record<string, unknown> = {
+    status: "sending",
+    ...(options?.campaignId ? { campaignId: options.campaignId } : {}),
+    ...(options?.forceAll ? {} : { updatedAt: { $lt: cutoff } }),
+  };
+  const result = await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).updateMany(filter, {
+    $set: {
+      status: "queued",
+      updatedAt: new Date(),
+      error: "Recuperado de envío colgado; reintento automático.",
+    },
+  });
+  return result.modifiedCount;
+}
+
+/**
+ * Saca de la cola (skipped) a quien ya tiene un envío sent en cualquier campaña.
+ * Evita re-mandar y desbloquea colas viejas con duplicados.
+ */
+export async function skipAlreadySentInQueue(
+  db: Db,
+  campaignId?: string,
+): Promise<number> {
+  const already = await listAlreadyCampaignSentEmails(db);
+  if (!already.size) return 0;
+
+  const filter: Record<string, unknown> = {
+    status: { $in: ["queued", "sending"] },
+    email: { $in: [...already] },
+    ...(campaignId ? { campaignId } : {}),
+  };
+  const result = await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).updateMany(filter, {
+    $set: {
+      status: "skipped",
+      updatedAt: new Date(),
+      error: "Ya se le envió un correo de campaña antes; se omite en esta cola.",
+    },
+  });
+  return result.modifiedCount;
+}
+
+async function processOneCampaignBatch(
+  db: Db,
+  limit: number,
+  options?: { forceUnstick?: boolean },
+): Promise<ProcessCampaignsResult> {
   if (!emailEnabled()) {
     const configError =
       emailConfigurationError() || "Configuración de correo incompleta en el servidor.";
@@ -295,22 +369,41 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
   );
 
   const deliveries = db.collection<EmailDeliveryDoc>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION);
-  // Recupera un lote si la función terminó después de reclamarlo y antes de guardar el resultado.
-  await deliveries.updateMany(
-    {
-      campaignId: campaign.id,
-      status: "sending",
-      updatedAt: { $lt: new Date(Date.now() - 10 * 60_000) },
-    },
-    { $set: { status: "queued", updatedAt: new Date() } },
-  );
-  const batch = await deliveries
+
+  // 1) Desbloquear "sending" colgados (antes 10 min → se veía “pegado”).
+  const reclaimed = await reclaimStuckCampaignDeliveries(db, {
+    campaignId: campaign.id,
+    maxAgeMs: options?.forceUnstick ? 0 : 90_000,
+    forceAll: Boolean(options?.forceUnstick),
+  });
+
+  // 2) Quien ya recibió mail de campaña no se vuelve a procesar en esta cola.
+  const alreadySentSkipped = await skipAlreadySentInQueue(db, campaign.id);
+
+  let batch = await deliveries
     .find({ campaignId: campaign.id, status: "queued" })
+    .sort({ updatedAt: 1 })
     .limit(limit)
     .toArray();
+
+  // Si no hay queued pero quedan "sending" viejos, forzar unstick y reintentar una vez.
+  if (!batch.length) {
+    const extra = await reclaimStuckCampaignDeliveries(db, {
+      campaignId: campaign.id,
+      maxAgeMs: 30_000,
+    });
+    if (extra > 0) {
+      batch = await deliveries
+        .find({ campaignId: campaign.id, status: "queued" })
+        .sort({ updatedAt: 1 })
+        .limit(limit)
+        .toArray();
+    }
+  }
+
   let sent = 0;
   let failed = 0;
-  let skipped = 0;
+  let skipped = alreadySentSkipped;
 
   for (const item of batch) {
     const claimed = await deliveries.updateOne(
@@ -318,6 +411,29 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
       { $set: { status: "sending", updatedAt: new Date() }, $inc: { attempts: 1 } },
     );
     if (!claimed.modifiedCount) continue;
+
+    const attemptCount = Number(item.attempts || 0) + 1;
+
+    // Defensa: si en otra carrera ya se marcó sent el mismo email, no reenviar.
+    const already = await deliveries.findOne({
+      email: item.email,
+      status: "sent",
+      deliveryKey: { $ne: item.deliveryKey },
+    });
+    if (already) {
+      skipped += 1;
+      await deliveries.updateOne(
+        { deliveryKey: item.deliveryKey },
+        {
+          $set: {
+            status: "skipped",
+            updatedAt: new Date(),
+            error: "Ya se le envió un correo de campaña; omitido.",
+          },
+        },
+      );
+      continue;
+    }
 
     // Magic link personal por destinatario (reintento 1x si falla).
     // Solo se envía si el token queda persistido en pending_registrations.
@@ -400,7 +516,7 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
           errorMsg,
         );
       }
-      if (item.attempts + 1 < 4) {
+      if (attemptCount < 4) {
         await deliveries.updateOne(
           { deliveryKey: item.deliveryKey },
           {
@@ -430,25 +546,42 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
           },
         );
       }
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 120));
       continue;
     }
 
     // Doble chequeo: si es claim, el path del correo debe llevar el token de 64 hex.
     if (linkKind === "claim" && !isUsableCampaignClaimPath(ctaPath)) {
       console.error("CAMPAIGN ABORT SEND — claim path inválido", item.email, ctaPath);
-      await deliveries.updateOne(
-        { deliveryKey: item.deliveryKey },
-        {
-          $set: {
-            status: "queued",
-            updatedAt: new Date(),
-            ctaPath,
-            linkKind,
-            error: "Path claim inválido antes de enviar; reintento.",
+      const now = new Date();
+      if (attemptCount < 4) {
+        await deliveries.updateOne(
+          { deliveryKey: item.deliveryKey },
+          {
+            $set: {
+              status: "queued",
+              updatedAt: now,
+              ctaPath,
+              linkKind,
+              error: "Path claim inválido antes de enviar; reintento.",
+            },
           },
-        },
-      );
+        );
+      } else {
+        failed += 1;
+        await deliveries.updateOne(
+          { deliveryKey: item.deliveryKey },
+          {
+            $set: {
+              status: "failed",
+              updatedAt: now,
+              ctaPath,
+              linkKind,
+              error: "Path claim inválido tras varios intentos.",
+            },
+          },
+        );
+      }
       continue;
     }
 
@@ -525,7 +658,7 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
       await new Promise((resolve) => setTimeout(resolve, 1200));
       // Cortar el lote actual: el cron siguiente continúa sin saturar.
       break;
-    } else if (item.attempts + 1 < 4) {
+    } else if (attemptCount < 4) {
       await deliveries.updateOne(
         { deliveryKey: item.deliveryKey },
         {
@@ -538,7 +671,7 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
           },
         },
       );
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise((resolve) => setTimeout(resolve, 280));
     } else {
       failed += 1;
       await deliveries.updateOne(
@@ -565,21 +698,43 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
   const byStatus = Object.fromEntries(counts.map((row) => [row._id, row.count]));
   const remaining = (byStatus.queued || 0) + (byStatus.sending || 0);
   const completed = remaining === 0;
-  await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).updateOne(
-    { id: campaign.id },
-    {
-      $set: {
-        status: completed ? "completed" : "processing",
-        sent: byStatus.sent || 0,
-        failed: byStatus.failed || 0,
-        skipped: byStatus.skipped || 0,
-        lastProcessedAt: new Date(),
-        updatedAt: new Date(),
-        ...(completed ? { completedAt: new Date() } : {}),
+  if (completed) {
+    await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).updateOne(
+      { id: campaign.id },
+      {
+        $set: {
+          status: "completed",
+          sent: byStatus.sent || 0,
+          failed: byStatus.failed || 0,
+          skipped: byStatus.skipped || 0,
+          lastProcessedAt: new Date(),
+          updatedAt: new Date(),
+          completedAt: new Date(),
+        },
+        $unset: { lastError: "" },
       },
-      $unset: { lastError: "" },
-    },
-  );
+    );
+  } else {
+    const stuckHint =
+      batch.length === 0 && remaining > 0
+        ? "Cola con envíos colgados o en reintento. Usá «Procesar cola» de nuevo (desbloquea autom.)."
+        : undefined;
+    await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).updateOne(
+      { id: campaign.id },
+      {
+        $set: {
+          status: "processing",
+          sent: byStatus.sent || 0,
+          failed: byStatus.failed || 0,
+          skipped: byStatus.skipped || 0,
+          lastProcessedAt: new Date(),
+          updatedAt: new Date(),
+          ...(stuckHint ? { lastError: stuckHint } : {}),
+        },
+        ...(stuckHint ? {} : { $unset: { lastError: "" } }),
+      },
+    );
+  }
 
   return {
     configured: true,
@@ -588,6 +743,8 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
     sent,
     failed,
     skipped,
+    reclaimed,
+    alreadySentSkipped,
   };
 }
 
@@ -599,11 +756,18 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
 export async function processQueuedEmailCampaigns(
   db: Db,
   limit = 20,
-  options?: { maxRounds?: number; deadlineMs?: number },
+  options?: { maxRounds?: number; deadlineMs?: number; forceUnstick?: boolean },
 ): Promise<ProcessCampaignsResult> {
   const maxRounds = Math.max(1, options?.maxRounds ?? 1);
   const deadlineMs = options?.deadlineMs ?? 0;
   const started = Date.now();
+
+  // Al entrar (sobre todo desde admin): liberar "sending" colgados y saltear ya enviados.
+  let totalReclaimed = await reclaimStuckCampaignDeliveries(db, {
+    maxAgeMs: options?.forceUnstick ? 0 : 90_000,
+    forceAll: Boolean(options?.forceUnstick),
+  });
+  let totalAlreadySkipped = await skipAlreadySentInQueue(db);
 
   let totalProcessed = 0;
   let totalSent = 0;
@@ -613,11 +777,14 @@ export async function processQueuedEmailCampaigns(
   let configured = true;
   let error: string | undefined;
   let rounds = 0;
+  let emptyRounds = 0;
 
   for (let round = 0; round < maxRounds; round += 1) {
     if (deadlineMs > 0 && Date.now() - started > deadlineMs) break;
 
-    const result = await processOneCampaignBatch(db, limit);
+    const result = await processOneCampaignBatch(db, limit, {
+      forceUnstick: options?.forceUnstick && round === 0,
+    });
     rounds += 1;
     configured = result.configured;
     if (result.campaignId) lastCampaignId = result.campaignId;
@@ -626,10 +793,27 @@ export async function processQueuedEmailCampaigns(
     totalSent += result.sent;
     totalFailed += result.failed;
     totalSkipped += result.skipped;
+    totalReclaimed += result.reclaimed || 0;
+    totalAlreadySkipped += result.alreadySentSkipped || 0;
 
-    // Sin configuración o sin trabajo pendiente: no tiene sentido seguir.
     if (!result.configured) break;
-    if (result.processed === 0) break;
+
+    // Si no hubo trabajo útil, unstick forzado una vez y reintentar.
+    if (result.sent === 0 && result.failed === 0 && (result.processed || 0) === 0) {
+      emptyRounds += 1;
+      if (emptyRounds === 1) {
+        totalReclaimed += await reclaimStuckCampaignDeliveries(db, { forceAll: true });
+        totalAlreadySkipped += await skipAlreadySentInQueue(db);
+        continue;
+      }
+      break;
+    }
+    emptyRounds = 0;
+
+    // Si este lote no envió nada pero aún hay cola, seguir (skipped/reclaims cuentan).
+    if (result.sent === 0 && result.failed === 0 && result.skipped > 0) {
+      continue;
+    }
   }
 
   return {
@@ -641,5 +825,7 @@ export async function processQueuedEmailCampaigns(
     campaignId: lastCampaignId,
     error,
     rounds,
+    reclaimed: totalReclaimed,
+    alreadySentSkipped: totalAlreadySkipped,
   };
 }

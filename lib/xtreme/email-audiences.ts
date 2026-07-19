@@ -15,6 +15,7 @@
 import type { Db } from "mongodb";
 import { EVENTS_COLLECTION } from "@/lib/xtreme/events";
 import {
+  EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CONTACTS_COLLECTION,
   EMAIL_SUPPRESSIONS_COLLECTION,
   MEMBERS_COLLECTION,
@@ -31,6 +32,7 @@ export const EMAIL_AUDIENCE_IDS = [
   "claim_profile",
   "claim_active_plan",
   "invite_recoverable",
+  "unverified_not_sent",
   "excel_recovered",
   "imported",
   "unregistered",
@@ -76,6 +78,10 @@ export type EmailAudienceDiagnostics = {
   recoveredFromExcel: number;
   /** Correos únicos invitables (invite_recoverable), sin match de nombre. */
   inviteRecoverableEmails: number;
+  /** Sin verificar y sin envío de campaña previo. */
+  unverifiedNotSentEmails: number;
+  /** Correos que ya recibieron al menos un envío de campaña. */
+  alreadyCampaignSentEmails: number;
 };
 
 type PlanAudience =
@@ -299,6 +305,21 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   const inviteRecoverable = clean(inviteRecoverableRaw).filter(
     (email) => !verifiedEmailsStrict.has(email) && !isPlaceholderCampaignEmail(email),
   );
+
+  // Ya se les mandó al menos un correo de campaña (status sent).
+  const alreadyCampaignSent = new Set(
+    (
+      await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).distinct("email", {
+        status: "sent",
+      })
+    )
+      .map((e) => normalizeAudienceEmail(e))
+      .filter(Boolean),
+  );
+
+  /** No verificados y sin envío previo de campaña → siguiente lote limpio. */
+  const unverifiedNotSent = inviteRecoverable.filter((email) => !alreadyCampaignSent.has(email));
+
   const activeKeys = new Set(recentlyActive);
   const everActiveKeys = new Set(everActive);
 
@@ -400,6 +421,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     claim_profile: clean(claimProfile),
     claim_active_plan: clean(claimActivePlan),
     invite_recoverable: inviteRecoverable,
+    unverified_not_sent: unverifiedNotSent,
     excel_recovered: clean(excelRecovered),
     imported,
     unregistered,
@@ -450,6 +472,8 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       recoveredFromQuarantine,
       recoveredFromExcel,
       inviteRecoverableEmails: inviteRecoverable.length,
+      unverifiedNotSentEmails: unverifiedNotSent.length,
+      alreadyCampaignSentEmails: alreadyCampaignSent.size,
     },
   };
 }

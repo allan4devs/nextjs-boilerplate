@@ -5,11 +5,14 @@ import { writeAudit } from "@/lib/xtreme/audit";
 import {
   assertSafeCampaignCta,
   extractCampaignRegistrationToken,
+  listAlreadyCampaignSentEmails,
   type EmailAudience,
   type EmailCampaignDoc,
   newEmailCampaignId,
   processQueuedEmailCampaigns,
+  reclaimStuckCampaignDeliveries,
   resolveCampaignCta,
+  skipAlreadySentInQueue,
 } from "@/lib/xtreme/email-campaigns";
 import { buildAudienceEmails, EMAIL_AUDIENCE_IDS } from "@/lib/xtreme/email-audiences";
 import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
@@ -341,9 +344,21 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "El enlace debe ser una ruta interna que empiece con /." }, { status: 400 });
       }
       const audiences = await buildAudienceEmails(db);
-      const recipients = audiences[audience];
-      if (!recipients?.length) {
-        return NextResponse.json({ error: "La audiencia seleccionada está vacía." }, { status: 400 });
+      const rawRecipients = audiences[audience] ?? [];
+      // Nunca re-encolar a quien ya recibió un envío exitoso de campaña.
+      const alreadySent = await listAlreadyCampaignSentEmails(db);
+      const recipients = rawRecipients.filter((email) => !alreadySent.has(email));
+      const excludedAlreadySent = rawRecipients.length - recipients.length;
+      if (!recipients.length) {
+        return NextResponse.json(
+          {
+            error: alreadySent.size
+              ? `No hay destinatarios nuevos: los ${rawRecipients.length} de esta audiencia ya recibieron un correo de campaña. Usá la audiencia «No verificados · no enviados».`
+              : "La audiencia seleccionada está vacía.",
+            excludedAlreadySent,
+          },
+          { status: 400 },
+        );
       }
       const id = newEmailCampaignId();
       const now = new Date();
@@ -381,21 +396,22 @@ export async function POST(req: NextRequest) {
         action: "email_campaign.queue",
         targetType: "system",
         targetId: id,
-        summary: `Campaña en cola para ${recipients.length} destinatarios`,
-        meta: { audience, subject },
+        summary: `Campaña en cola para ${recipients.length} destinatarios (${excludedAlreadySent} ya enviados excluidos)`,
+        meta: { audience, subject, excludedAlreadySent },
       });
 
-      // Primer lote suave al encolar (~30–40 mails); el cron */5 min termina los ~1000.
-      // Cada uno con token personal validado antes de Resend.
+      // Primer lote + desbloqueo; el cron */5 min termina el resto.
       const process = await processQueuedEmailCampaigns(db, 15, {
         maxRounds: 2,
         deadlineMs: 45_000,
+        forceUnstick: true,
       });
 
       return NextResponse.json({
         ok: true,
         campaignId: id,
         recipients: recipients.length,
+        excludedAlreadySent,
         process,
       });
     }
@@ -511,9 +527,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "process_queue") {
-      const process = await processQueuedEmailCampaigns(db, 30, {
-        maxRounds: 6,
+      // Admin: forzar desbloqueo de "sending" colgados + saltear ya enviados.
+      const reclaimed = await reclaimStuckCampaignDeliveries(db, { forceAll: true });
+      const alreadySkipped = await skipAlreadySentInQueue(db);
+      const process = await processQueuedEmailCampaigns(db, 25, {
+        maxRounds: 8,
         deadlineMs: 50_000,
+        forceUnstick: true,
       });
       await writeAudit(db, {
         actorRole: "super",
@@ -521,14 +541,60 @@ export async function POST(req: NextRequest) {
         targetType: "system",
         targetId: process.campaignId || "queue",
         summary: process.configured
-          ? `Cola procesada: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos (${process.processed} en este lote)`
+          ? `Cola: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos, ${reclaimed} desbloqueados, ${alreadySkipped} ya-enviados sacados`
           : `Cola no procesada: ${process.error || "correo no configurado"}`,
-        meta: process,
+        meta: { ...process, reclaimed, alreadySkipped },
       });
       return NextResponse.json({
         ok: true,
         emailConfigured: process.configured,
-        process,
+        process: {
+          ...process,
+          reclaimed: (process.reclaimed || 0) + reclaimed,
+          alreadySentSkipped: (process.alreadySentSkipped || 0) + alreadySkipped,
+        },
+      });
+    }
+
+    if (action === "unstick_queue") {
+      const reclaimed = await reclaimStuckCampaignDeliveries(db, { forceAll: true });
+      const alreadySkipped = await skipAlreadySentInQueue(db);
+      // Recalcular contadores de campañas abiertas.
+      const open = await db
+        .collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION)
+        .find({ status: { $in: ["queued", "processing"] } })
+        .toArray();
+      for (const campaign of open) {
+        const counts = await db
+          .collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION)
+          .aggregate<{ _id: string; count: number }>([
+            { $match: { campaignId: campaign.id } },
+            { $group: { _id: "$status", count: { $sum: 1 } } },
+          ])
+          .toArray();
+        const byStatus = Object.fromEntries(counts.map((row) => [row._id, row.count]));
+        const remaining = (byStatus.queued || 0) + (byStatus.sending || 0);
+        await db.collection(EMAIL_CAMPAIGNS_COLLECTION).updateOne(
+          { id: campaign.id },
+          {
+            $set: {
+              status: remaining === 0 ? "completed" : "processing",
+              sent: byStatus.sent || 0,
+              failed: byStatus.failed || 0,
+              skipped: byStatus.skipped || 0,
+              lastProcessedAt: new Date(),
+              updatedAt: new Date(),
+              ...(remaining === 0 ? { completedAt: new Date() } : {}),
+            },
+            $unset: { lastError: "" },
+          },
+        );
+      }
+      return NextResponse.json({
+        ok: true,
+        reclaimed,
+        alreadySkipped,
+        openCampaigns: open.length,
       });
     }
 

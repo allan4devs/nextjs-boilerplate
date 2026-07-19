@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
     const emailCampaigns = await processQueuedEmailCampaigns(db, 25, {
       maxRounds: 8,
       deadlineMs: 55_000,
+      forceUnstick: false, // reclaim a 90s; admin forceUnstick=true
     });
     return NextResponse.json({
       ok: true,
