@@ -17,6 +17,12 @@ import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { issueCampaignClaimLink } from "@/lib/xtreme/campaign-claim-link";
 import { hashRegistrationToken } from "@/lib/xtreme/registration-token";
 import {
+  getCampaignDeliveryStats,
+  listCampaignDeliveries,
+  resendCampaignRemindersBatch,
+  resendCampaignVerification,
+} from "@/lib/xtreme/campaign-delivery-status";
+import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
   EMAIL_CONTACTS_COLLECTION,
@@ -194,10 +200,47 @@ export async function GET(req: NextRequest) {
     ) as Record<EmailAudience, number>;
     const requestedAudience = String(req.nextUrl.searchParams.get("audience") || "") as EmailAudience;
     const includeCoverage = req.nextUrl.searchParams.get("coverage") === "1";
+    const campaignId = String(req.nextUrl.searchParams.get("campaignId") || "").trim();
+    const deliveryFilter = String(req.nextUrl.searchParams.get("deliveryFilter") || "all");
     const recipientList = AUDIENCES.has(requestedAudience)
       ? await buildRecipientList(db, audiences[requestedAudience] ?? [])
       : undefined;
     const memberCoverage = includeCoverage ? await buildMemberCoverage(db) : undefined;
+
+    // Detalle de seguimiento por campaña (enviado / click / registrado).
+    let campaignTracking:
+      | {
+          campaignId: string;
+          stats: Awaited<ReturnType<typeof getCampaignDeliveryStats>>;
+          rows: Awaited<ReturnType<typeof listCampaignDeliveries>>["rows"];
+        }
+      | undefined;
+    if (campaignId) {
+      const listed = await listCampaignDeliveries(db, campaignId, {
+        filter: deliveryFilter,
+        limit: 400,
+        offset: 0,
+      });
+      campaignTracking = {
+        campaignId,
+        stats: listed.stats,
+        rows: listed.rows,
+      };
+    }
+
+    // Stats ligeras para la lista de campañas recientes.
+    const campaignStats = await Promise.all(
+      campaigns.map(async (campaign) => {
+        try {
+          const stats = await getCampaignDeliveryStats(db, campaign.id);
+          return { id: campaign.id, stats };
+        } catch {
+          return { id: campaign.id, stats: null };
+        }
+      }),
+    );
+    const statsById = Object.fromEntries(campaignStats.map((row) => [row.id, row.stats]));
+
     return NextResponse.json({
       ok: true,
       emailConfigured: emailEnabled(),
@@ -207,10 +250,15 @@ export async function GET(req: NextRequest) {
         suppressed: audiences.suppressed,
       },
       diagnostics: audiences.diagnostics,
-      campaigns: campaigns.map((campaign) => ({ ...campaign, _id: undefined })),
+      campaigns: campaigns.map((campaign) => ({
+        ...campaign,
+        _id: undefined,
+        tracking: statsById[campaign.id] || undefined,
+      })),
       unsubscribes: unsubscribes.map((item) => ({ ...item, _id: undefined })),
       ...(recipientList ? { recipientList, recipientAudience: requestedAudience } : {}),
       ...(memberCoverage ? { memberCoverage } : {}),
+      ...(campaignTracking ? { campaignTracking } : {}),
     });
   } catch (error) {
     console.error("XTREME ADMIN EMAIL GET", error);
@@ -482,6 +530,59 @@ export async function POST(req: NextRequest) {
         emailConfigured: process.configured,
         process,
       });
+    }
+
+    if (action === "resend_reminder") {
+      const deliveryKey = String(body.deliveryKey ?? "").trim();
+      const campaignId = String(body.campaignId ?? "").trim();
+      const email = normalizeEmail(body.email);
+      if (!deliveryKey && !(campaignId && email)) {
+        return NextResponse.json(
+          { error: "Indicá el envío (deliveryKey) o campaña + correo." },
+          { status: 400 },
+        );
+      }
+      const result = await resendCampaignVerification(db, {
+        deliveryKey: deliveryKey || undefined,
+        campaignId: campaignId || undefined,
+        email: email || undefined,
+      });
+      await writeAudit(db, {
+        actorRole: "super",
+        action: "email_campaign.resend_reminder",
+        targetType: "system",
+        targetId: deliveryKey || email || campaignId,
+        summary: result.ok
+          ? `Recordatorio de verificación reenviado a ${result.email}`
+          : `Falló reenvío: ${result.error}`,
+        meta: result,
+      });
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 409 });
+      }
+      return NextResponse.json({
+        ok: true,
+        email: result.email,
+        ctaPathPreview: result.ctaPathPreview,
+      });
+    }
+
+    if (action === "resend_reminders_batch") {
+      const campaignId = String(body.campaignId ?? "").trim();
+      const limit = Math.min(Math.max(Number(body.limit) || 25, 1), 50);
+      if (!campaignId) {
+        return NextResponse.json({ error: "campaignId es requerido." }, { status: 400 });
+      }
+      const result = await resendCampaignRemindersBatch(db, campaignId, limit);
+      await writeAudit(db, {
+        actorRole: "super",
+        action: "email_campaign.resend_batch",
+        targetType: "system",
+        targetId: campaignId,
+        summary: `Lote recordatorios: ${result.sent} enviados, ${result.failed} fallidos de ${result.attempted}`,
+        meta: result,
+      });
+      return NextResponse.json({ ok: true, ...result });
     }
 
     return NextResponse.json({ error: "Acción no válida." }, { status: 400 });

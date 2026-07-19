@@ -1211,7 +1211,10 @@ export async function sendCampaignEmail(args: {
     }
   }
   const primaryHref = absoluteAppUrl(safePath);
-  const isSecureLink = /[?&]token=/.test(safePath) || safePath.includes("/registro/");
+  const isSecureLink =
+    /[?&]token=/.test(safePath) ||
+    safePath.includes("/registro/") ||
+    safePath.includes("/api/xtreme/campaign-click");
   const button = args.ctaLabel
     ? ctaButton(args.ctaLabel, primaryHref) +
       (isSecureLink ? linkFallback(primaryHref) : "")

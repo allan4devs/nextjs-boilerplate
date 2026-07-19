@@ -7,6 +7,7 @@ import {
   type CampaignClaimLink,
 } from "@/lib/xtreme/campaign-claim-link";
 import { hashRegistrationToken } from "@/lib/xtreme/registration-token";
+import { campaignClickPath } from "@/lib/xtreme/campaign-click";
 import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
@@ -219,6 +220,11 @@ type EmailDeliveryDoc = {
   /** Ruta CTA real del envío (con token si fue magic link). */
   ctaPath?: string;
   linkKind?: "claim" | "app" | "fallback";
+  sentAt?: Date;
+  openedAt?: Date;
+  registeredAt?: Date;
+  lastReminderAt?: Date;
+  reminderCount?: number;
 };
 
 export type ProcessCampaignsResult = {
@@ -446,13 +452,26 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
       continue;
     }
 
+    // Guardamos el magic link real en delivery; en el correo va el wrapper de click
+    // para saber cuándo abrieron (sin exponer el token en analytics del mail).
+    const emailCtaPath =
+      linkKind === "claim" && isUsableCampaignClaimPath(ctaPath)
+        ? campaignClickPath(item.deliveryKey)
+        : ctaPath;
+
+    // Persistir ctaPath ANTES del envío para que el click redirect ya encuentre el token.
+    await deliveries.updateOne(
+      { deliveryKey: item.deliveryKey },
+      { $set: { ctaPath, linkKind, updatedAt: new Date() } },
+    );
+
     const result = await sendCampaignEmail({
       to: item.email,
       subject: campaign.subject,
       title: campaign.title,
       message: campaign.message,
       ctaLabel,
-      ctaPath,
+      ctaPath: emailCtaPath,
       idempotencyKey: item.deliveryKey,
     });
     const now = new Date();
@@ -464,6 +483,7 @@ async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCa
           $set: {
             status: "sent",
             updatedAt: now,
+            sentAt: now,
             ctaPath,
             linkKind,
           },

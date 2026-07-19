@@ -75,6 +75,17 @@ type CenterData = {
     createdAt: string;
     lastProcessedAt?: string;
     lastError?: string;
+    tracking?: {
+      total: number;
+      sent: number;
+      opened: number;
+      registered: number;
+      notOpened: number;
+      notRegistered: number;
+      failed: number;
+      skipped: number;
+      queued: number;
+    };
   }>;
   unsubscribes: Array<{
     email: string;
@@ -83,6 +94,39 @@ type CenterData = {
     unsubscribedAt?: string;
     createdAt?: string;
   }>;
+};
+
+type DeliveryTrackingRow = {
+  deliveryKey: string;
+  campaignId: string;
+  email: string;
+  name: string;
+  status: string;
+  deliveryStatus: string;
+  sentAt: string | null;
+  openedAt: string | null;
+  registeredAt: string | null;
+  lastReminderAt: string | null;
+  reminderCount: number;
+  emailVerified: boolean;
+  canResend: boolean;
+  error?: string;
+};
+
+type CampaignTrackingPayload = {
+  campaignId: string;
+  stats: {
+    total: number;
+    sent: number;
+    opened: number;
+    registered: number;
+    notOpened: number;
+    notRegistered: number;
+    failed: number;
+    skipped: number;
+    queued: number;
+  };
+  rows: DeliveryTrackingRow[];
 };
 
 type RecipientPreview = {
@@ -642,6 +686,11 @@ export default function EmailCampaignCenter() {
   const [coverageBusy, setCoverageBusy] = useState(false);
   const [coverageSearch, setCoverageSearch] = useState("");
   const [coverageFilter, setCoverageFilter] = useState<"all" | "sendable" | "missing" | "quarantined">("all");
+  const [trackingCampaignId, setTrackingCampaignId] = useState("");
+  const [trackingFilter, setTrackingFilter] = useState("all");
+  const [tracking, setTracking] = useState<CampaignTrackingPayload | null>(null);
+  const [trackingBusy, setTrackingBusy] = useState(false);
+  const [trackingSearch, setTrackingSearch] = useState("");
   const [form, setForm] = useState(() => {
     const seed = templateFor("claim_profile");
     return {
@@ -717,6 +766,126 @@ export default function EmailCampaignCenter() {
       setError(err instanceof Error ? err.message : "No se pudo cargar la auditoría.");
     } finally {
       setCoverageBusy(false);
+    }
+  }
+
+  async function loadCampaignTracking(campaignId: string, filter = trackingFilter) {
+    if (!campaignId) return;
+    setTrackingBusy(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        campaignId,
+        deliveryFilter: filter,
+      });
+      const response = await fetch(`/api/xtreme/admin/email?${params}`, { cache: "no-store" });
+      const json = (await response.json()) as {
+        campaignTracking?: CampaignTrackingPayload;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(json.error || "No se pudo cargar el seguimiento.");
+      setTracking(json.campaignTracking ?? null);
+      setTrackingCampaignId(campaignId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cargar el seguimiento.");
+    } finally {
+      setTrackingBusy(false);
+    }
+  }
+
+  async function resendReminder(deliveryKey: string) {
+    setBusy(`resend:${deliveryKey}`);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/xtreme/admin/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resend_reminder", deliveryKey }),
+      });
+      const json = (await response.json()) as { ok?: boolean; email?: string; error?: string };
+      if (!response.ok) throw new Error(json.error || "No se pudo reenviar.");
+      setNotice(`Recordatorio reenviado a ${json.email}.`);
+      if (trackingCampaignId) await loadCampaignTracking(trackingCampaignId, trackingFilter);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo reenviar.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function resendRemindersBatch() {
+    if (!trackingCampaignId) return;
+    setBusy("resend-batch");
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/xtreme/admin/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "resend_reminders_batch",
+          campaignId: trackingCampaignId,
+          limit: 25,
+        }),
+      });
+      const json = (await response.json()) as {
+        sent?: number;
+        failed?: number;
+        attempted?: number;
+        errors?: string[];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(json.error || "No se pudo reenviar el lote.");
+      setNotice(
+        `Recordatorios: ${json.sent ?? 0} reenviados, ${json.failed ?? 0} fallidos (lote de ${json.attempted ?? 0}).`,
+      );
+      await loadCampaignTracking(trackingCampaignId, trackingFilter);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo reenviar el lote.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  const filteredTrackingRows = useMemo(() => {
+    const rows = tracking?.rows ?? [];
+    const q = trackingSearch.trim().toLocaleLowerCase("es-CR");
+    if (!q) return rows;
+    return rows.filter((row) =>
+      `${row.name} ${row.email} ${row.status}`.toLocaleLowerCase("es-CR").includes(q),
+    );
+  }, [tracking, trackingSearch]);
+
+  function statusLabel(status: string) {
+    if (status === "registered") return "Registrado";
+    if (status === "opened") return "Abrió enlace";
+    if (status === "sent") return "Enviado (sin click)";
+    if (status === "failed") return "Fallido";
+    if (status === "skipped") return "Omitido";
+    if (status === "queued" || status === "sending") return "En cola";
+    return status;
+  }
+
+  function statusClass(status: string) {
+    if (status === "registered") return "text-lime-200";
+    if (status === "opened") return "text-cyan-200";
+    if (status === "sent") return "text-amber-200";
+    if (status === "failed") return "text-red-300";
+    return "text-white/50";
+  }
+
+  function fmtWhen(value: string | null | undefined) {
+    if (!value) return "—";
+    try {
+      return new Date(value).toLocaleString("es-CR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+    } catch {
+      return "—";
     }
   }
 
@@ -1160,9 +1329,10 @@ export default function EmailCampaignCenter() {
       <section className="border-[3px] border-white/15 bg-[#0c0c0c] p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="font-black uppercase">Campañas recientes</h3>
+            <h3 className="font-black uppercase">Campañas y seguimiento</h3>
             <p className="mt-2 max-w-2xl text-xs font-semibold text-white/45">
-              El envío va en lotes (cron cada ~5 min). Si ves «queued» o «processing» sin avanzar, usá «Procesar cola ahora».
+              Envío en lotes (~5 min). Tocá una campaña para ver por persona: cuándo se envió, si abrió el enlace,
+              si ya se registró, y reenviar recordatorio de verificación.
             </p>
           </div>
           <button
@@ -1178,10 +1348,18 @@ export default function EmailCampaignCenter() {
         <div className="mt-3 space-y-2">
           {data?.campaigns.map((campaign) => {
             const remaining = Math.max(0, campaign.total - campaign.sent - campaign.failed - campaign.skipped);
+            const t = campaign.tracking;
+            const selected = trackingCampaignId === campaign.id;
             return (
-              <div
+              <button
+                type="button"
                 key={campaign.id}
-                className="grid gap-2 border-2 border-white/10 bg-black/30 p-3 text-xs sm:grid-cols-[1fr_auto] sm:items-center"
+                onClick={() => void loadCampaignTracking(campaign.id, trackingFilter)}
+                className={`grid w-full gap-2 border-2 p-3 text-left text-xs transition sm:grid-cols-[1fr_auto] sm:items-center ${
+                  selected
+                    ? "border-lime-300/50 bg-lime-300/10"
+                    : "border-white/10 bg-black/30 hover:border-white/25"
+                }`}
               >
                 <div>
                   <div className="font-black text-white">{campaign.subject}</div>
@@ -1192,23 +1370,217 @@ export default function EmailCampaignCenter() {
                       ? ` · último lote ${new Date(campaign.lastProcessedAt).toLocaleString("es-CR")}`
                       : ""}
                   </div>
+                  {t ? (
+                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wide">
+                      <span className="border border-white/15 px-2 py-0.5 text-white/70">
+                        Enviados {t.sent}
+                      </span>
+                      <span className="border border-cyan-300/30 px-2 py-0.5 text-cyan-200">
+                        Abrieron {t.opened}
+                      </span>
+                      <span className="border border-lime-300/30 px-2 py-0.5 text-lime-200">
+                        Registrados {t.registered}
+                      </span>
+                      <span className="border border-amber-300/30 px-2 py-0.5 text-amber-200">
+                        Sin click {t.notOpened}
+                      </span>
+                      <span className="border border-orange-300/30 px-2 py-0.5 text-orange-200">
+                        Sin registro {t.notRegistered}
+                      </span>
+                    </div>
+                  ) : null}
                   {campaign.lastError ? (
                     <div className="mt-1 font-semibold text-amber-200/90">{campaign.lastError}</div>
                   ) : null}
                 </div>
                 <div className="font-black uppercase text-lime-200">
-                  {campaign.status} · {campaign.sent}/{campaign.total} enviados
+                  {campaign.status} · {campaign.sent}/{campaign.total}
                   {campaign.failed ? ` · ${campaign.failed} fallidos` : ""}
-                  {campaign.skipped ? ` · ${campaign.skipped} omitidos` : ""}
-                  {remaining > 0 && campaign.status !== "completed" ? ` · ${remaining} pendientes` : ""}
+                  {remaining > 0 && campaign.status !== "completed" ? ` · ${remaining} en cola` : ""}
+                  <div className="mt-1 text-[10px] font-bold normal-case tracking-normal text-white/40">
+                    {selected ? "Seguimiento abierto ↓" : "Ver detalle →"}
+                  </div>
                 </div>
-              </div>
+              </button>
             );
           })}
           {data && !data.campaigns.length && (
             <p className="text-sm font-semibold text-white/40">Todavía no hay campañas.</p>
           )}
         </div>
+
+        {trackingCampaignId ? (
+          <div className="mt-4 border-2 border-cyan-300/25 bg-black/40 p-3 sm:p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-cyan-200">
+                  Detalle por persona
+                </div>
+                <p className="mt-1 text-xs font-semibold text-white/50">
+                  Enviado = salió el correo · Abrió = tocó el enlace · Registrado = verificó correo y creó PIN.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={trackingBusy || Boolean(busy)}
+                  onClick={() => void loadCampaignTracking(trackingCampaignId, trackingFilter)}
+                  className="inline-flex min-h-9 items-center gap-1.5 border border-white/20 px-2 text-[10px] font-black uppercase text-white/70"
+                >
+                  {trackingBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Actualizar
+                </button>
+                <button
+                  type="button"
+                  disabled={trackingBusy || Boolean(busy) || !(tracking?.stats.notRegistered)}
+                  onClick={() => void resendRemindersBatch()}
+                  className="inline-flex min-h-9 items-center gap-1.5 border border-lime-300/40 bg-lime-300/10 px-2 text-[10px] font-black uppercase text-lime-100 disabled:opacity-40"
+                >
+                  {busy === "resend-batch" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="h-3.5 w-3.5" />
+                  )}
+                  Recordatorio a sin registro (25)
+                </button>
+              </div>
+            </div>
+
+            {tracking?.stats ? (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                {[
+                  ["Enviados", tracking.stats.sent, "text-white"],
+                  ["Abrieron", tracking.stats.opened, "text-cyan-200"],
+                  ["Registrados", tracking.stats.registered, "text-lime-200"],
+                  ["Sin click", tracking.stats.notOpened, "text-amber-200"],
+                  ["Sin registro", tracking.stats.notRegistered, "text-orange-200"],
+                  ["Fallidos", tracking.stats.failed, "text-red-300"],
+                ].map(([label, value, tone]) => (
+                  <div key={String(label)} className="border border-white/10 bg-[#0c0c0c] p-2">
+                    <div className="text-[9px] font-black uppercase tracking-wider text-white/40">{label}</div>
+                    <div className={`mt-0.5 text-lg font-black ${tone}`}>{value as number}</div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(
+                [
+                  ["all", "Todos"],
+                  ["sent", "Enviados"],
+                  ["opened", "Abrieron"],
+                  ["not_opened", "Sin click"],
+                  ["registered", "Registrados"],
+                  ["not_registered", "Sin registro"],
+                  ["failed", "Fallidos"],
+                  ["queued", "En cola"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setTrackingFilter(id);
+                    void loadCampaignTracking(trackingCampaignId, id);
+                  }}
+                  className={`min-h-8 border px-2 text-[10px] font-black uppercase ${
+                    trackingFilter === id
+                      ? "border-lime-300 bg-lime-300 text-black"
+                      : "border-white/15 text-white/55 hover:border-white/30"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <input
+              value={trackingSearch}
+              onChange={(e) => setTrackingSearch(e.target.value)}
+              placeholder="Buscar nombre o correo…"
+              className="mt-3 w-full border-2 border-white/10 bg-black px-3 py-2 text-xs text-white placeholder:text-white/30"
+            />
+
+            <div className="mt-3 max-h-[28rem] overflow-auto border border-white/10">
+              <table className="min-w-full text-left text-[11px]">
+                <thead className="sticky top-0 bg-[#121212] text-[10px] font-black uppercase tracking-wide text-white/45">
+                  <tr>
+                    <th className="px-2 py-2">Persona</th>
+                    <th className="px-2 py-2">Estado</th>
+                    <th className="px-2 py-2">Enviado</th>
+                    <th className="px-2 py-2">Click / abrió</th>
+                    <th className="px-2 py-2">Registrado</th>
+                    <th className="px-2 py-2">Recordatorios</th>
+                    <th className="px-2 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTrackingRows.map((row) => (
+                    <tr key={row.deliveryKey} className="border-t border-white/10 align-top">
+                      <td className="px-2 py-2">
+                        <div className="font-black text-white">{row.name}</div>
+                        <div className="font-semibold text-white/45">{row.email}</div>
+                      </td>
+                      <td className={`px-2 py-2 font-black uppercase ${statusClass(row.status)}`}>
+                        {statusLabel(row.status)}
+                      </td>
+                      <td className="px-2 py-2 font-semibold text-white/70">{fmtWhen(row.sentAt)}</td>
+                      <td className="px-2 py-2 font-semibold text-cyan-100/90">{fmtWhen(row.openedAt)}</td>
+                      <td className="px-2 py-2 font-semibold text-lime-100/90">
+                        {fmtWhen(row.registeredAt)}
+                        {row.emailVerified ? (
+                          <div className="text-[9px] font-black uppercase text-lime-300/80">Verificado</div>
+                        ) : null}
+                      </td>
+                      <td className="px-2 py-2 font-semibold text-white/50">
+                        {row.reminderCount > 0 ? (
+                          <>
+                            {row.reminderCount}×
+                            <div className="text-[10px]">{fmtWhen(row.lastReminderAt)}</div>
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {row.canResend ? (
+                          <button
+                            type="button"
+                            disabled={Boolean(busy)}
+                            onClick={() => void resendReminder(row.deliveryKey)}
+                            className="inline-flex min-h-8 items-center gap-1 border border-lime-300/40 px-2 text-[9px] font-black uppercase text-lime-100 disabled:opacity-40"
+                          >
+                            {busy === `resend:${row.deliveryKey}` ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Mail className="h-3 w-3" />
+                            )}
+                            Reenviar
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                  {!trackingBusy && !filteredTrackingRows.length ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-6 text-center font-semibold text-white/40">
+                        No hay filas con este filtro.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {trackingBusy ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-6 text-center font-semibold text-white/40">
+                        <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="border-[3px] border-red-300/25 bg-[#0c0c0c] p-4 sm:p-5">

@@ -53,6 +53,10 @@ import {
   recordFailedAuthAttempt,
   requestFingerprint,
 } from "@/lib/xtreme/auth-attempts";
+import {
+  markCampaignLinkOpened,
+  markCampaignRegistered,
+} from "@/lib/xtreme/campaign-delivery-status";
 
 export const dynamic = "force-dynamic";
 
@@ -389,6 +393,13 @@ export async function GET(req: NextRequest) {
   const verified = await verifyToken(token);
   if ("error" in verified) {
     return NextResponse.json({ error: verified.error }, { status: verified.status });
+  }
+  // Campaña: marcar que abrieron el enlace (admin ve "dio click").
+  if (verified.pending.source === "campaign" || verified.pending.email) {
+    markCampaignLinkOpened(verified.db, {
+      email: verified.pending.email,
+      token,
+    }).catch(() => undefined);
   }
   if (verified.pending.confirmedAt || verified.pending.memberNormalizedName) {
     const normalizedName = normalizeKey(verified.pending.memberNormalizedName || "");
@@ -1050,6 +1061,9 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     { email },
     { $set: { confirmedAt: now, memberNormalizedName: normalizedName } },
   );
+
+  // Campañas: marcar "registrado/verificado" para el panel del admin.
+  markCampaignRegistered(db, email).catch(() => undefined);
 
   const accessCode = formatAccessCode(memberAccessCode(normalizedName));
   const profileWasReady = Boolean(existing?.emailVerified && existing?.cedula);
