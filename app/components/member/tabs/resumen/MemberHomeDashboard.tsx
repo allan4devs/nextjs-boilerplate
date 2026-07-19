@@ -468,8 +468,8 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
 
     tiles.push({
       id: "primary-quick",
-      label: "Tiempo libre",
-      hint: "Marcá minutos ya",
+      label: "¿Cuánto entrené?",
+      hint: "20 · 30 · 45 · 60 min",
       icon: Timer,
       tone: "border-cyan-300/45 bg-cyan-300/10 hover:border-cyan-300",
       score: 750,
@@ -735,7 +735,7 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
             className="inline-flex min-h-14 items-center justify-center gap-2 border-[3px] border-white/20 bg-black/40 px-4 text-sm font-black uppercase text-white transition hover:border-[#d8ff3e] hover:text-[#eaff93]"
           >
             <Timer className="h-5 w-5" />
-            Marcar tiempo
+            ¿Cuánto entrené?
           </button>
         </div>
 

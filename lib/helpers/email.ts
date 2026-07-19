@@ -196,7 +196,7 @@ export async function sendEmail(args: {
 }
 
 type LayoutOptions = {
-  /** Muestra bloque de mapa / ubicación (recomendado en campañas admin). */
+  /** Muestra bloque de ubicación / contacto (campañas y avisos de visita). */
   showMap?: boolean;
   /** Texto preheader (bandeja de entrada, no visible en el cuerpo). */
   preheader?: string;
@@ -206,86 +206,75 @@ function brandLogoUrl() {
   return absoluteAppUrl("/xtreme/logo.webp");
 }
 
-function facadeImageUrl() {
-  return absoluteAppUrl("/xtreme/fachada-xtreme-gym.webp");
-}
-
-/** Mapa estático (OSM) + enlace a Google Maps. Los iframes no funcionan en la mayoría de clientes de correo. */
-function staticMapImageUrl(width = 560, height = 220) {
-  const { lat, lng } = BUSINESS.geo;
-  const w = Math.min(640, Math.max(320, width));
-  const h = Math.min(320, Math.max(160, height));
-  return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=16&size=${w}x${h}&maptype=mapnik&markers=${lat},${lng},red-pushpin`;
-}
-
 function googleMapsDirectionsUrl() {
   const { lat, lng } = BUSINESS.geo;
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
 
+function mapsHref() {
+  return BUSINESS.maps || googleMapsDirectionsUrl();
+}
+
+function whatsappHref() {
+  return `https://wa.me/${BUSINESS.whatsapp}`;
+}
+
+/**
+ * Header limpio: solo logo propio (host del sitio) + marca.
+ * Sin hero photos ni mapas externos (se rompen o se ven mal en Gmail/Outlook).
+ */
 function emailHeader() {
   const logo = brandLogoUrl();
   return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0b0b0b;">
   <tr>
-    <td style="padding:20px 24px;vertical-align:middle;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="vertical-align:middle;padding-right:14px;">
-            <img src="${escapeHtml(logo)}" width="48" height="48" alt="Xtreme Gym" style="display:block;width:48px;height:48px;border:0;border-radius:4px;background:#111;" />
-          </td>
-          <td style="vertical-align:middle;">
-            <p style="margin:0;font-size:11px;font-weight:bold;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a84;">Xtreme Gym</p>
-            <p style="margin:4px 0 0;font-size:18px;font-weight:900;letter-spacing:0.04em;text-transform:uppercase;color:#d8ff3e;line-height:1.1;">Ciudad Quesada</p>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-  <tr>
-    <td style="height:3px;line-height:3px;font-size:0;background:linear-gradient(90deg,#d8ff3e 0%,#f6c400 55%,#0b0b0b 100%);">&nbsp;</td>
-  </tr>
-</table>`;
-}
-
-function locationMapBlock() {
-  const mapSrc = staticMapImageUrl(560, 220);
-  const mapsHref = BUSINESS.maps || googleMapsDirectionsUrl();
-  const facade = facadeImageUrl();
-  const address = BUSINESS.addressDetail || BUSINESS.location;
-
-  return `
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 8px;border:1px solid #e5e5e0;">
-  <tr>
-    <td style="padding:14px 16px 10px;background:#0b0b0b;">
-      <p style="margin:0;font-size:11px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;color:#d8ff3e;">Encontranos</p>
-      <p style="margin:6px 0 0;font-size:14px;font-weight:bold;color:#ffffff;line-height:1.4;">${escapeHtml(address)}</p>
-      <p style="margin:4px 0 0;font-size:12px;color:#b0b0a8;">${escapeHtml(BUSINESS.location)} · Costa Rica</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:0;line-height:0;font-size:0;background:#eee;">
-      <a href="${escapeHtml(mapsHref)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;">
-        <img src="${escapeHtml(mapSrc)}" width="560" alt="Mapa de Xtreme Gym en ${escapeHtml(BUSINESS.location)}" style="display:block;width:100%;max-width:560px;height:auto;border:0;" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:0;line-height:0;font-size:0;">
-      <a href="${escapeHtml(mapsHref)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;">
-        <img src="${escapeHtml(facade)}" width="560" alt="Fachada de Xtreme Gym" style="display:block;width:100%;max-width:560px;height:auto;border:0;max-height:160px;object-fit:cover;" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:14px 16px;background:#fafaf8;">
+    <td style="padding:22px 28px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td style="vertical-align:middle;">
-            <a href="${escapeHtml(mapsHref)}" style="display:inline-block;background:#0b0b0b;color:#d8ff3e;padding:11px 16px;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;">Abrir en Google Maps</a>
+          <td style="vertical-align:middle;width:56px;">
+            <img src="${escapeHtml(logo)}" width="44" height="44" alt="Xtreme Gym" style="display:block;width:44px;height:44px;border:0;outline:none;text-decoration:none;background:#141414;" />
+          </td>
+          <td style="vertical-align:middle;padding-left:12px;">
+            <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#8a8a84;font-family:Arial,Helvetica,sans-serif;">Xtreme Gym</p>
+            <p style="margin:5px 0 0;font-size:17px;font-weight:900;letter-spacing:0.03em;text-transform:uppercase;color:#d8ff3e;line-height:1.15;font-family:Arial,Helvetica,sans-serif;">Ciudad Quesada</p>
           </td>
           <td style="vertical-align:middle;text-align:right;">
-            <a href="https://wa.me/${escapeHtml(BUSINESS.whatsapp)}" style="font-size:12px;font-weight:bold;color:#333;text-decoration:none;">WhatsApp ${escapeHtml(BUSINESS.phone)}</a>
+            <p style="margin:0;font-size:11px;font-weight:700;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">San Carlos, CR</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="height:4px;line-height:4px;font-size:0;background:#d8ff3e;">&nbsp;</td>
+  </tr>
+</table>`;
+}
+
+/**
+ * Ubicación y contacto sin imágenes externas.
+ * Botones claros a Maps y WhatsApp (lo que sí funciona en todos los clientes).
+ */
+function locationContactBlock() {
+  const address = BUSINESS.addressDetail || BUSINESS.location;
+  return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 4px;border:1px solid #e8e8e2;background:#fafaf8;">
+  <tr>
+    <td style="padding:18px 18px 8px;">
+      <p style="margin:0 0 6px;font-size:10px;font-weight:900;letter-spacing:0.16em;text-transform:uppercase;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">Ubicación</p>
+      <p style="margin:0;font-size:15px;font-weight:700;color:#0b0b0b;line-height:1.45;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(address)}</p>
+      <p style="margin:6px 0 0;font-size:13px;color:#555;line-height:1.5;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(BUSINESS.location)}</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:12px 18px 18px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:0 8px 0 0;">
+            <a href="${escapeHtml(mapsHref())}" style="display:inline-block;background:#0b0b0b;color:#d8ff3e;padding:12px 16px;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;font-family:Arial,Helvetica,sans-serif;">Cómo llegar →</a>
+          </td>
+          <td>
+            <a href="${escapeHtml(whatsappHref())}" style="display:inline-block;background:#f0f0ea;color:#0b0b0b;padding:12px 16px;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;font-family:Arial,Helvetica,sans-serif;">WhatsApp ${escapeHtml(BUSINESS.phone)}</a>
           </td>
         </tr>
       </table>
@@ -294,20 +283,43 @@ function locationMapBlock() {
 </table>`;
 }
 
+/** Footer de contacto profesional: dirección, WhatsApp, redes y ayuda. */
 function emailFooterLinks() {
   return `
-<p style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#111;">Xtreme Gym · ${escapeHtml(BUSINESS.location)}</p>
-<p style="margin:0;font-size:12px;line-height:1.9;color:#555;">
-  <a href="${escapeHtml(BUSINESS.maps)}" style="color:#111;font-weight:bold;text-decoration:none;">Cómo llegar</a>
-  &nbsp;·&nbsp;
-  <a href="https://wa.me/${escapeHtml(BUSINESS.whatsapp)}" style="color:#111;font-weight:bold;text-decoration:none;">WhatsApp ${escapeHtml(BUSINESS.phone)}</a>
-  &nbsp;·&nbsp;
-  <a href="${escapeHtml(BUSINESS.social.instagram)}" style="color:#111;font-weight:bold;text-decoration:none;">Instagram</a>
-  &nbsp;·&nbsp;
-  <a href="${escapeHtml(absoluteAppUrl("/contacto"))}" style="color:#111;font-weight:bold;text-decoration:none;">Contacto</a>
-  &nbsp;·&nbsp;
-  <a href="${escapeHtml(absoluteAppUrl("/ayuda"))}" style="color:#111;font-weight:bold;text-decoration:none;">Ayuda</a>
-</p>`;
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td style="padding:0 0 14px;">
+      <p style="margin:0 0 4px;font-size:10px;font-weight:900;letter-spacing:0.16em;text-transform:uppercase;color:#8a8a84;font-family:Arial,Helvetica,sans-serif;">Contacto</p>
+      <p style="margin:0;font-size:14px;font-weight:700;color:#0b0b0b;font-family:Arial,Helvetica,sans-serif;">Xtreme Gym</p>
+      <p style="margin:6px 0 0;font-size:13px;line-height:1.55;color:#444;font-family:Arial,Helvetica,sans-serif;">
+        ${escapeHtml(BUSINESS.addressDetail || BUSINESS.location)}<br />
+        ${escapeHtml(BUSINESS.location)}
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 0 12px;">
+      <p style="margin:0;font-size:13px;line-height:1.85;font-family:Arial,Helvetica,sans-serif;">
+        <a href="${escapeHtml(whatsappHref())}" style="color:#0b0b0b;font-weight:700;text-decoration:none;">WhatsApp ${escapeHtml(BUSINESS.phone)}</a><br />
+        <a href="mailto:${escapeHtml(BUSINESS.email)}" style="color:#0b0b0b;font-weight:700;text-decoration:none;">${escapeHtml(BUSINESS.email)}</a><br />
+        <a href="${escapeHtml(mapsHref())}" style="color:#0b0b0b;font-weight:700;text-decoration:none;">Cómo llegar en Maps →</a>
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:12px 0 0;border-top:1px solid #e8e8e2;">
+      <p style="margin:0;font-size:12px;line-height:1.8;color:#666;font-family:Arial,Helvetica,sans-serif;">
+        <a href="${escapeHtml(BUSINESS.social.instagram)}" style="color:#333;font-weight:700;text-decoration:none;">Instagram</a>
+        &nbsp;·&nbsp;
+        <a href="${escapeHtml(BUSINESS.social.facebook)}" style="color:#333;font-weight:700;text-decoration:none;">Facebook</a>
+        &nbsp;·&nbsp;
+        <a href="${escapeHtml(absoluteAppUrl("/ayuda"))}" style="color:#333;font-weight:700;text-decoration:none;">Ayuda</a>
+        &nbsp;·&nbsp;
+        <a href="${escapeHtml(absoluteAppUrl("/app"))}" style="color:#333;font-weight:700;text-decoration:none;">App socios</a>
+      </p>
+    </td>
+  </tr>
+</table>`;
 }
 
 function layout(title: string, bodyHtml: string, opts: LayoutOptions = {}) {
@@ -317,42 +329,42 @@ function layout(title: string, bodyHtml: string, opts: LayoutOptions = {}) {
     : "";
 
   return `<!doctype html>
-<html lang="es">
+<html lang="es-CR">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
     <title>${escapeHtml(title)}</title>
   </head>
-  <body style="margin:0;padding:0;background:#ecece8;font-family:Arial,Helvetica,sans-serif;color:#111;-webkit-text-size-adjust:100%;">
+  <body style="margin:0;padding:0;background:#e8e8e4;font-family:Arial,Helvetica,sans-serif;color:#111;-webkit-text-size-adjust:100%;">
     ${preheader}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ecece8;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8e8e4;">
       <tr>
-        <td align="center" style="padding:28px 12px;">
-          <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #e0e0da;">
+        <td align="center" style="padding:24px 10px 32px;">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #ddd9d0;">
             <tr>
-              <td>
-                ${emailHeader()}
-              </td>
+              <td>${emailHeader()}</td>
             </tr>
             <tr>
-              <td style="padding:28px 24px 8px;">
-                <h1 style="margin:0 0 18px;font-size:22px;line-height:1.25;font-weight:900;text-transform:uppercase;letter-spacing:0.02em;color:#0b0b0b;">${title}</h1>
+              <td style="padding:28px 28px 12px;">
+                <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3;font-weight:900;color:#0b0b0b;font-family:Arial,Helvetica,sans-serif;">${title}</h1>
                 ${bodyHtml}
-                ${showMap ? locationMapBlock() : ""}
+                ${showMap ? locationContactBlock() : ""}
               </td>
             </tr>
             <tr>
-              <td style="padding:8px 24px 24px;">
-                <div style="margin-top:8px;padding-top:18px;border-top:1px solid #e5e5e0;">
+              <td style="padding:8px 28px 28px;">
+                <div style="margin-top:4px;padding-top:20px;border-top:1px solid #e8e8e2;">
                   ${emailFooterLinks()}
                   ${PREFERENCES_BLOCK}
                 </div>
               </td>
             </tr>
           </table>
-          <p style="color:#8a8a84;font-size:12px;margin:16px 8px 0;line-height:1.5;text-align:center;">
-            Xtreme Gym · Ciudad Quesada · Siempre serás bienvenido/a.<br />
-            Este correo se generó automáticamente.
+          <p style="color:#8a8a84;font-size:11px;margin:14px 12px 0;line-height:1.55;text-align:center;font-family:Arial,Helvetica,sans-serif;">
+            Xtreme Gym · Ciudad Quesada, San Carlos<br />
+            Correo automático del gym. No respondas a este mensaje.
           </p>
         </td>
       </tr>
@@ -362,65 +374,83 @@ function layout(title: string, bodyHtml: string, opts: LayoutOptions = {}) {
 }
 
 function p(html: string) {
-  return `<p style="margin:0 0 14px;font-size:14px;line-height:1.65;color:#222;">${html}</p>`;
+  return `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#222;font-family:Arial,Helvetica,sans-serif;">${html}</p>`;
 }
 
 function muted(html: string) {
-  return `<p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:#6b6b66;">${html}</p>`;
+  return `<p style="margin:10px 0 0;font-size:13px;line-height:1.55;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">${html}</p>`;
 }
 
+/** CTA principal: tabla full-width para que se vea en mobile y Outlook. */
 function ctaButton(label: string, href: string) {
-  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin:8px 0 4px;background:#0b0b0b;color:#d8ff3e;padding:14px 22px;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;">${escapeHtml(label)}</a>`;
+  return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 10px;">
+  <tr>
+    <td align="center" style="background:#0b0b0b;">
+      <a href="${escapeHtml(href)}" style="display:block;padding:16px 20px;color:#d8ff3e;text-decoration:none;font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;font-family:Arial,Helvetica,sans-serif;text-align:center;">${escapeHtml(label)} →</a>
+    </td>
+  </tr>
+</table>`;
 }
 
 function secondaryButton(label: string, href: string) {
-  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin:8px 8px 4px 0;background:#f6c400;color:#0b0b0b;padding:12px 18px;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;">${escapeHtml(label)}</a>`;
+  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin:6px 8px 4px 0;background:#f0f0ea;color:#0b0b0b;padding:11px 16px;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(label)}</a>`;
 }
 
 function codeBox(value: string, opts?: { large?: boolean }) {
-  const size = opts?.large ? 34 : 28;
-  const spacing = opts?.large ? 10 : 6;
-  return `<div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:20px 16px;font-size:${size}px;font-weight:900;letter-spacing:${spacing}px;margin:12px 0 16px;font-family:Consolas,'Courier New',monospace;">${escapeHtml(value)}</div>`;
+  const size = opts?.large ? 32 : 26;
+  const spacing = opts?.large ? 8 : 5;
+  return `<div style="background:#0b0b0b;color:#d8ff3e;text-align:center;padding:18px 14px;font-size:${size}px;font-weight:900;letter-spacing:${spacing}px;margin:12px 0 14px;font-family:Consolas,'Courier New',monospace;">${escapeHtml(value)}</div>`;
 }
 
 function infoCard(html: string) {
-  return `<div style="border-left:4px solid #d8ff3e;background:#f7f9ec;padding:14px 16px;font-size:13px;line-height:1.65;margin:0 0 16px;color:#222;">${html}</div>`;
+  return `<div style="border-left:4px solid #d8ff3e;background:#f6f8ee;padding:12px 14px;font-size:14px;line-height:1.55;margin:0 0 14px;color:#222;font-family:Arial,Helvetica,sans-serif;">${html}</div>`;
 }
 
 function steps(items: string[]) {
   const rows = items
     .map(
       (item, index) => `<tr>
-      <td style="padding:6px 12px 6px 0;vertical-align:top;width:32px;">
-        <span style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:#0b0b0b;color:#d8ff3e;font-weight:900;font-size:13px;">${index + 1}</span>
+      <td style="padding:5px 10px 5px 0;vertical-align:top;width:28px;">
+        <span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;background:#0b0b0b;color:#d8ff3e;font-weight:900;font-size:12px;font-family:Arial,Helvetica,sans-serif;">${index + 1}</span>
       </td>
-      <td style="padding:6px 0;font-size:14px;line-height:1.6;color:#222;">${item}</td>
+      <td style="padding:5px 0;font-size:14px;line-height:1.5;color:#222;font-family:Arial,Helvetica,sans-serif;">${item}</td>
     </tr>`,
     )
     .join("");
-  return `<table style="border-collapse:collapse;margin:4px 0 16px;width:100%;">${rows}</table>`;
+  return `<table role="presentation" style="border-collapse:collapse;margin:2px 0 14px;width:100%;">${rows}</table>`;
 }
 
+/** Caja visible del enlace seguro (cuando el botón no abre). */
 function linkFallback(href: string) {
-  return muted(
-    `Si el botón no abre, copiá este enlace:<br><span style="word-break:break-all;color:#333;">${escapeHtml(href)}</span>`,
-  );
+  return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 12px;border:1px solid #e0e0da;background:#fafaf8;">
+  <tr>
+    <td style="padding:12px 14px;">
+      <p style="margin:0 0 6px;font-size:10px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">Tu enlace seguro</p>
+      <p style="margin:0;font-size:12px;line-height:1.5;word-break:break-all;color:#333;font-family:Consolas,'Courier New',monospace;">
+        <a href="${escapeHtml(href)}" style="color:#0b0b0b;font-weight:700;text-decoration:underline;">${escapeHtml(href)}</a>
+      </p>
+      <p style="margin:8px 0 0;font-size:12px;color:#6b6b66;font-family:Arial,Helvetica,sans-serif;">Si el botón no responde, tocá o copiá este enlace.</p>
+    </td>
+  </tr>
+</table>`;
 }
 
 function row(label: string, value: string) {
   return `<tr>
-    <td style="padding:6px 12px 6px 0;color:#6b6b66;font-size:14px;white-space:nowrap;vertical-align:top;">${label}</td>
-    <td style="padding:6px 0;font-size:14px;font-weight:bold;color:#111;">${value}</td>
+    <td style="padding:5px 12px 5px 0;color:#6b6b66;font-size:13px;white-space:nowrap;vertical-align:top;font-family:Arial,Helvetica,sans-serif;">${label}</td>
+    <td style="padding:5px 0;font-size:14px;font-weight:700;color:#111;font-family:Arial,Helvetica,sans-serif;">${value}</td>
   </tr>`;
 }
 
 function detailsTable(rowsHtml: string) {
-  return `<table style="border-collapse:collapse;margin:4px 0 16px;">${rowsHtml}</table>`;
+  return `<table role="presentation" style="border-collapse:collapse;margin:2px 0 14px;">${rowsHtml}</table>`;
 }
 
 function helpFooter() {
   return muted(
-    `¿Dudas? WhatsApp <a href="https://wa.me/${escapeHtml(BUSINESS.whatsapp)}" style="color:#555;font-weight:bold;">${escapeHtml(BUSINESS.phone)}</a> o recepción en ${escapeHtml(BUSINESS.location)}.`,
+    `¿Dudas? Escribinos por WhatsApp al <a href="${escapeHtml(whatsappHref())}" style="color:#0b0b0b;font-weight:700;">${escapeHtml(BUSINESS.phone)}</a> o pasá por recepción en ${escapeHtml(BUSINESS.location)}.`,
   );
 }
 
@@ -1148,17 +1178,18 @@ export async function sendCampaignEmail(args: {
   ctaPath?: string;
   idempotencyKey?: string;
 }) {
+  // Mensaje: máximo 3 párrafos visibles, sin relleno largo.
   const paragraphs = args.message
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean)
+    .slice(0, 4)
     .map(
       (paragraph) =>
-        `<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#222;">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`,
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#222;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`,
     )
     .join("");
   // Soporta rutas internas y magic links con query (?token=).
-  // Nunca dejar /registro/confirmar sin token: no es un enlace de registro usable.
   const rawPath = String(args.ctaPath || "/app").trim();
   let safePath =
     rawPath.startsWith("/") && !rawPath.startsWith("//") ? rawPath : "/app";
@@ -1169,50 +1200,21 @@ export async function sendCampaignEmail(args: {
     safePath = "/primer-dia#registro";
   }
   const primaryHref = absoluteAppUrl(safePath);
+  const isSecureLink = /[?&]token=/.test(safePath) || safePath.includes("/registro/");
   const button = args.ctaLabel
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 18px;">
-        <tr>
-          <td style="background:#0b0b0b;">
-            <a href="${escapeHtml(primaryHref)}" style="display:inline-block;padding:14px 22px;color:#d8ff3e;text-decoration:none;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;">${escapeHtml(args.ctaLabel)}</a>
-          </td>
-        </tr>
-      </table>`
+    ? ctaButton(args.ctaLabel, primaryHref) +
+      (isSecureLink ? linkFallback(primaryHref) : "")
     : "";
 
-  const returnActions = `
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 4px;border:1px solid #e5e5e0;background:#fafaf8;">
-  <tr>
-    <td style="padding:16px 18px;">
-      <p style="margin:0 0 12px;font-size:11px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;color:#6b6b66;">Accesos rápidos</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="padding:0 0 10px;">
-            <a href="${escapeHtml(absoluteAppUrl("/app"))}" style="font-size:14px;font-weight:bold;color:#0b0b0b;text-decoration:none;">→ Entrar a mi cuenta</a>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0 0 10px;">
-            <a href="${escapeHtml(absoluteAppUrl("/precios#inscripcion"))}" style="font-size:14px;font-weight:bold;color:#0b0b0b;text-decoration:none;">→ Ver planes e inscribirme</a>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0 0 10px;">
-            <a href="${escapeHtml(absoluteAppUrl("/primer-dia#registro"))}" style="font-size:14px;font-weight:bold;color:#0b0b0b;text-decoration:none;">→ Primer día / registro</a>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <a href="${escapeHtml(BUSINESS.maps)}" style="font-size:14px;font-weight:bold;color:#0b0b0b;text-decoration:none;">→ Cómo llegar al gym</a>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>`;
+  const guideNote = isSecureLink
+    ? infoCard(
+        "<strong>Qué hacer ahora</strong><br>1) Tocá el botón negro<br>2) Confirmá tus datos<br>3) Creá tu PIN de 4 dígitos",
+      )
+    : "";
 
   const preheader =
-    args.message.replace(/\s+/g, " ").trim().slice(0, 110) ||
-    "Mensaje de Xtreme Gym · Ciudad Quesada";
+    args.message.replace(/\s+/g, " ").trim().slice(0, 100) ||
+    `${args.ctaLabel || "Xtreme Gym"} · Ciudad Quesada`;
 
   return sendEmail({
     to: args.to,
@@ -1226,17 +1228,20 @@ export async function sendCampaignEmail(args: {
       "",
       args.ctaLabel ? `${args.ctaLabel}: ${primaryHref}` : "",
       "",
-      `Ubicación: ${BUSINESS.addressDetail || BUSINESS.location}`,
-      `Mapa: ${BUSINESS.maps}`,
       `WhatsApp: ${BUSINESS.phone}`,
-      `App: ${absoluteAppUrl("/app")}`,
+      `Ubicación: ${BUSINESS.addressDetail || BUSINESS.location}`,
+      `Maps: ${BUSINESS.maps}`,
     ]
       .filter(Boolean)
       .join("\n"),
-    html: layout(escapeHtml(args.title), `${paragraphs}${button}${returnActions}`, {
-      showMap: true,
-      preheader,
-    }),
+    html: layout(
+      escapeHtml(args.title),
+      `${paragraphs}${guideNote}${button}`,
+      {
+        showMap: true,
+        preheader,
+      },
+    ),
   });
 }
 

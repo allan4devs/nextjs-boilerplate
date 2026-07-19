@@ -549,7 +549,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
                 className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/45 bg-[#d8ff3e]/10 px-3 text-xs font-black uppercase text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/20"
               >
                 <Sparkles className="h-4 w-4" />
-                Marcar tiempo
+                ¿Cuánto entrené?
               </button>
               <button
                 type="button"
