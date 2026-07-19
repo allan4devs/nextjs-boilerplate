@@ -6,15 +6,18 @@
  * al tocar para reservar / check-in sin saturar la pantalla.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarClock,
   Check,
   ChevronRight,
   ClipboardList,
   CreditCard,
+  DoorOpen,
   Dumbbell,
   Loader2,
+  LogOut,
+  Radio,
   Sparkles,
   Target,
   Video,
@@ -259,6 +262,9 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
     reserveTraining,
     cancelReservation,
     setOsModal,
+    activeVisit,
+    isRegisteringCheckout,
+    registerCheckout,
   } = os;
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -267,10 +273,19 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
   const doneCount = TRAININGS.filter((t) => completedToday.has(t.id)).length;
   const hasPlan = Boolean(currentMember.trainingPlan);
   const activeWorkout = Boolean(currentMember.activePlanWorkout);
+
+  useEffect(() => {
+    if (activeWorkout) setActiveId("plan");
+  }, [activeWorkout]);
   const today = todayIso();
   const membership = currentMember.membership;
+  const freeDayToday =
+    membership.plan === "Primer día gratis" || /primer\s*d[ií]a/i.test(membership.plan || "");
+  // Primer día gratis (vigente hoy) y cualquier membresía con días >= 0 pueden reservar.
+  // Solo pedimos pago si está vencida o sin plan.
   const needsAccess =
     unlocked &&
+    !freeDayToday &&
     (membership.status === "expired" ||
       membership.plan === "Sin plan activo" ||
       membership.daysRemaining < 0);
@@ -290,17 +305,18 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
         <GameCallout tone="orange" icon={CreditCard}>
           <div className="space-y-2">
             <p className="text-sm font-bold leading-snug text-white/85">
-              Para reservar clases necesitás un plan activo o un pase del día.
+              Para reservar clases necesitás un plan activo, un pase del día o tu primer día
+              gratis vigente.
             </p>
             <p className="text-xs font-semibold text-white/50">
-              Ya estás en la app: activá el acceso y después tocá Reservar en la clase que
-              querés.
+              Podés activar el acceso acá y después tocar Reservar. (Vida y entrenos libres no
+              requieren plan.)
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               <GameButton
                 onClick={() => setOsModal({ kind: "checkout", planId: "day-pass" })}
               >
-                Activar acceso
+                Pase del día
               </GameButton>
               <GameButton
                 variant="ghost"
@@ -313,7 +329,13 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
         </GameCallout>
       )}
 
-      {!needsAccess && unlocked && (
+      {freeDayToday && unlocked && (
+        <p className="text-xs font-semibold leading-5 text-[#d8ff3e]/80">
+          Primer día gratis activo: podés reservar clases de hoy.
+        </p>
+      )}
+
+      {!needsAccess && !freeDayToday && unlocked && (
         <p className="text-xs font-semibold leading-5 text-white/40">
           Tocá una clase → <strong className="text-white/60">Reservar</strong> antes de que
           inicie. Después hacé check-in 30 min antes.
@@ -467,7 +489,53 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
         title="Entrenar"
         subtitle="Tocá un cuadro. Reservá, check-in o seguí tu plan."
         header={
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          <div className="space-y-3">
+            {activeWorkout && (
+              <button
+                type="button"
+                onClick={() => setActiveId("plan")}
+                className="flex min-h-16 w-full items-center gap-3 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-4 py-3 text-left text-black shadow-[5px_5px_0_rgba(216,255,62,.2)] transition hover:bg-white"
+              >
+                <span className="relative grid h-10 w-10 shrink-0 place-items-center bg-black text-[#d8ff3e]">
+                  <Radio className="h-5 w-5" />
+                  <span className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-orange-400" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-black uppercase tracking-[.18em]">Entreno en curso</span>
+                  <span className="block truncate text-base font-black uppercase">
+                    {currentMember.activePlanWorkout?.trainingName || "Continuar entreno"}
+                  </span>
+                </span>
+                <span className="shrink-0 text-xs font-black uppercase">Abrir y finalizar →</span>
+              </button>
+            )}
+
+            {activeVisit && (
+              <div className="flex min-h-16 flex-col gap-3 border-[3px] border-orange-300 bg-orange-300/10 px-4 py-3 sm:flex-row sm:items-center">
+                <span className="grid h-10 w-10 shrink-0 place-items-center bg-orange-300 text-black">
+                  <DoorOpen className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[.18em] text-orange-200">Ingreso activo</p>
+                  <p className="font-black uppercase">Cuando terminés, marcá tu salida</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isRegisteringCheckout}
+                  onClick={() => {
+                    if (window.confirm("¿Ya terminaste y querés registrar tu salida?")) {
+                      void registerCheckout();
+                    }
+                  }}
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 bg-orange-300 px-4 text-xs font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
+                >
+                  {isRegisteringCheckout ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                  {isRegisteringCheckout ? "Registrando…" : "Registrar salida"}
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {[
               {
                 label: "Hoy",
@@ -504,6 +572,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
                 </div>
               );
             })}
+            </div>
           </div>
         }
       />

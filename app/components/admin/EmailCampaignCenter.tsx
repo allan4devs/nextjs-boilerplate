@@ -156,15 +156,12 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     subject: "Activá tu acceso a Xtreme Gym",
     title: "Te estamos esperando en la app",
     message:
-      "Hola. Este correo está en Xtreme Gym y solo falta activar tu acceso.\n\n" +
-      "Qué tenés que hacer:\n" +
-      "1) Pedí en recepción un enlace a ESTE correo (o abrí el que ya te mandamos).\n" +
-      "2) Confirmá nombre, teléfono y cédula.\n" +
-      "3) Creá tu PIN de 4 dígitos y entrás a la app.\n\n" +
+      "Hola. Este correo está en Xtreme Gym y solo falta activar tu acceso a la app de socios.\n\n" +
+      "Tocá el botón de este correo (es tu enlace personal). Vas a ver los datos que ya teníamos asociados a vos: nombre, teléfono y cédula. Podés dejarlos o corregirlos, y después creás tu PIN de 4 dígitos.\n\n" +
       "Con la app reservás clases, marcás entrenos y usás tu carné digital.\n\n" +
-      "Pura vida — equipo Xtreme, Ciudad Quesada.",
-    ctaLabel: "Ir a la app",
-    ctaPath: "/app",
+      "El enlace vence en 72 horas. Pura vida — equipo Xtreme, Ciudad Quesada.",
+    ctaLabel: "Verificar mis datos y activar",
+    ctaPath: "/registro/confirmar",
   },
   winback_90: {
     subject: "Te extrañamos en Xtreme — volvé cuando quieras",
@@ -209,29 +206,29 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     title: "Activá tu cuenta",
     message:
       "Hola. En Xtreme Gym ya tenés contacto, pero todavía no activaste el acceso a la app.\n\n" +
-      "Pedí o abrí el enlace a este correo, completá tu perfil, creá tu PIN y listo. Así reservás y usás tu carné digital.",
+      "Tocá el botón de este correo: vas a ver los datos asociados a vos (si los hay), podés corregirlos y crear tu PIN.",
     ctaLabel: "Activar mi acceso",
-    ctaPath: "/app",
+    ctaPath: "/registro/confirmar",
   },
   unregistered: {
     subject: "Volvé a Xtreme Gym — Ciudad Quesada",
     title: "Te extrañamos en el piso",
     message:
       "Hola. Estamos armando de nuevo la comunidad de Xtreme Gym con app, reservas y planes claros.\n\n" +
-      "Si entrenabas con nosotros, registrate con tu correo y activá tu acceso.\n\n" +
-      "Primer día gratis si es tu primera vez, o elegí plan. Barrio San Pablo, Ciudad Quesada.",
-    ctaLabel: "Quiero mi primer día gratis",
-    ctaPath: "/primer-dia",
+      "Si entrenabas con nosotros, tocá el botón, revisá tus datos y activá tu acceso.\n\n" +
+      "Barrio San Pablo, Ciudad Quesada.",
+    ctaLabel: "Activar mi acceso",
+    ctaPath: "/registro/confirmar",
   },
   pending: {
     subject: "Te falta un paso: confirmá tu correo en Xtreme",
     title: "Terminá tu registro",
     message:
       "Hola. Empezaste el registro en Xtreme Gym y solo falta confirmar el correo.\n\n" +
-      "Abrí el enlace del correo anterior (si venció, regístrate de nuevo), completá tu perfil y creá tu PIN.\n\n" +
+      "Tocá el botón de este mensaje, revisá tus datos y creá tu PIN.\n\n" +
       "¡Nos vemos en el gym!",
     ctaLabel: "Terminar mi registro",
-    ctaPath: "/primer-dia",
+    ctaPath: "/registro/confirmar",
   },
   never_opened: {
     subject: "Ya tenés cuenta en Xtreme — abrí la app",

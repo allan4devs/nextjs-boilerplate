@@ -269,7 +269,6 @@ export async function GET(req: NextRequest) {
     return res;
   }
   const boundKey = normalizeKey(verified.pending.expectedMemberKey || "");
-  const boundProfile = Boolean(boundKey);
   let prefill = {
     memberName: verified.pending.expectedMemberName || "",
     cedula: "",
@@ -277,21 +276,46 @@ export async function GET(req: NextRequest) {
     goal: "",
   };
   let neverRegistered = true;
+  let bound: MemberDoc | null = null;
+
   if (boundKey) {
-    const bound = await verified.db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne(
+    bound = await verified.db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne(
       { normalizedName: boundKey },
-      { projection: { memberName: 1, cedula: 1, phone: 1, goal: 1, emailVerified: 1 } },
+      { projection: { memberName: 1, cedula: 1, phone: 1, goal: 1, emailVerified: 1, email: 1 } },
     );
-    if (bound) {
-      neverRegistered = bound.emailVerified !== true;
-      prefill = {
-        memberName: bound.memberName || prefill.memberName,
-        cedula: bound.cedula || "",
-        phone: bound.phone || "",
-        goal: bound.goal || "",
-      };
-    }
   }
+
+  // Campañas / import: si no hay ficha ligada por key, buscamos por el correo del enlace.
+  if (!bound && verified.pending.email) {
+    const email = normalizeEmail(verified.pending.email);
+    bound =
+      (await verified.db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne(
+        {
+          emailVerified: { $ne: true },
+          email: { $regex: `^${email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+        },
+        { projection: { memberName: 1, cedula: 1, phone: 1, goal: 1, emailVerified: 1, email: 1, normalizedName: 1 } },
+      )) || null;
+  }
+
+  if (bound) {
+    neverRegistered = bound.emailVerified !== true;
+    prefill = {
+      memberName: bound.memberName || prefill.memberName,
+      cedula: bound.cedula || "",
+      phone: bound.phone || "",
+      goal: bound.goal || "",
+    };
+  }
+
+  const boundProfile = Boolean(boundKey || bound);
+  // Snapshot de lo guardado: el socio ve lo viejo aunque edite el form.
+  const savedProfile = {
+    memberName: prefill.memberName,
+    cedula: prefill.cedula,
+    phone: prefill.phone,
+    goal: prefill.goal,
+  };
 
   return NextResponse.json({
     ok: true,
@@ -299,10 +323,11 @@ export async function GET(req: NextRequest) {
     source: verified.pending.source,
     boundProfile,
     neverRegistered,
-    // PayPal: el nombre del pago se puede corregir, pero preferimos el precargado.
     canEditName: true,
     canEditCedula: true,
     canEditPhone: true,
+    /** Datos en archivo (import / ficha) para mostrar como referencia. */
+    savedProfile,
     ...prefill,
   });
 }
@@ -362,15 +387,30 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
     return res;
   }
 
-  // Invitación ligada a ficha existente (PayPal, super admin, recepción con socio).
-  const boundKey = normalizeKey(pending.expectedMemberKey || "");
-  const boundInvite = Boolean(boundKey);
-  const paidInvite = pending.source === "paypal" && boundInvite;
-  const staffInvite = pending.source === "reception" || pending.source === "admin";
-
-  const boundExisting = boundInvite
+  // Invitación ligada a ficha existente (PayPal, super admin, recepción, campaña admin).
+  let boundKey = normalizeKey(pending.expectedMemberKey || "");
+  let boundExisting = boundKey
     ? await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: boundKey })
     : null;
+
+  // Campaña / magic link solo con correo: reclamar ficha sin verificar de ese email.
+  if (!boundExisting && pending.email) {
+    const email = normalizeEmail(pending.email);
+    const byEmail = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+      emailVerified: { $ne: true },
+      email: { $regex: `^${email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+    });
+    if (byEmail?.normalizedName) {
+      boundKey = normalizeKey(byEmail.normalizedName);
+      boundExisting = byEmail;
+    }
+  }
+
+  const boundInvite = Boolean(boundKey);
+  const paidInvite = pending.source === "paypal" && boundInvite;
+  const staffInvite =
+    pending.source === "reception" || pending.source === "admin";
+
   if (boundInvite && !boundExisting) {
     return NextResponse.json(
       {
@@ -482,7 +522,7 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
       (boundExisting.emailVerified !== true && cedulaDigits(boundExisting.cedula).length === 0);
     const paidSourceCanMove =
       paidSourceIsProvisional ||
-      normalizeEmail(boundExisting.email) === email;
+      normalizeEmail(boundExisting?.email) === email;
     if ((cedulaDuplicate.emailVerified !== true || sameVerifiedEmail) && paidSourceCanMove) {
       normalizedName = normalizeKey(cedulaDuplicate.normalizedName);
       existing = cedulaDuplicate;

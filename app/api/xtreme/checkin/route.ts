@@ -20,6 +20,7 @@ import {
   toAdminMember,
 } from "@/lib/xtreme/shared";
 import { recordEvent } from "@/lib/xtreme/events";
+import { pushMemberEvent } from "@/lib/xtreme/member-push";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import {
   MEMBER_NOT_FOUND_MESSAGE,
@@ -290,6 +291,25 @@ export async function POST(req: NextRequest) {
         entity: { type: "checkin", id: checkin.id },
         properties: { method: checkin.method, membershipStatus: ms.status, date },
       });
+    }
+
+    // Ingreso OS confirma en el mismo celular que la entrada sí quedó registrada.
+    // Se espera el resultado para que el runtime serverless no corte el envío al responder.
+    if (checkin.by === "kiosk") {
+      const push = await pushMemberEvent(db, normalizedName, { type: "visit_checked_in" });
+      if (push.sent > 0) {
+        await recordEvent(db, {
+          type: "notification_sent",
+          memberId: normalizedName,
+          source: "kiosk",
+          entity: { type: "checkin_confirmation", id: checkin.id },
+          properties: {
+            campaign: "checkin-confirmation",
+            checkinId: checkin.id,
+            pushDevices: push.sent,
+          },
+        });
+      }
     }
 
     let referralReward: { rewarded: boolean; referrer?: string } = { rewarded: false };

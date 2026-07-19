@@ -14,6 +14,13 @@ import {
 } from "lucide-react";
 import { CEDULA_KEY, STORAGE_KEY } from "@/app/components/member/storage/keys";
 
+type SavedProfile = {
+  memberName: string;
+  cedula: string;
+  phone: string;
+  goal: string;
+};
+
 type VerifyState =
   | { phase: "loading" }
   | { phase: "invalid"; error: string }
@@ -24,6 +31,8 @@ type VerifyState =
       boundProfile: boolean;
       neverRegistered: boolean;
       canEditName: boolean;
+      /** Datos en archivo (import / ficha) — se muestran como referencia. */
+      savedProfile: SavedProfile;
     }
   | {
       phase: "done";
@@ -36,6 +45,39 @@ type VerifyState =
       claimedExistingCedula?: boolean;
       alreadyCompleted?: boolean;
     };
+
+function FieldHint({
+  saved,
+  current,
+  emptyLabel = "Sin dato en archivo",
+}: {
+  saved: string;
+  current: string;
+  emptyLabel?: string;
+}) {
+  const savedTrim = saved.trim();
+  const currentTrim = current.trim();
+  if (!savedTrim) {
+    return <span className="mt-1 block text-xs font-semibold text-white/35">{emptyLabel}</span>;
+  }
+  const changed =
+    onlyDigits(savedTrim) && onlyDigits(currentTrim)
+      ? onlyDigits(savedTrim) !== onlyDigits(currentTrim)
+      : savedTrim.toLowerCase() !== currentTrim.toLowerCase();
+  return (
+    <span className="mt-1 block text-xs font-semibold leading-snug text-white/40">
+      {changed ? (
+        <>
+          Antes en archivo: <span className="text-orange-200/90">{savedTrim}</span>
+        </>
+      ) : (
+        <>
+          En archivo: <span className="text-white/55">{savedTrim}</span>
+        </>
+      )}
+    </span>
+  );
+}
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
@@ -142,6 +184,7 @@ function ConfirmInner() {
           boundProfile?: boolean;
           neverRegistered?: boolean;
           canEditName?: boolean;
+          savedProfile?: Partial<SavedProfile>;
           error?: string;
         };
         if (cancelled) return;
@@ -164,10 +207,20 @@ function ConfirmInner() {
           });
           return;
         }
+        const saved: SavedProfile = {
+          memberName: String(json.savedProfile?.memberName ?? json.memberName ?? ""),
+          cedula: String(json.savedProfile?.cedula ?? json.cedula ?? ""),
+          phone: String(json.savedProfile?.phone ?? json.phone ?? ""),
+          goal: String(json.savedProfile?.goal ?? json.goal ?? ""),
+        };
         if (json.memberName) setMemberName(json.memberName);
+        else if (saved.memberName) setMemberName(saved.memberName);
         if (json.cedula) setCedula(formatCedulaDisplay(json.cedula));
+        else if (saved.cedula) setCedula(formatCedulaDisplay(saved.cedula));
         if (json.phone) setPhone(formatPhoneDisplay(json.phone));
+        else if (saved.phone) setPhone(formatPhoneDisplay(saved.phone));
         if (json.goal) setGoal(json.goal);
+        else if (saved.goal) setGoal(saved.goal);
         setState({
           phase: "form",
           email: json.email,
@@ -175,6 +228,7 @@ function ConfirmInner() {
           boundProfile: Boolean(json.boundProfile),
           neverRegistered: json.neverRegistered !== false,
           canEditName: json.canEditName !== false,
+          savedProfile: saved,
         });
       } catch {
         if (!cancelled) {
@@ -194,7 +248,7 @@ function ConfirmInner() {
     if (state.phase !== "form") return "";
     if (state.source === "paypal") return "Pago confirmado";
     if (state.source === "reception") return "Invitación de recepción";
-    if (state.source === "admin") return "Invitación del gimnasio";
+    if (state.source === "admin") return "Activación · Xtreme Gym";
     if (state.source === "primer-dia") return "Primer día gratis";
     return "Registro por correo";
   }, [state]);
@@ -347,23 +401,55 @@ function ConfirmInner() {
               <p className="text-xs font-black uppercase tracking-[0.18em]">{sourceLabel}</p>
             </div>
             <h1 className="mt-3 text-3xl font-black uppercase leading-none">
-              Completá tu perfil
+              {state.boundProfile ? "Verificá tus datos" : "Completá tu perfil"}
             </h1>
             <p className="mt-2 text-sm font-semibold text-white/60">
               Correo: <span className="text-[#d8ff3e]">{state.email}</span>
             </p>
 
             <div className="mt-4 border border-[#d8ff3e]/25 bg-[#d8ff3e]/10 px-3 py-3 text-sm font-semibold leading-6 text-white/80">
-              {state.boundProfile
-                ? "Traemos lo que ya teníamos de tu ficha. Revisalo y dejá listos tus datos reales."
-                : "Con estos datos activás tu cuenta y creás el PIN para entrar a la app."}
-              <p className="mt-2 text-white/60">Al guardar, el correo queda verificado y el PIN listo.</p>
+              {state.boundProfile ||
+              state.savedProfile.memberName ||
+              state.savedProfile.cedula ||
+              state.savedProfile.phone
+                ? "Abajo ves lo que ya teníamos asociado a este correo. Podés dejarlo igual o corregirlo. Al guardar, el correo queda verificado y creás tu PIN."
+                : "Completá tus datos reales y creá tu PIN. Con eso activás la app."}
             </div>
+
+            {(state.savedProfile.memberName ||
+              state.savedProfile.cedula ||
+              state.savedProfile.phone) && (
+              <div className="mt-4 border border-white/12 bg-black/40 px-3 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">
+                  Datos en archivo (solo referencia)
+                </p>
+                <dl className="mt-2 space-y-1.5 text-xs font-semibold text-white/65">
+                  {state.savedProfile.memberName ? (
+                    <div className="flex gap-2">
+                      <dt className="w-16 shrink-0 text-white/35">Nombre</dt>
+                      <dd>{state.savedProfile.memberName}</dd>
+                    </div>
+                  ) : null}
+                  {state.savedProfile.cedula ? (
+                    <div className="flex gap-2">
+                      <dt className="w-16 shrink-0 text-white/35">Cédula</dt>
+                      <dd>{formatCedulaDisplay(state.savedProfile.cedula)}</dd>
+                    </div>
+                  ) : null}
+                  {state.savedProfile.phone ? (
+                    <div className="flex gap-2">
+                      <dt className="w-16 shrink-0 text-white/35">Tel</dt>
+                      <dd>{formatPhoneDisplay(state.savedProfile.phone)}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+            )}
 
             <section className="mt-6">
               <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/50">
                 <UserRound className="h-3.5 w-3.5 text-[#d8ff3e]" />
-                Tus datos
+                Confirmá o corregí
               </div>
 
               <label className="block">
@@ -379,8 +465,10 @@ function ConfirmInner() {
                   className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e] read-only:cursor-not-allowed read-only:text-white/55"
                   placeholder="Nombre y apellidos"
                 />
-                {fieldHints.memberName && (
+                {fieldHints.memberName ? (
                   <span className="mt-1 block text-xs font-bold text-red-300">{fieldHints.memberName}</span>
+                ) : (
+                  <FieldHint saved={state.savedProfile.memberName} current={memberName} />
                 )}
                 {!state.canEditName && (
                   <span className="mt-1 block text-xs font-semibold text-white/40">
@@ -404,9 +492,11 @@ function ConfirmInner() {
                 {fieldHints.phone ? (
                   <span className="mt-1 block text-xs font-bold text-red-300">{fieldHints.phone}</span>
                 ) : (
-                  <span className="mt-1 block text-xs font-semibold text-white/40">
-                    Preferible con WhatsApp.
-                  </span>
+                  <FieldHint
+                    saved={state.savedProfile.phone}
+                    current={phone}
+                    emptyLabel="Preferible con WhatsApp."
+                  />
                 )}
               </label>
 
@@ -425,9 +515,11 @@ function ConfirmInner() {
                 {fieldHints.cedula ? (
                   <span className="mt-1 block text-xs font-bold text-red-300">{fieldHints.cedula}</span>
                 ) : (
-                  <span className="mt-1 block text-xs font-semibold text-white/40">
-                    Con esta ID + tu PIN entrás a la app.
-                  </span>
+                  <FieldHint
+                    saved={state.savedProfile.cedula}
+                    current={cedula}
+                    emptyLabel="Con esta ID + tu PIN entrás a la app."
+                  />
                 )}
               </label>
 

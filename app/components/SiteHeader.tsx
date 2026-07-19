@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
@@ -43,13 +43,31 @@ export default function SiteHeader() {
     : languagePairs[pathname] ?? "/en";
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileHidden, setMobileHidden] = useState(false);
+  const lastScrollRef = useRef(0);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const next = Math.max(0, window.scrollY);
+        const delta = next - lastScrollRef.current;
+        setScrolled(next > 8);
+        if (open || next < 72) setMobileHidden(false);
+        else if (delta > 6) setMobileHidden(true);
+        else if (delta < -6) setMobileHidden(false);
+        lastScrollRef.current = next;
+      });
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -68,18 +86,19 @@ export default function SiteHeader() {
 
   return (
     <header
-      className={`xg-site-header sticky top-0 z-[110] border-b transition-colors duration-300 ${
+      data-mobile-hidden={mobileHidden && !open ? "true" : "false"}
+      className={`xg-site-header sticky top-0 z-[110] border-b transition-[transform,background-color,border-color] duration-300 ${
         scrolled
           ? "border-white/10 bg-[#070707]/90 shadow-[0_10px_40px_-24px_rgba(0,0,0,1)] backdrop-blur-xl"
           : "border-transparent bg-[#070707]/60 backdrop-blur-md"
       }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
-        <Link href={english ? "/en" : "/"} className="group flex min-w-0 items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden border border-[#f6c400]/50 bg-[#f6c400] text-black shadow-[0_0_28px_-12px_rgba(246,196,0,.9)] transition group-hover:shadow-[0_0_28px_-6px_rgba(246,196,0,.9)]">
+      <div className="xg-site-header-inner mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-8 lg:py-3.5">
+        <Link href={english ? "/en" : "/"} className="group flex min-w-0 items-center gap-2.5 sm:gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden border border-[#f6c400]/50 bg-[#f6c400] text-black shadow-[0_0_28px_-12px_rgba(246,196,0,.9)] transition group-hover:shadow-[0_0_28px_-6px_rgba(246,196,0,.9)] sm:h-11 sm:w-11">
             <Image src="/xtreme/logo.webp" alt="Xtreme Gym" width={44} height={44} quality={82} className="h-full w-full object-cover" />
           </span>
-          <span className="min-w-0 text-lg font-black uppercase tracking-tight">
+          <span className="min-w-0 text-base font-black uppercase tracking-tight sm:text-lg">
             Xtreme<span className="text-[#f6c400]">Gym</span>
           </span>
         </Link>
@@ -112,7 +131,7 @@ export default function SiteHeader() {
             href={languageHref}
             hrefLang={english ? "es-CR" : "en"}
             aria-label={english ? "Ver sitio en español" : "View website in English"}
-            className="inline-flex h-11 items-center gap-1.5 border border-white/15 bg-white/[0.04] px-3 text-xs font-black uppercase tracking-[0.12em] text-white/70 transition hover:border-[#f6c400]/60 hover:text-[#f6c400]"
+            className="hidden h-11 items-center gap-1.5 border border-white/15 bg-white/[0.04] px-3 text-xs font-black uppercase tracking-[0.12em] text-white/70 transition hover:border-[#f6c400]/60 hover:text-[#f6c400] md:inline-flex"
           >
             <Languages className="h-4 w-4" />
             {english ? "ES" : "EN"}
@@ -137,7 +156,7 @@ export default function SiteHeader() {
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
             aria-label={open ? (english ? "Close menu" : "Cerrar menú") : (english ? "Open menu" : "Abrir menú")}
-            className="grid h-11 w-11 place-items-center border border-white/15 bg-white/[0.06] text-white transition hover:border-[#f6c400]/60 lg:hidden"
+            className="grid h-10 w-10 place-items-center border border-white/15 bg-white/[0.06] text-white transition hover:border-[#f6c400]/60 sm:h-11 sm:w-11 lg:hidden"
           >
             {open ? (
               <X className="h-5 w-5" />
@@ -218,6 +237,15 @@ export default function SiteHeader() {
                 WhatsApp
               </a>
             </div>
+            <Link
+              href={languageHref}
+              hrefLang={english ? "es-CR" : "en"}
+              onClick={() => setOpen(false)}
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 border border-white/15 text-xs font-black uppercase tracking-[.14em] text-white/60 md:hidden"
+            >
+              <Languages className="h-4 w-4" />
+              {english ? "Ver en español" : "View in English"}
+            </Link>
           </nav>
           </div>,
           document.body,

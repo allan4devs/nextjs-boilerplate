@@ -983,7 +983,10 @@ export async function sendCampaignEmail(args: {
         `<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#222;">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`,
     )
     .join("");
-  const safePath = args.ctaPath?.startsWith("/") ? args.ctaPath : "/app";
+  // Soporta rutas internas y rutas con query (?token=) del magic link de activación.
+  const rawPath = String(args.ctaPath || "/app").trim();
+  const safePath =
+    rawPath.startsWith("/") && !rawPath.startsWith("//") ? rawPath : "/app";
   const primaryHref = absoluteAppUrl(safePath);
   const button = args.ctaLabel
     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 18px;">

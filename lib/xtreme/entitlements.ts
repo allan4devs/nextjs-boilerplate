@@ -253,23 +253,27 @@ export async function ensureLegacyEntitlement(db: Db, member: MemberDoc): Promis
   if (hasLive) return existing.filter((e) => isActiveOn(e, today) || e.status === "active");
 
   const ms = membershipStatus(member.membership);
-  if (ms.status === "expired" || ms.daysRemaining < 0) {
+  // daysRemaining === 0 = vigente hoy (p. ej. primer día gratis).
+  // "Sin plan activo" no genera cupo artificial.
+  if (ms.daysRemaining < 0 || ms.plan === "Sin plan activo" || ms.plan === "—") {
     return existing;
   }
 
   const now = new Date();
   const endsOn = ms.nextBillingDate || today;
   const startsOn = member.membership?.startedAt || today;
+  const isFreeDay =
+    ms.plan === FREE_FIRST_DAY_PLAN_LABEL || /primer\s*d[ií]a/i.test(String(ms.plan || ""));
   const doc: EntitlementDoc = {
-    id: newEntitlementId("legacy"),
+    id: newEntitlementId(isFreeDay ? "free" : "legacy"),
     memberKey,
-    kind: "plan",
-    offerId: "legacy-membership",
+    kind: isFreeDay ? "day_pass" : "plan",
+    offerId: isFreeDay ? FREE_FIRST_DAY_OFFER_ID : "legacy-membership",
     label: ms.plan || "Membresia",
     startsOn: startsOn <= endsOn ? startsOn : endsOn,
-    endsOn,
+    endsOn: endsOn < today ? today : endsOn,
     remainingBookings: null,
-    source: { type: "migration", id: "membership-field" },
+    source: { type: "migration", id: isFreeDay ? FREE_FIRST_DAY_OFFER_ID : "membership-field" },
     status: "active",
     createdAt: now,
     updatedAt: now,
@@ -279,7 +283,9 @@ export async function ensureLegacyEntitlement(db: Db, member: MemberDoc): Promis
     memberKey,
     entitlementId: doc.id,
     action: "grant",
-    note: "Migrated from membership.nextBillingDate",
+    note: isFreeDay
+      ? "Primer día gratis reactivado desde membresía"
+      : "Migrated from membership.nextBillingDate",
     source: doc.source,
   });
   return [...existing, doc];
@@ -535,7 +541,8 @@ async function writeLedger(
 }
 
 /**
- * Load entitlements (with legacy backfill) and run canBook.
+ * Load entitlements (with legacy backfill + free first day if eligible) and run canBook.
+ * Socios con membresía vigente hoy (incluye primer día gratis) deben poder reservar.
  */
 export async function decideBooking(
   db: Db,
@@ -551,7 +558,28 @@ export async function decideBooking(
       entitlements: [],
     };
   }
-  const entitlements = await ensureLegacyEntitlement(db, member);
-  const decision = canBook(entitlements, args);
+
+  let entitlements = await ensureLegacyEntitlement(db, member);
+  let decision = canBook(entitlements, args);
+
+  // Si no hay cupo de plan, intentar activar primer día gratis (una sola vez) o
+  // rehidratar entitlement del día cuando la ficha todavía cubre hoy.
+  if (!decision.allowed && (decision.reason === "payment_required" || decision.reason === "expired")) {
+    const ms = membershipStatus(member.membership);
+    const planLabel = String(ms.plan || "");
+    const isFreeDayPlan =
+      planLabel === FREE_FIRST_DAY_PLAN_LABEL || /primer\s*d[ií]a/i.test(planLabel);
+    const coversToday = ms.daysRemaining >= 0 && planLabel !== "Sin plan activo";
+
+    if (coversToday || isFreeDayPlan) {
+      // Primer día: grant idempotente; no pisa si ya se usó otro día.
+      if (isFreeDayPlan || !entitlements.some((e) => e.status === "active" || e.status === "exhausted")) {
+        await grantFreeFirstDayIfEligible(db, memberKey, args.date || todayIso()).catch(() => null);
+      }
+      entitlements = await ensureLegacyEntitlement(db, member);
+      decision = canBook(entitlements, args);
+    }
+  }
+
   return { ...decision, entitlements };
 }

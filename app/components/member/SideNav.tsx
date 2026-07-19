@@ -9,9 +9,8 @@
  */
 
 import Link from "next/link";
-import { ArrowRight, House, UserRound, X } from "lucide-react";
+import { ArrowRight, House, LayoutGrid, UserRound, X } from "lucide-react";
 import { GameButton } from "../GameOS";
-import SystemLinks from "../SystemLinks";
 import Avatar from "./Avatar";
 import { TABS } from "./constants";
 import { formatCedulaInput } from "./utils";
@@ -175,17 +174,21 @@ export default function SideNav({ os }: { os: MemberOs }) {
             );
           })}
 
-          {/* Sistemas: en mobile siempre (drawer abierto); en desktop solo con rail expandido */}
-          <div
-            className={`mt-3 border-t border-white/10 pt-3 ${
-              navOpen ? "block" : "hidden lg:hidden"
-            }`}
-          >
-            <SystemLinks onNavigate={closeNav} />
-          </div>
         </nav>
 
         <div className="xg-side-nav-footer shrink-0 border-t-[3px] border-white/15 p-2">
+          {/* Solo el centro de apps (no listar cada sistema 1 a 1). */}
+          <Link
+            href="/acceso"
+            title="Centro de sistemas"
+            onClick={closeNav}
+            className={`mb-2 flex min-h-12 w-full items-center gap-3 border-[3px] border-[#d8ff3e]/45 bg-[#d8ff3e]/10 px-2 text-xs font-black uppercase tracking-[.1em] text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/15 ${
+              navOpen ? "justify-start" : "justify-center lg:justify-center"
+            }`}
+          >
+            <LayoutGrid className="h-5 w-5 shrink-0" />
+            <span className={navOpen ? "block" : "lg:hidden"}>Centro de apps</span>
+          </Link>
           <Link
             href="/"
             title="Ir al sitio Xtreme Gym"

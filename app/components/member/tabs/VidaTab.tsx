@@ -86,9 +86,12 @@ function SectionTitle({ icon: Icon, eyebrow, title }: { icon: typeof HeartPulse;
 
 export default function VidaTab({ os }: { os: MemberOs }) {
   const {
+    unlocked,
     lifestyle,
     isLoadingLifestyle,
     lifestyleBusy,
+    lifestyleLoadError,
+    loadLifestyle,
     saveDailyWellness,
     toggleLifestyleHabit,
     toggleLifestyleChallenge,
@@ -140,12 +143,41 @@ export default function VidaTab({ os }: { os: MemberOs }) {
         : "Estas en zona estable: entrena con buena tecnica y escucha el cuerpo.";
   const completedHabits = HABITS.filter((habit) => lifestyle.today?.habits[habit.id]).length;
 
-  if (isLoadingLifestyle && !lifestyle.recent.length) {
-    return <div className="grid min-h-[420px] place-items-center border-[3px] border-white/15 bg-[#0c0c0c]"><Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" /></div>;
+  // Vida no requiere plan: solo sesión. Nunca bloquear la pestaña por membresía.
+  if (!unlocked) {
+    return (
+      <div className="xg-tab-in grid min-h-[280px] place-items-center border-[3px] border-white/15 bg-[#0c0c0c] p-6 text-center">
+        <div>
+          <HeartPulse className="mx-auto h-8 w-8 text-cyan-300" />
+          <p className="mt-3 text-sm font-black uppercase text-white">Vida Xtreme</p>
+          <p className="mt-2 max-w-sm text-sm font-semibold text-white/55">
+            Desbloqueá tu sesión con el PIN para registrar hábitos, sueño y retos. No necesitás un
+            plan activo.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="xg-tab-in space-y-3 sm:space-y-4" data-tour="tour-vida-hub">
+      {isLoadingLifestyle && (
+        <div className="flex items-center gap-2 border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-bold text-cyan-100">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando tu check-in…
+        </div>
+      )}
+      {lifestyleLoadError && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border border-orange-300/35 bg-orange-300/10 px-3 py-2 text-xs font-bold text-orange-100">
+          <span>{lifestyleLoadError}</span>
+          <button
+            type="button"
+            onClick={() => void loadLifestyle()}
+            className="border border-orange-300/40 px-2 py-1 uppercase tracking-wide hover:bg-orange-300 hover:text-black"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
       <section className="relative overflow-hidden border-[3px] border-cyan-300/45 bg-gradient-to-br from-cyan-300/[.12] via-[#0b0b0b] to-[#d8ff3e]/[.07] p-3 shadow-[6px_6px_0_rgba(34,211,238,.13)] sm:p-6">
         <div aria-hidden className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-300/10 blur-3xl" />
         <div className="relative grid gap-4 sm:gap-5 md:grid-cols-[auto_1fr] md:items-center">

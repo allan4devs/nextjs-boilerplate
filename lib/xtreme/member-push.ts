@@ -46,6 +46,9 @@ export type MemberPushEvent =
       trainingName: string;
       minutesUntil: number;
       startLabel: string;
+    }
+  | {
+      type: "visit_checked_in";
     };
 
 function payloadFor(event: MemberPushEvent): {
@@ -120,6 +123,13 @@ function payloadFor(event: MemberPushEvent): {
         body: `${event.trainingName} a las ${event.startLabel} (en ~${event.minutesUntil} min). ¡Nos vemos en Xtreme!`,
         url: "/app",
         tag: "xtreme-class-reminder",
+      };
+    case "visit_checked_in":
+      return {
+        title: "Ingreso registrado ✅",
+        body: "Ya estás dentro. Que las máquinas no digan que solo viniste a saludar 😄 Al terminar, registrá tu salida.",
+        url: "/app",
+        tag: "xtreme-checkin",
       };
     default:
       return {

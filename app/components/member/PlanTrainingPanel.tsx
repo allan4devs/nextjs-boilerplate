@@ -194,17 +194,23 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
             </button>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => void savePlanWorkout(stopExerciseTimer())} className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-white/20 font-black uppercase text-white/70 hover:border-white/50">
               <Save className="h-4 w-4" /> Guardar avance
             </button>
             <button type="button" onClick={() => void cancelPlanWorkout()} className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-red-400/40 font-black uppercase text-red-300">
               <X className="h-4 w-4" /> Cancelar
             </button>
-            <button type="button" disabled={busy} onClick={() => void finishPlanWorkout(stopExerciseTimer())} className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#d8ff3e] px-4 font-black uppercase text-black disabled:opacity-50">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Finalizar entreno
-            </button>
           </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void finishPlanWorkout(stopExerciseTimer())}
+            className="inline-flex min-h-16 w-full items-center justify-center gap-3 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-5 text-base font-black uppercase text-black shadow-[5px_5px_0_rgba(216,255,62,.22)] transition hover:bg-white disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
+            {busy ? "Guardando entreno…" : "Finalizar y guardar entreno"}
+          </button>
           <p className="text-xs font-semibold text-white/40">
             Para finalizar tiene que haber un ingreso registrado hoy. El tiempo, máquinas y repeticiones quedarán en tu historial.
           </p>

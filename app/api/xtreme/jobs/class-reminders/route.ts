@@ -5,6 +5,10 @@ import { processClassReminders } from "@/lib/xtreme/class-reminders";
 import { pushEnabled } from "@/lib/helpers/push";
 import { processVisitCheckoutReminders } from "@/lib/xtreme/visit-reminders";
 import { processQueuedEmailCampaigns } from "@/lib/xtreme/email-campaigns";
+import {
+  processActiveWorkoutReminders,
+  processDailyTrainingReminders,
+} from "@/lib/xtreme/training-reminders";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -26,9 +30,11 @@ export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const now = new Date();
-    const [summary, visitReminders] = await Promise.all([
+    const [summary, visitReminders, dailyTraining, activeWorkouts] = await Promise.all([
       processClassReminders(db, now),
       processVisitCheckoutReminders(db, now),
+      processDailyTrainingReminders(db, now),
+      processActiveWorkoutReminders(db, now),
     ]);
     const emailCampaigns = await processQueuedEmailCampaigns(db, 20);
     return NextResponse.json({
@@ -38,6 +44,8 @@ export async function GET(req: NextRequest) {
       window: "45-75 min before class",
       ...summary,
       visitReminders,
+      dailyTraining,
+      activeWorkouts,
       emailCampaigns,
     });
   } catch (error) {

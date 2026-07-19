@@ -1,293 +1,283 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Image from "next/image";
-import ImageTile from "../components/ImageTile";
-import CtaBand from "../components/CtaBand";
-import LandingTrack from "../components/LandingTrack";
+import Link from "next/link";
 import {
-  BUSINESS,
-  HERO_IMAGES,
-  QUICK_INFO,
-  SOCIAL_PROOF,
-  TRANSFORM_STEPS,
-} from "../lib/site";
-import { gymJsonLd, pageMetadata } from "../lib/seo";
+  Activity,
+  ArrowDown,
+  ArrowRight,
+  CalendarCheck,
+  Dumbbell,
+  MapPin,
+  ScanLine,
+  Smartphone,
+  Sparkles,
+} from "lucide-react";
+import CinematicLandingFX from "../components/CinematicLandingFX";
+import CtaBand from "../components/CtaBand";
 import JsonLd from "../components/JsonLd";
-import { ArrowRight, MapPin, Smartphone } from "lucide-react";
+import LandingTrack from "../components/LandingTrack";
+import { BUSINESS, SOCIAL_PROOF } from "../lib/site";
+import { gymJsonLd, pageMetadata } from "../lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Xtreme Gym | Ciudad Quesada",
   description:
-    "Xtreme Gym en Ciudad Quesada, San Carlos. Un gimnasio para entrenar en serio, con máquinas excelentes, zonas completas y acompañamiento.",
+    "Xtreme Gym en Ciudad Quesada, San Carlos. Entrená con máquinas completas, zonas especializadas, acompañamiento y una app para sostener tu progreso.",
   path: "/",
   absoluteTitle: true,
 });
 
-const EXPLORE = [
+const SCENES = [
   {
-    href: "/precios",
-    label: "Precios y planes",
-    text: "Día, semana, quincena o mes. Inscríbase y pague en línea.",
+    number: "01",
+    eyebrow: "Un piso que responde",
+    title: "Todo para entrenar. Nada para distraerte.",
+    text: "Peso libre, fuerza guiada, cardio y zonas funcionales conviven en un espacio amplio. Llegás con un objetivo y encontrás el equipo para trabajarlo.",
     image: "/xtreme/piso-maquinas-panoramica.webp",
-  },
-  {
+    alt: "Piso panorámico de máquinas de Xtreme Gym",
     href: "/zonas",
-    label: "Zonas de entrenamiento",
-    text: "Calistenia, peso libre, cardio, pierna y tren superior con equipo completo.",
-    image: "/xtreme/zona-mancuernas.webp",
+    cta: "Recorrer las zonas",
+    icon: Dumbbell,
+    facts: ["5 zonas", "Equipo completo", "Desde las 5 AM"],
   },
   {
-    href: "/beneficios",
-    label: "Beneficios para socios",
-    text: "Instructores, medición corporal, parqueo, área infantil y más.",
-    image: "/xtreme/area-infantil.webp",
-  },
-  {
-    href: "/adultos-mayores",
-    label: "Adultos mayores",
-    text: "Tres clases por semana para movilidad, fuerza y confianza.",
-    image: "/xtreme/zona-funcional-clases.webp",
-  },
-  {
-    href: "/app",
-    label: "App de socios",
-    text: "Reservas, rachas, carné digital y progreso en un solo lugar.",
+    number: "02",
+    eyebrow: "Member OS",
+    title: "Tu constancia también vive fuera del gym.",
+    text: "Reservas, plan, rachas, progreso y carné digital en una experiencia diseñada para decirte qué sigue, sin convertir tu entrenamiento en otra lista de tareas.",
     image: "/xtreme/maquinas-y-entrenador-xtreme.webp",
+    alt: "Socio entrenando con acompañamiento en Xtreme Gym",
+    href: "/app",
+    cta: "Abrir la app",
+    icon: Smartphone,
+    facts: ["Reservas reales", "Progreso visible", "Acceso privado"],
   },
   {
-    href: "/preguntas",
-    label: "Preguntas frecuentes",
-    text: "Lo que la gente consulta antes de su primera sesión.",
-    image: "/xtreme/recepcion-sala-espera.webp",
+    number: "03",
+    eyebrow: "Dirección humana",
+    title: "Tecnología cuando ayuda. Personas cuando importa.",
+    text: "El equipo te orienta, la medición corporal pone contexto y la comunidad hace más fácil volver. No necesitás experiencia: necesitás un buen punto de partida.",
+    image: "/xtreme/zona-funcional-clases.webp",
+    alt: "Entrenamiento guiado en la zona funcional de Xtreme Gym",
+    href: "/beneficios",
+    cta: "Ver lo que incluye",
+    icon: Activity,
+    facts: ["Medición incluida", "Guía de instructores", "Comunidad Xtreme"],
   },
-  {
-    href: "/contacto",
-    label: "Horario y ubicación",
-    text: "Barrio San Pablo. Vea horarios, mapa y cómo llegar.",
-    image: "/xtreme/fachada-xtreme-gym.webp",
-  },
-];
+] as const;
+
+const PATHS = [
+  { number: "01", title: "Probá el gym", text: "Tu primer día es gratis.", href: "/primer-dia", icon: Sparkles },
+  { number: "02", title: "Elegí tu plan", text: "Semana, quincena o mes.", href: "/precios", icon: CalendarCheck },
+  { number: "03", title: "Conocé las zonas", text: "Encontrá dónde avanzar.", href: "/zonas", icon: Dumbbell },
+  { number: "04", title: "Entrá a Member OS", text: "Tu progreso en un lugar.", href: "/app", icon: Smartphone },
+] as const;
 
 export default function ExtremeGymLandingPage() {
   return (
     <>
       <JsonLd data={gymJsonLd()} />
       <LandingTrack surface="home" />
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0">
+
+      <section
+        data-cinema-stage
+        className="cinema-home-hero cinema-stage relative isolate overflow-hidden border-b border-white/10 bg-[#050505]"
+      >
+        <div className="cinema-stage-image absolute inset-[-2%] z-0">
           <Image
             src="/xtreme/piso-pesas-panoramica.webp"
+            alt="Piso de pesas de Xtreme Gym en Ciudad Quesada"
             fill
-            sizes="100vw"
             priority
-            quality={78}
-            alt="Interior de gimnasio con máquinas"
-            className="object-cover opacity-44"
+            quality={82}
+            sizes="100vw"
+            className="object-cover object-[62%_center]"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,#070707_0%,rgba(7,7,7,.94)_38%,rgba(7,7,7,.62)_72%,rgba(7,7,7,.34)_100%)]" />
-          <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:72px_72px]" />
-          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#070707] to-transparent" />
         </div>
+        <div className="absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(4,4,4,.98)_0%,rgba(4,4,4,.91)_38%,rgba(4,4,4,.52)_70%,rgba(4,4,4,.68)_100%)]" />
+        <div className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(0,0,0,.2),transparent_30%,rgba(0,0,0,.92)_100%)]" />
+        <div className="cinema-vignette absolute inset-0 z-[1]" />
+        <CinematicLandingFX />
 
-        <div className="relative mx-auto flex max-w-7xl flex-col px-5 py-4 sm:px-8 lg:py-3">
-          <div className="grid flex-1 gap-8 py-5 lg:grid-cols-[.95fr_1.05fr] lg:items-center lg:py-6">
-            <div className="min-w-0">
-              <a
-                href="#mapa-footer"
-                aria-label="Ir al mapa y la ubicación de Xtreme Gym"
-                className="inline-flex items-center gap-2 border border-[#f6c400]/45 bg-black/45 px-3 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#ffe875] backdrop-blur transition hover:border-[#f6c400] hover:bg-[#f6c400]/10"
-              >
-                <MapPin className="h-4 w-4" />
-                {BUSINESS.location}
-              </a>
-              <h1 className="mt-5 max-w-4xl text-[2.5rem] font-black uppercase leading-[0.88] tracking-tight min-[420px]:text-5xl sm:text-6xl lg:text-[4rem] xl:text-[4.5rem]">
-                Tomátelo en serio.
-                <span className="block text-[#f6c400]">Entrená sin excusas.</span>
+        <div className="cinema-home-hero-shell relative z-10 mx-auto flex max-w-[1500px] flex-col px-5 sm:px-8 lg:px-12">
+          <div className="flex items-center justify-between gap-4 border-b border-white/10 py-4 text-[10px] font-black uppercase tracking-[.2em] text-white/45">
+            <a href="#mapa-footer" className="inline-flex min-h-11 items-center gap-2 transition hover:text-[#f6c400]">
+              <MapPin className="h-3.5 w-3.5 text-[#f6c400]" />
+              {BUSINESS.location}
+            </a>
+            <span className="hidden items-center gap-2 sm:inline-flex">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f6c400]/60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f6c400]" />
+              </span>
+              Sistema Xtreme · activo
+            </span>
+          </div>
+
+          <div className="grid flex-1 items-end gap-10 py-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,.55fr)] lg:pb-14 lg:pt-16">
+            <div data-cinema-reveal className="max-w-5xl">
+              <p className="mb-5 flex items-center gap-3 text-[10px] font-black uppercase tracking-[.28em] text-[#f6c400]">
+                <span className="h-px w-12 bg-[#f6c400]" />
+                Entrenamiento · Ciudad Quesada
+              </p>
+              <h1 className="cinema-display max-w-[1050px] text-[clamp(3.35rem,8.8vw,9rem)] font-black uppercase leading-[.78] tracking-[-.07em]">
+                No venís a
+                <span className="block text-[#f6c400]">pasar el rato.</span>
               </h1>
-              <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/72">
-                Si estás comprometido con tu progreso, este es tu lugar. Entrená con máquinas
-                excelentes de todo tipo, zonas completas y un ambiente que te impulsa a dar más.
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href="/primer-dia"
-                  className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black shadow-[0_0_40px_-16px_rgba(246,196,0,.95)] transition hover:bg-white"
-                >
-                  Primer día gratis
-                  <Smartphone className="h-5 w-5" />
-                </Link>
-                <Link
-                  href="/precios#inscripcion"
-                  className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/[0.07] px-5 font-black uppercase text-white backdrop-blur transition hover:border-white/45 hover:bg-white/10"
-                >
-                  Ver planes
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
-              </div>
-
-            </div>
-
-            <div className="min-w-0">
-              <div className="hidden gap-3 lg:grid lg:grid-cols-[1fr_230px]">
-                <div className="relative border border-white/12 bg-black/70 p-3 shadow-2xl backdrop-blur">
-                  <ImageTile src={HERO_IMAGES[0].src} alt={HERO_IMAGES[0].alt} className="aspect-square" sizes="(min-width: 1024px) 440px, 1px" />
-                  <div className="absolute left-6 top-6 max-w-[210px] bg-[#f6c400] px-4 py-3 text-black">
-                    <p className="text-xs font-black uppercase tracking-[0.18em]">Movimiento Xtreme</p>
-                    <p className="text-2xl font-black uppercase leading-none">Compromiso que se nota</p>
-                  </div>
-                </div>
-
-                <div className="grid content-start gap-3">
-                  <ImageTile src={HERO_IMAGES[1].src} alt={HERO_IMAGES[1].alt} className="aspect-[4/3]" sizes="(min-width: 1024px) 230px, 1px" />
-                  <div className="border border-[#f6c400]/45 bg-[#f6c400] p-4 text-black shadow-[0_0_36px_-18px_rgba(246,196,0,.9)]">
-                    <p className="text-xs font-black uppercase tracking-[0.2em]">Entrená en serio</p>
-                    <h2 className="mt-2 text-2xl font-black uppercase leading-none">Todo el equipo para superarte</h2>
-                    <p className="mt-2 text-xs font-bold leading-5">
-                      Máquinas de todo tipo, zonas completas y el ambiente para mantenerte enfocado.
-                    </p>
-                  </div>
+              <div className="mt-8 grid max-w-4xl gap-6 border-t border-white/15 pt-6 md:grid-cols-[1fr_auto] md:items-end">
+                <p className="max-w-2xl text-base font-medium leading-7 text-white/62 sm:text-lg sm:leading-8">
+                  Venís a moverte, medir el avance y volver más fuerte. Nosotros ponemos el espacio,
+                  el equipo y la dirección para que esa decisión se sostenga.
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  <Link
+                    href="/primer-dia"
+                    className="cinema-cta inline-flex min-h-13 items-center gap-3 bg-[#f6c400] px-5 text-xs font-black uppercase tracking-[.08em] text-black"
+                  >
+                    Empezá gratis <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/precios#inscripcion"
+                    className="inline-flex min-h-13 items-center gap-3 border border-white/25 bg-black/25 px-5 text-xs font-black uppercase tracking-[.08em] text-white backdrop-blur-md transition hover:border-white/60 hover:bg-white/10"
+                  >
+                    Ver planes
+                  </Link>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 border border-white/10 bg-black/55 backdrop-blur sm:grid-cols-4 lg:mt-3">
-                {SOCIAL_PROOF.map((item) => (
-                  <div key={item.label} className="border-r border-white/10 p-2.5 last:border-r-0 sm:p-3">
-                    <p className="text-2xl font-black text-[#f6c400]">{item.value}</p>
-                    <p className="mt-1 text-xs font-black uppercase tracking-[0.14em] text-white/48">{item.label}</p>
-                  </div>
-                ))}
-              </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      <section className="border-b border-white/10 bg-[#090909] px-5 py-4 sm:px-8">
-        <div className="mx-auto grid max-w-7xl gap-3 sm:grid-cols-3">
-          {QUICK_INFO.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="border border-white/10 bg-white/[0.04] px-4 py-3 transition hover:border-[#f6c400]/55 hover:bg-[#f6c400]/10"
+            <aside
+              data-cinema-reveal
+              className="cinema-live-card relative hidden self-end overflow-hidden border border-white/15 bg-black/35 p-2 backdrop-blur-md lg:block"
             >
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/45">{item.label}</p>
-              <div className="mt-1 flex items-baseline justify-between gap-3">
-                <p className="text-lg font-black uppercase text-white">{item.value}</p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#f6c400]">{item.detail}</p>
+              <div className="relative aspect-[4/5] overflow-hidden">
+                <Image
+                  src="/xtreme/maquinas-xtreme-amarillas.webp"
+                  alt="Máquinas amarillas de Xtreme Gym"
+                  fill
+                  sizes="360px"
+                  className="object-cover opacity-75"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
+                <div className="absolute left-4 right-4 top-4 flex items-center justify-between text-[9px] font-black uppercase tracking-[.18em]">
+                  <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4 text-[#f6c400]" /> Piso principal</span>
+                  <span className="text-[#f6c400]">Live</span>
+                </div>
+                <div className="absolute inset-x-4 bottom-4">
+                  <p className="text-3xl font-black uppercase leading-none">El trabajo se nota.</p>
+                  <div className="mt-4 h-px bg-white/20"><div className="h-px w-2/3 bg-[#f6c400]" /></div>
+                  <p className="mt-3 text-[10px] font-bold uppercase tracking-[.15em] text-white/55">Fuerza · cardio · funcional</p>
+                </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-y border-white/10 bg-[#f6c400] px-5 py-4 text-black sm:px-8">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em]">
-          <span>Calistenia</span>
-          <span>Peso libre</span>
-          <span>Cardio</span>
-          <span>Pierna</span>
-          <span>Tren superior</span>
-          <span>Entrenamiento VIP</span>
-          <span>Clases grupales</span>
-          <span>Adultos mayores</span>
-          <span>Bronceado</span>
-        </div>
-      </section>
-
-      <section className="bg-[#0b0b0b] px-5 py-16 sm:px-8 lg:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-8 lg:grid-cols-[.85fr_1.15fr] lg:items-end">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Ruta simple</p>
-              <h2 className="mt-3 max-w-2xl text-4xl font-black uppercase leading-none sm:text-6xl">
-                Compromiso, constancia y resultados.
-              </h2>
-            </div>
-            <div className="w-full max-w-2xl lg:ml-auto">
-              <ImageTile
-                src={HERO_IMAGES[2].src}
-                alt={HERO_IMAGES[2].alt}
-                className="h-28 border border-white/10 sm:h-36 lg:h-32"
-              />
-              <p className="mt-5 text-base font-semibold leading-8 text-white/58">
-                Xtreme Gym te da el espacio, las máquinas y el acompañamiento. Vos ponés la
-                decisión de presentarte, entrenar con intención y no abandonar tu progreso.
-              </p>
-            </div>
+            </aside>
           </div>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {TRANSFORM_STEPS.map((step, index) => (
-              <article
-                key={step.title}
-                className="group border border-white/10 bg-white/[0.045] p-5 transition hover:border-[#f6c400]/55 hover:bg-[#f6c400]/10"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <span className="grid h-12 w-12 place-items-center bg-[#f6c400] text-black">
-                    <step.icon className="h-6 w-6" />
-                  </span>
-                  <span className="text-4xl font-black leading-none text-white/[0.08] transition group-hover:text-[#f6c400]/25">
-                    0{index + 1}
-                  </span>
+          <div className="grid border-t border-white/12 bg-black/20 backdrop-blur-sm sm:grid-cols-[auto_1fr]">
+            <a href="#experiencia" className="hidden min-h-20 items-center gap-3 border-r border-white/10 px-5 text-[9px] font-black uppercase tracking-[.2em] text-white/45 transition hover:text-white sm:flex">
+              Descubrí más <ArrowDown className="h-4 w-4 text-[#f6c400]" />
+            </a>
+            <div className="grid grid-cols-2 sm:grid-cols-4">
+              {SOCIAL_PROOF.map((item) => (
+                <div key={item.label} className="border-r border-white/10 px-3 py-3 last:border-r-0 sm:px-5">
+                  <p className="text-xl font-black text-white sm:text-2xl">{item.value}</p>
+                  <p className="mt-1 text-[8px] font-black uppercase tracking-[.13em] text-white/35 sm:text-[9px]">{item.label}</p>
                 </div>
-                <h3 className="mt-8 text-2xl font-black uppercase">{step.title}</h3>
-                <p className="mt-3 text-sm font-semibold leading-7 text-white/58">{step.text}</p>
-              </article>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="px-5 py-16 sm:px-8 lg:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Explore</p>
-              <h2 className="mt-3 text-4xl font-black uppercase leading-none sm:text-6xl">
-                Todo lo que necesita saber.
-              </h2>
-            </div>
-            <p className="max-w-xl text-sm font-semibold leading-7 text-white/55">
-              Cada tema tiene su propia página, con la información completa y sin ruido.
-            </p>
-          </div>
+      <section id="experiencia" className="relative overflow-hidden border-b border-white/10 bg-[#080808] px-5 py-24 sm:px-8 lg:py-36">
+        <div className="cinema-orbit absolute left-1/2 top-1/2 h-[46rem] w-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#f6c400]/10" aria-hidden />
+        <div data-cinema-reveal className="relative mx-auto max-w-6xl text-center">
+          <p className="text-[10px] font-black uppercase tracking-[.28em] text-[#f6c400]">La idea es simple</p>
+          <h2 className="cinema-display mx-auto mt-6 max-w-5xl text-[clamp(3rem,7vw,7rem)] font-black uppercase leading-[.84] tracking-[-.06em]">
+            Un buen gym no te grita.
+            <span className="block text-white/28">Te da razones para volver.</span>
+          </h2>
+          <p className="mx-auto mt-8 max-w-2xl text-base font-medium leading-8 text-white/48 sm:text-lg">
+            Menos fricción. Más claridad. Un lugar que acompaña la decisión que ya tomaste.
+          </p>
+        </div>
+      </section>
 
-          <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {EXPLORE.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="group relative overflow-hidden border border-white/10 bg-black transition hover:border-[#f6c400]/55"
-              >
-                <div className="relative aspect-[16/10] overflow-hidden">
-                  <Image
-                    src={item.image}
-                    alt={item.label}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    quality={72}
-                    className="object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-                </div>
-                <div className="p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-xl font-black uppercase">{item.label}</h3>
-                    <ArrowRight className="h-5 w-5 shrink-0 text-[#f6c400] transition group-hover:translate-x-1" />
+      <div className="bg-[#050505]">
+        {SCENES.map((scene, index) => {
+          const Icon = scene.icon;
+          return (
+            <section key={scene.number} className="cinema-scene border-b border-white/10 px-5 py-20 sm:px-8 lg:min-h-[82vh] lg:py-28">
+              <div className={`mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center lg:gap-20 ${index % 2 ? "" : ""}`}>
+                <div data-cinema-reveal className={`relative ${index % 2 ? "lg:order-2" : ""}`}>
+                  <div className="cinema-image-frame relative aspect-[4/5] overflow-hidden border border-white/12 sm:aspect-[16/11] lg:aspect-[4/5]">
+                    <Image
+                      src={scene.image}
+                      alt={scene.alt}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-cover opacity-80 transition duration-1000 hover:scale-[1.025] hover:opacity-95"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/20" />
+                    <span className="absolute left-5 top-5 text-[10px] font-black uppercase tracking-[.22em] text-[#f6c400]">Scene {scene.number}</span>
+                    <div className="absolute bottom-5 left-5 right-5 flex flex-wrap gap-2">
+                      {scene.facts.map((fact) => <span key={fact} className="border border-white/20 bg-black/55 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[.12em] backdrop-blur">{fact}</span>)}
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-white/55">{item.text}</p>
                 </div>
-              </Link>
-            ))}
+
+                <div data-cinema-reveal className={index % 2 ? "lg:order-1" : ""}>
+                  <div className="flex items-center justify-between border-b border-white/10 pb-5">
+                    <p className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[.24em] text-[#f6c400]"><Icon className="h-4 w-4" /> {scene.eyebrow}</p>
+                    <span className="text-5xl font-black tracking-[-.08em] text-white/[.07]">{scene.number}</span>
+                  </div>
+                  <h2 className="cinema-display mt-8 text-[clamp(2.8rem,5vw,5.6rem)] font-black uppercase leading-[.86] tracking-[-.055em]">{scene.title}</h2>
+                  <p className="mt-7 max-w-xl text-base font-medium leading-8 text-white/52 sm:text-lg">{scene.text}</p>
+                  <Link href={scene.href} className="group mt-9 inline-flex min-h-12 items-center gap-4 border-b border-[#f6c400] text-xs font-black uppercase tracking-[.13em] text-white transition hover:text-[#f6c400]">
+                    {scene.cta}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-1.5" />
+                  </Link>
+                </div>
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      <section className="bg-[#0a0a0a] px-5 py-24 sm:px-8 lg:py-32">
+        <div className="mx-auto max-w-7xl">
+          <div data-cinema-reveal className="flex flex-wrap items-end justify-between gap-6 border-b border-white/12 pb-8">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[.24em] text-[#f6c400]">Tu entrada</p>
+              <h2 className="cinema-display mt-4 text-5xl font-black uppercase leading-[.85] tracking-[-.055em] sm:text-7xl">Elegí por dónde empezar.</h2>
+            </div>
+            <p className="max-w-md text-sm font-medium leading-7 text-white/45">Cuatro caminos claros. Sin una pared de tarjetas compitiendo por tu atención.</p>
+          </div>
+
+          <div className="mt-8 grid gap-px bg-white/10 sm:grid-cols-2">
+            {PATHS.map((path) => {
+              const Icon = path.icon;
+              return (
+                <Link key={path.number} href={path.href} data-cinema-card className="cinema-path group relative min-h-52 overflow-hidden bg-[#080808] p-6 sm:p-8">
+                  <div className="cinema-card-spotlight pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100" />
+                  <div className="relative flex h-full flex-col justify-between">
+                    <div className="flex items-start justify-between">
+                      <span className="text-[10px] font-black tracking-[.18em] text-white/28">{path.number}</span>
+                      <Icon className="h-5 w-5 text-[#f6c400]" />
+                    </div>
+                    <div className="mt-14">
+                      <div className="flex items-end justify-between gap-4">
+                        <div><h3 className="text-2xl font-black uppercase sm:text-3xl">{path.title}</h3><p className="mt-2 text-sm font-medium text-white/42">{path.text}</p></div>
+                        <ArrowRight className="h-5 w-5 shrink-0 text-white/35 transition group-hover:translate-x-1 group-hover:text-[#f6c400]" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <CtaBand
-        title="Empezá gratis hoy o inscribite y activá tu acceso al instante."
-        cta="Ver planes y pagar"
-      />
+      <CtaBand title="La decisión puede empezar hoy. El primer día corre por nuestra cuenta." cta="Ver planes y pagar" />
     </>
   );
 }

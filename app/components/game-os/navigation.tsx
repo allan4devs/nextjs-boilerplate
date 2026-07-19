@@ -56,20 +56,27 @@ export type GameDockItemProps = {
   active: boolean;
   onClick: () => void;
   tourId?: string;
+  attention?: boolean;
 };
 
-export function GameDockItem({ label, icon: Icon, active, onClick, tourId }: GameDockItemProps) {
+export function GameDockItem({ label, icon: Icon, active, onClick, tourId, attention = false }: GameDockItemProps) {
   return (
     <button
       type="button"
       data-tour={tourId}
       onClick={onClick}
-      className={`flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 border-t-[3px] px-0.5 transition sm:min-h-[58px] sm:px-1 ${
+      className={`relative flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 border-t-[3px] px-0.5 transition sm:min-h-[58px] sm:px-1 ${
         active
           ? "border-t-[#d8ff3e] bg-gradient-to-b from-[#d8ff3e]/20 to-transparent text-[#d8ff3e]"
           : "border-t-transparent text-white/45 active:bg-white/[0.06] active:text-white"
       }`}
     >
+      {attention && (
+        <span
+          aria-label="Acción pendiente"
+          className="absolute right-[calc(50%-18px)] top-1.5 h-2.5 w-2.5 animate-pulse rounded-full border-2 border-[#0a0a0a] bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,.9)]"
+        />
+      )}
       <Icon className={`h-5 w-5 shrink-0 ${active ? "xg-dock-active-icon" : ""}`} strokeWidth={active ? 2.5 : 2} />
       <span className="max-w-full truncate text-[8px] font-black uppercase tracking-[0.06em] sm:text-[9px] sm:tracking-[0.08em]">
         {label}

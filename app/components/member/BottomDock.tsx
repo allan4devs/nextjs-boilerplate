@@ -13,7 +13,7 @@ import type { MemberOs } from "./useMemberOs";
 const DOCK_TABS = TABS.filter((item) => item.id !== "perfil" && item.id !== "maquinas");
 
 export default function BottomDock({ os, showChat = false }: { os: MemberOs; showChat?: boolean }) {
-  const { tab, setTab, setOsModal } = os;
+  const { tab, setTab, setOsModal, currentMember, activeVisit } = os;
 
   return (
     <nav
@@ -26,6 +26,7 @@ export default function BottomDock({ os, showChat = false }: { os: MemberOs; sho
           label={item.label}
           icon={item.icon}
           active={tab === item.id}
+          attention={item.id === "entrenar" && Boolean(currentMember.activePlanWorkout || activeVisit)}
           tourId={`tab-${item.id}`}
           onClick={() => {
             setTab(item.id);

@@ -2,6 +2,10 @@ import { randomUUID } from "crypto";
 import type { Db } from "mongodb";
 import { emailEnabled, sendCampaignEmail } from "@/lib/helpers/email";
 import {
+  CLAIM_LINK_AUDIENCES,
+  issueCampaignClaimLink,
+} from "@/lib/xtreme/campaign-claim-link";
+import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
 } from "@/lib/xtreme/shared/config";
@@ -100,13 +104,32 @@ export async function processQueuedEmailCampaigns(db: Db, limit = 20) {
     );
     if (!claimed.modifiedCount) continue;
 
+    // Campañas de activación: cada destinatario recibe un magic link personal
+    // ligado a su ficha (si existe) para verificar/corregir datos y crear PIN.
+    let ctaPath = campaign.ctaPath;
+    let ctaLabel = campaign.ctaLabel;
+    if (CLAIM_LINK_AUDIENCES.has(campaign.audience)) {
+      try {
+        const claim = await issueCampaignClaimLink(db, item.email);
+        if (claim?.kind === "claim") {
+          ctaPath = claim.path;
+          ctaLabel = campaign.ctaLabel || "Activar mi acceso";
+        } else if (claim?.kind === "app") {
+          ctaPath = "/app";
+          ctaLabel = campaign.ctaLabel || "Entrar a la app";
+        }
+      } catch (err) {
+        console.error("CAMPAIGN CLAIM LINK", item.email, err);
+      }
+    }
+
     const result = await sendCampaignEmail({
       to: item.email,
       subject: campaign.subject,
       title: campaign.title,
       message: campaign.message,
-      ctaLabel: campaign.ctaLabel,
-      ctaPath: campaign.ctaPath,
+      ctaLabel,
+      ctaPath,
       idempotencyKey: item.deliveryKey,
     });
     const now = new Date();

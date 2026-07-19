@@ -352,14 +352,34 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 
 /* Header de marketing fuera de la isla dinámica/status bar en iPhone. */
 .xg-site-header {
+  --xg-site-header-bar: 56px;
   padding-top: env(safe-area-inset-top, 0px);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .xg-mobile-menu {
-  top: calc(73px + env(safe-area-inset-top, 0px));
-  max-height: calc(100dvh - 73px - env(safe-area-inset-top, 0px));
+  top: calc(var(--xg-site-header-bar, 56px) + env(safe-area-inset-top, 0px));
+  max-height: calc(var(--xg-visual-viewport-height) - var(--xg-site-header-bar, 56px) - env(safe-area-inset-top, 0px));
   overscroll-behavior: contain;
   touch-action: pan-y;
+}
+
+@media (max-width: 1023px) {
+  .xg-site-header[data-mobile-hidden="true"] {
+    transform: translate3d(0, calc(-100% - env(safe-area-inset-top, 0px)), 0);
+  }
+
+  html[data-xg-platform="ios"] .xg-mobile-menu {
+    top: calc(var(--xg-visual-viewport-offset) + var(--xg-site-header-bar, 56px) + env(safe-area-inset-top, 0px));
+  }
+}
+
+@media (min-width: 1024px) {
+  .xg-site-header {
+    --xg-site-header-bar: 72px;
+  }
 }
 
 .xg-mobile-scroll {
@@ -424,6 +444,155 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   .xg-chat-above-mobile-cta,
   .xg-chat-safe-bottom {
     bottom: 1.5rem;
+  }
+}
+
+/* --- Cinematic landing -------------------------------------------------- */
+
+.cinema-stage {
+  --cinema-x: 0px;
+  --cinema-y: 0px;
+}
+
+.cinema-home-hero,
+.cinema-home-hero-shell {
+  min-height: calc(100svh - 56px - env(safe-area-inset-top, 0px));
+}
+
+@media (min-width: 1024px) {
+  .cinema-home-hero,
+  .cinema-home-hero-shell {
+    min-height: calc(100svh - 72px - env(safe-area-inset-top, 0px));
+  }
+}
+
+.cinema-stage-image {
+  transform: translate3d(var(--cinema-x), var(--cinema-y), 0) scale(1.045);
+  transition: transform 900ms cubic-bezier(0.2, 0.75, 0.2, 1);
+  will-change: transform;
+}
+
+.cinema-vignette {
+  background:
+    radial-gradient(circle at 70% 46%, transparent 0 16%, rgba(0, 0, 0, 0.2) 48%, rgba(0, 0, 0, 0.78) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 7vw);
+}
+
+.cinema-display {
+  text-wrap: balance;
+  font-kerning: normal;
+}
+
+.cinema-live-card {
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(246, 196, 0, 0.04);
+}
+
+.cinema-live-card::after,
+.cinema-image-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 15%, rgba(255, 255, 255, 0.065) 44%, transparent 68%);
+  transform: translateX(-120%);
+  transition: transform 1.2s cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+.cinema-live-card:hover::after,
+.cinema-image-frame:hover::after {
+  transform: translateX(120%);
+}
+
+.cinema-cta {
+  box-shadow: 0 16px 60px -22px rgba(246, 196, 0, 0.9);
+  transition: transform 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
+}
+
+.cinema-cta:hover {
+  transform: translateY(-2px);
+  background: #fff;
+  box-shadow: 0 22px 70px -18px rgba(246, 196, 0, 0.78);
+}
+
+.cinema-orbit::before,
+.cinema-orbit::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  border: 1px solid rgba(246, 196, 0, 0.07);
+}
+
+.cinema-orbit::before {
+  inset: 12%;
+}
+
+.cinema-orbit::after {
+  inset: 27%;
+  background: radial-gradient(circle, rgba(246, 196, 0, 0.06), transparent 68%);
+}
+
+.cinema-scene {
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.018) 50%, transparent),
+    #050505;
+}
+
+.cinema-image-frame {
+  box-shadow: 0 35px 100px rgba(0, 0, 0, 0.45);
+}
+
+.cinema-path {
+  --spot-x: 50%;
+  --spot-y: 50%;
+}
+
+.cinema-card-spotlight {
+  background: radial-gradient(360px circle at var(--spot-x) var(--spot-y), rgba(246, 196, 0, 0.13), transparent 62%);
+}
+
+[data-cinema-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 32px, 0);
+  filter: blur(7px);
+  transition:
+    opacity 900ms cubic-bezier(0.2, 0.75, 0.2, 1),
+    transform 1000ms cubic-bezier(0.2, 0.75, 0.2, 1),
+    filter 900ms ease;
+}
+
+[data-cinema-reveal][data-cinema-visible="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  filter: blur(0);
+}
+
+@media (max-width: 639px) {
+  .cinema-stage-image {
+    transform: scale(1.03);
+  }
+
+  .cinema-vignette {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.92));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinema-stage-image,
+  .cinema-live-card::after,
+  .cinema-image-frame::after,
+  [data-cinema-reveal] {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  [data-cinema-reveal] {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  .cinema-cta:hover {
+    transform: none;
   }
 }
 
