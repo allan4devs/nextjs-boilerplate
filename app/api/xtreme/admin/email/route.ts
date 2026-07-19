@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { emailConfigurationError, emailEnabled } from "@/lib/helpers/email";
 import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit } from "@/lib/xtreme/audit";
 import {
   type EmailAudience,
   type EmailCampaignDoc,
   newEmailCampaignId,
+  processQueuedEmailCampaigns,
 } from "@/lib/xtreme/email-campaigns";
 import { buildAudienceEmails, EMAIL_AUDIENCE_IDS } from "@/lib/xtreme/email-audiences";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
@@ -20,6 +22,8 @@ import {
 } from "@/lib/xtreme/shared";
 
 export const dynamic = "force-dynamic";
+/** process_queue y campaign (primer lote) pueden enviar varios correos con claim links. */
+export const maxDuration = 60;
 
 type ContactInput = { email?: unknown; name?: unknown; phone?: unknown };
 type ContactDoc = {
@@ -180,6 +184,8 @@ export async function GET(req: NextRequest) {
     const memberCoverage = includeCoverage ? await buildMemberCoverage(db) : undefined;
     return NextResponse.json({
       ok: true,
+      emailConfigured: emailEnabled(),
+      emailConfigError: emailConfigurationError(),
       audiences: {
         ...counts,
         suppressed: audiences.suppressed,
@@ -314,7 +320,41 @@ export async function POST(req: NextRequest) {
         summary: `Campaña en cola para ${recipients.length} destinatarios`,
         meta: { audience, subject },
       });
-      return NextResponse.json({ ok: true, campaignId: id, recipients: recipients.length });
+
+      // Drena el primer lote ya en esta request para no depender solo del cron.
+      const process = await processQueuedEmailCampaigns(db, 20, {
+        maxRounds: 2,
+        deadlineMs: 45_000,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        campaignId: id,
+        recipients: recipients.length,
+        process,
+      });
+    }
+
+    if (action === "process_queue") {
+      const process = await processQueuedEmailCampaigns(db, 30, {
+        maxRounds: 6,
+        deadlineMs: 50_000,
+      });
+      await writeAudit(db, {
+        actorRole: "super",
+        action: "email_campaign.process",
+        targetType: "system",
+        targetId: process.campaignId || "queue",
+        summary: process.configured
+          ? `Cola procesada: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos (${process.processed} en este lote)`
+          : `Cola no procesada: ${process.error || "correo no configurado"}`,
+        meta: process,
+      });
+      return NextResponse.json({
+        ok: true,
+        emailConfigured: process.configured,
+        process,
+      });
     }
 
     return NextResponse.json({ error: "Acción no válida." }, { status: 400 });

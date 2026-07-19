@@ -25,7 +25,20 @@ type AudienceId =
   | "plan_other"
   | "no_plan"
   | "all";
+type CampaignProcessSummary = {
+  configured: boolean;
+  processed: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  campaignId?: string;
+  error?: string;
+  rounds?: number;
+};
+
 type CenterData = {
+  emailConfigured?: boolean;
+  emailConfigError?: string | null;
   audiences: Record<AudienceId, number> & { suppressed: number };
   diagnostics: {
     totalMembers: number;
@@ -50,6 +63,8 @@ type CenterData = {
     failed: number;
     skipped: number;
     createdAt: string;
+    lastProcessedAt?: string;
+    lastError?: string;
   }>;
   unsubscribes: Array<{
     email: string;
@@ -552,12 +567,61 @@ export default function EmailCampaignCenter() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "campaign", ...form, consentConfirmed: campaignConsent }),
       });
-      const json = (await response.json()) as { recipients?: number; error?: string };
+      const json = (await response.json()) as {
+        recipients?: number;
+        process?: CampaignProcessSummary;
+        error?: string;
+      };
       if (!response.ok) throw new Error(json.error || "No se pudo crear la campaña.");
-      setNotice(`Campaña en cola para ${json.recipients} destinatarios. Se enviará en lotes automáticos.`);
+      const process = json.process;
+      if (process && !process.configured) {
+        setError(
+          `Campaña en cola (${json.recipients} destinos) pero el servidor no puede enviar: ${process.error || "revisá EMAIL_SENDING_ENABLED / Resend"}.`,
+        );
+      } else if (process && process.processed > 0) {
+        setNotice(
+          `Campaña en cola para ${json.recipients} destinatarios. Primer lote: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos. El resto sigue cada ~5 min o con «Procesar cola».`,
+        );
+      } else {
+        setNotice(
+          `Campaña en cola para ${json.recipients} destinatarios. El envío continúa en lotes automáticos (~cada 5 min) o con «Procesar cola ahora».`,
+        );
+      }
       setCampaignConsent(false); await load();
     } catch (err) { setError(err instanceof Error ? err.message : "No se pudo crear la campaña."); }
     finally { setBusy(""); }
+  }
+
+  async function processQueueNow() {
+    setBusy("process"); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/xtreme/admin/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "process_queue" }),
+      });
+      const json = (await response.json()) as {
+        process?: CampaignProcessSummary;
+        emailConfigured?: boolean;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(json.error || "No se pudo procesar la cola.");
+      const process = json.process;
+      if (!process?.configured) {
+        setError(process?.error || "El servidor no tiene el correo configurado para envíos.");
+      } else if (!process.processed) {
+        setNotice("No había correos pendientes en la cola.");
+      } else {
+        setNotice(
+          `Lote procesado: ${process.sent} enviados · ${process.failed} fallidos · ${process.skipped} omitidos (${process.processed} revisados${process.rounds ? `, ${process.rounds} rondas` : ""}). Si quedan pendientes, volvé a tocar «Procesar cola».`,
+        );
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo procesar la cola.");
+    } finally {
+      setBusy("");
+    }
   }
 
   return (
@@ -573,8 +637,26 @@ export default function EmailCampaignCenter() {
             excluyen solas; recibos y códigos de cuenta siempre se entregan.
           </p>
         </div>
-        <button type="button" onClick={() => void load()} className="inline-flex min-h-11 items-center gap-2 border-2 border-white/20 px-3 text-xs font-black uppercase"><RefreshCw className={`h-4 w-4 ${busy === "load" ? "animate-spin" : ""}`} />Actualizar</button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={Boolean(busy)}
+            onClick={() => void processQueueNow()}
+            className="inline-flex min-h-11 items-center gap-2 border-2 border-lime-300/50 bg-lime-300/15 px-3 text-xs font-black uppercase text-lime-100 disabled:opacity-40"
+          >
+            {busy === "process" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Procesar cola ahora
+          </button>
+          <button type="button" onClick={() => void load()} className="inline-flex min-h-11 items-center gap-2 border-2 border-white/20 px-3 text-xs font-black uppercase"><RefreshCw className={`h-4 w-4 ${busy === "load" ? "animate-spin" : ""}`} />Actualizar</button>
+        </div>
       </div>
+
+      {data && data.emailConfigured === false && (
+        <div className="border-[3px] border-amber-400/50 bg-amber-500/10 px-4 py-3 text-sm font-bold text-amber-100">
+          El servidor no puede enviar campañas: {data.emailConfigError || "falta configuración de correo (EMAIL_SENDING_ENABLED, RESEND_API_KEY, SMTP_FROM)."}.
+          Las campañas se quedan en cola hasta corregir las variables en Vercel Production.
+        </div>
+      )}
 
       {(notice || error) && <div className={`border-[3px] px-4 py-3 text-sm font-bold ${error ? "border-red-400/50 bg-red-500/10 text-red-200" : "border-lime-300/50 bg-lime-300/10 text-lime-100"}`}>{error || notice}</div>}
 
@@ -791,7 +873,59 @@ export default function EmailCampaignCenter() {
         </section>
       </div>
 
-      <section className="border-[3px] border-white/15 bg-[#0c0c0c] p-4 sm:p-5"><h3 className="font-black uppercase">Campañas recientes</h3><div className="mt-3 space-y-2">{data?.campaigns.map((campaign) => <div key={campaign.id} className="grid gap-2 border-2 border-white/10 bg-black/30 p-3 text-xs sm:grid-cols-[1fr_auto] sm:items-center"><div><div className="font-black text-white">{campaign.subject}</div><div className="mt-1 font-semibold text-white/40">{AUDIENCE_LABELS[campaign.audience] ?? campaign.audience} · {new Date(campaign.createdAt).toLocaleString("es-CR")}</div></div><div className="font-black uppercase text-lime-200">{campaign.status} · {campaign.sent}/{campaign.total} enviados{campaign.failed ? ` · ${campaign.failed} fallidos` : ""}{campaign.skipped ? ` · ${campaign.skipped} omitidos` : ""}</div></div>)}{data && !data.campaigns.length && <p className="text-sm font-semibold text-white/40">Todavía no hay campañas.</p>}</div></section>
+      <section className="border-[3px] border-white/15 bg-[#0c0c0c] p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-black uppercase">Campañas recientes</h3>
+            <p className="mt-2 max-w-2xl text-xs font-semibold text-white/45">
+              El envío va en lotes (cron cada ~5 min). Si ves «queued» o «processing» sin avanzar, usá «Procesar cola ahora».
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={Boolean(busy)}
+            onClick={() => void processQueueNow()}
+            className="inline-flex min-h-10 items-center gap-2 border-2 border-lime-300/40 px-3 text-[10px] font-black uppercase text-lime-100 disabled:opacity-40"
+          >
+            {busy === "process" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Procesar cola
+          </button>
+        </div>
+        <div className="mt-3 space-y-2">
+          {data?.campaigns.map((campaign) => {
+            const remaining = Math.max(0, campaign.total - campaign.sent - campaign.failed - campaign.skipped);
+            return (
+              <div
+                key={campaign.id}
+                className="grid gap-2 border-2 border-white/10 bg-black/30 p-3 text-xs sm:grid-cols-[1fr_auto] sm:items-center"
+              >
+                <div>
+                  <div className="font-black text-white">{campaign.subject}</div>
+                  <div className="mt-1 font-semibold text-white/40">
+                    {AUDIENCE_LABELS[campaign.audience] ?? campaign.audience} ·{" "}
+                    {new Date(campaign.createdAt).toLocaleString("es-CR")}
+                    {campaign.lastProcessedAt
+                      ? ` · último lote ${new Date(campaign.lastProcessedAt).toLocaleString("es-CR")}`
+                      : ""}
+                  </div>
+                  {campaign.lastError ? (
+                    <div className="mt-1 font-semibold text-amber-200/90">{campaign.lastError}</div>
+                  ) : null}
+                </div>
+                <div className="font-black uppercase text-lime-200">
+                  {campaign.status} · {campaign.sent}/{campaign.total} enviados
+                  {campaign.failed ? ` · ${campaign.failed} fallidos` : ""}
+                  {campaign.skipped ? ` · ${campaign.skipped} omitidos` : ""}
+                  {remaining > 0 && campaign.status !== "completed" ? ` · ${remaining} pendientes` : ""}
+                </div>
+              </div>
+            );
+          })}
+          {data && !data.campaigns.length && (
+            <p className="text-sm font-semibold text-white/40">Todavía no hay campañas.</p>
+          )}
+        </div>
+      </section>
 
       <section className="border-[3px] border-red-300/25 bg-[#0c0c0c] p-4 sm:p-5">
         <h3 className="font-black uppercase">Bajas de correo y motivos</h3>

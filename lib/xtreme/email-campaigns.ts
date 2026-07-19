@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import type { Db } from "mongodb";
-import { emailEnabled, sendCampaignEmail } from "@/lib/helpers/email";
+import { emailConfigurationError, emailEnabled, sendCampaignEmail } from "@/lib/helpers/email";
 import {
   CLAIM_LINK_AUDIENCES,
   issueCampaignClaimLink,
@@ -50,6 +50,10 @@ export type EmailCampaignDoc = {
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
+  /** Último intento de procesamiento (cron o admin). */
+  lastProcessedAt?: Date;
+  /** Motivo legible si no se pudo procesar (config, etc.). */
+  lastError?: string;
 };
 
 type EmailDeliveryDoc = {
@@ -63,23 +67,71 @@ type EmailDeliveryDoc = {
   error?: string;
 };
 
+export type ProcessCampaignsResult = {
+  configured: boolean;
+  processed: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  campaignId?: string;
+  error?: string;
+  rounds?: number;
+};
+
 export function newEmailCampaignId() {
   return `email-${randomUUID()}`;
 }
 
-/** Procesa pocos destinatarios por corrida para no competir con correos transaccionales. */
-export async function processQueuedEmailCampaigns(db: Db, limit = 20) {
-  if (!emailEnabled()) return { configured: false, processed: 0, sent: 0, failed: 0, skipped: 0 };
+async function processOneCampaignBatch(db: Db, limit: number): Promise<ProcessCampaignsResult> {
+  if (!emailEnabled()) {
+    const configError =
+      emailConfigurationError() || "Configuración de correo incompleta en el servidor.";
+    // Marca la campaña más antigua para que el admin vea por qué no avanza.
+    const stuck = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne(
+      { status: { $in: ["queued", "processing"] } },
+      { sort: { createdAt: 1 } },
+    );
+    if (stuck) {
+      await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).updateOne(
+        { id: stuck.id },
+        {
+          $set: {
+            lastError: configError,
+            lastProcessedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        },
+      );
+    }
+    return {
+      configured: false,
+      processed: 0,
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      campaignId: stuck?.id,
+      error: configError,
+    };
+  }
 
   const campaign = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne(
     { status: { $in: ["queued", "processing"] } },
     { sort: { createdAt: 1 } },
   );
-  if (!campaign) return { configured: true, processed: 0, sent: 0, failed: 0, skipped: 0 };
+  if (!campaign) {
+    return { configured: true, processed: 0, sent: 0, failed: 0, skipped: 0 };
+  }
 
   await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).updateOne(
     { id: campaign.id },
-    { $set: { status: "processing", updatedAt: new Date() } },
+    {
+      $set: {
+        status: "processing",
+        lastProcessedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      $unset: { lastError: "" },
+    },
   );
 
   const deliveries = db.collection<EmailDeliveryDoc>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION);
@@ -92,7 +144,10 @@ export async function processQueuedEmailCampaigns(db: Db, limit = 20) {
     },
     { $set: { status: "queued", updatedAt: new Date() } },
   );
-  const batch = await deliveries.find({ campaignId: campaign.id, status: "queued" }).limit(limit).toArray();
+  const batch = await deliveries
+    .find({ campaignId: campaign.id, status: "queued" })
+    .limit(limit)
+    .toArray();
   let sent = 0;
   let failed = 0;
   let skipped = 0;
@@ -120,6 +175,22 @@ export async function processQueuedEmailCampaigns(db: Db, limit = 20) {
         }
       } catch (err) {
         console.error("CAMPAIGN CLAIM LINK", item.email, err);
+        const now = new Date();
+        const detail =
+          err instanceof Error ? err.message.slice(0, 160) : "Error al generar enlace de activación";
+        if (item.attempts + 1 < 3) {
+          await deliveries.updateOne(
+            { deliveryKey: item.deliveryKey },
+            { $set: { status: "queued", updatedAt: now, error: detail } },
+          );
+        } else {
+          failed += 1;
+          await deliveries.updateOne(
+            { deliveryKey: item.deliveryKey },
+            { $set: { status: "failed", updatedAt: now, error: detail } },
+          );
+        }
+        continue;
       }
     }
 
@@ -164,7 +235,7 @@ export async function processQueuedEmailCampaigns(db: Db, limit = 20) {
       );
     }
     // Resend parte de 5 req/s por equipo; dejamos espacio para correos transaccionales.
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 220));
   }
 
   const counts = await deliveries
@@ -174,8 +245,8 @@ export async function processQueuedEmailCampaigns(db: Db, limit = 20) {
     ])
     .toArray();
   const byStatus = Object.fromEntries(counts.map((row) => [row._id, row.count]));
-  const queued = (byStatus.queued || 0) + (byStatus.sending || 0);
-  const completed = queued === 0;
+  const remaining = (byStatus.queued || 0) + (byStatus.sending || 0);
+  const completed = remaining === 0;
   await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).updateOne(
     { id: campaign.id },
     {
@@ -184,11 +255,73 @@ export async function processQueuedEmailCampaigns(db: Db, limit = 20) {
         sent: byStatus.sent || 0,
         failed: byStatus.failed || 0,
         skipped: byStatus.skipped || 0,
+        lastProcessedAt: new Date(),
         updatedAt: new Date(),
         ...(completed ? { completedAt: new Date() } : {}),
       },
+      $unset: { lastError: "" },
     },
   );
 
-  return { configured: true, campaignId: campaign.id, processed: batch.length, sent, failed, skipped };
+  return {
+    configured: true,
+    campaignId: campaign.id,
+    processed: batch.length,
+    sent,
+    failed,
+    skipped,
+  };
+}
+
+/**
+ * Procesa destinos en cola. Por defecto un solo lote (cron ligero).
+ * Con `maxRounds` > 1 y `deadlineMs`, vacía varios lotes en la misma invocación
+ * (job dedicado / botón admin) sin pasarse del timeout de Vercel.
+ */
+export async function processQueuedEmailCampaigns(
+  db: Db,
+  limit = 20,
+  options?: { maxRounds?: number; deadlineMs?: number },
+): Promise<ProcessCampaignsResult> {
+  const maxRounds = Math.max(1, options?.maxRounds ?? 1);
+  const deadlineMs = options?.deadlineMs ?? 0;
+  const started = Date.now();
+
+  let totalProcessed = 0;
+  let totalSent = 0;
+  let totalFailed = 0;
+  let totalSkipped = 0;
+  let lastCampaignId: string | undefined;
+  let configured = true;
+  let error: string | undefined;
+  let rounds = 0;
+
+  for (let round = 0; round < maxRounds; round += 1) {
+    if (deadlineMs > 0 && Date.now() - started > deadlineMs) break;
+
+    const result = await processOneCampaignBatch(db, limit);
+    rounds += 1;
+    configured = result.configured;
+    if (result.campaignId) lastCampaignId = result.campaignId;
+    if (result.error) error = result.error;
+    totalProcessed += result.processed;
+    totalSent += result.sent;
+    totalFailed += result.failed;
+    totalSkipped += result.skipped;
+
+    // Sin configuración o sin trabajo pendiente: no tiene sentido seguir.
+    if (!result.configured) break;
+    if (result.processed === 0) break;
+  }
+
+  return {
+    configured,
+    processed: totalProcessed,
+    sent: totalSent,
+    failed: totalFailed,
+    skipped: totalSkipped,
+    campaignId: lastCampaignId,
+    error,
+    rounds,
+  };
 }

@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
       processDailyTrainingReminders(db, now),
       processActiveWorkoutReminders(db, now),
     ]);
-    const emailCampaigns = await processQueuedEmailCampaigns(db, 20);
+    // Respaldo ligero: el drenado principal va en /jobs/email-campaigns cada 5 min.
+    const emailCampaigns = await processQueuedEmailCampaigns(db, 10);
     return NextResponse.json({
       ok: true,
       date: businessDate(now),
