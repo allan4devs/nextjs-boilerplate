@@ -411,6 +411,18 @@ const STATUS_LABEL: Record<AdminMember["membershipStatus"], string> = {
   expired: "Vencida",
 };
 
+/** Filtros de la tabla de socios (membresía + verificación de correo). */
+type MemberListFilter = "all" | "active" | "warning" | "expired" | "verified" | "unverified";
+
+const MEMBER_LIST_FILTERS: { id: MemberListFilter; label: string }[] = [
+  { id: "all", label: "Todos" },
+  { id: "active", label: STATUS_LABEL.active },
+  { id: "warning", label: STATUS_LABEL.warning },
+  { id: "expired", label: STATUS_LABEL.expired },
+  { id: "verified", label: "Verificados" },
+  { id: "unverified", label: "Sin verificar" },
+];
+
 function money(crc: number) {
   return `CRC ${crc.toLocaleString("es-CR")}`;
 }
@@ -586,7 +598,7 @@ export default function XtremeAdminPage() {
   const [message, setMessage] = useState("");
   const [tab, setTab] = useState<Tab>("resumen");
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "warning" | "expired">("all");
+  const [statusFilter, setStatusFilter] = useState<MemberListFilter>("all");
   const [memberPage, setMemberPage] = useState(1);
   const [memberPageSize, setMemberPageSize] = useState(25);
   const [memberSort, setMemberSort] = useState<{
@@ -750,11 +762,28 @@ export default function XtremeAdminPage() {
     }
   }
 
+  const memberVerifyCounts = useMemo(() => {
+    if (!data) return { verified: 0, unverified: 0 };
+    let verified = 0;
+    let unverified = 0;
+    for (const m of data.members) {
+      if (m.emailVerified === true) verified += 1;
+      else unverified += 1;
+    }
+    return { verified, unverified };
+  }, [data]);
+
   const filteredMembers = useMemo(() => {
     if (!data) return [];
     const q = query.trim().toUpperCase();
     return data.members.filter((m) => {
-      if (statusFilter !== "all" && m.membershipStatus !== statusFilter) return false;
+      if (statusFilter === "verified") {
+        if (m.emailVerified !== true) return false;
+      } else if (statusFilter === "unverified") {
+        if (m.emailVerified === true) return false;
+      } else if (statusFilter !== "all" && m.membershipStatus !== statusFilter) {
+        return false;
+      }
       if (!q) return true;
       return (
         m.memberName.toUpperCase().includes(q) ||
@@ -762,7 +791,8 @@ export default function XtremeAdminPage() {
         m.phone.includes(q) ||
         m.coach.toUpperCase().includes(q) ||
         m.goal.toUpperCase().includes(q) ||
-        m.plan.toUpperCase().includes(q)
+        m.plan.toUpperCase().includes(q) ||
+        (m.email || "").toUpperCase().includes(q)
       );
     });
   }, [data, query, statusFilter]);
@@ -1846,20 +1876,33 @@ export default function XtremeAdminPage() {
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(["all", "active", "warning", "expired"] as const).map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setStatusFilter(s)}
-                        className={`border px-3 py-2 text-[11px] font-black uppercase ${
-                          statusFilter === s
-                            ? "border-lime-300 bg-lime-300 text-black"
-                            : "border-white/15 text-white/60"
-                        }`}
-                      >
-                        {s === "all" ? "Todos" : STATUS_LABEL[s]}
-                      </button>
-                    ))}
+                    {MEMBER_LIST_FILTERS.map((s) => {
+                      const countSuffix =
+                        s.id === "verified"
+                          ? ` (${memberVerifyCounts.verified})`
+                          : s.id === "unverified"
+                            ? ` (${memberVerifyCounts.unverified})`
+                            : "";
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setStatusFilter(s.id)}
+                          className={`border px-3 py-2 text-[11px] font-black uppercase ${
+                            statusFilter === s.id
+                              ? s.id === "verified"
+                                ? "border-cyan-300 bg-cyan-300 text-black"
+                                : s.id === "unverified"
+                                  ? "border-orange-300 bg-orange-300 text-black"
+                                  : "border-lime-300 bg-lime-300 text-black"
+                              : "border-white/15 text-white/60"
+                          }`}
+                        >
+                          {s.label}
+                          {countSuffix}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1868,7 +1911,12 @@ export default function XtremeAdminPage() {
                     <div className="flex items-center gap-3">
                       <Users className="h-5 w-5 text-orange-300" />
                       <h2 className="text-lg font-black uppercase">
-                        Socios ({filteredMembers.length}/{data.members.length})
+                        {statusFilter === "verified"
+                          ? "Correo verificado"
+                          : statusFilter === "unverified"
+                            ? "Sin verificar"
+                            : "Socios"}{" "}
+                        ({filteredMembers.length}/{data.members.length})
                       </h2>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -2116,7 +2164,11 @@ export default function XtremeAdminPage() {
                         {!filteredMembers.length && (
                           <tr>
                             <td colSpan={8} className="px-5 py-10 text-center text-sm font-semibold text-white/45">
-                              Sin resultados. Ajusta el filtro o genera seed demo.
+                              {statusFilter === "verified"
+                                ? "Nadie con correo verificado todavía."
+                                : statusFilter === "unverified"
+                                  ? "Todos los socios con correo ya están verificados."
+                                  : "Sin resultados. Ajustá el filtro o generá seed demo."}
                             </td>
                           </tr>
                         )}
