@@ -133,8 +133,7 @@ export default function SideNav({ os }: { os: MemberOs }) {
               <input
                 value={memberCedulaInput}
                 onChange={(event) => setMemberCedulaInput(formatCedulaInput(event.target.value))}
-                placeholder="Cedula (escanear o digitar)"
-                inputMode="numeric"
+                placeholder="Cédula o correo"
                 autoFocus
                 className="min-w-0 border-[3px] border-white/15 bg-black/45 px-4 py-3 text-center font-black tracking-widest text-white outline-none transition placeholder:tracking-normal placeholder:text-white/35 focus:border-[#d8ff3e]"
               />

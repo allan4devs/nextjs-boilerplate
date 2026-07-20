@@ -82,9 +82,7 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
                 ref={cedulaInputRef}
                 value={memberCedulaInput}
                 onChange={(event) => {
-                  const val = event.target.value;
-                  const isEmail = val.includes("@");
-                  setMemberCedulaInput(isEmail ? val : formatCedulaInput(val));
+                  setMemberCedulaInput(formatCedulaInput(event.target.value));
                   setNeedsRegistration(false);
                   setError("");
                 }}

@@ -13,7 +13,13 @@ export function onlyDigits(value: string) {
 }
 
 export function formatCedulaInput(value: string) {
-  return value.replace(/[^\d-]/g, "").slice(0, 20);
+  const str = String(value ?? "");
+  // Si contiene letras o '@', el usuario está escribiendo un correo electrónico
+  if (/[a-zA-Z@]/.test(str)) {
+    return str.trimStart().slice(0, 80);
+  }
+  // Si son solo números/guiones, formatear como cédula
+  return str.replace(/[^\d-]/g, "").slice(0, 20);
 }
 
 export function memberCode(key: string) {
