@@ -5,17 +5,22 @@
  */
 import type { Db } from "mongodb";
 import {
+  CHECKINS_COLLECTION,
   ENTITLEMENT_LEDGER_COLLECTION,
   ENTITLEMENTS_COLLECTION,
+  DAY_PASS_HOLD_DAYS,
   FREE_FIRST_DAY_OFFER_ID,
   FREE_FIRST_DAY_PLAN_LABEL,
   MEMBERS_COLLECTION,
   isInactivePlanLabel,
+  isOneDayPlanLabel,
   membershipCoversToday,
   membershipStatus,
   todayIso,
   type MemberDoc,
 } from "./shared";
+
+export { DAY_PASS_HOLD_DAYS, isOneDayPlanLabel };
 
 export type EntitlementKind = "plan" | "day_pass" | "class_credit" | "referral_bonus" | "admin_grant";
 
@@ -37,6 +42,11 @@ export type EntitlementDoc = {
   trainingIds?: string[];
   startsOn: string; // YYYY-MM-DD
   endsOn: string; // YYYY-MM-DD inclusive
+  /**
+   * Day passes are held unused until the first gym check-in.
+   * When set (YYYY-MM-DD), the pass was redeemed that business day and expires after it.
+   */
+  activatedOn?: string | null;
   /** null = unlimited class bookings within window */
   remainingBookings: number | null;
   source: EntitlementSource;
@@ -46,6 +56,19 @@ export type EntitlementDoc = {
   revokedAt?: Date | null;
   revokeReason?: string;
 };
+
+export function isDayPassOfferId(offerId: string | undefined | null) {
+  const id = String(offerId ?? "").trim();
+  return id === "day-pass" || id === FREE_FIRST_DAY_OFFER_ID;
+}
+
+/** Effective end of the unused-hold window for a day pass. */
+export function dayPassHoldEndsOn(startsOn: string, endsOn?: string) {
+  const holdEnd = addDaysIso(startsOn, DAY_PASS_HOLD_DAYS);
+  // Legacy grants set endsOn === startsOn (same calendar day). Extend those to the hold window.
+  if (!endsOn || endsOn <= startsOn) return holdEnd;
+  return endsOn > holdEnd ? endsOn : holdEnd;
+}
 
 export type LedgerEntry = {
   id: string;
@@ -84,8 +107,15 @@ function coversTraining(ent: EntitlementDoc, trainingId?: string) {
 
 function isActiveOn(ent: EntitlementDoc, date: string) {
   if (ent.status === "revoked" || ent.status === "exhausted") return false;
-  if (date < ent.startsOn || date > ent.endsOn) return false;
   if (ent.remainingBookings !== null && ent.remainingBookings <= 0) return false;
+
+  // Day pass pending first gym visit: stays valid through the hold window, not just grant day.
+  if (ent.kind === "day_pass" && !ent.activatedOn) {
+    const holdEnd = dayPassHoldEndsOn(ent.startsOn, ent.endsOn);
+    return date >= ent.startsOn && date <= holdEnd;
+  }
+
+  if (date < ent.startsOn || date > ent.endsOn) return false;
   return true;
 }
 
@@ -157,7 +187,9 @@ export function entitlementFromPayment(args: {
         offerId: "day-pass",
         label: args.optionLabel,
         startsOn: start,
-        endsOn: start,
+        // Held until first gym check-in; expires end of that visit day.
+        endsOn: addDaysIso(start, DAY_PASS_HOLD_DAYS),
+        activatedOn: null,
         remainingBookings: 1,
         source,
         status: "active",
@@ -218,14 +250,20 @@ export function addDaysIso(date: string, days: number) {
 }
 
 export async function listActiveEntitlements(db: Db, memberKey: string, onDate = todayIso()) {
+  // Include pending day passes whose stored endsOn may be the grant day (legacy)
+  // but are still inside the hold window via isActiveOn.
   const docs = await db
     .collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION)
     .find({
       memberKey,
       status: { $in: ["active", "exhausted"] },
       startsOn: { $lte: onDate },
-      endsOn: { $gte: onDate },
       revokedAt: null,
+      $or: [
+        { endsOn: { $gte: onDate } },
+        { kind: "day_pass", activatedOn: null },
+        { kind: "day_pass", activatedOn: { $exists: false } },
+      ],
     })
     .sort({ endsOn: 1 })
     .toArray();
@@ -302,7 +340,7 @@ export async function ensureLegacyEntitlement(db: Db, member: MemberDoc): Promis
   return [...existing, doc];
 }
 
-/** One-time free first day: full-day access (unlimited class bookings within the day). */
+/** One-time free first day: held until first gym check-in, then one calendar day. */
 export function freeFirstDayEntitlementShape(
   memberKey: string,
   today = todayIso(),
@@ -314,7 +352,8 @@ export function freeFirstDayEntitlementShape(
     offerId: FREE_FIRST_DAY_OFFER_ID,
     label: FREE_FIRST_DAY_PLAN_LABEL,
     startsOn: today,
-    endsOn: today,
+    endsOn: addDaysIso(today, DAY_PASS_HOLD_DAYS),
+    activatedOn: null,
     remainingBookings: null,
     source: { type: "admin", id: FREE_FIRST_DAY_OFFER_ID },
     status: "active",
@@ -337,6 +376,114 @@ export async function hasFreeFirstDayGrant(db: Db, memberKey: string) {
 export async function grantFreeFirstDayIfEligible(db: Db, memberKey: string, today = todayIso()) {
   if (await hasFreeFirstDayGrant(db, memberKey)) return null;
   return grantEntitlement(db, freeFirstDayEntitlementShape(memberKey, today));
+}
+
+/**
+ * Burn a pending day pass on the first gym check-in.
+ * The pass then covers only that business day (endsOn = visit date).
+ * Multi-day plan entitlements take priority so we never waste a day pass.
+ */
+export async function activateDayPassOnCheckin(
+  db: Db,
+  memberKey: string,
+  date = todayIso(),
+): Promise<EntitlementDoc | null> {
+  if (!memberKey) return null;
+
+  const entitlements = await listMemberEntitlements(db, memberKey);
+  const hasActivePlan = entitlements.some(
+    (ent) => ent.kind === "plan" && ent.status === "active" && date >= ent.startsOn && date <= ent.endsOn,
+  );
+  if (hasActivePlan) return null;
+
+  const pending = entitlements
+    .filter((ent) => {
+      if (ent.kind !== "day_pass") return false;
+      if (ent.status === "revoked") return false;
+      if (ent.activatedOn) return false;
+      // Pending use: still inside hold window (legacy same-day endsOn is extended).
+      const holdEnd = dayPassHoldEndsOn(ent.startsOn, ent.endsOn);
+      return date >= ent.startsOn && date <= holdEnd;
+    })
+    .sort((a, b) => a.endsOn.localeCompare(b.endsOn) || a.createdAt.getTime() - b.createdAt.getTime());
+
+  let target: EntitlementDoc | null = pending[0] ?? null;
+
+  // Membership-only one-day plan (no entitlement yet): create and activate today.
+  if (!target) {
+    const member = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+      normalizedName: memberKey,
+    });
+    const planLabel = String(member?.membership?.plan ?? "");
+    if (!isOneDayPlanLabel(planLabel)) return null;
+
+    // If membership already expired long ago and was not a held day pass, skip.
+    const startedAt = String(member?.membership?.startedAt || date).slice(0, 10);
+    const holdEnd = dayPassHoldEndsOn(startedAt, member?.membership?.nextBillingDate);
+    if (date < startedAt || date > holdEnd) return null;
+
+    const isFree =
+      planLabel === FREE_FIRST_DAY_PLAN_LABEL || /primer\s*d[ií]a/i.test(planLabel);
+    if (isFree && (await hasFreeFirstDayGrant(db, memberKey))) {
+      // Grant exists but was filtered (e.g. already activated) — nothing to do.
+      return null;
+    }
+
+    const shape = isFree
+      ? freeFirstDayEntitlementShape(memberKey, startedAt)
+      : {
+          id: newEntitlementId("day"),
+          memberKey,
+          kind: "day_pass" as const,
+          offerId: "day-pass",
+          label: planLabel || "Pase del día",
+          startsOn: startedAt,
+          endsOn: addDaysIso(startedAt, DAY_PASS_HOLD_DAYS),
+          activatedOn: null as string | null,
+          remainingBookings: 1 as number | null,
+          source: { type: "migration" as const, id: "membership-day-pass" },
+          status: "active" as const,
+        };
+    target = await grantEntitlement(db, shape);
+  }
+
+  const now = new Date();
+  await db.collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION).updateOne(
+    { id: target.id, memberKey, activatedOn: null },
+    {
+      $set: {
+        activatedOn: date,
+        startsOn: date,
+        endsOn: date,
+        status: target.remainingBookings === 0 ? "exhausted" : "active",
+        updatedAt: now,
+      },
+    },
+  );
+
+  const planLabel = target.label || target.offerId || "Pase del día";
+  await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+    { normalizedName: memberKey },
+    {
+      $set: {
+        "membership.plan": planLabel,
+        "membership.nextBillingDate": date,
+        "membership.status": "active",
+        "membership.startedAt": target.startsOn || date,
+        updatedAt: now,
+      },
+    },
+  );
+
+  await writeLedger(db, {
+    memberKey,
+    entitlementId: target.id,
+    action: "consume",
+    note: `Pase de un día activado por ingreso al gym (${date})`,
+    source: target.source,
+  });
+
+  return db.collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION).findOne({ id: target.id });
 }
 
 export async function grantEntitlement(
@@ -370,10 +517,15 @@ export async function grantEntitlement(
       { normalizedName: doc.memberKey },
       { projection: { membership: 1 } },
     );
-    const nextBillingDate =
-      existing?.membership?.nextBillingDate && existing.membership.nextBillingDate > doc.endsOn
-        ? existing.membership.nextBillingDate
+    // Pending day pass: membership stays active for the hold window until first check-in.
+    const effectiveEndsOn =
+      doc.kind === "day_pass" && !doc.activatedOn
+        ? dayPassHoldEndsOn(doc.startsOn, doc.endsOn)
         : doc.endsOn;
+    const nextBillingDate =
+      existing?.membership?.nextBillingDate && existing.membership.nextBillingDate > effectiveEndsOn
+        ? existing.membership.nextBillingDate
+        : effectiveEndsOn;
     const label = planLabel || existing?.membership?.plan || doc.label || "Plan";
     await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
       { normalizedName: doc.memberKey },
@@ -590,4 +742,58 @@ export async function decideBooking(
   }
 
   return { ...decision, entitlements };
+}
+
+/**
+ * Repair database records for members with 1-day pass plans who have zero check-ins.
+ * Ensures their membership.nextBillingDate and pending day_pass entitlement endsOn are extended
+ * to the hold window (startsOn + DAY_PASS_HOLD_DAYS) so they show active until check-in.
+ */
+export async function fixUnactivatedDayPasses(db: Db) {
+  const now = new Date();
+  const today = todayIso();
+  const members = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
+
+  let fixedCount = 0;
+  for (const member of members) {
+    const planLabel = String(member.membership?.plan ?? "");
+    if (!isOneDayPlanLabel(planLabel)) continue;
+
+    const memberKey = member.normalizedName;
+    if (!memberKey) continue;
+
+    // Check if member has checked in before
+    const checkinCount = await db.collection(CHECKINS_COLLECTION).countDocuments({ normalizedName: memberKey });
+    if (checkinCount > 0) continue; // Already visited at least once
+
+    const startedAt = String(member.membership?.startedAt || today).slice(0, 10);
+    const targetNextBilling = addDaysIso(startedAt, DAY_PASS_HOLD_DAYS);
+
+    if (member.membership?.nextBillingDate !== targetNextBilling || member.membership?.status !== "active") {
+      await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName: memberKey },
+        {
+          $set: {
+            "membership.nextBillingDate": targetNextBilling,
+            "membership.status": "active",
+            updatedAt: now,
+          },
+        },
+      );
+      fixedCount += 1;
+    }
+
+    // Also update any pending day_pass entitlements for this member
+    await db.collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION).updateMany(
+      { memberKey, kind: "day_pass", activatedOn: null },
+      {
+        $set: {
+          endsOn: targetNextBilling,
+          status: "active",
+          updatedAt: now,
+        },
+      },
+    );
+  }
+  return fixedCount;
 }

@@ -29,6 +29,7 @@ import {
   toUtcDate,
 } from "@/lib/xtreme/shared";
 import {
+  DAY_PASS_HOLD_DAYS,
   entitlementFromPayment,
   grantEntitlement,
   type EntitlementDoc,
@@ -85,7 +86,8 @@ type PayPalCaptureResponse = {
 function planDays(optionId: string) {
   switch (optionId) {
     case "day-pass":
-      return 1;
+      // Held until first gym check-in; membership shows the hold window.
+      return DAY_PASS_HOLD_DAYS;
     case "week":
       return 7;
     case "fortnight":
@@ -426,6 +428,11 @@ export async function POST(req: NextRequest) {
         });
         if (entShape.kind === "plan") {
           entShape.endsOn = nextBillingDate;
+        }
+        // Day pass: keep hold-window endsOn from entitlementFromPayment (activate on check-in).
+        if (entShape.kind === "day_pass") {
+          entShape.endsOn = nextBillingDate;
+          entShape.activatedOn = null;
         }
         entitlement = await grantEntitlement(db, entShape);
         membershipUntil = entitlement.endsOn;

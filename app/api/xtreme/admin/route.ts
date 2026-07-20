@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import { activateDayPassOnCheckin, fixUnactivatedDayPasses } from "@/lib/xtreme/entitlements";
 import {
   CHECKINS_COLLECTION,
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
@@ -160,6 +161,8 @@ export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const date = todayIso();
+
+    await fixUnactivatedDayPasses(db).catch(() => null);
 
     const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
 
@@ -749,6 +752,20 @@ export async function POST(req: NextRequest) {
       };
 
       await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+      let activeMsStatus = ms.status;
+      try {
+        const activatedEnt = await activateDayPassOnCheckin(db, normalizedName, date);
+        if (activatedEnt) {
+          const updatedMember = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+          if (updatedMember) {
+            const newMs = membershipStatus(updatedMember.membership);
+            activeMsStatus = newMs.status;
+            checkin.membershipStatus = newMs.status;
+          }
+        }
+      } catch (actErr) {
+        console.error("XTREME ADMIN DAY PASS ACTIVATE ERROR", actErr);
+      }
       await writeAudit(db, {
         actorRole: role,
         action: "member.checkin",
@@ -756,7 +773,7 @@ export async function POST(req: NextRequest) {
         targetId: normalizedName,
         summary: `Ingreso manual: ${checkin.memberName}`,
       });
-      return NextResponse.json({ ok: true, checkin, membershipStatus: ms.status });
+      return NextResponse.json({ ok: true, checkin, membershipStatus: activeMsStatus });
     }
 
     // Pago manual - solo super admin

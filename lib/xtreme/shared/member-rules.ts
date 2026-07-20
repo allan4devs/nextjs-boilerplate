@@ -7,12 +7,34 @@ import {
   type WorkoutEntry,
 } from "./types";
 
+import { FREE_FIRST_DAY_PLAN_LABEL } from "./config";
+
 const LEGACY_ACTIVE_CHECKIN_MINUTES = 90;
 
 /** Plan labels that must never unlock class booking by themselves. */
 export function isInactivePlanLabel(plan: string | undefined | null) {
   const value = String(plan ?? "").trim();
   return !value || value === "-" || /^sin\s*plan/i.test(value);
+}
+
+/** Labels / offer ids that grant a single training day, activated on first gym entry. */
+export function isOneDayPlanLabel(plan: string | undefined | null) {
+  const value = String(plan ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!value) return false;
+  if (value === FREE_FIRST_DAY_PLAN_LABEL.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")) {
+    return true;
+  }
+  return (
+    /primer\s*d[ií]?a/.test(value) ||
+    /pase\s*(del\s*)?d[ií]?a/.test(value) ||
+    value === "pase dia" ||
+    value === "day-pass" ||
+    value === "day pass"
+  );
 }
 
 export function isCheckinOpen(checkin: CheckinDoc, now = Date.now()) {
@@ -58,8 +80,15 @@ export function membershipStatus(membership?: Membership) {
 
   const today = toUtcDate(todayIso());
   const daysRemaining = Math.ceil((toUtcDate(nextBillingDate).getTime() - today.getTime()) / 86_400_000);
+  const isOneDay = isOneDayPlanLabel(plan);
   const status: "active" | "warning" | "expired" =
-    daysRemaining < 0 ? "expired" : daysRemaining <= 5 ? "warning" : "active";
+    daysRemaining < 0
+      ? "expired"
+      : isOneDay
+        ? "active"
+        : daysRemaining <= 5
+          ? "warning"
+          : "active";
   return { plan, nextBillingDate, daysRemaining, status, startedAt };
 }
 

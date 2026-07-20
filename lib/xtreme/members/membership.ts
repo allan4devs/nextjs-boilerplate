@@ -1,3 +1,4 @@
+import { DAY_PASS_HOLD_DAYS } from "@/lib/xtreme/shared/config";
 import type { Membership, TrainingPlan } from "./types";
 
 const DAY_MS = 86_400_000;
@@ -46,13 +47,16 @@ export function createDefaultMembership(today: string): Membership {
   return createInactiveMembership(today);
 }
 
-/** Self-serve first visit: one calendar day of access (not a paid monthly plan). */
+/** Self-serve first visit: held until first gym check-in, then one calendar day. */
 export function createFreeFirstDayMembership(today: string): Membership {
+  const holdEnd = new Date(`${today}T00:00:00.000Z`);
+  holdEnd.setUTCDate(holdEnd.getUTCDate() + DAY_PASS_HOLD_DAYS);
   return {
     plan: "Primer día gratis",
     status: "active",
     startedAt: today,
-    nextBillingDate: today,
+    // Pending use window; snapped to the visit day on first reception/kiosk check-in.
+    nextBillingDate: holdEnd.toISOString().slice(0, 10),
   };
 }
 

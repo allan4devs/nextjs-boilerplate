@@ -1754,7 +1754,7 @@ export default function EmailCampaignCenter() {
                   <span className="font-black text-white">{item.email}</span>
                   <span className="font-black uppercase text-red-200">{OPT_OUT_REASON_LABELS[item.reason || ""] || item.reason || "Sin motivo"}</span>
                 </div>
-                {item.feedback && <p className="mt-2 whitespace-pre-wrap font-semibold leading-relaxed text-white/60">"{item.feedback}"</p>}
+                {item.feedback && <p className="mt-2 whitespace-pre-wrap font-semibold leading-relaxed text-white/60">&quot;{item.feedback}&quot;</p>}
                 {date && <p className="mt-2 font-semibold text-white/30">{new Date(date).toLocaleString("es-CR")}</p>}
               </div>
             );

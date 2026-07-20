@@ -11,6 +11,7 @@ import {
   inviteBaseUrlFromRequest,
   inviteExistingMemberToApp,
 } from "@/lib/xtreme/member-app-invite";
+import { activateDayPassOnCheckin } from "@/lib/xtreme/entitlements";
 import {
   CHECKINS_COLLECTION,
   MEMBERS_COLLECTION,
@@ -699,6 +700,19 @@ export async function POST(req: NextRequest) {
             note: "Alta + ingreso en recepcion",
           };
           await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+          try {
+            const activatedEnt = await activateDayPassOnCheckin(db, normalizedName, date);
+            if (activatedEnt) {
+              const updatedMember = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+              if (updatedMember) {
+                const newMs = membershipStatus(updatedMember.membership);
+                membershipStatusValue = newMs.status;
+                checkin.membershipStatus = newMs.status;
+              }
+            }
+          } catch (actErr) {
+            console.error("XTREME RECEPTION DAY PASS ACTIVATE ERROR", actErr);
+          }
           await recordEvent(db, {
             type: "checkin_completed",
             memberId: normalizedName,

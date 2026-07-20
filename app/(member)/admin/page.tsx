@@ -4402,7 +4402,7 @@ function UserDetailModal({
                   </div>
 
                   {member.trainingPlan.coachNote && (
-                    <div className="mt-3 text-xs italic text-white/70 border-l-2 border-lime-300/40 pl-3">"{member.trainingPlan.coachNote}"</div>
+                    <div className="mt-3 text-xs italic text-white/70 border-l-2 border-lime-300/40 pl-3">&quot;{member.trainingPlan.coachNote}&quot;</div>
                   )}
                 </div>
               ) : (

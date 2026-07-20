@@ -175,7 +175,7 @@ export default function PwaRuntime() {
             : "Reservas, racha y progreso como una app, sin buscar el sitio."}
       </p>
       <div className="mt-4 flex gap-2">
-        {!isIos && (installPrompt || promptRef.current) && (
+        {!isIos && installPrompt && (
           <button
             type="button"
             onClick={() => void install()}

@@ -29,6 +29,8 @@ export const EMAIL_SUPPRESSIONS_COLLECTION = "xtreme_gym_email_suppressions";
 
 export const FREE_FIRST_DAY_OFFER_ID = "free-first-day";
 export const FREE_FIRST_DAY_PLAN_LABEL = "Primer día gratis";
+/** Max calendar days a day pass / free first day can sit unused before expiring (effectively unlimited until first gym check-in). */
+export const DAY_PASS_HOLD_DAYS = 3650;
 export const GYM_CAPACITY = 85;
 export const PIN_PEPPER = "xtreme-gym-member-pin-v1";
 

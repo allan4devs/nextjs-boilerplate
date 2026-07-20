@@ -129,7 +129,7 @@ function LevelAndStreak({ model, actions }: Props) {
           <div>
             <GameLabel tone="orange">Racha activa</GameLabel>
             <p className="mt-2 text-xl font-black uppercase">No soltés el ritmo</p>
-            <p className="mt-2 text-sm font-bold italic text-orange-100/75">"{model.streak.phrase}"</p>
+            <p className="mt-2 text-sm font-bold italic text-orange-100/75">&quot;{model.streak.phrase}&quot;</p>
           </div>
         </div>
       </button>

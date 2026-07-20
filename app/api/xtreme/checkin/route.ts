@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import { activateDayPassOnCheckin } from "@/lib/xtreme/entitlements";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 import {
   CHECKINS_COLLECTION,
@@ -196,13 +197,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: MEMBER_NOT_FOUND_MESSAGE }, { status: 404 });
     }
 
-    const member = resolved.member;
-    const displayName = String(member.memberName || "").trim();
+    let currentMember = resolved.member;
+    const displayName = String(currentMember.memberName || "").trim();
     if (!displayName) {
       return NextResponse.json({ error: MEMBER_NOT_FOUND_MESSAGE }, { status: 404 });
     }
     const normalizedName =
-      resolved.memberKey || member.normalizedName || normalizeKey(displayName);
+      resolved.memberKey || currentMember.normalizedName || normalizeKey(displayName);
     const accessCode = formatAccessCode(memberAccessCode(normalizedName));
 
     // Auth: staff header OR valid member PIN (required for self-service kiosk).
@@ -230,7 +231,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const ms = membershipStatus(member.membership);
+    const ms = membershipStatus(currentMember.membership);
     const now = new Date();
     const date = todayIso();
 
@@ -245,7 +246,7 @@ export async function POST(req: NextRequest) {
         ok: true,
         duplicate: true,
         message: "Esta persona ya aparece dentro del gimnasio.",
-        member: staffRole ? toAdminMember(member) : toKioskMember(member, { hasPin: true }),
+        member: staffRole ? toAdminMember(currentMember) : toKioskMember(currentMember, { hasPin: true }),
         membershipStatus: ms.status,
         checkin: recent,
         status,
@@ -267,6 +268,22 @@ export async function POST(req: NextRequest) {
     };
 
     await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+
+    // Activate 1-day pass on check-in if member has a pending day pass
+    let activeMs = ms;
+    try {
+      const activatedEnt = await activateDayPassOnCheckin(db, normalizedName, date);
+      if (activatedEnt) {
+        const updatedMember = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+        if (updatedMember) {
+          currentMember = updatedMember;
+          activeMs = membershipStatus(updatedMember.membership);
+          checkin.membershipStatus = activeMs.status;
+        }
+      }
+    } catch (actErr) {
+      console.error("XTREME DAY PASS ACTIVATE ERROR", actErr);
+    }
 
     const priorCheckins = await db.collection<CheckinDoc>(CHECKINS_COLLECTION).countDocuments({
       normalizedName,
@@ -330,15 +347,15 @@ export async function POST(req: NextRequest) {
       ok: true,
       duplicate: false,
       message:
-        ms.status === "expired"
+        activeMs.status === "expired"
           ? "Ingreso registrado. Membresia vencida - hablar con recepcion."
-          : ms.status === "warning"
+          : activeMs.status === "warning"
             ? "Bienvenido. Tu membresia vence pronto."
             : referralReward.rewarded
               ? "Bienvenido. Referido calificado: +7 dias para vos y tu amigo."
               : "Bienvenido a Xtreme Gym.",
-      member: staffRole ? toAdminMember(member) : toKioskMember(member, { hasPin: true }),
-      membershipStatus: ms.status,
+      member: staffRole ? toAdminMember(currentMember) : toKioskMember(currentMember, { hasPin: true }),
+      membershipStatus: activeMs.status,
       checkin,
       status,
       firstCheckin: isFirstCheckin,
