@@ -72,7 +72,7 @@ type CenterData = {
     id: string;
     subject: string;
     audience: AudienceId;
-    status: "queued" | "processing" | "completed";
+    status: "queued" | "processing" | "completed" | "cancelled";
     total: number;
     sent: number;
     failed: number;
@@ -1009,6 +1009,42 @@ export default function EmailCampaignCenter() {
     }
   }
 
+  async function stopCampaign(campaignId: string, subject: string) {
+    const ok = window.confirm(
+      `¿Detener la cola de envíos de «${subject}»?\n\n` +
+        "Los correos que ya salieron se mantienen. Los pendientes NO se envían.",
+    );
+    if (!ok) return;
+    setBusy(`stop:${campaignId}`);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/xtreme/admin/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "stop_campaign", campaignId }),
+      });
+      const json = (await response.json()) as {
+        ok?: boolean;
+        stoppedPending?: number;
+        sent?: number;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(json.error || "No se pudo detener la campaña.");
+      setNotice(
+        `Campaña detenida. ${json.stoppedPending ?? 0} pendientes cancelados · ${json.sent ?? 0} ya enviados se conservan.`,
+      );
+      if (trackingCampaignId === campaignId) {
+        await loadCampaignTracking(campaignId, trackingFilter);
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo detener la campaña.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function processQueueNow() {
     setBusy("process"); setError(""); setNotice("");
     try {
@@ -1388,18 +1424,29 @@ export default function EmailCampaignCenter() {
             const remaining = Math.max(0, campaign.total - campaign.sent - campaign.failed - campaign.skipped);
             const t = campaign.tracking;
             const selected = trackingCampaignId === campaign.id;
+            const canStop = campaign.status === "queued" || campaign.status === "processing";
+            const statusTone =
+              campaign.status === "cancelled"
+                ? "text-red-300"
+                : campaign.status === "completed"
+                  ? "text-lime-200"
+                  : "text-amber-200";
             return (
-              <button
-                type="button"
+              <div
                 key={campaign.id}
-                onClick={() => void loadCampaignTracking(campaign.id, trackingFilter)}
-                className={`grid w-full gap-2 border-2 p-3 text-left text-xs transition sm:grid-cols-[1fr_auto] sm:items-center ${
+                className={`grid gap-2 border-2 p-3 text-xs sm:grid-cols-[1fr_auto] sm:items-center ${
                   selected
                     ? "border-lime-300/50 bg-lime-300/10"
-                    : "border-white/10 bg-black/30 hover:border-white/25"
+                    : campaign.status === "cancelled"
+                      ? "border-red-300/25 bg-black/30"
+                      : "border-white/10 bg-black/30"
                 }`}
               >
-                <div>
+                <button
+                  type="button"
+                  onClick={() => void loadCampaignTracking(campaign.id, trackingFilter)}
+                  className="min-w-0 text-left"
+                >
                   <div className="font-black text-white">{campaign.subject}</div>
                   <div className="mt-1 font-semibold text-white/40">
                     {AUDIENCE_LABELS[campaign.audience] ?? campaign.audience} ·{" "}
@@ -1430,16 +1477,44 @@ export default function EmailCampaignCenter() {
                   {campaign.lastError ? (
                     <div className="mt-1 font-semibold text-amber-200/90">{campaign.lastError}</div>
                   ) : null}
-                </div>
-                <div className="font-black uppercase text-lime-200">
-                  {campaign.status} · {campaign.sent}/{campaign.total}
-                  {campaign.failed ? ` · ${campaign.failed} fallidos` : ""}
-                  {remaining > 0 && campaign.status !== "completed" ? ` · ${remaining} en cola` : ""}
-                  <div className="mt-1 text-[10px] font-bold normal-case tracking-normal text-white/40">
-                    {selected ? "Seguimiento abierto ↓" : "Ver detalle →"}
+                  <div className="mt-1 text-[10px] font-bold text-white/40">
+                    {selected ? "Seguimiento abierto ↓" : "Tocá para ver detalle →"}
                   </div>
+                </button>
+                <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                  <div className={`font-black uppercase ${statusTone}`}>
+                    {campaign.status === "cancelled"
+                      ? "DETENIDA"
+                      : campaign.status === "completed"
+                        ? "COMPLETADA"
+                        : campaign.status === "processing"
+                          ? "ENVIANDO"
+                          : "EN COLA"}
+                    {" · "}
+                    {campaign.sent}/{campaign.total}
+                    {campaign.failed ? ` · ${campaign.failed} fallidos` : ""}
+                    {campaign.skipped ? ` · ${campaign.skipped} omitidos` : ""}
+                    {remaining > 0 && canStop ? ` · ${remaining} pendientes` : ""}
+                  </div>
+                  {canStop ? (
+                    <button
+                      type="button"
+                      disabled={Boolean(busy)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void stopCampaign(campaign.id, campaign.subject);
+                      }}
+                      className="inline-flex min-h-9 items-center justify-center border-2 border-red-300/50 bg-red-500/10 px-3 text-[10px] font-black uppercase tracking-wide text-red-200 transition hover:bg-red-500/20 disabled:opacity-40"
+                    >
+                      {busy === `stop:${campaign.id}` ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Detener cola"
+                      )}
+                    </button>
+                  ) : null}
                 </div>
-              </button>
+              </div>
             );
           })}
           {data && !data.campaigns.length && (

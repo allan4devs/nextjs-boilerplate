@@ -199,7 +199,7 @@ export type EmailCampaignDoc = {
   ctaLabel?: string;
   ctaPath?: string;
   audience: EmailAudience;
-  status: "queued" | "processing" | "completed";
+  status: "queued" | "processing" | "completed" | "cancelled";
   total: number;
   sent: number;
   failed: number;
@@ -207,6 +207,7 @@ export type EmailCampaignDoc = {
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
+  cancelledAt?: Date;
   /** Último intento de procesamiento (cron o admin). */
   lastProcessedAt?: Date;
   /** Motivo legible si no se pudo procesar (config, etc.). */
@@ -271,9 +272,32 @@ export async function reclaimStuckCampaignDeliveries(
 ): Promise<number> {
   const maxAgeMs = options?.forceAll ? 0 : (options?.maxAgeMs ?? 90_000);
   const cutoff = new Date(Date.now() - maxAgeMs);
+
+  // Solo reencolar envíos de campañas aún activas (no canceladas / terminadas).
+  const activeIds = options?.campaignId
+    ? [options.campaignId]
+    : (
+        await db
+          .collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION)
+          .find({ status: { $in: ["queued", "processing"] } })
+          .project({ id: 1 })
+          .toArray()
+      ).map((c) => c.id);
+
+  if (!activeIds.length) return 0;
+
+  // Si pidieron un id concreto pero la campaña ya no está activa, no revivir cola.
+  if (options?.campaignId) {
+    const active = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne({
+      id: options.campaignId,
+      status: { $in: ["queued", "processing"] },
+    });
+    if (!active) return 0;
+  }
+
   const filter: Record<string, unknown> = {
     status: "sending",
-    ...(options?.campaignId ? { campaignId: options.campaignId } : {}),
+    campaignId: { $in: activeIds },
     ...(options?.forceAll ? {} : { updatedAt: { $lt: cutoff } }),
   };
   const result = await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).updateMany(filter, {
@@ -284,6 +308,93 @@ export async function reclaimStuckCampaignDeliveries(
     },
   });
   return result.modifiedCount;
+}
+
+/**
+ * Detiene una campaña: no se procesan más envíos.
+ * Los queued/sending pendientes pasan a skipped (los ya sent se conservan).
+ */
+export async function stopCampaignQueue(
+  db: Db,
+  campaignId: string,
+  reason = "Detenido por el administrador.",
+): Promise<{
+  ok: boolean;
+  error?: string;
+  stoppedPending: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+}> {
+  const id = String(campaignId || "").trim();
+  if (!id) return { ok: false, error: "Falta el id de la campaña.", stoppedPending: 0, sent: 0, failed: 0, skipped: 0 };
+
+  const campaigns = db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION);
+  const campaign = await campaigns.findOne({ id });
+  if (!campaign) {
+    return { ok: false, error: "No encontramos esa campaña.", stoppedPending: 0, sent: 0, failed: 0, skipped: 0 };
+  }
+  if (campaign.status === "completed" || campaign.status === "cancelled") {
+    return {
+      ok: false,
+      error:
+        campaign.status === "cancelled"
+          ? "Esa campaña ya estaba detenida."
+          : "Esa campaña ya terminó; no hay cola que detener.",
+      stoppedPending: 0,
+      sent: campaign.sent || 0,
+      failed: campaign.failed || 0,
+      skipped: campaign.skipped || 0,
+    };
+  }
+
+  const now = new Date();
+  const deliveries = db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION);
+  const stopResult = await deliveries.updateMany(
+    {
+      campaignId: id,
+      status: { $in: ["queued", "sending"] },
+    },
+    {
+      $set: {
+        status: "skipped",
+        updatedAt: now,
+        error: reason,
+      },
+    },
+  );
+
+  const counts = await deliveries
+    .aggregate<{ _id: string; count: number }>([
+      { $match: { campaignId: id } },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ])
+    .toArray();
+  const byStatus = Object.fromEntries(counts.map((row) => [row._id, row.count]));
+
+  await campaigns.updateOne(
+    { id },
+    {
+      $set: {
+        status: "cancelled",
+        sent: byStatus.sent || 0,
+        failed: byStatus.failed || 0,
+        skipped: byStatus.skipped || 0,
+        cancelledAt: now,
+        lastProcessedAt: now,
+        updatedAt: now,
+        lastError: reason,
+      },
+    },
+  );
+
+  return {
+    ok: true,
+    stoppedPending: stopResult.modifiedCount,
+    sent: byStatus.sent || 0,
+    failed: byStatus.failed || 0,
+    skipped: byStatus.skipped || 0,
+  };
 }
 
 /**
@@ -356,8 +467,20 @@ async function processOneCampaignBatch(
     return { configured: true, processed: 0, sent: 0, failed: 0, skipped: 0 };
   }
 
+  // Si el admin la detuvo entre rondas, no tocar.
+  if (campaign.status === "cancelled") {
+    return {
+      configured: true,
+      processed: 0,
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      campaignId: campaign.id,
+    };
+  }
+
   await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).updateOne(
-    { id: campaign.id },
+    { id: campaign.id, status: { $in: ["queued", "processing"] } },
     {
       $set: {
         status: "processing",
@@ -368,9 +491,26 @@ async function processOneCampaignBatch(
     },
   );
 
+  // Releer: pudo haber sido cancelada en paralelo.
+  const stillActive = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne({
+    id: campaign.id,
+    status: { $in: ["queued", "processing"] },
+  });
+  if (!stillActive) {
+    return {
+      configured: true,
+      processed: 0,
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      campaignId: campaign.id,
+    };
+  }
+
   const deliveries = db.collection<EmailDeliveryDoc>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION);
 
   // 1) Desbloquear "sending" colgados (antes 10 min → se veía “pegado”).
+  // No reencolar si la campaña ya no está activa (cancelada).
   const reclaimed = await reclaimStuckCampaignDeliveries(db, {
     campaignId: campaign.id,
     maxAgeMs: options?.forceUnstick ? 0 : 90_000,
@@ -406,6 +546,15 @@ async function processOneCampaignBatch(
   let skipped = alreadySentSkipped;
 
   for (const item of batch) {
+    // Respetar detención del admin a mitad de lote.
+    const live = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne(
+      { id: campaign.id },
+      { projection: { status: 1 } },
+    );
+    if (!live || live.status === "cancelled" || live.status === "completed") {
+      break;
+    }
+
     const claimed = await deliveries.updateOne(
       { deliveryKey: item.deliveryKey, status: "queued" },
       { $set: { status: "sending", updatedAt: new Date() }, $inc: { attempts: 1 } },

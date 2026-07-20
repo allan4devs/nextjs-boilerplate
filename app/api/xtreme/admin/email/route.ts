@@ -13,6 +13,7 @@ import {
   reclaimStuckCampaignDeliveries,
   resolveCampaignCta,
   skipAlreadySentInQueue,
+  stopCampaignQueue,
 } from "@/lib/xtreme/email-campaigns";
 import { buildAudienceEmails, EMAIL_AUDIENCE_IDS } from "@/lib/xtreme/email-audiences";
 import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
@@ -524,6 +525,32 @@ export async function POST(req: NextRequest) {
           ? "/registro/confirmar?token=…"
           : resolved.ctaPath,
       });
+    }
+
+    if (action === "stop_campaign") {
+      const campaignId = String(body.campaignId ?? "").trim();
+      if (!campaignId) {
+        return NextResponse.json({ error: "Indicá la campaña a detener." }, { status: 400 });
+      }
+      const result = await stopCampaignQueue(
+        db,
+        campaignId,
+        "Detenido por el administrador. Los envíos pendientes no se mandan.",
+      );
+      await writeAudit(db, {
+        actorRole: "super",
+        action: "email_campaign.stop",
+        targetType: "system",
+        targetId: campaignId,
+        summary: result.ok
+          ? `Campaña detenida: ${result.stoppedPending} pendientes cancelados, ${result.sent} ya enviados`
+          : `No se detuvo: ${result.error}`,
+        meta: result,
+      });
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 409 });
+      }
+      return NextResponse.json({ ok: true, ...result });
     }
 
     if (action === "process_queue") {
