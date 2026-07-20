@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Póster Oficial App | Xtreme Gym Costa Rica</title>
   <link rel="stylesheet" href="xtreme-gym-registro-app.css">
+  <script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
 </head>
 
 <body>
@@ -35,6 +36,7 @@
         <!-- HEADER -->
         <header class="header">
           <div class="top-badge">⚡ APP OFICIAL DE SOCIOS XTREME GYM</div>
+          <img src="../../public/xtreme/logo.webp" alt="Xtreme Gym Logo" class="header-logo">
           <h1 class="title-main">
             <span>ACTIVE SU CUENTA</span>
             <span class="title-highlight">EN LA APP DE SOCIOS</span>
@@ -48,12 +50,7 @@
         <!-- QR HERO -->
         <div class="qr-hero-card">
           <div class="qr-box" id="qrContainer">
-            <!-- QR se genera dinámicamente -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33" shape-rendering="crispEdges">
-              <path fill="#ffffff" d="M0 0h33v33H0z" />
-              <path stroke="#050505"
-                d="M2 2.5h7m1 0h1m1 0h6m1 0h4m1 0h7M2 3.5h1m5 0h1m1 0h4m1 0h1m2 0h1m1 0h1m3 0h1m5 0h1M2 4.5h1m1 0h3m1 0h1m3 0h1m5 0h1m1 0h1m3 0h1m1 0h3m1 0h1M2 5.5h1m1 0h3m1 0h1m1 0h2m1 0h1m2 0h2m1 0h1m4 0h1m1 0h3m1 0h1M2 6.5h1m1 0h3m1 0h1m2 0h2m3 0h1m1 0h1m2 0h1m2 0h1m1 0h3m1 0h1M2 7.5h1m5 0h1m2 0h3m1 0h1m1 0h2m1 0h2m2 0h1m5 0h1M2 8.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M10 9.5h1m1 0h2m3 0h5M2 10.5h1m1 0h2m1 0h3m1 0h3m1 0h1m1 0h1m1 0h1m4 0h1m2 0h1m1 0h2M2 11.5h1m2 0h3m1 0h1m1 0h3m1 0h3m1 0h3m2 0h3m3 0h1M3 12.5h1m2 0h1m1 0h2m2 0h2m1 0h1m2 0h1m1 0h1m1 0h1m1 0h3m1 0h2M5 13.5h1m5 0h1m2 0h1m3 0h1m1 0h1m3 0h3m3 0h1M2 14.5h1m1 0h1m3 0h1m1 0h1m2 0h2m1 0h2m1 0h1m2 0h1m4 0h2M3 15.5h2m6 0h1m4 0h1m1 0h2m1 0h1m1 0h3m2 0h3M2 16.5h1m3 0h1m1 0h5m1 0h2m1 0h2m2 0h6m1 0h3M5 17.5h1m1 0h1m1 0h2m1 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h2m2 0h1M3 18.5h1m2 0h1m1 0h2m1 0h3m2 0h3m1 0h1m1 0h2m2 0h2m1 0h1M3 19.5h4m4 0h1m2 0h1m1 0h1m1 0h1m1 0h1m1 0h2m1 0h1m1 0h3M2 20.5h1m1 0h3m1 0h1m3 0h1m1 0h5m1 0h1m1 0h2m1 0h1m2 0h1M4 21.5h4m1 0h1m2 0h2m1 0h2m2 0h1m4 0h1m3 0h1M3 22.5h1m1 0h2m1 0h1m5 0h3m1 0h11M10 23.5h2m2 0h1m2 0h2m3 0h1m3 0h5M2 24.5h7m1 0h1m1 0h3m1 0h2m1 0h1m1 0h2m1 0h1m1 0h2m1 0h1M2 25.5h1m5 0h1m2 0h3m3 0h4m1 0h3m2 0h2m1 0h1M2 26.5h1m1 0h3m1 0h1m2 0h2m5 0h1m1 0h1m1 0h5m1 0h1m1 0h1M2 27.5h1m1 0h3m1 0h1m1 0h1m2 0h3m5 0h3m2 0h2m1 0h1M2 28.5h1m1 0h3m1 0h1m1 0h3m2 0h1m3 0h2m1 0h1m2 0h1m2 0h1m1 0h1M2 29.5h1m5 0h1m2 0h1m1 0h1m1 0h3m1 0h2m1 0h1m2 0h1m1 0h1m1 0h1M2 30.5h7m1 0h2m1 0h1m5 0h5m3 0h1m1 0h1" />
-            </svg>
+            <!-- QR generado por qr-code-styling -->
           </div>
           <div class="qr-callout-badge">👉 APUNTE SU CEL AL CÓDIGO QR</div>
           <p class="qr-desc">
@@ -124,7 +121,7 @@
       <!-- FOOTER -->
       <footer class="footer-bar">
         <div class="gym-brand">
-          <span class="gym-name">XTREME GYM</span>
+          <img src="../../public/xtreme/logo.webp" alt="Xtreme Gym" class="footer-logo">
           <span class="gym-sub">CIUDAD QUESADA - SAN CARLOS</span>
         </div>
         <div class="gym-details">
@@ -147,15 +144,54 @@
   </div>
 
   <script>
+    // ── QR con diseño Xtreme Gym ──────────────────────────────────
+    const LOGO_PATH = '../../public/xtreme/logo.webp';
+    const DEFAULT_URL = 'https://www.xtremecr.com/app';
+
+    const qrCode = new QRCodeStyling({
+      width: 230,
+      height: 230,
+      type: 'svg',
+      data: DEFAULT_URL,
+      image: LOGO_PATH,
+      margin: 0,
+      qrOptions: {
+        errorCorrectionLevel: 'H'   // nivel alto = soporta logo encima
+      },
+      imageOptions: {
+        hideBackgroundDots: true,
+        imageSize: 0.32,
+        margin: 6,
+        crossOrigin: 'anonymous'
+      },
+      dotsOptions: {
+        color: '#111111',
+        type: 'extra-rounded'
+      },
+      backgroundOptions: {
+        color: '#ffffff'
+      },
+      cornersSquareOptions: {
+        color: '#111111',
+        type: 'extra-rounded'
+      },
+      cornersDotOptions: {
+        color: '#ffcc00',   // amarillo Xtreme en los puntos interiores de esquina
+        type: 'dot'
+      }
+    });
+
+    // Renderizar al cargar
+    qrCode.append(document.getElementById('qrContainer'));
+
+    // Actualizar URL dinámicamente (desde el input de la toolbar)
     function updateQrUrl(url) {
+      // Actualiza el label de URL
       const display = document.getElementById('qrUrlDisplay');
       if (display) display.textContent = url.replace(/^https?:\/\//i, '');
 
-      const qrContainer = document.getElementById('qrContainer');
-      if (qrContainer && url) {
-        const encoded = encodeURIComponent(url);
-        qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encoded}&color=050505&bgcolor=ffffff&margin=2" alt="QR Code" style="width:100%;height:100%;object-fit:contain;" />`;
-      }
+      // Actualiza el QR con la nueva URL
+      if (url) qrCode.update({ data: url });
     }
   </script>
 </body>

@@ -1,4 +1,5 @@
 import { DAY_PASS_HOLD_DAYS } from "@/lib/xtreme/shared/config";
+import { isOneDayPlanLabel } from "@/lib/xtreme/shared/member-rules";
 import type { Membership, TrainingPlan } from "./types";
 
 const DAY_MS = 86_400_000;
@@ -84,11 +85,22 @@ export function membershipWithStatus(
 
   const currentDate = toUtcDate(today);
   const nextBilling = toUtcDate(nextBillingDate);
-  const daysRemaining = Math.ceil(
+  const daysRemainingRaw = Math.ceil(
     (nextBilling.getTime() - currentDate.getTime()) / DAY_MS,
   );
+
+  // Planes de 1 día (primer día gratis, day pass) usan nextBillingDate como hold
+  // hasta el primer check-in; no reflejan días reales. Siempre valen "1 día" si no vencieron.
+  const isOneDay = isOneDayPlanLabel(plan);
+  const daysRemaining = isOneDay ? (daysRemainingRaw < 0 ? -1 : 1) : daysRemainingRaw;
   const status: Membership["status"] =
-    daysRemaining < 0 ? "expired" : daysRemaining <= 5 ? "warning" : "active";
+    daysRemainingRaw < 0
+      ? "expired"
+      : isOneDay
+        ? "active"
+        : daysRemainingRaw <= 5
+          ? "warning"
+          : "active";
 
   return {
     plan,
