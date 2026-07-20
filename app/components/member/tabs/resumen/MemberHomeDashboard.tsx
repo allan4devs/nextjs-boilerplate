@@ -34,6 +34,7 @@ import { trackAction } from "@/app/lib/analytics/session-client";
 import { BarTrendChart, CHART_LIME } from "../../../charts";
 import { GameButton, GameLabel, GameModal } from "../../../GameOS";
 import { StreakRing, XpBar } from "../../../gamification";
+import { isOneDayPlanLabel } from "../../helpers/membership";
 import type {
   ResumenActions,
   ResumenViewModel,
@@ -56,7 +57,8 @@ type DetailId = MemberHomePanelId | "quick-stats";
 function MembershipHero({ model, actions }: Props) {
   if (!model.membership) return null;
   const membership = model.membership;
-  const urgent = membership.daysRemaining <= 5;
+  const isOneDay = isOneDayPlanLabel(membership.plan);
+  const urgent = !isOneDay && membership.daysRemaining <= 5;
 
   return (
     <div className={`relative overflow-hidden border-[3px] p-4 sm:p-5 ${membership.tone}`}>
@@ -75,10 +77,12 @@ function MembershipHero({ model, actions }: Props) {
         </span>
       </div>
       <h3 className="mt-3 text-xl font-black uppercase">{membership.plan}</h3>
-      <p className="mt-1 text-sm font-bold opacity-70">Activo hasta {membership.nextBillingDate}</p>
+      <p className="mt-1 text-sm font-bold opacity-70">
+        {isOneDay ? "Válido para 1 día de entrenamiento al ingresar" : `Activo hasta ${membership.nextBillingDate}`}
+      </p>
       <div className="mt-4">
         <div className="flex justify-between text-[9px] font-black uppercase tracking-[.15em] opacity-70">
-          <span>{urgent ? "Renová a tiempo" : "Tiempo restante"}</span>
+          <span>{isOneDay ? "1 día de acceso" : urgent ? "Renová a tiempo" : "Tiempo restante"}</span>
           <span>{membership.progressPct}%</span>
         </div>
         <div className="mt-2 h-3 border-[3px] border-current/25 bg-black/25">

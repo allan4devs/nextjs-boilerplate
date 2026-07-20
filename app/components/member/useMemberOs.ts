@@ -696,16 +696,23 @@ export function useMemberOs() {
    */
   const startMemberByCedula = useCallback(
     async (cedulaRaw: string, allowSession = true) => {
-      const digits = onlyDigits(cedulaRaw);
-      if (digits.length < CEDULA_MIN_DIGITS) {
+      const inputTrimmed = cedulaRaw.trim();
+      const isEmail = inputTrimmed.includes("@");
+      const digits = onlyDigits(inputTrimmed);
+
+      if (!isEmail && digits.length < CEDULA_MIN_DIGITS) {
         setError(MSG.errors.cedulaTooShort(CEDULA_MIN_DIGITS));
+        return;
+      }
+      if (isEmail && (!inputTrimmed.includes(".") || inputTrimmed.length < 5)) {
+        setError("Ingresá un correo electrónico válido (ejemplo: socio@gmail.com).");
         return;
       }
 
       setError("");
       setMessage("");
       setIsLoading(true);
-      setMemberCedulaInput(formatCedulaInput(cedulaRaw));
+      setMemberCedulaInput(isEmail ? inputTrimmed : formatCedulaInput(cedulaRaw));
       // No mostrar el perfil ni reservas del socio anterior (kioscos compartidos).
       setShowPin(false);
       setMemberName("");
@@ -723,7 +730,7 @@ export function useMemberOs() {
           window.localStorage.removeItem(SESSION_KEY);
         }
 
-        const lookupParams = new URLSearchParams({ cedula: digits });
+        const lookupParams = new URLSearchParams({ cedula: isEmail ? inputTrimmed : digits });
         const lookupResponse = await fetch(`/api/xtreme/user?${lookupParams}`, {
           cache: "no-store",
           credentials: "same-origin",

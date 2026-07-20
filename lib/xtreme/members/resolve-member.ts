@@ -30,6 +30,7 @@ import {
 
 export type MemberResolvedBy =
   | "cedula"
+  | "email"
   | "memberKey"
   | "code"
   | "name"
@@ -74,6 +75,16 @@ async function resolveByCedula(db: Db, raw: string): Promise<ResolvedMember | nu
   const hit = findMemberByCedula(withCed, raw) || findMemberByCedula(withCed, digits);
   if (!hit) return null;
   return { member: hit, memberKey: memberKeyOf(hit), resolvedBy: "cedula" };
+}
+
+async function resolveByEmail(db: Db, raw: string): Promise<ResolvedMember | null> {
+  const clean = raw.trim().toLowerCase();
+  if (!clean.includes("@")) return null;
+  const hit = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+    email: { $regex: new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+  });
+  if (!hit) return null;
+  return { member: hit, memberKey: memberKeyOf(hit), resolvedBy: "email" };
 }
 
 async function resolveByMemberKey(db: Db, keyRaw: string): Promise<ResolvedMember | null> {
@@ -157,6 +168,13 @@ export async function resolveMember(
   input: MemberLookupParams,
 ): Promise<ResolvedMember | null> {
   const p = buildMemberLookupParams(input);
+
+  // 0) Búsqueda por Correo electrónico (si contiene '@')
+  const rawQuery = (p.cedula || p.q || "").trim();
+  if (rawQuery.includes("@")) {
+    const byEmail = await resolveByEmail(db, rawQuery);
+    if (byEmail) return byEmail;
+  }
 
   // 1) Cédula - siempre primero
   if (p.cedula && digitsOnly(p.cedula).length >= 6) {

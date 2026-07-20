@@ -46,7 +46,8 @@ import {
 } from "@/lib/xtreme/gamification";
 import { findMachineGuide, FREE_WORKOUT } from "./constants";
 import { youtubeThumb, youtubeVideoId } from "./catalog/machines";
-import { dayLabel, membershipPlanDays, membershipRemainingPct, todayIso } from "./utils";
+import { isOneDayPlanLabel, membershipPlanDays, membershipRemainingPct } from "./helpers/membership";
+import { dayLabel, todayIso } from "./utils";
 import type { MemberOs } from "./useMemberOs";
 
 const FREE_ACTIVITY_OPTIONS = [
@@ -742,17 +743,23 @@ export default function OsModals({ os }: { os: MemberOs }) {
           <GameStat
             label="Días"
             value={membershipDaysRemaining}
-            hint={membershipDaysRemaining > membershipTotalDays ? "acumulados" : `de ${membershipTotalDays}`}
+            hint={isOneDayPlanLabel(currentMember.membership.plan) ? "disponible" : membershipDaysRemaining > membershipTotalDays ? "acumulados" : `de ${membershipTotalDays}`}
             tone="orange"
           />
-          <GameStat label="Activo hasta" value={currentMember.membership.nextBillingDate} tone="cyan" />
+          <GameStat
+            label={isOneDayPlanLabel(currentMember.membership.plan) ? "Acceso" : "Activo hasta"}
+            value={isOneDayPlanLabel(currentMember.membership.plan) ? "1 día disponible" : currentMember.membership.nextBillingDate}
+            tone="cyan"
+          />
           <div className="mt-4 border-[3px] border-white/15 bg-black/30 p-4 sm:col-span-3">
             <div className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.14em]">
               <span className="text-white/55">Tiempo restante del plan</span>
               <span className="text-[#d8ff3e]">
-                {membershipDaysRemaining > membershipTotalDays
-                  ? `${membershipDaysRemaining} días acumulados`
-                  : `${membershipDaysRemaining}/${membershipTotalDays} días`}
+                {isOneDayPlanLabel(currentMember.membership.plan)
+                  ? "1 día disponible"
+                  : membershipDaysRemaining > membershipTotalDays
+                    ? `${membershipDaysRemaining} días acumulados`
+                    : `${membershipDaysRemaining}/${membershipTotalDays} días`}
               </span>
             </div>
             <div className="mt-3 h-4 border-[3px] border-white/15 bg-black/50">

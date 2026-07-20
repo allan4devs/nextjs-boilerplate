@@ -79,14 +79,15 @@ export function membershipStatus(membership?: Membership) {
   }
 
   const today = toUtcDate(todayIso());
-  const daysRemaining = Math.ceil((toUtcDate(nextBillingDate).getTime() - today.getTime()) / 86_400_000);
+  const daysRemainingRaw = Math.ceil((toUtcDate(nextBillingDate).getTime() - today.getTime()) / 86_400_000);
   const isOneDay = isOneDayPlanLabel(plan);
+  const daysRemaining = isOneDay ? (daysRemainingRaw < 0 ? -1 : 1) : daysRemainingRaw;
   const status: "active" | "warning" | "expired" =
-    daysRemaining < 0
+    daysRemainingRaw < 0
       ? "expired"
       : isOneDay
         ? "active"
-        : daysRemaining <= 5
+        : daysRemainingRaw <= 5
           ? "warning"
           : "active";
   return { plan, nextBillingDate, daysRemaining, status, startedAt };

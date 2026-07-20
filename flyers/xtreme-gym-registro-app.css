@@ -1,0 +1,447 @@
+:root {
+  --bg-dark: #ffffff;
+  --panel-bg: #f8f8f8;
+  --card-bg: #f9f9f9;
+  --yellow: #ffcc00;
+  --dark: #111111;
+  --white: #ffffff;
+  --muted: #666666;
+  --border: #dddddd;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+@page {
+  size: letter portrait;
+  margin: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background: #000000;
+  color: #111111;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* BARRA DE CONTROL INTERACTIVA PARA PANTALLA (se oculta al imprimir) */
+.toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #0f172a;
+  border-bottom: 2px solid var(--yellow);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+}
+
+.toolbar-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--yellow);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.url-input-group {
+  display: flex;
+  align-items: center;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.url-input-group label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-right: 8px;
+  text-transform: uppercase;
+}
+
+.url-input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: monospace;
+  font-size: 13px;
+  width: 280px;
+  outline: none;
+}
+
+.btn-print {
+  background: var(--yellow);
+  color: #111;
+  border: none;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
+}
+
+.btn-print:hover {
+  transform: translateY(-1px);
+  background: #ffe066;
+}
+
+/* CONTENEDOR HOJA CARTA PARA VISTA WEB */
+.page-wrapper {
+  padding-top: 60px;
+  padding-bottom: 40px;
+  display: flex;
+  justify-content: center;
+  background: #000;
+  min-height: 100vh;
+}
+
+.letter-page {
+  position: relative;
+  width: 8.5in;
+  height: 11in;
+  background: #ffffff;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  border: 8px solid #111111;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.page-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* HEADER PRINCIPAL */
+.header {
+  text-align: center;
+  padding: 25px 20px 15px;
+  background: linear-gradient(135deg, #111111, #222222);
+  color: #ffffff;
+  border-bottom: 6px solid #ffcc00;
+}
+
+.top-badge {
+  display: inline-block;
+  background: #ffcc00;
+  color: #111111;
+  font-weight: bold;
+  padding: 6px 18px;
+  border-radius: 30px;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+}
+
+.title-main {
+  font-size: 2.4rem;
+  line-height: 1.1;
+  margin: 15px 0;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.title-main span {
+  display: block;
+  white-space: nowrap;
+}
+
+.title-highlight {
+  display: block;
+  color: #ffcc00;
+  font-size: 2.1rem;
+}
+
+.subtitle {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #e2e8f0;
+  max-width: 90%;
+  margin: 0 auto;
+  line-height: 1.4;
+}
+
+/* HERO QR CENTRADO */
+.qr-hero-card {
+  text-align: center;
+  padding: 25px 20px;
+  background: #f8f8f8;
+  border-bottom: 1px solid #dddddd;
+}
+
+.qr-box {
+  width: 260px;
+  height: 260px;
+  margin: 0 auto 18px;
+  padding: 15px;
+  background: #ffffff;
+  border: 4px solid #111111;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.qr-box svg,
+.qr-box img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.qr-callout-badge {
+  background: #111111;
+  color: #ffcc00;
+  font-weight: bold;
+  padding: 10px 25px;
+  border-radius: 50px;
+  display: inline-block;
+  margin: 10px 0;
+  font-size: 1.15rem;
+  text-transform: uppercase;
+}
+
+.qr-desc {
+  font-size: 1.05rem;
+  color: #444444;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.qr-url-display {
+  background: #111111;
+  color: #ffcc00;
+  font-family: monospace;
+  font-size: 1.2rem;
+  font-weight: 900;
+  padding: 8px 24px;
+  border-radius: 8px;
+  display: inline-block;
+  letter-spacing: 0.5px;
+}
+
+/* PASOS EN 3 COLUMNAS Y GRILLAS */
+.section-title {
+  text-align: center;
+  font-size: 1.45rem;
+  font-weight: bold;
+  margin: 24px 0 16px;
+  color: #111111;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.steps-grid,
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 0 20px 20px;
+}
+
+.step-card {
+  background: #f9f9f9;
+  border: 2px solid #dddddd;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.step-card:hover {
+  transform: translateY(-4px);
+  border-color: #ffcc00;
+}
+
+.step-num {
+  width: 44px;
+  height: 44px;
+  background: #111111;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin: 0 auto 10px;
+}
+
+.step-head {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: #111111;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.step-body {
+  font-size: 0.9rem;
+  color: #555555;
+  line-height: 1.3;
+}
+
+/* FUNCIONES DE LA APP */
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f9f9f9;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border-left: 5px solid #ffcc00;
+  border-top: 1px solid #eee;
+  border-right: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+}
+
+.feature-icon {
+  font-size: 2.2rem;
+  flex-shrink: 0;
+}
+
+.feature-info {
+  flex: 1;
+}
+
+.feature-title {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: #111111;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.feature-desc {
+  font-size: 0.88rem;
+  color: #555555;
+  line-height: 1.25;
+}
+
+/* FOOTER INFO GYM */
+.footer-bar {
+  background: #111111;
+  color: #ffffff;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.95rem;
+}
+
+.gym-brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.gym-name {
+  font-size: 1.4rem;
+  font-weight: 950;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.gym-sub {
+  color: #ffcc00;
+  font-weight: bold;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.gym-details {
+  display: flex;
+  gap: 18px;
+  font-size: 0.88rem;
+  color: #cccccc;
+}
+
+.detail-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #ffcc00;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-val {
+  font-weight: 700;
+}
+
+/* REGLAS EXACTAS PARA IMPRESIÓN EN TAMAÑO CARTA (LETTER 8.5" x 11") SIN DESBORDES */
+@media print {
+  html, body {
+    width: 8.5in !important;
+    height: 11in !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .toolbar {
+    display: none !important;
+  }
+
+  .page-wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    min-height: 0 !important;
+    display: block !important;
+  }
+
+  .letter-page {
+    width: 8.5in !important;
+    height: 11in !important;
+    max-height: 11in !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

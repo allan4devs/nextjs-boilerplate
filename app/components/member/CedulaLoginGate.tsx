@@ -62,19 +62,19 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
           <CreditCard className="h-8 w-8" />
         </div>
         <GameLabel tone="lime" className="mt-4">
-          Member OS · Cedula
+          Member OS · Acceso de Socios
         </GameLabel>
         <h2 className="xg-text-glow mt-2 text-2xl font-black uppercase text-white">
-          Escaneá tu cédula
+          Ingresá tu cédula o correo
         </h2>
         <p className="mt-2 text-sm font-bold text-white/55">
-          Escaneá o digitá · después tu PIN
+          Escaneá, digitá tu cédula o correo · después tu PIN
         </p>
 
         <div className="mt-6 grid gap-2 text-left">
           <label className="block">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
-              Cédula
+              Cédula o Correo
             </span>
             <div className="relative mt-1.5">
               <CreditCard className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/35" />
@@ -82,15 +82,16 @@ export default function CedulaLoginGate({ os }: { os: MemberOs }) {
                 ref={cedulaInputRef}
                 value={memberCedulaInput}
                 onChange={(event) => {
-                  setMemberCedulaInput(formatCedulaInput(event.target.value));
+                  const val = event.target.value;
+                  const isEmail = val.includes("@");
+                  setMemberCedulaInput(isEmail ? val : formatCedulaInput(val));
                   setNeedsRegistration(false);
                   setError("");
                 }}
-                inputMode="numeric"
                 autoComplete="off"
                 autoFocus
-                placeholder="1-2345-6789"
-                className="min-h-14 w-full border-[3px] border-white/20 bg-black/50 py-3 pl-11 pr-3 text-center text-xl font-black tracking-[0.18em] text-white outline-none transition placeholder:text-sm placeholder:tracking-normal placeholder:text-white/35 focus:border-[#d8ff3e]"
+                placeholder="1-2345-6789 o tu@correo.com"
+                className="min-h-14 w-full border-[3px] border-white/20 bg-black/50 py-3 pl-11 pr-3 text-center text-lg font-black tracking-normal text-white outline-none transition placeholder:text-sm placeholder:tracking-normal placeholder:text-white/35 focus:border-[#d8ff3e]"
               />
             </div>
           </label>

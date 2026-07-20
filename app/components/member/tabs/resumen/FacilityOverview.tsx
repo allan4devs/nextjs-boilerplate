@@ -7,6 +7,8 @@ import type {
   ResumenViewModel,
 } from "../../view-models/useResumenViewModel";
 
+import { isOneDayPlanLabel } from "../../helpers/membership";
+
 type FacilityOverviewProps = {
   membership: ResumenViewModel["membership"];
   occupancy: ResumenViewModel["occupancy"];
@@ -21,22 +23,21 @@ function FacilityOverviewComponent({
   onOpenOccupancy,
 }: FacilityOverviewProps) {
   return (
-    <div className={`grid gap-3 sm:gap-4 ${membership ? "lg:grid-cols-[1fr_.85fr]" : ""}`}>
+    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
       {membership && (
         <button
           type="button"
           onClick={onOpenMembership}
-          className={`xg-lift w-full border-[3px] p-4 text-left shadow-[4px_4px_0_rgba(0,0,0,.45)] transition active:translate-x-px active:translate-y-px ${membership.tone}`}
+          className={`flex flex-col justify-between border-[3px] p-4 text-left shadow-[4px_4px_0_rgba(0,0,0,.4)] transition hover:brightness-110 ${membership.tone}`}
         >
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-75">
-                Membresía · toca
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-70">
+                Tu plan
               </p>
-              <h2 className="mt-2 text-2xl font-black uppercase">{membership.plan}</h2>
-              <p className="mt-2 text-sm font-bold opacity-75">
-                Activo hasta: {membership.nextBillingDate}
-              </p>
+              <h3 className="mt-1 text-lg font-black uppercase tracking-tight">
+                {membership.plan}
+              </h3>
             </div>
             <CreditCard className="h-8 w-8" />
           </div>
@@ -64,9 +65,11 @@ function FacilityOverviewComponent({
             <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.12em] opacity-75">
               <span>Tiempo disponible</span>
               <span>
-                {membership.daysRemaining > membership.totalDays
-                  ? `${membership.daysRemaining} días acumulados`
-                  : `${membership.daysRemaining} de ${membership.totalDays} días`}
+                {isOneDayPlanLabel(membership.plan)
+                  ? "1 día disponible"
+                  : membership.daysRemaining > membership.totalDays
+                    ? `${membership.daysRemaining} días acumulados`
+                    : `${membership.daysRemaining} de ${membership.totalDays} días`}
               </span>
             </div>
             <div className="mt-2 h-3 border-[3px] border-white/20 bg-black/35">

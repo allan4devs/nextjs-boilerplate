@@ -192,7 +192,8 @@ async function bootstrapLookup(
 export async function GET(req: NextRequest) {
   const memberNameParam = normalizeMemberName(req.nextUrl.searchParams.get("memberName"));
   const cedulaParam = String(req.nextUrl.searchParams.get("cedula") ?? "").trim();
-  const digits = cedulaDigits(cedulaParam);
+  const isEmailInput = cedulaParam.includes("@");
+  const digits = isEmailInput ? "" : cedulaDigits(cedulaParam);
 
   try {
     const db = await getDb();
@@ -200,40 +201,40 @@ export async function GET(req: NextRequest) {
     const session = await resolveMemberSession(req);
 
     // Authenticated: full profile for the session member (optional lookup must match).
-    // Cédula es la mayor key: si viene, se usa para confirmar o cambiar de cuenta.
+    // Cédula o Correo es la mayor key: si viene, se usa para confirmar o cambiar de cuenta.
     if (session) {
       let normalizedName = session.memberKey;
       let resolvedBy: "name" | "cedula" | "session" = "session";
 
-      if (digits.length >= 6 || memberNameParam) {
+      if (digits.length >= 6 || isEmailInput || memberNameParam) {
         const hit = await resolveMember(db, {
-          cedula: digits.length >= 6 ? digits : undefined,
+          cedula: isEmailInput ? cedulaParam : digits.length >= 6 ? digits : undefined,
           memberName: memberNameParam || undefined,
-          q: memberNameParam || undefined,
-          strictCedula: digits.length >= 6,
+          q: memberNameParam || cedulaParam || undefined,
+          strictCedula: !isEmailInput && digits.length >= 6,
         });
         if (hit) {
           if (hit.memberKey !== session.memberKey) {
-            // Otra cédula/nombre que la sesión → bootstrap (cambio de cuenta)
+            // Otra cédula/correo/nombre que la sesión → bootstrap (cambio de cuenta)
             return NextResponse.json(
               await bootstrapLookup(
                 db,
                 hit.memberKey,
                 hit.resolvedBy === "cedula" ? "cedula" : "name",
-                digits,
+                digits || cedulaParam,
               ),
             );
           }
           normalizedName = hit.memberKey;
           resolvedBy = hit.resolvedBy === "cedula" ? "cedula" : hit.resolvedBy === "name" ? "name" : "session";
-        } else if (digits.length >= 6) {
-          // Una cookie de otro socio no puede convertir una cédula inexistente
+        } else if (digits.length >= 6 || isEmailInput) {
+          // Una cookie de otro socio no puede convertir un correo o cédula inexistente
           // en acceso al perfil que quedó abierto en este navegador.
           return NextResponse.json({
             member: null,
             exists: false,
-            lookup: "cedula" as const,
-            cedula: digits,
+            lookup: (isEmailInput ? "email" : "cedula") as any,
+            cedula: cedulaParam || digits,
             hasPinSet: false,
             leaderboard: [],
             nextBestAction: null,
@@ -243,13 +244,13 @@ export async function GET(req: NextRequest) {
 
       const payload = await buildAuthenticatedMemberPayload(db, normalizedName, today, {
         lookup: resolvedBy,
-        cedula: digits || undefined,
+        cedula: digits || cedulaParam || undefined,
       });
       return NextResponse.json(payload);
     }
 
     // Unauthenticated without lookup keys
-    if (!memberNameParam && digits.length < 6) {
+    if (!memberNameParam && digits.length < 6 && !isEmailInput) {
       return NextResponse.json({
         member: null,
         exists: false,
@@ -258,12 +259,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Login Member OS: cédula primero (fuente única resolveMember)
+    // Login Member OS: correo o cédula (fuente única resolveMember)
     const hit = await resolveMember(db, {
-      cedula: digits.length >= 6 ? digits : undefined,
+      cedula: isEmailInput ? cedulaParam : digits.length >= 6 ? digits : undefined,
       memberName: memberNameParam || undefined,
-      q: memberNameParam || digits || undefined,
-      strictCedula: digits.length >= 6,
+      q: memberNameParam || cedulaParam || digits || undefined,
+      strictCedula: !isEmailInput && digits.length >= 6,
     });
 
     if (!hit?.memberKey) {
@@ -272,15 +273,15 @@ export async function GET(req: NextRequest) {
         source: "member_app",
         properties: {
           outcome: "not_found",
-          method: digits.length >= 6 ? "cedula" : "name",
+          method: isEmailInput ? "email" : digits.length >= 6 ? "cedula" : "name",
           requestFingerprint: requestFingerprint(req),
         },
       });
       return NextResponse.json({
         member: null,
         exists: false,
-        lookup: (digits.length >= 6 ? "cedula" : "name") as "cedula" | "name",
-        cedula: digits || undefined,
+        lookup: (isEmailInput ? "email" : digits.length >= 6 ? "cedula" : "name") as any,
+        cedula: cedulaParam || digits || undefined,
         hasPinSet: false,
         leaderboard: [],
         nextBestAction: null,

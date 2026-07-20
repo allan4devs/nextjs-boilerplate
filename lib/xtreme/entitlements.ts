@@ -162,6 +162,14 @@ export function canBook(
   }
 
   const chosen = active[0];
+  if (chosen.kind === "day_pass" || isOneDayPlanLabel(chosen.label || chosen.offerId)) {
+    return {
+      allowed: false,
+      reason: "limit_reached",
+      message:
+        "Tu plan de 1 día te permite entrenar en el gimnasio y ver tus entrenamientos asignados, pero no incluye reserva de clases. Activá un plan semanal o mensual para reservar clases.",
+    };
+  }
   return { allowed: true, entitlementId: chosen.id, entitlement: chosen };
 }
 
