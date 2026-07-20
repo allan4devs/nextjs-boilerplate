@@ -2,18 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "npm ci --prefer-offline --no-audit --no-fund",
-  "crons": [
-    {
-      "path": "/api/xtreme/jobs/lifecycle",
-      "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/xtreme/jobs/class-reminders",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/xtreme/jobs/email-campaigns",
-      "schedule": "*/5 * * * *"
-    }
-  ]
+  "crons": []
 }

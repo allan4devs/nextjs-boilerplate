@@ -23,7 +23,10 @@ import { recordEvent } from "@/lib/xtreme/events";
 import {
   authAttemptStatus,
   clearAuthAttempts,
+  clearPinAttempts,
+  ensureAuthAttemptsIndex,
   recordFailedAuthAttempt,
+  recordPinFailure,
   requestFingerprint,
 } from "@/lib/xtreme/auth-attempts";
 
@@ -115,6 +118,9 @@ export async function POST(req: NextRequest) {
     const normalizedName = normalizeKey(memberName);
     const db = await getDb();
     const col = db.collection(PINS_COLLECTION);
+
+    // Asegurar índice TTL una sola vez (Mongo lo cachea).
+    ensureAuthAttemptsIndex(db).catch(() => undefined);
 
     async function trackAccess(
       type: string,
@@ -521,7 +527,13 @@ export async function POST(req: NextRequest) {
     }
     const valid = doc.pinHash === hashPin(pin, normalizedName);
     if (!valid) {
-      const failed = await recordFailedAuthAttempt(db, loginRate.key, {
+      // Registrar en ambos ejes: por cuenta (independiente de IP) + por IP.
+      const failed = await recordPinFailure(db, req, {
+        scope: "member_pin_login",
+        subject: normalizedName,
+      });
+      // También actualizar el eje legacy (compatibilidad con logs existentes).
+      await recordFailedAuthAttempt(db, loginRate.key, {
         scope: "member_pin_login",
         maxAttempts: 5,
         windowMs: 15 * 60_000,
@@ -531,8 +543,25 @@ export async function POST(req: NextRequest) {
         failed.blocked ? "blocked" : "failed",
         "incorrect_pin",
       );
+      if (failed.blocked) {
+        const lockouts = failed.lockoutCount ?? 1;
+        const durations = ["1 hora", "2 horas", "4 horas", "8 horas", "24 horas"];
+        const label = durations[Math.min(lockouts - 1, durations.length - 1)];
+        return NextResponse.json(
+          {
+            valid: false,
+            hasPinSet: true,
+            blocked: true,
+            error: `Cuenta bloqueada por ${
+              label
+            } tras demasiados intentos. Si no sos vos, cambiá el PIN desde el correo.`,
+          },
+          { status: 429 },
+        );
+      }
       return NextResponse.json({ valid: false, hasPinSet: true });
     }
+    await clearPinAttempts(db, req, { scope: "member_pin_login", subject: normalizedName });
     await clearAuthAttempts(db, loginRate.key);
     await trackAccess("login_attempted", "success");
     return withMemberSession(

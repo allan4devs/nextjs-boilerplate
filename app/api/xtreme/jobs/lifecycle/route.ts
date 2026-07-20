@@ -79,6 +79,16 @@ async function deliver(trigger: LifecycleTrigger, member: MemberDoc): Promise<Se
 export async function GET(req: NextRequest) {
   if (!authorized(req)) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
+  // Cron detenido a solicitud del usuario ("deten el cron job por ahora").
+  const CRON_PAUSED = true;
+  if (CRON_PAUSED) {
+    return NextResponse.json({
+      ok: true,
+      paused: true,
+      message: "El cron job de lifecycle y correos de expiración está detenido temporalmente.",
+    });
+  }
+
   let db: Awaited<ReturnType<typeof getDb>> | null = null;
   const runId = `lifecycle-${Date.now()}`;
   try {

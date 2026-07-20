@@ -110,6 +110,7 @@ function TrainingCard({
   onReserve,
   onComplete,
   needsAccess = false,
+  isOneDayPass = false,
 }: {
   training: Training;
   unlocked: boolean;
@@ -124,6 +125,8 @@ function TrainingCard({
   onComplete: () => void;
   /** Sin plan/pase vigente: Reservar abre checkout en vez de crear cupo. */
   needsAccess?: boolean;
+  /** Pase de 1 día (día gratis, day-pass): no permite reservar clases grupales. */
+  isOneDayPass?: boolean;
 }) {
   const Icon = training.icon;
   const isFull = reservation.remaining <= 0 && !reservation.isMine;
@@ -132,10 +135,11 @@ function TrainingCard({
     Math.round((reservation.reserved / reservation.capacity) * 100),
   );
   const checkIn = classCheckInHint(training.id, date, reservation.isMine, done);
+  // Socios con pase de 1 día no pueden reservar clases grupales (solo planes semanales/mensuales).
   const reserveDisabled =
     !unlocked ||
     Boolean(reservingTrainingId) ||
-    (reservation.isMine ? false : isFull || !checkIn.canReserve);
+    (reservation.isMine ? false : isOneDayPass || isFull || !checkIn.canReserve);
   const checkInDisabled =
     !unlocked || Boolean(savingTrainingId) || done || !checkIn.canCheckIn;
 
@@ -227,9 +231,11 @@ function TrainingCard({
                 ? "Cancelar"
                 : isFull
                   ? "Lleno"
-                  : needsAccess
-                    ? "Activar acceso"
-                    : "Reservar"}
+                  : isOneDayPass
+                    ? "Solo plan"
+                    : needsAccess
+                      ? "Activar acceso"
+                      : "Reservar"}
             </button>
             <button
               type="button"
@@ -369,6 +375,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
               date={today}
               expanded={openTrainingId === training.id}
               needsAccess={needsAccess}
+              isOneDayPass={isOneDayPass}
               onToggle={() =>
                 setOpenTrainingId((id) => (id === training.id ? null : training.id))
               }

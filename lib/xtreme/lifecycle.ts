@@ -37,7 +37,10 @@ export function evaluateLifecycle(member: MemberDoc, today: string): LifecycleTr
     }
   }
 
-  if (prefs.renewalReminders && member.membership?.nextBillingDate) {
+  // Pausado a solicitud del usuario ("no mandes el correo ahorita de los que están pronto a expirar").
+  const RENEWAL_REMINDERS_ENABLED = false;
+
+  if (RENEWAL_REMINDERS_ENABLED && prefs.renewalReminders && member.membership?.nextBillingDate) {
     const membership = membershipStatus(member.membership);
     if (membership.daysRemaining === 5 || membership.daysRemaining === -3) {
       triggers.push({
