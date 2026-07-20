@@ -3,6 +3,10 @@
  * Crude but honest aggregates for the admin Growth strip.
  */
 import type { Db } from "mongodb";
+import {
+  isInternalAnalyticsSubject,
+  loadInternalAnonymousIds,
+} from "./analytics-exclusions";
 import { EVENTS_COLLECTION, type ProductEvent } from "./events";
 import { CHECKINS_COLLECTION, PAYMENTS_COLLECTION, todayIso, type CheckinDoc, type PaymentDoc } from "./shared";
 import { addDaysIso } from "./entitlements";
@@ -83,12 +87,22 @@ export async function computeGrowthSnapshot(db: Db, windowDays = 30): Promise<Gr
   const fromDate = daysAgo(windowDays - 1, toDate);
   const from = new Date(`${fromDate}T00:00:00.000Z`);
 
-  const events = await db
+  const knownAnons = await loadInternalAnonymousIds(db);
+  const rawEvents = await db
     .collection<ProductEvent>(EVENTS_COLLECTION)
     .find({ occurredAt: { $gte: from } })
     .sort({ occurredAt: -1 })
     .limit(5000)
     .toArray();
+
+  // Fuera: Allan Rojas (y anons de sus browsers) — no inflar funnel/app opens.
+  const events = rawEvents.filter(
+    (e) =>
+      !isInternalAnalyticsSubject(
+        { memberId: e.memberId, anonymousId: e.anonymousId },
+        knownAnons,
+      ),
+  );
 
   const countType = (type: string) => events.filter((e) => e.type === type).length;
   const countOutcome = (type: string, outcome: string) =>

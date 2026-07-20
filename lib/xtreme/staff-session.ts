@@ -2,7 +2,15 @@ import { createHash, randomBytes } from "crypto";
 import type { Db } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
-import { STAFF_SESSIONS_COLLECTION, resolveStaffRole, type StaffRole } from "./shared";
+import {
+  ADMIN_CODE,
+  RECEPTION_CODE,
+  STAFF_SESSIONS_COLLECTION,
+  SUPER_ADMIN_CODE,
+  TRAINER_CODE,
+  resolveStaffRole,
+  type StaffRole,
+} from "./shared";
 import { SESSION_IDLE_TIMEOUT_MS } from "./session-policy";
 
 export type StaffSurface = "reception" | "ingreso" | "trainer" | "admin";
@@ -30,7 +38,25 @@ type StaffSessionDoc = {
   lastSeenAt: Date;
   revokedAt?: Date | null;
   userAgent?: string;
+  /**
+   * Huella de los códigos de staff al crear la sesión.
+   * Si cambian XTREME_*_CODE en el entorno, el epoch no coincide y la sesión muere.
+   */
+  authEpoch?: string;
 };
+
+/**
+ * Huella de los códigos actuales de staff.
+ * Al rotar ADMIN / SUPER / RECEPTION / TRAINER en env, las sesiones viejas dejan de valer.
+ */
+export function staffAuthEpoch() {
+  return createHash("sha256")
+    .update(
+      `staff-auth|${ADMIN_CODE}|${SUPER_ADMIN_CODE}|${RECEPTION_CODE}|${TRAINER_CODE}|v1`,
+    )
+    .digest("hex")
+    .slice(0, 24);
+}
 
 export type StaffSession = {
   surface: StaffSurface;
@@ -79,6 +105,7 @@ export async function createStaffSession(
     lastSeenAt: now,
     revokedAt: null,
     userAgent: args.userAgent?.slice(0, 200),
+    authEpoch: staffAuthEpoch(),
   };
   await db.collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION).insertOne(doc);
   return { token, expiresAt };
@@ -121,6 +148,7 @@ export async function resolveStaffSession(
   const db = await getDb();
   const now = new Date();
   const idleCutoff = new Date(now.getTime() - SESSION_IDLE_TIMEOUT_MS);
+  const epoch = staffAuthEpoch();
   const doc = await db.collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION).findOne({
     tokenHash: hashToken(token),
     surface,
@@ -129,6 +157,15 @@ export async function resolveStaffSession(
     lastSeenAt: { $gt: idleCutoff },
   });
   if (!doc || !roleCanUseSurface(doc.role, surface)) return null;
+
+  // Código de staff rotado en env → sesión inválida (incluye docs viejos sin authEpoch).
+  if (!doc.authEpoch || doc.authEpoch !== epoch) {
+    await db.collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION).updateOne(
+      { tokenHash: doc.tokenHash, surface, revokedAt: null },
+      { $set: { revokedAt: now } },
+    );
+    return null;
+  }
 
   if (touchActivity) {
     await db.collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION).updateOne(
@@ -153,6 +190,67 @@ export async function revokeStaffSession(req: NextRequest, surface: StaffSurface
     { tokenHash: hashToken(token), surface, revokedAt: null },
     { $set: { revokedAt: new Date() } },
   );
+}
+
+/**
+ * Revoca sesiones de staff abiertas (admin / recepción / ingreso / trainer).
+ * Por defecto conserva la sesión actual del super admin (exceptTokenHash).
+ */
+export async function revokeAllStaffSessions(
+  db: Db,
+  options?: { exceptTokenHash?: string; surface?: StaffSurface },
+): Promise<number> {
+  const filter: Record<string, unknown> = { revokedAt: null };
+  if (options?.exceptTokenHash) {
+    filter.tokenHash = { $ne: options.exceptTokenHash };
+  }
+  if (options?.surface) {
+    filter.surface = options.surface;
+  }
+  const result = await db.collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION).updateMany(
+    filter,
+    { $set: { revokedAt: new Date() } },
+  );
+  return result.modifiedCount;
+}
+
+/** Sesiones aún usables (no revocadas, no vencidas, no idle). */
+export async function countActiveStaffSessions(db: Db): Promise<{
+  total: number;
+  bySurface: Record<StaffSurface, number>;
+}> {
+  const now = new Date();
+  const idleCutoff = new Date(now.getTime() - SESSION_IDLE_TIMEOUT_MS);
+  const epoch = staffAuthEpoch();
+  const rows = await db
+    .collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION)
+    .aggregate<{ _id: StaffSurface; count: number }>([
+      {
+        $match: {
+          revokedAt: null,
+          expiresAt: { $gt: now },
+          lastSeenAt: { $gt: idleCutoff },
+          authEpoch: epoch,
+        },
+      },
+      { $group: { _id: "$surface", count: { $sum: 1 } } },
+    ])
+    .toArray();
+
+  const bySurface: Record<StaffSurface, number> = {
+    reception: 0,
+    ingreso: 0,
+    trainer: 0,
+    admin: 0,
+  };
+  let total = 0;
+  for (const row of rows) {
+    if (row._id in bySurface) {
+      bySurface[row._id] = row.count;
+      total += row.count;
+    }
+  }
+  return { total, bySurface };
 }
 
 export async function requireStaffSession(req: NextRequest, surface: StaffSurface) {

@@ -24,7 +24,11 @@ import {
   toAdminMember,
   toUtcDate,
 } from "@/lib/xtreme/shared";
-import { resolveStaffSession } from "@/lib/xtreme/staff-session";
+import {
+  countActiveStaffSessions,
+  resolveStaffSession,
+  revokeAllStaffSessions,
+} from "@/lib/xtreme/staff-session";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { listOpenOpsAlerts, resolveOpsAlert } from "@/lib/xtreme/ops-alerts";
 import {
@@ -285,6 +289,12 @@ export async function GET(req: NextRequest) {
 
     if (role === "super") {
       payload.revenue = await revenueSummary(db);
+      try {
+        payload.staffSecurity = await countActiveStaffSessions(db);
+      } catch (staffSecErr) {
+        console.error("XTREME ADMIN STAFF SECURITY", staffSecErr);
+        payload.staffSecurity = { total: 0, bySurface: { reception: 0, ingreso: 0, trainer: 0, admin: 0 } };
+      }
     }
 
     // Phase 3: Growth strip for all admin roles (funnel, not full revenue detail)
@@ -336,6 +346,38 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const action = String(body.action ?? "plan");
+
+    // Super admin: revocar todas las sesiones de staff (admin/recepción/ingreso/trainer).
+    // Conserva la sesión actual para no echarte del panel a mitad del click.
+    if (action === "revoke_all_staff_sessions") {
+      if (role !== "super") return forbidden();
+      const session = await resolveStaffSession(req, "admin");
+      if (!session) return unauthorized();
+      const db = await getDb();
+      const includeSelf = body.includeSelf === true;
+      const revoked = await revokeAllStaffSessions(db, {
+        exceptTokenHash: includeSelf ? undefined : session.tokenHash,
+      });
+      await writeAudit(db, {
+        actorRole: role,
+        action: "staff.revoke_all_sessions",
+        targetType: "system",
+        targetId: "staff_sessions",
+        summary: includeSelf
+          ? `Cerró todas las sesiones de staff (${revoked}), incluida la propia.`
+          : `Cerró ${revoked} sesión(es) de staff (conservó la actual).`,
+        meta: { revoked, includeSelf },
+      });
+      const active = await countActiveStaffSessions(db);
+      return NextResponse.json({
+        ok: true,
+        revoked,
+        includeSelf,
+        staffSecurity: active,
+        // Si se incluyó a sí mismo, el cliente debe forzar logout.
+        mustRelogin: includeSelf,
+      });
+    }
 
     // Super admin: invitación individual desde la lista de socios (magic link ligado a la ficha).
     if (action === "invite_member") {

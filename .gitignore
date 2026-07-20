@@ -43,3 +43,6 @@ next-env.d.ts
 .next-dev.err.log
 .env*.local
 scripts/email-recovery-report.json
+
+# Local data exports (emails / PII — never commit)
+/exports/

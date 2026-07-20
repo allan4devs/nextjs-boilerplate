@@ -4,6 +4,10 @@
  * Best-effort: nunca debe romper la UX de la app.
  */
 import type { Db } from "mongodb";
+import {
+  isInternalAnalyticsSubject,
+  loadInternalAnonymousIds,
+} from "./analytics-exclusions";
 import type { EventSource } from "./events";
 import { normalizeKey, normalizeName } from "./shared";
 
@@ -288,6 +292,8 @@ export type UsageBitacoraSnapshot = {
   sessions: number;
   memberSessions: number;
   anonSessions: number;
+  /** Sesiones excluidas (cuentas internas / QA, p. ej. Allan Rojas). */
+  excludedInternalSessions: number;
   uniqueMembers: number;
   avgDurationMs: number;
   medianDurationMs: number;
@@ -348,12 +354,32 @@ export async function computeUsageBitacora(
   const from = new Date(to.getTime() - (windowDays - 1) * 86_400_000);
   from.setUTCHours(0, 0, 0, 0);
 
-  const docs = await db
+  const knownAnons = await loadInternalAnonymousIds(db);
+
+  const rawDocs = await db
     .collection<SessionLogDoc>(SESSION_LOGS_COLLECTION)
     .find({ lastSeenAt: { $gte: from } })
     .sort({ lastSeenAt: -1 })
     .limit(2000)
     .toArray();
+
+  let excludedInternalSessions = 0;
+  const docs = rawDocs.filter((d) => {
+    if (
+      isInternalAnalyticsSubject(
+        {
+          memberId: d.memberId,
+          memberName: d.memberName,
+          anonymousId: d.anonymousId,
+        },
+        knownAnons,
+      )
+    ) {
+      excludedInternalSessions += 1;
+      return false;
+    }
+    return true;
+  });
 
   const pathViews: Record<string, number> = {};
   const pathSessions: Record<string, number> = {};
@@ -440,6 +466,7 @@ export async function computeUsageBitacora(
     sessions: docs.length,
     memberSessions,
     anonSessions,
+    excludedInternalSessions,
     uniqueMembers: memberIds.size,
     avgDurationMs,
     medianDurationMs: median(durations),

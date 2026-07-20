@@ -200,6 +200,16 @@ type AdminData = {
   };
   checkins: CheckinRow[];
   checkinSeries: { date: string; checkins: number; unique: number }[];
+  /** Solo super: sesiones de staff abiertas (admin/recepción/ingreso/trainer). */
+  staffSecurity?: {
+    total: number;
+    bySurface: {
+      reception: number;
+      ingreso: number;
+      trainer: number;
+      admin: number;
+    };
+  };
   revenue?: Revenue;
   growth?: {
     windowDays: number;
@@ -261,6 +271,7 @@ type AdminData = {
     sessions: number;
     memberSessions: number;
     anonSessions: number;
+    excludedInternalSessions?: number;
     uniqueMembers: number;
     avgDurationMs: number;
     medianDurationMs: number;
@@ -917,6 +928,11 @@ export default function XtremeAdminPage() {
 
   const sortedMembers = useMemo(() => {
     const collator = new Intl.Collator("es-CR", { numeric: true, sensitivity: "base" });
+    /** Días hasta/desde vencimiento: número real (negativo = ya venció). */
+    const daysLeft = (member: AdminMember) => {
+      const n = Number(member.daysRemaining);
+      return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY;
+    };
     const valueFor = (member: AdminMember): string | number => {
       switch (memberSort.key) {
         case "member":
@@ -924,11 +940,12 @@ export default function XtremeAdminPage() {
         case "contact":
           return member.phone || member.email;
         case "streak":
-          return member.streak;
+          return Number(member.streak) || 0;
         case "coach":
           return member.coach;
         case "membership":
-          return member.daysRemaining;
+          // Siempre por días restantes/vencidos, nunca por texto del plan o estado.
+          return daysLeft(member);
         case "code":
           return Number(member.accessCode.replace(/\D/g, "")) || 0;
         case "plan":
@@ -938,10 +955,17 @@ export default function XtremeAdminPage() {
     const direction = memberSort.direction === "asc" ? 1 : -1;
 
     return [...filteredMembers].sort((left, right) => {
+      // Membresía: orden numérico estricto por días (asc = más vencido / menos días primero).
+      if (memberSort.key === "membership") {
+        const diff = daysLeft(left) - daysLeft(right);
+        if (diff) return diff * direction;
+        return collator.compare(left.memberName, right.memberName);
+      }
+
       const leftValue = valueFor(left);
       const rightValue = valueFor(right);
-      const leftBlank = leftValue === "";
-      const rightBlank = rightValue === "";
+      const leftBlank = leftValue === "" || leftValue == null;
+      const rightBlank = rightValue === "" || rightValue == null;
       if (leftBlank !== rightBlank) return leftBlank ? 1 : -1;
 
       const comparison =
@@ -1463,6 +1487,54 @@ export default function XtremeAdminPage() {
     }
   }
 
+  async function revokeAllStaffSessions(includeSelf = false) {
+    if (data?.role !== "super") return;
+    const confirmMsg = includeSelf
+      ? "Vas a cerrar TODAS las sesiones de staff, incluida la tuya. Tendrás que volver a entrar con el código."
+      : "Vas a cerrar todas las sesiones de staff (admin, recepción, ingreso, trainer), excepto la tuya. ¿Seguís?";
+    if (!window.confirm(confirmMsg)) return;
+    setBusy("revoke-staff");
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/xtreme/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "revoke_all_staff_sessions", includeSelf }),
+      });
+      const json = (await response.json()) as {
+        ok?: boolean;
+        revoked?: number;
+        mustRelogin?: boolean;
+        staffSecurity?: AdminData["staffSecurity"];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(json.error || "No se pudieron cerrar las sesiones.");
+      if (json.mustRelogin) {
+        setMessage(`Se cerraron ${json.revoked ?? 0} sesión(es). Volvé a entrar.`);
+        await fetch("/api/xtreme/staff-session?surface=admin", { method: "DELETE" });
+        setCode("");
+        setCodeInput("");
+        setData(null);
+        return;
+      }
+      setMessage(
+        `Listo: se cerraron ${json.revoked ?? 0} sesión(es) de staff. Tu sesión se mantuvo abierta.`,
+      );
+      if (json.staffSecurity) {
+        setData((current) =>
+          current ? { ...current, staffSecurity: json.staffSecurity } : current,
+        );
+      } else {
+        await load(code);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al revocar sesiones.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function logout() {
     await fetch("/api/xtreme/staff-session?surface=admin", { method: "DELETE" });
     setCode("");
@@ -1662,6 +1734,64 @@ export default function XtremeAdminPage() {
                   <Kpi icon={ClipboardList} label="Con plan" value={`${data.totals.withPlan}`} accent="from-fuchsia-400 to-rose-400" />
                   <Kpi icon={Activity} label="Ocupacion" value={`${t?.occupancyPct ?? 0}%`} accent="from-lime-300 to-cyan-300" />
                 </div>
+
+                {isSuper && (
+                  <div className="mt-4 border-[3px] border-orange-300/40 bg-orange-300/[0.06] p-4 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <ShieldAlert className="mt-0.5 h-6 w-6 shrink-0 text-orange-300" />
+                        <div>
+                          <h2 className="text-lg font-black uppercase text-orange-100">
+                            Seguridad · sesiones de staff
+                          </h2>
+                          <p className="mt-1 max-w-2xl text-xs font-bold leading-relaxed text-white/50">
+                            Si alguien entró al admin o recepción con un código viejo, o dejó una
+                            sesión abierta, acá las cerrás al toque. Rotar el PIN en Vercel también
+                            invalida sesiones al próximo request (authEpoch).
+                          </p>
+                          <p className="mt-2 text-sm font-black text-white">
+                            Activas ahora:{" "}
+                            <span className="text-orange-200">
+                              {data.staffSecurity?.total ?? "—"}
+                            </span>
+                            {data.staffSecurity ? (
+                              <span className="ml-2 text-[11px] font-bold text-white/45">
+                                admin {data.staffSecurity.bySurface.admin} · recepción{" "}
+                                {data.staffSecurity.bySurface.reception} · ingreso{" "}
+                                {data.staffSecurity.bySurface.ingreso} · trainer{" "}
+                                {data.staffSecurity.bySurface.trainer}
+                              </span>
+                            ) : null}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={Boolean(busy)}
+                          onClick={() => void revokeAllStaffSessions(false)}
+                          className="inline-flex min-h-11 items-center gap-2 border-[3px] border-orange-300/50 bg-orange-300/15 px-3 py-2 text-[11px] font-black uppercase text-orange-100 transition hover:bg-orange-300 hover:text-black disabled:opacity-40"
+                        >
+                          {busy === "revoke-staff" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <LogOut className="h-4 w-4" />
+                          )}
+                          Cerrar otras sesiones
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(busy)}
+                          onClick={() => void revokeAllStaffSessions(true)}
+                          className="inline-flex min-h-11 items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-[11px] font-black uppercase text-red-200 transition hover:bg-red-400 hover:text-black disabled:opacity-40"
+                        >
+                          <ShieldAlert className="h-4 w-4" />
+                          Cerrar todas (+ yo)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {data.opsAlerts && data.opsAlerts.length > 0 && (
                   <div className="mt-4 border-[3px] border-red-400/45 bg-red-500/[0.08] p-4 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5">
@@ -2135,7 +2265,7 @@ export default function XtremeAdminPage() {
                             onSort={toggleMemberSort}
                           />
                           <SortableMemberHeader
-                            label="Membresía"
+                            label="Días plan"
                             sortKey="membership"
                             activeKey={memberSort.key}
                             direction={memberSort.direction}
@@ -2253,8 +2383,26 @@ export default function XtremeAdminPage() {
                               <span className={`inline-block border px-2 py-1 text-[10px] font-black uppercase ${STATUS_STYLES[m.membershipStatus]}`}>
                                 {STATUS_LABEL[m.membershipStatus]}
                               </span>
-                              <div className="mt-1 text-[11px] font-semibold text-white/40">
-                                {m.plan} · {m.daysRemaining < 0 ? `${Math.abs(m.daysRemaining)}d vencida` : `${m.daysRemaining}d`}
+                              <div
+                                className={`mt-1 text-sm font-black tabular-nums ${
+                                  m.daysRemaining < 0
+                                    ? "text-red-300"
+                                    : m.daysRemaining <= 5
+                                      ? "text-orange-300"
+                                      : "text-lime-200"
+                                }`}
+                                title={
+                                  m.daysRemaining < 0
+                                    ? `Venció hace ${Math.abs(m.daysRemaining)} día(s)`
+                                    : `Quedan ${m.daysRemaining} día(s)`
+                                }
+                              >
+                                {m.daysRemaining < 0
+                                  ? `−${Math.abs(m.daysRemaining)}d`
+                                  : `${m.daysRemaining}d`}
+                              </div>
+                              <div className="mt-0.5 text-[11px] font-semibold text-white/40">
+                                {m.plan || "Sin plan"}
                               </div>
                               {data.role === "super" && (
                                 <button
@@ -2483,8 +2631,12 @@ export default function XtremeAdminPage() {
 
                     <p className="text-xs font-semibold text-white/45">
                       Ventana {data.usage.fromDate} → {data.usage.toDate} ·{" "}
-                      {data.usage.memberSessions} con socio · {data.usage.anonSessions} anónimas ·
-                      mediana {formatDurationMs(data.usage.medianDurationMs)}
+                      {data.usage.memberSessions} con socio · {data.usage.anonSessions} anónimas
+                      {typeof data.usage.excludedInternalSessions === "number" &&
+                      data.usage.excludedInternalSessions > 0
+                        ? ` · ${data.usage.excludedInternalSessions} internas excluidas (QA/Allan)`
+                        : ""}{" "}
+                      · mediana {formatDurationMs(data.usage.medianDurationMs)}
                     </p>
 
                     <div className="grid gap-4 lg:grid-cols-3">
