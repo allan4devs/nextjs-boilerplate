@@ -81,6 +81,14 @@ type AdminMember = {
   phone: string;
   email: string;
   emailVerified?: boolean;
+  /** Confirmó/corrigió datos de ficha (profileClaim o correo verificado). */
+  profileClaimed?: boolean;
+  profileClaimedAt?: string | null;
+  hasEmailRecovery?: boolean;
+  /** Tiene PIN en la app. */
+  hasPin?: boolean;
+  /** Recibió al menos un correo de campaña (magic link) con status sent. */
+  campaignInviteSent?: boolean;
   cedula?: string;
   coach: string;
   notes: string;
@@ -411,17 +419,92 @@ const STATUS_LABEL: Record<AdminMember["membershipStatus"], string> = {
   expired: "Vencida",
 };
 
-/** Filtros de la tabla de socios (membresía + verificación de correo). */
-type MemberListFilter = "all" | "active" | "warning" | "expired" | "verified" | "unverified";
+/** Membresía (plan vigente / por vencer / vencida). */
+type MembershipFilter = "all" | "active" | "warning" | "expired";
+/** Registro en la app (correo verificado). */
+type RegistrationFilter = "all" | "registered" | "not_registered" | "no_email";
+/** Auditarón / confirmaron datos de la ficha (profileClaim o registro). */
+type ProfileFilter = "all" | "audited" | "pending";
+/** Se les mandó invitación/magic link de campaña. */
+type InviteFilter = "all" | "sent" | "not_sent";
 
-const MEMBER_LIST_FILTERS: { id: MemberListFilter; label: string }[] = [
-  { id: "all", label: "Todos" },
+const MEMBERSHIP_FILTERS: { id: MembershipFilter; label: string }[] = [
+  { id: "all", label: "Todas" },
   { id: "active", label: STATUS_LABEL.active },
   { id: "warning", label: STATUS_LABEL.warning },
   { id: "expired", label: STATUS_LABEL.expired },
-  { id: "verified", label: "Verificados" },
-  { id: "unverified", label: "Sin verificar" },
 ];
+
+const REGISTRATION_FILTERS: { id: RegistrationFilter; label: string }[] = [
+  { id: "all", label: "Todos" },
+  { id: "registered", label: "Registrados" },
+  { id: "not_registered", label: "Sin registrar" },
+  { id: "no_email", label: "Sin correo" },
+];
+
+const PROFILE_FILTERS: { id: ProfileFilter; label: string }[] = [
+  { id: "all", label: "Todas" },
+  { id: "audited", label: "Ficha OK" },
+  { id: "pending", label: "Sin auditar" },
+];
+
+const INVITE_FILTERS: { id: InviteFilter; label: string }[] = [
+  { id: "all", label: "Todos" },
+  { id: "sent", label: "Correo enviado" },
+  { id: "not_sent", label: "Sin invitar" },
+];
+
+function FilterChipRow<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  counts,
+  activeTone = "lime",
+}: {
+  label: string;
+  options: { id: T; label: string }[];
+  value: T;
+  onChange: (id: T) => void;
+  counts?: Partial<Record<T, number>>;
+  activeTone?: "lime" | "cyan" | "orange" | "violet";
+}) {
+  const activeClass =
+    activeTone === "cyan"
+      ? "border-cyan-300 bg-cyan-300 text-black"
+      : activeTone === "orange"
+        ? "border-orange-300 bg-orange-300 text-black"
+        : activeTone === "violet"
+          ? "border-violet-300 bg-violet-300 text-black"
+          : "border-lime-300 bg-lime-300 text-black";
+  return (
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+      <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-white/40 sm:w-24">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => {
+          const count = counts?.[opt.id];
+          const countSuffix =
+            opt.id !== ("all" as T) && count != null ? ` (${count})` : "";
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onChange(opt.id)}
+              className={`border px-2.5 py-1.5 text-[10px] font-black uppercase ${
+                value === opt.id ? activeClass : "border-white/15 text-white/60"
+              }`}
+            >
+              {opt.label}
+              {countSuffix}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function money(crc: number) {
   return `CRC ${crc.toLocaleString("es-CR")}`;
@@ -598,7 +681,10 @@ export default function XtremeAdminPage() {
   const [message, setMessage] = useState("");
   const [tab, setTab] = useState<Tab>("resumen");
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<MemberListFilter>("all");
+  const [membershipFilter, setMembershipFilter] = useState<MembershipFilter>("all");
+  const [registrationFilter, setRegistrationFilter] = useState<RegistrationFilter>("all");
+  const [profileFilter, setProfileFilter] = useState<ProfileFilter>("all");
+  const [inviteFilter, setInviteFilter] = useState<InviteFilter>("all");
   const [memberPage, setMemberPage] = useState(1);
   const [memberPageSize, setMemberPageSize] = useState(25);
   const [memberSort, setMemberSort] = useState<{
@@ -762,28 +848,59 @@ export default function XtremeAdminPage() {
     }
   }
 
-  const memberVerifyCounts = useMemo(() => {
-    if (!data) return { verified: 0, unverified: 0 };
-    let verified = 0;
-    let unverified = 0;
+  const memberLifecycleCounts = useMemo(() => {
+    const empty = {
+      registered: 0,
+      not_registered: 0,
+      no_email: 0,
+      audited: 0,
+      pending: 0,
+      sent: 0,
+      not_sent: 0,
+      active: 0,
+      warning: 0,
+      expired: 0,
+    };
+    if (!data) return empty;
     for (const m of data.members) {
-      if (m.emailVerified === true) verified += 1;
-      else unverified += 1;
+      if (m.membershipStatus === "active") empty.active += 1;
+      else if (m.membershipStatus === "warning") empty.warning += 1;
+      else if (m.membershipStatus === "expired") empty.expired += 1;
+
+      if (!m.email?.trim()) empty.no_email += 1;
+      else if (m.emailVerified === true) empty.registered += 1;
+      else empty.not_registered += 1;
+
+      if (m.profileClaimed === true || m.emailVerified === true) empty.audited += 1;
+      else empty.pending += 1;
+
+      if (m.campaignInviteSent === true) empty.sent += 1;
+      else empty.not_sent += 1;
     }
-    return { verified, unverified };
+    return empty;
   }, [data]);
 
   const filteredMembers = useMemo(() => {
     if (!data) return [];
     const q = query.trim().toUpperCase();
     return data.members.filter((m) => {
-      if (statusFilter === "verified") {
+      if (membershipFilter !== "all" && m.membershipStatus !== membershipFilter) return false;
+
+      if (registrationFilter === "registered") {
         if (m.emailVerified !== true) return false;
-      } else if (statusFilter === "unverified") {
-        if (m.emailVerified === true) return false;
-      } else if (statusFilter !== "all" && m.membershipStatus !== statusFilter) {
-        return false;
+      } else if (registrationFilter === "not_registered") {
+        if (m.emailVerified === true || !m.email?.trim()) return false;
+      } else if (registrationFilter === "no_email") {
+        if (m.email?.trim()) return false;
       }
+
+      const audited = m.profileClaimed === true || m.emailVerified === true;
+      if (profileFilter === "audited" && !audited) return false;
+      if (profileFilter === "pending" && audited) return false;
+
+      if (inviteFilter === "sent" && m.campaignInviteSent !== true) return false;
+      if (inviteFilter === "not_sent" && m.campaignInviteSent === true) return false;
+
       if (!q) return true;
       return (
         m.memberName.toUpperCase().includes(q) ||
@@ -792,10 +909,11 @@ export default function XtremeAdminPage() {
         m.coach.toUpperCase().includes(q) ||
         m.goal.toUpperCase().includes(q) ||
         m.plan.toUpperCase().includes(q) ||
-        (m.email || "").toUpperCase().includes(q)
+        (m.email || "").toUpperCase().includes(q) ||
+        (m.cedula || "").includes(q)
       );
     });
-  }, [data, query, statusFilter]);
+  }, [data, query, membershipFilter, registrationFilter, profileFilter, inviteFilter]);
 
   const sortedMembers = useMemo(() => {
     const collator = new Intl.Collator("es-CR", { numeric: true, sensitivity: "base" });
@@ -845,7 +963,15 @@ export default function XtremeAdminPage() {
   // Al filtrar / ordenar / cambiar page size, volver a la página 1
   useEffect(() => {
     setMemberPage(1);
-  }, [query, statusFilter, memberSort, memberPageSize]);
+  }, [
+    query,
+    membershipFilter,
+    registrationFilter,
+    profileFilter,
+    inviteFilter,
+    memberSort,
+    memberPageSize,
+  ]);
 
   // Si la página actual queda fuera de rango (p. ej. tras borrar), ajustar
   useEffect(() => {
@@ -1865,44 +1991,80 @@ export default function XtremeAdminPage() {
 
             {tab === "socios" && (
               <>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="relative flex-1 max-w-md">
+                <div className="space-y-3">
+                  <div className="relative max-w-md">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                     <input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Buscar nombre, codigo, telefono, coach..."
+                      placeholder="Buscar nombre, cédula, código, correo, coach..."
                       className="w-full border border-white/12 bg-black/40 py-2.5 pl-10 pr-3 text-sm font-semibold text-white outline-none focus:border-lime-300"
                     />
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {MEMBER_LIST_FILTERS.map((s) => {
-                      const countSuffix =
-                        s.id === "verified"
-                          ? ` (${memberVerifyCounts.verified})`
-                          : s.id === "unverified"
-                            ? ` (${memberVerifyCounts.unverified})`
-                            : "";
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => setStatusFilter(s.id)}
-                          className={`border px-3 py-2 text-[11px] font-black uppercase ${
-                            statusFilter === s.id
-                              ? s.id === "verified"
-                                ? "border-cyan-300 bg-cyan-300 text-black"
-                                : s.id === "unverified"
-                                  ? "border-orange-300 bg-orange-300 text-black"
-                                  : "border-lime-300 bg-lime-300 text-black"
-                              : "border-white/15 text-white/60"
-                          }`}
-                        >
-                          {s.label}
-                          {countSuffix}
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-2.5 border border-white/10 bg-white/[0.03] p-3 sm:p-4">
+                    <FilterChipRow
+                      label="Membresía"
+                      options={MEMBERSHIP_FILTERS}
+                      value={membershipFilter}
+                      onChange={setMembershipFilter}
+                      counts={{
+                        active: memberLifecycleCounts.active,
+                        warning: memberLifecycleCounts.warning,
+                        expired: memberLifecycleCounts.expired,
+                      }}
+                      activeTone="lime"
+                    />
+                    <FilterChipRow
+                      label="Registro"
+                      options={REGISTRATION_FILTERS}
+                      value={registrationFilter}
+                      onChange={setRegistrationFilter}
+                      counts={{
+                        registered: memberLifecycleCounts.registered,
+                        not_registered: memberLifecycleCounts.not_registered,
+                        no_email: memberLifecycleCounts.no_email,
+                      }}
+                      activeTone="cyan"
+                    />
+                    <FilterChipRow
+                      label="Ficha"
+                      options={PROFILE_FILTERS}
+                      value={profileFilter}
+                      onChange={setProfileFilter}
+                      counts={{
+                        audited: memberLifecycleCounts.audited,
+                        pending: memberLifecycleCounts.pending,
+                      }}
+                      activeTone="violet"
+                    />
+                    <FilterChipRow
+                      label="Invitación"
+                      options={INVITE_FILTERS}
+                      value={inviteFilter}
+                      onChange={setInviteFilter}
+                      counts={{
+                        sent: memberLifecycleCounts.sent,
+                        not_sent: memberLifecycleCounts.not_sent,
+                      }}
+                      activeTone="orange"
+                    />
+                    {(membershipFilter !== "all" ||
+                      registrationFilter !== "all" ||
+                      profileFilter !== "all" ||
+                      inviteFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMembershipFilter("all");
+                          setRegistrationFilter("all");
+                          setProfileFilter("all");
+                          setInviteFilter("all");
+                        }}
+                        className="text-[10px] font-black uppercase text-white/45 underline decoration-white/25 underline-offset-2 hover:text-lime-200"
+                      >
+                        Limpiar filtros
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1911,12 +2073,7 @@ export default function XtremeAdminPage() {
                     <div className="flex items-center gap-3">
                       <Users className="h-5 w-5 text-orange-300" />
                       <h2 className="text-lg font-black uppercase">
-                        {statusFilter === "verified"
-                          ? "Correo verificado"
-                          : statusFilter === "unverified"
-                            ? "Sin verificar"
-                            : "Socios"}{" "}
-                        ({filteredMembers.length}/{data.members.length})
+                        Socios ({filteredMembers.length}/{data.members.length})
                       </h2>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -2025,20 +2182,63 @@ export default function XtremeAdminPage() {
                             </td>
                             <td className="px-3 py-3 text-xs font-semibold text-white/55">
                               <div>{m.phone || "-"}</div>
-                              <div className="truncate max-w-[140px]">{m.email || "-"}</div>
-                              {m.email ? (
-                                <div
-                                  className={`mt-0.5 text-[10px] font-black uppercase tracking-wide ${
-                                    m.emailVerified ? "text-lime-300/80" : "text-orange-300/80"
+                              <div className="truncate max-w-[160px]">{m.email || "-"}</div>
+                              <div className="mt-1.5 flex flex-wrap gap-1">
+                                <span
+                                  className={`inline-block border px-1.5 py-0.5 text-[9px] font-black uppercase ${
+                                    m.emailVerified
+                                      ? "border-lime-300/40 bg-lime-300/10 text-lime-200"
+                                      : m.email
+                                        ? "border-orange-300/40 bg-orange-300/10 text-orange-200"
+                                        : "border-white/15 text-white/40"
                                   }`}
+                                  title={
+                                    m.emailVerified
+                                      ? "Correo verificado · se registró en la app"
+                                      : m.email
+                                        ? "Tiene correo pero no ha completado el registro"
+                                        : "Sin correo en la ficha"
+                                  }
                                 >
-                                  {m.emailVerified ? "Correo OK" : "Sin verificar"}
-                                </div>
-                              ) : (
-                                <div className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-white/35">
-                                  Sin correo
-                                </div>
-                              )}
+                                  {m.emailVerified ? "Registrado" : m.email ? "Sin registrar" : "Sin correo"}
+                                </span>
+                                <span
+                                  className={`inline-block border px-1.5 py-0.5 text-[9px] font-black uppercase ${
+                                    m.profileClaimed || m.emailVerified
+                                      ? "border-violet-300/40 bg-violet-300/10 text-violet-200"
+                                      : "border-white/15 text-white/40"
+                                  }`}
+                                  title={
+                                    m.profileClaimed || m.emailVerified
+                                      ? "Confirmó o corrigió los datos de la ficha"
+                                      : "Aún no auditó/confirmó los datos de la ficha"
+                                  }
+                                >
+                                  {m.profileClaimed || m.emailVerified ? "Ficha OK" : "Sin auditar"}
+                                </span>
+                                <span
+                                  className={`inline-block border px-1.5 py-0.5 text-[9px] font-black uppercase ${
+                                    m.campaignInviteSent
+                                      ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200"
+                                      : "border-white/15 text-white/40"
+                                  }`}
+                                  title={
+                                    m.campaignInviteSent
+                                      ? "Ya se le envió invitación / magic link de campaña"
+                                      : "Todavía no se le ha enviado correo de campaña"
+                                  }
+                                >
+                                  {m.campaignInviteSent ? "Correo enviado" : "Sin invitar"}
+                                </span>
+                                {m.hasPin ? (
+                                  <span
+                                    className="inline-block border border-lime-300/30 bg-lime-300/5 px-1.5 py-0.5 text-[9px] font-black uppercase text-lime-200/80"
+                                    title="Tiene PIN en la app"
+                                  >
+                                    PIN
+                                  </span>
+                                ) : null}
+                              </div>
                             </td>
                             <td className="px-3 py-3">
                               <span className="inline-flex items-center gap-1 font-black text-orange-300">
@@ -2164,11 +2364,7 @@ export default function XtremeAdminPage() {
                         {!filteredMembers.length && (
                           <tr>
                             <td colSpan={8} className="px-5 py-10 text-center text-sm font-semibold text-white/45">
-                              {statusFilter === "verified"
-                                ? "Nadie con correo verificado todavía."
-                                : statusFilter === "unverified"
-                                  ? "Todos los socios con correo ya están verificados."
-                                  : "Sin resultados. Ajustá el filtro o generá seed demo."}
+                              Sin resultados con estos filtros. Probá «Limpiar filtros» o ampliá la búsqueda.
                             </td>
                           </tr>
                         )}
@@ -3798,6 +3994,20 @@ function UserDetailModal({
                 <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
                   {STATUS_LABEL[member.membershipStatus]}
                 </span>
+                <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
+                  {member.emailVerified ? "Registrado" : member.email ? "Sin registrar" : "Sin correo"}
+                </span>
+                <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
+                  {member.profileClaimed || member.emailVerified ? "Ficha OK" : "Sin auditar"}
+                </span>
+                <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
+                  {member.campaignInviteSent ? "Correo enviado" : "Sin invitar"}
+                </span>
+                {member.hasPin ? (
+                  <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
+                    PIN
+                  </span>
+                ) : null}
                 {member.seeded && (
                   <span className="border-2 border-black/25 px-1.5 py-0.5 text-[9px] font-black uppercase text-black/55">
                     demo

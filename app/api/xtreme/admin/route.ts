@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import {
   CHECKINS_COLLECTION,
+  EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   MEMBERS_COLLECTION,
   PAYMENTS_COLLECTION,
   PINS_COLLECTION,
@@ -156,8 +157,33 @@ export async function GET(req: NextRequest) {
     const date = todayIso();
 
     const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
+
+    // Invitaciones de campaña (magic link) ya enviadas + PINs creados.
+    const [campaignSentEmailsRaw, pinKeysRaw] = await Promise.all([
+      db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).distinct("email", { status: "sent" }),
+      db.collection(PINS_COLLECTION).distinct("normalizedName"),
+    ]);
+    const campaignSentEmails = new Set(
+      campaignSentEmailsRaw
+        .map((e) => String(e || "").trim().toLowerCase())
+        .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
+    );
+    const pinKeys = new Set(
+      pinKeysRaw.map((k) => String(k || "").trim().toUpperCase()).filter(Boolean),
+    );
+
     const members = docs
-      .map(toAdminMember)
+      .map((doc) => {
+        const base = toAdminMember(doc);
+        const emailNorm = String(base.email || "")
+          .trim()
+          .toLowerCase();
+        return {
+          ...base,
+          hasPin: pinKeys.has(String(base.normalizedName || "").toUpperCase()),
+          campaignInviteSent: Boolean(emailNorm && campaignSentEmails.has(emailNorm)),
+        };
+      })
       .sort(
         (a, b) =>
           b.streak - a.streak ||

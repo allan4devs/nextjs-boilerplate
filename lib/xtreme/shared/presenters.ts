@@ -90,6 +90,12 @@ export function toAdminMember(doc: MemberDoc) {
     email: doc.email ?? "",
     cedula: doc.cedula ?? "",
     emailVerified: Boolean(doc.emailVerified),
+    /** Confirmó/corrigió datos de la ficha vía magic link o registro. */
+    profileClaimed: Boolean(doc.profileClaim?.claimedAt) || Boolean(doc.emailVerified),
+    profileClaimedAt: doc.profileClaim?.claimedAt
+      ? new Date(doc.profileClaim.claimedAt).toISOString()
+      : null,
+    hasEmailRecovery: Boolean(doc.emailRecovery),
     coach: doc.coach ?? "",
     notes: doc.notes ?? "",
     photoUrl: doc.photoUrl ?? "",
