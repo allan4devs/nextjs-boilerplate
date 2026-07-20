@@ -1,6 +1,12 @@
 import { randomUUID } from "crypto";
 import type { Db } from "mongodb";
-import { emailConfigurationError, emailEnabled, sendCampaignEmail } from "@/lib/helpers/email";
+import {
+  buildCampaignEmail,
+  emailConfigurationError,
+  emailEnabled,
+  sendBatchEmails,
+  type SendEmailArgs,
+} from "@/lib/helpers/email";
 import {
   CLAIM_LINK_AUDIENCES,
   issueCampaignClaimLink,
@@ -545,6 +551,16 @@ async function processOneCampaignBatch(
   let failed = 0;
   let skipped = alreadySentSkipped;
 
+  /** Preparamos en serie (claim + DB); el envío va por Resend Batch API (hasta 100). */
+  type PendingCampaignSend = {
+    deliveryKey: string;
+    ctaPath: string;
+    linkKind: "claim" | "app" | "fallback";
+    attemptCount: number;
+    mail: SendEmailArgs;
+  };
+  const pendingSends: PendingCampaignSend[] = [];
+
   for (const item of batch) {
     // Respetar detención del admin a mitad de lote.
     const live = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne(
@@ -747,94 +763,131 @@ async function processOneCampaignBatch(
       { $set: { ctaPath, linkKind, updatedAt: new Date() } },
     );
 
-    const result = await sendCampaignEmail({
-      to: item.email,
-      subject: campaign.subject,
-      title: campaign.title,
-      message: campaign.message,
-      ctaLabel,
-      ctaPath: emailCtaPath,
-      idempotencyKey: item.deliveryKey,
+    pendingSends.push({
+      deliveryKey: item.deliveryKey,
+      ctaPath,
+      linkKind,
+      attemptCount,
+      mail: buildCampaignEmail({
+        to: item.email,
+        subject: campaign.subject,
+        title: campaign.title,
+        message: campaign.message,
+        ctaLabel,
+        ctaPath: emailCtaPath,
+        ref: item.deliveryKey,
+      }),
     });
-    const now = new Date();
-    if (result.ok) {
-      sent += 1;
-      await deliveries.updateOne(
-        { deliveryKey: item.deliveryKey },
-        {
-          $set: {
-            status: "sent",
-            updatedAt: now,
-            sentAt: now,
-            ctaPath,
-            linkKind,
+  }
+
+  // Un solo request a Resend Batch por chunk (hasta 100). Evita 1 HTTP por socio.
+  if (pendingSends.length) {
+    const live = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne(
+      { id: campaign.id },
+      { projection: { status: 1 } },
+    );
+    if (!live || live.status === "cancelled" || live.status === "completed") {
+      const now = new Date();
+      for (const pending of pendingSends) {
+        await deliveries.updateOne(
+          { deliveryKey: pending.deliveryKey },
+          {
+            $set: {
+              status: "queued",
+              updatedAt: now,
+              ctaPath: pending.ctaPath,
+              linkKind: pending.linkKind,
+              error: "Campaña detenida antes del envío en lote; reencolado.",
+            },
+            $inc: { attempts: -1 },
           },
-          $unset: { error: "" },
-        },
-      );
-      // Ritmo estable bajo Resend (~4 envíos/s de margen).
-      await new Promise((resolve) => setTimeout(resolve, 260));
-    } else if (result.skipped) {
-      skipped += 1;
-      await deliveries.updateOne(
-        { deliveryKey: item.deliveryKey },
-        {
-          $set: {
-            status: "skipped",
-            updatedAt: now,
-            ctaPath,
-            linkKind,
-            error: result.error || "Envío omitido sin detalle.",
-          },
-        },
-      );
-    } else if (result.code === "rate_limit" || result.status === 429) {
-      // No quemar reintentos: reencolar y enfriar el lote.
-      await deliveries.updateOne(
-        { deliveryKey: item.deliveryKey },
-        {
-          $set: {
-            status: "queued",
-            updatedAt: now,
-            ctaPath,
-            linkKind,
-            error: result.error || "Rate limit Resend",
-          },
-          // Devolver el attempt para no castigar por 429 del proveedor.
-          $inc: { attempts: -1 },
-        },
-      );
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      // Cortar el lote actual: el cron siguiente continúa sin saturar.
-      break;
-    } else if (attemptCount < 4) {
-      await deliveries.updateOne(
-        { deliveryKey: item.deliveryKey },
-        {
-          $set: {
-            status: "queued",
-            updatedAt: now,
-            ctaPath,
-            linkKind,
-            error: result.error || "Error de envío",
-          },
-        },
-      );
-      await new Promise((resolve) => setTimeout(resolve, 280));
+        );
+      }
     } else {
-      failed += 1;
-      await deliveries.updateOne(
-        { deliveryKey: item.deliveryKey },
+      const batchResult = await sendBatchEmails(
+        pendingSends.map((row) => row.mail),
         {
-          $set: {
-            status: "failed",
-            updatedAt: now,
-            ctaPath,
-            linkKind,
-            error: result.error || "Error de envío",
-          },
+          idempotencyKey: `campaign:${campaign.id}:${pendingSends[0].deliveryKey}:n${pendingSends.length}`,
         },
       );
+
+      for (const result of batchResult.results) {
+        const pending = pendingSends[result.index];
+        if (!pending) continue;
+        const now = new Date();
+        if (result.ok) {
+          sent += 1;
+          await deliveries.updateOne(
+            { deliveryKey: pending.deliveryKey },
+            {
+              $set: {
+                status: "sent",
+                updatedAt: now,
+                sentAt: now,
+                ctaPath: pending.ctaPath,
+                linkKind: pending.linkKind,
+                ...(result.id ? { providerMessageId: result.id } : {}),
+              },
+              $unset: { error: "" },
+            },
+          );
+        } else if (result.skipped) {
+          skipped += 1;
+          await deliveries.updateOne(
+            { deliveryKey: pending.deliveryKey },
+            {
+              $set: {
+                status: "skipped",
+                updatedAt: now,
+                ctaPath: pending.ctaPath,
+                linkKind: pending.linkKind,
+                error: result.error || "Envío omitido sin detalle.",
+              },
+            },
+          );
+        } else if (result.code === "rate_limit" || result.status === 429) {
+          await deliveries.updateOne(
+            { deliveryKey: pending.deliveryKey },
+            {
+              $set: {
+                status: "queued",
+                updatedAt: now,
+                ctaPath: pending.ctaPath,
+                linkKind: pending.linkKind,
+                error: result.error || "Rate limit Resend",
+              },
+              $inc: { attempts: -1 },
+            },
+          );
+        } else if (pending.attemptCount < 4) {
+          await deliveries.updateOne(
+            { deliveryKey: pending.deliveryKey },
+            {
+              $set: {
+                status: "queued",
+                updatedAt: now,
+                ctaPath: pending.ctaPath,
+                linkKind: pending.linkKind,
+                error: result.error || "Error de envío",
+              },
+            },
+          );
+        } else {
+          failed += 1;
+          await deliveries.updateOne(
+            { deliveryKey: pending.deliveryKey },
+            {
+              $set: {
+                status: "failed",
+                updatedAt: now,
+                ctaPath: pending.ctaPath,
+                linkKind: pending.linkKind,
+                error: result.error || "Error de envío",
+              },
+            },
+          );
+        }
+      }
     }
   }
 

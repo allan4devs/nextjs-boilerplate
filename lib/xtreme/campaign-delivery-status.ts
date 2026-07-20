@@ -4,7 +4,12 @@
  * También reenvío de recordatorio de verificación.
  */
 import type { Db } from "mongodb";
-import { sendCampaignEmail } from "@/lib/helpers/email";
+import {
+  buildCampaignEmail,
+  sendBatchEmails,
+  sendEmail,
+  type SendEmailArgs,
+} from "@/lib/helpers/email";
 import {
   assertSafeCampaignCta,
   extractCampaignRegistrationToken,
@@ -325,11 +330,17 @@ export async function listCampaignDeliveries(
   };
 }
 
-/** Reenvía recordatorio de verificación con un magic link nuevo. */
-export async function resendCampaignVerification(
+/**
+ * Prepara un recordatorio de verificación (claim + delivery) sin enviar.
+ * Devuelve el payload listo para Resend Batch o un error.
+ */
+async function prepareCampaignVerificationReminder(
   db: Db,
   args: { deliveryKey?: string; email?: string; campaignId?: string },
-): Promise<{ ok: true; email: string; ctaPathPreview: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; email: string; ctaPathPreview: string; mail: SendEmailArgs }
+  | { ok: false; error: string }
+> {
   const deliveries = db.collection<DeliveryDoc>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION);
   let doc: DeliveryDoc | null = null;
 
@@ -390,7 +401,6 @@ export async function resendCampaignVerification(
     };
   }
 
-  // Guardar magic link real; el correo usa wrapper de click.
   const now = new Date();
   await deliveries.updateOne(
     { deliveryKey: doc.deliveryKey },
@@ -406,31 +416,46 @@ export async function resendCampaignVerification(
   );
 
   const trackPath = campaignClickPath(doc.deliveryKey);
-  const result = await sendCampaignEmail({
-    to: email,
-    subject: `Recordatorio: ${String(campaign?.subject || "activá tu acceso en Xtreme Gym")}`,
-    title: "Todavía falta confirmar tu acceso",
-    message:
-      "Hola. Te reenviamos el enlace personal para activar tu cuenta en la app de Xtreme Gym (Ciudad Quesada).\n\n" +
-      "Tocá el botón, revisá o completá tus datos y creá tu PIN de 4 dígitos. El enlace vence en 72 horas.\n\n" +
-      "Si ya te registraste, podés ignorar este mensaje. Equipo Xtreme Gym.",
-    ctaLabel: "Confirmar mis datos y crear PIN",
-    ctaPath: trackPath,
-    idempotencyKey: `${doc.deliveryKey}:reminder:${Date.now()}`,
-  });
+  return {
+    ok: true,
+    email,
+    ctaPathPreview: "/registro/confirmar?token=…",
+    mail: buildCampaignEmail({
+      to: email,
+      subject: `Recordatorio: ${String(campaign?.subject || "activá tu acceso en Xtreme Gym")}`,
+      title: "Todavía falta confirmar tu acceso",
+      message:
+        "Hola. Te reenviamos el enlace personal para activar tu cuenta en la app de Xtreme Gym (Ciudad Quesada).\n\n" +
+        "Tocá el botón, revisá o completá tus datos y creá tu PIN de 4 dígitos. El enlace vence en 72 horas.\n\n" +
+        "Si ya te registraste, podés ignorar este mensaje. Equipo Xtreme Gym.",
+      ctaLabel: "Confirmar mis datos y crear PIN",
+      ctaPath: trackPath,
+      ref: `${doc.deliveryKey}:reminder`,
+    }),
+  };
+}
 
+/** Reenvía recordatorio de verificación con un magic link nuevo. */
+export async function resendCampaignVerification(
+  db: Db,
+  args: { deliveryKey?: string; email?: string; campaignId?: string },
+): Promise<{ ok: true; email: string; ctaPathPreview: string } | { ok: false; error: string }> {
+  const prepared = await prepareCampaignVerificationReminder(db, args);
+  if (!prepared.ok) return prepared;
+
+  const result = await sendEmail(prepared.mail);
   if (!result.ok) {
     return { ok: false, error: result.error || "El proveedor rechazó el reenvío." };
   }
 
   return {
     ok: true,
-    email,
-    ctaPathPreview: "/registro/confirmar?token=…",
+    email: prepared.email,
+    ctaPathPreview: prepared.ctaPathPreview,
   };
 }
 
-/** Reenvía recordatorio a varios no registrados de una campaña (lote acotado). */
+/** Reenvía recordatorio a varios no registrados de una campaña (Resend Batch). */
 export async function resendCampaignRemindersBatch(
   db: Db,
   campaignId: string,
@@ -441,17 +466,47 @@ export async function resendCampaignRemindersBatch(
     limit,
     offset: 0,
   });
-  let sent = 0;
+  const candidates = rows.filter((r) => r.canResend).slice(0, limit);
   let failed = 0;
   const errors: string[] = [];
-  for (const row of rows.filter((r) => r.canResend).slice(0, limit)) {
-    const result = await resendCampaignVerification(db, { deliveryKey: row.deliveryKey });
-    if (result.ok) sent += 1;
-    else {
+  const mails: SendEmailArgs[] = [];
+
+  for (const row of candidates) {
+    const prepared = await prepareCampaignVerificationReminder(db, {
+      deliveryKey: row.deliveryKey,
+    });
+    if (!prepared.ok) {
       failed += 1;
-      if (errors.length < 8) errors.push(`${row.email}: ${result.error}`);
+      if (errors.length < 8) errors.push(`${row.email}: ${prepared.error}`);
+      continue;
     }
-    await new Promise((r) => setTimeout(r, 280));
+    mails.push(prepared.mail);
   }
-  return { attempted: Math.min(rows.length, limit), sent, failed, errors };
+
+  if (!mails.length) {
+    return { attempted: candidates.length, sent: 0, failed, errors };
+  }
+
+  const batch = await sendBatchEmails(mails, {
+    idempotencyKey: `campaign-reminder:${campaignId}:${Date.now()}`,
+  });
+
+  for (const result of batch.results) {
+    if (!result.ok) {
+      failed += 1;
+      if (errors.length < 8) {
+        const email = Array.isArray(mails[result.index]?.to)
+          ? mails[result.index].to[0]
+          : mails[result.index]?.to;
+        errors.push(`${email || "?"}: ${result.error || "Error de envío"}`);
+      }
+    }
+  }
+
+  return {
+    attempted: candidates.length,
+    sent: batch.sent,
+    failed,
+    errors,
+  };
 }

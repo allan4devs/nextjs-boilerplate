@@ -5,6 +5,9 @@ import { emailPreferencesToken } from "@/lib/xtreme/email-preferences-token";
 import { EMAIL_SUPPRESSIONS_COLLECTION } from "@/lib/xtreme/shared/config";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
+/** Batch API: hasta 100 correos por request. https://resend.com/docs/api-reference/emails/send-batch-emails */
+const RESEND_BATCH_ENDPOINT = "https://api.resend.com/emails/batch";
+export const RESEND_BATCH_MAX = 100;
 const PREFERENCES_BLOCK = "__XTREME_EMAIL_PREFERENCES__";
 
 export type SendEmailResult = {
@@ -20,6 +23,56 @@ export type SendEmailResult = {
     | "network";
   /** HTTP status del proveedor (útil para reintentos 429). */
   status?: number;
+  /** ID de Resend cuando el envío se creó con éxito. */
+  id?: string;
+};
+
+export type SendEmailArgs = {
+  to: string | string[];
+  subject: string;
+  html: string;
+  /** Texto plano: mejora entrega y lectura del código OTP en clientes simples. */
+  text?: string;
+  cc?: string[];
+  optional?: boolean;
+  managePreferences?: boolean;
+  idempotencyKey?: string;
+  /** Tags de Resend (ASCII, máx 256 chars por nombre/valor). */
+  tags?: { name: string; value: string }[];
+  /**
+   * Ref local para correlacionar resultados de `sendBatchEmails`
+   * (p. ej. deliveryKey de campaña). No se envía a Resend.
+   */
+  ref?: string;
+};
+
+export type BatchEmailItemResult = SendEmailResult & {
+  index: number;
+  ref?: string;
+};
+
+export type SendBatchEmailsResult = {
+  /** true si todos los no-omitidos salieron ok. */
+  ok: boolean;
+  results: BatchEmailItemResult[];
+  sent: number;
+  failed: number;
+  skipped: number;
+  /** Error de lote completo (config, red, o rechazo de Resend al batch). */
+  error?: string;
+  status?: number;
+  code?: SendEmailResult["code"];
+};
+
+type ResendPayload = {
+  from: string;
+  to: string[];
+  subject: string;
+  html: string;
+  text?: string;
+  cc?: string[];
+  headers?: Record<string, string>;
+  tags?: { name: string; value: string }[];
 };
 
 /** Diagnóstico seguro: informa nombres de variables, nunca sus valores. */
@@ -83,69 +136,124 @@ export function escapeHtml(value: unknown) {
     .replace(/"/g, "&quot;");
 }
 
-/**
- * Envia un correo via Resend usando SMTP_FROM como remitente.
- * Nunca lanza: las rutas no deben fallar porque el correo falle.
- */
-export async function sendEmail(args: {
-  to: string | string[];
-  subject: string;
-  html: string;
-  /** Texto plano: mejora entrega y lectura del código OTP en clientes simples. */
-  text?: string;
-  cc?: string[];
-  optional?: boolean;
-  managePreferences?: boolean;
-  idempotencyKey?: string;
-}): Promise<SendEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.SMTP_FROM?.trim();
-  const to = (Array.isArray(args.to) ? args.to : [args.to]).map((t) => t.trim()).filter(Boolean);
-  const configurationError = emailConfigurationError();
+function normalizeRecipients(to: string | string[]) {
+  return (Array.isArray(to) ? to : [to]).map((t) => t.trim()).filter(Boolean);
+}
 
-  if (configurationError || !apiKey || !from) {
-    console.error("EMAIL SEND SKIPPED", configurationError);
-    return { ok: false, skipped: true, code: "configuration", error: configurationError || "Configuración de correo incompleta." };
-  }
+function sanitizeResendTags(tags: SendEmailArgs["tags"]): { name: string; value: string }[] | undefined {
+  if (!tags?.length) return undefined;
+  const cleaned = tags
+    .map((tag) => ({
+      name: String(tag.name || "")
+        .replace(/[^a-zA-Z0-9_-]/g, "")
+        .slice(0, 256),
+      value: String(tag.value || "")
+        .replace(/[^a-zA-Z0-9_-]/g, "")
+        .slice(0, 256),
+    }))
+    .filter((tag) => tag.name && tag.value);
+  return cleaned.length ? cleaned : undefined;
+}
+
+/**
+ * Prepara el payload Resend (preferencias, suppressions, validación).
+ * No llama a la red excepto lectura de Mongo para suppressions.
+ */
+async function prepareResendPayload(
+  args: SendEmailArgs,
+  from: string,
+): Promise<{ ok: true; payload: ResendPayload } | { ok: false; result: SendEmailResult }> {
+  const to = normalizeRecipients(args.to);
   if (!to.length) {
     return {
       ok: false,
-      skipped: true,
-      code: "invalid_recipient",
-      error: "No hay un correo destinatario válido para realizar el envío.",
+      result: {
+        ok: false,
+        skipped: true,
+        code: "invalid_recipient",
+        error: "No hay un correo destinatario válido para realizar el envío.",
+      },
     };
   }
 
-  try {
-    if (args.optional) {
-      const db = await getDb();
-      const suppressed = await db
-        .collection(EMAIL_SUPPRESSIONS_COLLECTION)
-        .countDocuments({ email: { $in: to } }, { limit: 1 });
-      if (suppressed) {
-        return {
+  if (args.optional) {
+    const db = await getDb();
+    const suppressed = await db
+      .collection(EMAIL_SUPPRESSIONS_COLLECTION)
+      .countDocuments({ email: { $in: to } }, { limit: 1 });
+    if (suppressed) {
+      return {
+        ok: false,
+        result: {
           ok: false,
           skipped: true,
           code: "suppressed",
           error: "El destinatario desactivó los correos opcionales; el envío fue omitido.",
-        };
-      }
+        },
+      };
     }
+  }
 
-    const preferencesEnabled = args.managePreferences !== false;
-    const token = preferencesEnabled ? emailPreferencesToken(to[0]) : "";
-    const preferencesUrl = token
-      ? absoluteAppUrl("/correo/preferencias?token=" + encodeURIComponent(token))
-      : "";
-    const oneClickUrl = token
-      ? absoluteAppUrl("/api/xtreme/email-preferences?token=" + encodeURIComponent(token))
-      : "";
-    const preferencesHtml = preferencesUrl
-      ? '<p style="margin:14px 0 0;color:#8a8a84;font-size:12px;line-height:1.6;">Para administrar recordatorios o novedades, <a href="' +
-        escapeHtml(preferencesUrl) +
-        '" style="color:#555;text-decoration:underline;">tocá acá</a>. Los recibos y avisos de la cuenta siguen disponibles.</p>'
-      : "";
-    const html = args.html.replace(PREFERENCES_BLOCK, preferencesHtml);
+  const preferencesEnabled = args.managePreferences !== false;
+  const token = preferencesEnabled ? emailPreferencesToken(to[0]) : "";
+  const preferencesUrl = token
+    ? absoluteAppUrl("/correo/preferencias?token=" + encodeURIComponent(token))
+    : "";
+  const oneClickUrl = token
+    ? absoluteAppUrl("/api/xtreme/email-preferences?token=" + encodeURIComponent(token))
+    : "";
+  const preferencesHtml = preferencesUrl
+    ? '<p style="margin:14px 0 0;color:#8a8a84;font-size:12px;line-height:1.6;">Para administrar recordatorios o novedades, <a href="' +
+      escapeHtml(preferencesUrl) +
+      '" style="color:#555;text-decoration:underline;">tocá acá</a>. Los recibos y avisos de la cuenta siguen disponibles.</p>'
+    : "";
+  const html = args.html.replace(PREFERENCES_BLOCK, preferencesHtml);
+  const tags = sanitizeResendTags(args.tags);
+
+  return {
+    ok: true,
+    payload: {
+      from,
+      to,
+      subject: args.subject,
+      html,
+      ...(args.text?.trim() ? { text: args.text.trim() } : {}),
+      ...(args.cc?.length ? { cc: args.cc } : {}),
+      ...(oneClickUrl
+        ? {
+            headers: {
+              "List-Unsubscribe": "<" + oneClickUrl + ">",
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+          }
+        : {}),
+      ...(tags ? { tags } : {}),
+    },
+  };
+}
+
+/**
+ * Envia un correo via Resend usando SMTP_FROM como remitente.
+ * Nunca lanza: las rutas no deben fallar porque el correo falle.
+ */
+export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.SMTP_FROM?.trim();
+  const configurationError = emailConfigurationError();
+
+  if (configurationError || !apiKey || !from) {
+    console.error("EMAIL SEND SKIPPED", configurationError);
+    return {
+      ok: false,
+      skipped: true,
+      code: "configuration",
+      error: configurationError || "Configuración de correo incompleta.",
+    };
+  }
+
+  try {
+    const prepared = await prepareResendPayload(args, from);
+    if (!prepared.ok) return prepared.result;
 
     const response = await fetch(RESEND_ENDPOINT, {
       method: "POST",
@@ -154,22 +262,7 @@ export async function sendEmail(args: {
         "Content-Type": "application/json",
         ...(args.idempotencyKey ? { "Idempotency-Key": args.idempotencyKey.slice(0, 256) } : {}),
       },
-      body: JSON.stringify({
-        from,
-        to,
-        subject: args.subject,
-        html,
-        ...(args.text?.trim() ? { text: args.text.trim() } : {}),
-        ...(args.cc?.length ? { cc: args.cc } : {}),
-        ...(oneClickUrl
-          ? {
-              headers: {
-                "List-Unsubscribe": "<" + oneClickUrl + ">",
-                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-              },
-            }
-          : {}),
-      }),
+      body: JSON.stringify(prepared.payload),
     });
 
     if (!response.ok) {
@@ -183,7 +276,15 @@ export async function sendEmail(args: {
       };
     }
 
-    return { ok: true };
+    let id: string | undefined;
+    try {
+      const body = (await response.json()) as { id?: string };
+      if (typeof body.id === "string") id = body.id;
+    } catch {
+      // Resend a veces devuelve 200 sin body legible; el envío igual se creó.
+    }
+
+    return { ok: true, id };
   } catch (err) {
     console.error("EMAIL SEND ERROR", err);
     const detail = err instanceof Error ? err.message.trim().slice(0, 160) : "error de red desconocido";
@@ -193,6 +294,174 @@ export async function sendEmail(args: {
       error: `No se pudo conectar con Resend: ${detail}. Revisá la red del deployment e intentá de nuevo.`,
     };
   }
+}
+
+/**
+ * Envío en lote vía Resend Batch API (`POST /emails/batch`, máx 100 por request).
+ * Cada ítem puede tener destinatario/asunto/html distintos.
+ * Nunca lanza. Si el batch falla, todos los no-omitidos del chunk quedan como failed
+ * (Resend no devuelve éxitos parciales por ítem en un request fallido).
+ *
+ * @see https://resend.com/docs/api-reference/emails/send-batch-emails
+ */
+export async function sendBatchEmails(
+  items: SendEmailArgs[],
+  options?: { idempotencyKey?: string },
+): Promise<SendBatchEmailsResult> {
+  const results: BatchEmailItemResult[] = items.map((item, index) => ({
+    index,
+    ref: item.ref,
+    ok: false,
+  }));
+
+  if (!items.length) {
+    return { ok: true, results, sent: 0, failed: 0, skipped: 0 };
+  }
+
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.SMTP_FROM?.trim();
+  const configurationError = emailConfigurationError();
+
+  if (configurationError || !apiKey || !from) {
+    console.error("EMAIL BATCH SKIPPED", configurationError);
+    const error = configurationError || "Configuración de correo incompleta.";
+    for (const row of results) {
+      row.ok = false;
+      row.skipped = true;
+      row.code = "configuration";
+      row.error = error;
+    }
+    return {
+      ok: false,
+      results,
+      sent: 0,
+      failed: 0,
+      skipped: results.length,
+      error,
+      code: "configuration",
+    };
+  }
+
+  type Ready = { index: number; payload: ResendPayload };
+  const ready: Ready[] = [];
+
+  try {
+    for (let i = 0; i < items.length; i += 1) {
+      const prepared = await prepareResendPayload(items[i], from);
+      if (!prepared.ok) {
+        results[i] = { index: i, ref: items[i].ref, ...prepared.result };
+        continue;
+      }
+      ready.push({ index: i, payload: prepared.payload });
+    }
+
+    // Chunks de hasta 100 (límite Resend).
+    for (let offset = 0; offset < ready.length; offset += RESEND_BATCH_MAX) {
+      const chunk = ready.slice(offset, offset + RESEND_BATCH_MAX);
+      const chunkKey =
+        options?.idempotencyKey &&
+        `${options.idempotencyKey}:c${Math.floor(offset / RESEND_BATCH_MAX)}`.slice(0, 256);
+
+      const response = await fetch(RESEND_BATCH_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          ...(chunkKey ? { "Idempotency-Key": chunkKey } : {}),
+        },
+        body: JSON.stringify(chunk.map((row) => row.payload)),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        console.error("EMAIL BATCH FAILED", response.status, detail.slice(0, 300));
+        const error = resendError(response.status, detail);
+        const code = response.status === 429 ? "rate_limit" : "provider_rejected";
+        for (const row of chunk) {
+          results[row.index] = {
+            index: row.index,
+            ref: items[row.index].ref,
+            ok: false,
+            status: response.status,
+            code,
+            error,
+          };
+        }
+        // Si es rate limit, no seguir con más chunks.
+        if (response.status === 429) break;
+        continue;
+      }
+
+      let ids: Array<{ id?: string }> = [];
+      try {
+        const body = (await response.json()) as { data?: Array<{ id?: string }> };
+        ids = Array.isArray(body.data) ? body.data : [];
+      } catch {
+        ids = [];
+      }
+
+      for (let j = 0; j < chunk.length; j += 1) {
+        const row = chunk[j];
+        const id = typeof ids[j]?.id === "string" ? ids[j].id : undefined;
+        results[row.index] = {
+          index: row.index,
+          ref: items[row.index].ref,
+          ok: true,
+          id,
+        };
+      }
+    }
+  } catch (err) {
+    console.error("EMAIL BATCH ERROR", err);
+    const detail = err instanceof Error ? err.message.trim().slice(0, 160) : "error de red desconocido";
+    const error = `No se pudo conectar con Resend: ${detail}. Revisá la red del deployment e intentá de nuevo.`;
+    for (const row of ready) {
+      if (!results[row.index].ok && !results[row.index].error) {
+        results[row.index] = {
+          index: row.index,
+          ref: items[row.index].ref,
+          ok: false,
+          code: "network",
+          error,
+        };
+      }
+    }
+    // Ítems aún no enviados (chunks posteriores no ejecutados).
+    for (const row of results) {
+      if (!row.ok && !row.error && !row.skipped) {
+        row.code = "network";
+        row.error = error;
+      }
+    }
+    const sent = results.filter((r) => r.ok).length;
+    const skipped = results.filter((r) => r.skipped).length;
+    const failed = results.length - sent - skipped;
+    return {
+      ok: false,
+      results,
+      sent,
+      failed,
+      skipped,
+      error,
+      code: "network",
+    };
+  }
+
+  const sent = results.filter((r) => r.ok).length;
+  const skipped = results.filter((r) => r.skipped).length;
+  const failed = results.length - sent - skipped;
+  const firstFail = results.find((r) => !r.ok && !r.skipped);
+
+  return {
+    ok: failed === 0,
+    results,
+    sent,
+    failed,
+    skipped,
+    ...(firstFail
+      ? { error: firstFail.error, status: firstFail.status, code: firstFail.code }
+      : {}),
+  };
 }
 
 type LayoutOptions = {
@@ -939,20 +1208,23 @@ export async function sendPinChangedEmail(args: {
   });
 }
 
-export async function sendMembershipReminderEmail(args: {
+/** Contenido de recordatorio de membresía (listo para `sendEmail` / `sendBatchEmails`). */
+export function buildMembershipReminderEmail(args: {
   to: string;
   memberName: string;
   plan: string;
   nextBillingDate: string;
   daysRemaining: number;
-}) {
+  ref?: string;
+}): SendEmailArgs {
   const expired = args.daysRemaining < 0;
   const headline = expired
     ? `Tu membresía venció el ${args.nextBillingDate}`
     : `Tu membresía vence en ${args.daysRemaining} día${args.daysRemaining === 1 ? "" : "s"}`;
-  return sendEmail({
+  return {
     to: args.to,
     optional: true,
+    ref: args.ref,
     subject: expired ? "Xtreme Gym - membresía vencida" : "Xtreme Gym - tu membresía vence pronto",
     html: layout(
       "Recordatorio de membresía",
@@ -964,7 +1236,17 @@ export async function sendMembershipReminderEmail(args: {
       <p style="font-size:14px;line-height:1.6;">Podés renovar directamente desde tu app o en recepción. No pierdas tu racha.</p>
       ${appButton("Abrir mi membresía")}`,
     ),
-  });
+  };
+}
+
+export async function sendMembershipReminderEmail(args: {
+  to: string;
+  memberName: string;
+  plan: string;
+  nextBillingDate: string;
+  daysRemaining: number;
+}) {
+  return sendEmail(buildMembershipReminderEmail(args));
 }
 
 export async function sendCustomReminderEmail(args: {
@@ -1168,8 +1450,8 @@ export async function sendAdminPlanRegistrationInviteEmail(args: {
   });
 }
 
-/** Plantilla profesional para campañas del Admin OS (logo + mapa + CTAs). */
-export async function sendCampaignEmail(args: {
+/** Contenido de campaña (listo para `sendEmail` / `sendBatchEmails`). */
+export function buildCampaignEmail(args: {
   to: string;
   subject: string;
   title: string;
@@ -1177,8 +1459,9 @@ export async function sendCampaignEmail(args: {
   ctaLabel?: string;
   ctaPath?: string;
   idempotencyKey?: string;
-}) {
-  // Mensaje: máximo 3 párrafos visibles, sin relleno largo.
+  ref?: string;
+}): SendEmailArgs {
+  // Mensaje: máximo 3–4 párrafos visibles, sin relleno largo.
   const paragraphs = args.message
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
@@ -1206,7 +1489,7 @@ export async function sendCampaignEmail(args: {
       }
     }
     if (!tokenOk) {
-      console.error("sendCampaignEmail: CTA registro sin token válido → fallback", safePath);
+      console.error("buildCampaignEmail: CTA registro sin token válido → fallback", safePath);
       safePath = "/primer-dia#registro";
     }
   }
@@ -1233,10 +1516,11 @@ export async function sendCampaignEmail(args: {
     args.message.replace(/\s+/g, " ").trim().slice(0, 100) ||
     `${args.ctaLabel || "Xtreme Gym"} · Ciudad Quesada`;
 
-  return sendEmail({
+  return {
     to: args.to,
     optional: true,
     idempotencyKey: args.idempotencyKey,
+    ref: args.ref ?? args.idempotencyKey,
     subject: args.subject,
     text: [
       args.title,
@@ -1259,7 +1543,20 @@ export async function sendCampaignEmail(args: {
         preheader,
       },
     ),
-  });
+  };
+}
+
+/** Plantilla profesional para campañas del Admin OS (logo + mapa + CTAs). */
+export async function sendCampaignEmail(args: {
+  to: string;
+  subject: string;
+  title: string;
+  message: string;
+  ctaLabel?: string;
+  ctaPath?: string;
+  idempotencyKey?: string;
+}) {
+  return sendEmail(buildCampaignEmail(args));
 }
 
 /** Recordatorio 48 h: empezó el primer día gratis pero no completó el perfil. */

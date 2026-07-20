@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = await getDb();
-    // Envío gradual: lotes chicos + delay por correo (claim + Resend).
+    // Lotes con Resend Batch API (1 HTTP por hasta 100 mails). Claim links siguen en serie.
     // ~25/ronda × ~8 rondas ≈ 150–200 por cron de 5 min → ~1000 en 25–40 min.
     // Cada envío exige magic link con token persistido; si no, reencola sin mandar basura.
     const emailCampaigns = await processQueuedEmailCampaigns(db, 25, {

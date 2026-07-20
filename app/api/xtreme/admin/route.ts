@@ -27,7 +27,9 @@ import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { listOpenOpsAlerts, resolveOpsAlert } from "@/lib/xtreme/ops-alerts";
 import {
+  buildMembershipReminderEmail,
   sendAdminGrantedPlanEmail,
+  sendBatchEmails,
   sendMembershipReminderEmail,
   sendPaymentReceiptEmail,
 } from "@/lib/helpers/email";
@@ -858,7 +860,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, sentTo: member.email });
     }
 
-    // Recordatorio masivo a membresias por vencer / vencidas
+    // Recordatorio masivo a membresias por vencer / vencidas (Resend Batch API).
     if (action === "notifyExpiring") {
       const db = await getDb();
       const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
@@ -871,19 +873,28 @@ export async function POST(req: NextRequest) {
             (ms.status === "warning" || ms.status === "expired"),
         );
 
-      let sent = 0;
-      for (const { doc, ms } of targets) {
-        const result = await sendMembershipReminderEmail({
-          to: doc.email!,
-          memberName: doc.memberName || "",
-          plan: ms.plan,
-          nextBillingDate: ms.nextBillingDate,
-          daysRemaining: ms.daysRemaining,
-        });
-        if (result.ok) sent += 1;
-      }
+      const batch = await sendBatchEmails(
+        targets.map(({ doc, ms }) =>
+          buildMembershipReminderEmail({
+            to: doc.email!,
+            memberName: doc.memberName || "",
+            plan: ms.plan,
+            nextBillingDate: ms.nextBillingDate,
+            daysRemaining: ms.daysRemaining,
+            ref: normalizeKey(doc.memberName || doc.email || ""),
+          }),
+        ),
+        { idempotencyKey: `admin-notify-expiring:${todayIso()}` },
+      );
 
-      return NextResponse.json({ ok: true, sent, eligible: targets.length });
+      return NextResponse.json({
+        ok: true,
+        sent: batch.sent,
+        failed: batch.failed,
+        skipped: batch.skipped,
+        eligible: targets.length,
+        ...(batch.error ? { emailError: batch.error } : {}),
+      });
     }
 
     // Registrar metrica corporal (para que la entrenadora personal haga seguimiento)
