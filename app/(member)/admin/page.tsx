@@ -210,6 +210,19 @@ type AdminData = {
       admin: number;
     };
   };
+  /** Socios con el Member OS abierto / sesión PIN reciente. */
+  onlineMembers?: {
+    count: number;
+    windowMinutes: number;
+    members: Array<{
+      memberKey: string;
+      memberName: string;
+      lastSeenAt: string;
+      via: "session" | "usage" | "both";
+      source?: string;
+      path?: string;
+    }>;
+  };
   revenue?: Revenue;
   growth?: {
     windowDays: number;
@@ -1490,8 +1503,8 @@ export default function XtremeAdminPage() {
   async function revokeAllStaffSessions(includeSelf = false) {
     if (data?.role !== "super") return;
     const confirmMsg = includeSelf
-      ? "Vas a cerrar TODAS las sesiones de staff, incluida la tuya. Tendrás que volver a entrar con el código."
-      : "Vas a cerrar todas las sesiones de staff (admin, recepción, ingreso, trainer), excepto la tuya. ¿Seguís?";
+      ? "Solo cierra sesiones de STAFF (admin/recepción/ingreso/trainer), incluida la tuya. Las sesiones de SOCIOS en la app NO se tocan. ¿Seguís?"
+      : "Solo cierra sesiones de STAFF (admin/recepción/ingreso/trainer), excepto la tuya. Las sesiones de SOCIOS en la app NO se tocan. ¿Seguís?";
     if (!window.confirm(confirmMsg)) return;
     setBusy("revoke-staff");
     setError("");
@@ -1519,7 +1532,7 @@ export default function XtremeAdminPage() {
         return;
       }
       setMessage(
-        `Listo: se cerraron ${json.revoked ?? 0} sesión(es) de staff. Tu sesión se mantuvo abierta.`,
+        `Listo: se cerraron ${json.revoked ?? 0} sesión(es) de staff. Socios en la app no se tocaron. Tu sesión de admin se mantuvo.`,
       );
       if (json.staffSecurity) {
         setData((current) =>
@@ -1735,6 +1748,86 @@ export default function XtremeAdminPage() {
                   <Kpi icon={Activity} label="Ocupacion" value={`${t?.occupancyPct ?? 0}%`} accent="from-lime-300 to-cyan-300" />
                 </div>
 
+                <div className="mt-4 border-[3px] border-lime-300/35 bg-lime-300/[0.05] p-4 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <Smartphone className="mt-0.5 h-6 w-6 shrink-0 text-lime-300" />
+                      <div>
+                        <h2 className="text-lg font-black uppercase text-lime-100">
+                          Conectados ahora · socios
+                        </h2>
+                        <p className="mt-1 max-w-2xl text-xs font-bold leading-relaxed text-white/50">
+                          Quién tiene el Member OS abierto o sesión con PIN reciente (~
+                          {data.onlineMembers?.windowMinutes ?? 5} min). Esto es de socios: no se
+                          cierra con el botón de seguridad de staff.
+                        </p>
+                        <p className="mt-2 text-sm font-black text-white">
+                          Online:{" "}
+                          <span className="text-lime-200">{data.onlineMembers?.count ?? 0}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void load(code)}
+                      disabled={isLoading || Boolean(busy)}
+                      className="inline-flex min-h-10 items-center gap-2 border border-lime-300/40 px-3 text-[10px] font-black uppercase text-lime-200 disabled:opacity-40"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                      Actualizar
+                    </button>
+                  </div>
+                  {data.onlineMembers && data.onlineMembers.members.length > 0 ? (
+                    <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {data.onlineMembers.members.map((m) => {
+                        const agoSec = Math.max(
+                          0,
+                          Math.round((Date.now() - new Date(m.lastSeenAt).getTime()) / 1000),
+                        );
+                        const agoLabel =
+                          agoSec < 60
+                            ? `hace ${agoSec}s`
+                            : agoSec < 3600
+                              ? `hace ${Math.floor(agoSec / 60)}m`
+                              : `hace ${Math.floor(agoSec / 3600)}h`;
+                        const viaLabel =
+                          m.via === "both"
+                            ? "PIN + app"
+                            : m.via === "session"
+                              ? "Sesión PIN"
+                              : "App abierta";
+                        return (
+                          <li
+                            key={m.memberKey}
+                            className="flex items-start justify-between gap-2 border border-lime-300/25 bg-black/35 px-3 py-2.5"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-lime-300 shadow-[0_0_8px_#d8ff3e]" />
+                                <span className="truncate text-sm font-black uppercase text-white">
+                                  {m.memberName}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-[10px] font-semibold text-white/40">
+                                {viaLabel}
+                                {m.path ? ` · ${m.path}` : ""}
+                                {m.source ? ` · ${m.source}` : ""}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-[10px] font-black uppercase text-lime-200/80">
+                              {agoLabel}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="mt-3 text-xs font-semibold text-white/40">
+                      Nadie con sesión activa en este momento (ventana ~5 min).
+                    </p>
+                  )}
+                </div>
+
                 {isSuper && (
                   <div className="mt-4 border-[3px] border-orange-300/40 bg-orange-300/[0.06] p-4 shadow-[4px_4px_0_rgba(0,0,0,.45)] sm:p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1742,15 +1835,18 @@ export default function XtremeAdminPage() {
                         <ShieldAlert className="mt-0.5 h-6 w-6 shrink-0 text-orange-300" />
                         <div>
                           <h2 className="text-lg font-black uppercase text-orange-100">
-                            Seguridad · sesiones de staff
+                            Seguridad · solo staff
                           </h2>
                           <p className="mt-1 max-w-2xl text-xs font-bold leading-relaxed text-white/50">
-                            Si alguien entró al admin o recepción con un código viejo, o dejó una
-                            sesión abierta, acá las cerrás al toque. Rotar el PIN en Vercel también
-                            invalida sesiones al próximo request (authEpoch).
+                            Cierra paneles de admin / recepción / ingreso / trainer.{" "}
+                            <span className="text-orange-100">
+                              No cierra a socios en la app
+                            </span>{" "}
+                            (sesiones Member OS aparte). Rotar el código en Vercel también invalida
+                            solo staff (authEpoch).
                           </p>
                           <p className="mt-2 text-sm font-black text-white">
-                            Activas ahora:{" "}
+                            Staff activo:{" "}
                             <span className="text-orange-200">
                               {data.staffSecurity?.total ?? "—"}
                             </span>
@@ -1777,7 +1873,7 @@ export default function XtremeAdminPage() {
                           ) : (
                             <LogOut className="h-4 w-4" />
                           )}
-                          Cerrar otras sesiones
+                          Cerrar staff (otros)
                         </button>
                         <button
                           type="button"
@@ -1786,7 +1882,7 @@ export default function XtremeAdminPage() {
                           className="inline-flex min-h-11 items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-[11px] font-black uppercase text-red-200 transition hover:bg-red-400 hover:text-black disabled:opacity-40"
                         >
                           <ShieldAlert className="h-4 w-4" />
-                          Cerrar todas (+ yo)
+                          Cerrar staff (todos)
                         </button>
                       </div>
                     </div>

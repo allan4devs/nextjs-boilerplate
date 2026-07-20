@@ -29,6 +29,7 @@ import {
   resolveStaffSession,
   revokeAllStaffSessions,
 } from "@/lib/xtreme/staff-session";
+import { listOnlineMembers } from "@/lib/xtreme/session";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { listOpenOpsAlerts, resolveOpsAlert } from "@/lib/xtreme/ops-alerts";
 import {
@@ -297,6 +298,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Socios conectados ahora (sesiones Member OS + bitácora reciente). No es staff.
+    try {
+      payload.onlineMembers = await listOnlineMembers(db);
+    } catch (onlineErr) {
+      console.error("XTREME ADMIN ONLINE MEMBERS", onlineErr);
+      payload.onlineMembers = { count: 0, windowMinutes: 5, members: [] };
+    }
+
     // Phase 3: Growth strip for all admin roles (funnel, not full revenue detail)
     try {
       const { computeGrowthSnapshot } = await import("@/lib/xtreme/growth");
@@ -364,9 +373,9 @@ export async function POST(req: NextRequest) {
         targetType: "system",
         targetId: "staff_sessions",
         summary: includeSelf
-          ? `Cerró todas las sesiones de staff (${revoked}), incluida la propia.`
-          : `Cerró ${revoked} sesión(es) de staff (conservó la actual).`,
-        meta: { revoked, includeSelf },
+          ? `Cerró todas las sesiones de STAFF (${revoked}), incluida la propia. Socios no afectados.`
+          : `Cerró ${revoked} sesión(es) de STAFF (admin/recepción/ingreso/trainer). Socios no afectados.`,
+        meta: { revoked, includeSelf, scope: "staff_only" },
       });
       const active = await countActiveStaffSessions(db);
       return NextResponse.json({

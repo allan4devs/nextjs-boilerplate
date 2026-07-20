@@ -193,13 +193,15 @@ export async function revokeStaffSession(req: NextRequest, surface: StaffSurface
 }
 
 /**
- * Revoca sesiones de staff abiertas (admin / recepción / ingreso / trainer).
+ * Revoca SOLO sesiones de staff (admin / recepción / ingreso / trainer).
+ * Nunca toca sesiones de socios (Member OS / cookie xtreme_member_session).
  * Por defecto conserva la sesión actual del super admin (exceptTokenHash).
  */
 export async function revokeAllStaffSessions(
   db: Db,
   options?: { exceptTokenHash?: string; surface?: StaffSurface },
 ): Promise<number> {
+  // Colección exclusiva de staff — no confundir con SESSIONS_COLLECTION (socios).
   const filter: Record<string, unknown> = { revokedAt: null };
   if (options?.exceptTokenHash) {
     filter.tokenHash = { $ne: options.exceptTokenHash };

@@ -160,6 +160,155 @@ export async function renewMemberSession(db: Db, session: MemberSession): Promis
   return expiresAt;
 }
 
+/** Ventana “conectado ahora” en el panel admin (presencia en vivo). */
+export const ONLINE_PRESENCE_MS = 5 * 60_000;
+
+export type OnlineMemberPresence = {
+  memberKey: string;
+  memberName: string;
+  lastSeenAt: string;
+  /** Sesión autenticada (cookie PIN) y/o bitácora de uso del Member OS. */
+  via: "session" | "usage" | "both";
+  source?: string;
+  path?: string;
+};
+
+/**
+ * Socios con actividad reciente (Member OS).
+ * - Sesiones con PIN (lastSeenAt &lt; idle 10 min)
+ * - Bitácora de uso con memberId (lastSeenAt &lt; 5 min)
+ * No toca ni lista sesiones de staff.
+ */
+export async function listOnlineMembers(db: Db): Promise<{
+  count: number;
+  windowMinutes: number;
+  members: OnlineMemberPresence[];
+}> {
+  const now = new Date();
+  const sessionCutoff = new Date(now.getTime() - SESSION_IDLE_TIMEOUT_MS);
+  const usageCutoff = new Date(now.getTime() - ONLINE_PRESENCE_MS);
+
+  type Row = {
+    memberKey: string;
+    memberName: string;
+    lastSeenAt: Date;
+    hasSession: boolean;
+    hasUsage: boolean;
+    source?: string;
+    path?: string;
+  };
+  const byKey = new Map<string, Row>();
+
+  const authSessions = await db
+    .collection<MemberSessionDoc>(SESSIONS_COLLECTION)
+    .find({
+      revokedAt: null,
+      expiresAt: { $gt: now },
+      lastSeenAt: { $gt: sessionCutoff },
+    })
+    .project({ memberKey: 1, memberName: 1, lastSeenAt: 1 })
+    .sort({ lastSeenAt: -1 })
+    .limit(100)
+    .toArray();
+
+  for (const s of authSessions) {
+    const key = String(s.memberKey || "").trim().toUpperCase();
+    if (!key) continue;
+    const last =
+      s.lastSeenAt instanceof Date ? s.lastSeenAt : new Date(s.lastSeenAt);
+    byKey.set(key, {
+      memberKey: key,
+      memberName: String(s.memberName || key).trim() || key,
+      lastSeenAt: last,
+      hasSession: true,
+      hasUsage: false,
+    });
+  }
+
+  try {
+    const usage = await db
+      .collection<{
+        memberId?: string;
+        memberName?: string;
+        lastSeenAt?: Date;
+        source?: string;
+        exitPath?: string;
+        entryPath?: string;
+      }>("xtreme_gym_session_logs")
+      .find({
+        lastSeenAt: { $gte: usageCutoff },
+        memberId: { $type: "string", $ne: "" },
+      })
+      .project({
+        memberId: 1,
+        memberName: 1,
+        lastSeenAt: 1,
+        source: 1,
+        exitPath: 1,
+        entryPath: 1,
+      })
+      .sort({ lastSeenAt: -1 })
+      .limit(150)
+      .toArray();
+
+    for (const u of usage) {
+      const key = String(u.memberId || "").trim().toUpperCase();
+      if (!key) continue;
+      const last =
+        u.lastSeenAt instanceof Date
+          ? u.lastSeenAt
+          : new Date(u.lastSeenAt || now);
+      const prev = byKey.get(key);
+      if (!prev) {
+        byKey.set(key, {
+          memberKey: key,
+          memberName: String(u.memberName || key).trim() || key,
+          lastSeenAt: last,
+          hasSession: false,
+          hasUsage: true,
+          source: u.source,
+          path: u.exitPath || u.entryPath,
+        });
+      } else {
+        prev.hasUsage = true;
+        if (last.getTime() > prev.lastSeenAt.getTime()) {
+          prev.lastSeenAt = last;
+          prev.source = u.source || prev.source;
+          prev.path = u.exitPath || u.entryPath || prev.path;
+        }
+        if (!prev.memberName || prev.memberName === key) {
+          prev.memberName = String(u.memberName || prev.memberName).trim() || key;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("listOnlineMembers usage", err);
+  }
+
+  const members = [...byKey.values()]
+    .sort((a, b) => b.lastSeenAt.getTime() - a.lastSeenAt.getTime())
+    .slice(0, 40)
+    .map((r) => ({
+      memberKey: r.memberKey,
+      memberName: r.memberName,
+      lastSeenAt: r.lastSeenAt.toISOString(),
+      via:
+        r.hasSession && r.hasUsage
+          ? ("both" as const)
+          : r.hasSession
+            ? ("session" as const)
+            : ("usage" as const),
+      source: r.source,
+      path: r.path,
+    }));
+
+  return {
+    count: members.length,
+    windowMinutes: Math.round(ONLINE_PRESENCE_MS / 60_000),
+    members,
+  };
+}
+
 export function unauthorizedMember(message = "Sesión requerida. Ingresá tu PIN.") {
   return NextResponse.json({ error: message, code: "session_required" }, { status: 401 });
 }
