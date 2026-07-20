@@ -550,7 +550,13 @@ export async function POST(req: NextRequest) {
       if (!result.ok) {
         return NextResponse.json({ error: result.error }, { status: 409 });
       }
-      return NextResponse.json({ ok: true, ...result });
+      return NextResponse.json({
+        ok: true,
+        stoppedPending: result.stoppedPending,
+        sent: result.sent,
+        failed: result.failed,
+        skipped: result.skipped,
+      });
     }
 
     if (action === "process_queue") {
