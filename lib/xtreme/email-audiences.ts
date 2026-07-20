@@ -76,12 +76,16 @@ export type EmailAudienceDiagnostics = {
   /** Recovery por categoría de script. */
   recoveredFromQuarantine: number;
   recoveredFromExcel: number;
-  /** Correos únicos invitables (invite_recoverable), sin match de nombre. */
+  /** Correos recuperables sin verificar (bruto, antes de sacar ya-enviados). */
+  inviteRecoverableTotal: number;
+  /** Invitables que aún NO recibieron campaña / magic link. */
   inviteRecoverableEmails: number;
-  /** Sin verificar y sin envío de campaña previo. */
+  /** Sin verificar y sin envío de campaña previo (mismo criterio de “falta enviar”). */
   unverifiedNotSentEmails: number;
-  /** Correos que ya recibieron al menos un envío de campaña. */
+  /** Correos que ya recibieron al menos un envío exitoso de campaña (magic link). */
   alreadyCampaignSentEmails: number;
+  /** Destinatarios que aún faltan en audiencias de activación/invitación (suma lógica de trabajo). */
+  remainingActivationEmails: number;
 };
 
 type PlanAudience =
@@ -306,7 +310,8 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     (email) => !verifiedEmailsStrict.has(email) && !isPlaceholderCampaignEmail(email),
   );
 
-  // Ya se les mandó al menos un correo de campaña (status sent).
+  // Ya se les mandó al menos un correo de campaña con éxito (magic link / invitación).
+  // Esas direcciones salen de TODAS las listas de campaña: solo quedan los que falta enviar.
   const alreadyCampaignSent = new Set(
     (
       await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).distinct("email", {
@@ -317,26 +322,40 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       .filter(Boolean),
   );
 
-  /** No verificados y sin envío previo de campaña → siguiente lote limpio. */
-  const unverifiedNotSent = inviteRecoverable.filter((email) => !alreadyCampaignSent.has(email));
+  /** Quita a quien ya recibió invitación/magic link de campaña. */
+  const withoutAlreadySent = (emails: string[]) =>
+    emails.filter((email) => !alreadyCampaignSent.has(normalizeAudienceEmail(email)));
+
+  /** No verificados y sin envío previo → lo que aún falta invitar. */
+  const inviteRecoverableRemaining = withoutAlreadySent(inviteRecoverable);
+  const unverifiedNotSent = inviteRecoverableRemaining;
 
   const activeKeys = new Set(recentlyActive);
   const everActiveKeys = new Set(everActive);
 
-  const inactive = clean(
-    verifiedMembers
-      .filter((row) => !row.normalizedName || !activeKeys.has(row.normalizedName))
-      .map((row) => row.email),
+  const inactive = withoutAlreadySent(
+    clean(
+      verifiedMembers
+        .filter((row) => !row.normalizedName || !activeKeys.has(row.normalizedName))
+        .map((row) => row.email),
+    ),
   );
-  const neverOpened = clean(
-    verifiedMembers
-      .filter((row) => !row.normalizedName || !everActiveKeys.has(row.normalizedName))
-      .map((row) => row.email),
+  const neverOpened = withoutAlreadySent(
+    clean(
+      verifiedMembers
+        .filter((row) => !row.normalizedName || !everActiveKeys.has(row.normalizedName))
+        .map((row) => row.email),
+    ),
   );
-  const unregistered = imported.filter((email) => !registered.has(email) && !waiting.has(email));
-  const neverRegistered = clean([...imported, ...pendingEmails]).filter(
-    (email) => !registered.has(email),
+  const unregistered = withoutAlreadySent(
+    imported.filter((email) => !registered.has(email) && !waiting.has(email)),
   );
+  const neverRegistered = withoutAlreadySent(
+    clean([...imported, ...pendingEmails]).filter((email) => !registered.has(email)),
+  );
+  const pendingRemaining = withoutAlreadySent(pendingEmails);
+  const importedRemaining = withoutAlreadySent(imported);
+  const membersRemaining = withoutAlreadySent(memberEmails);
 
   const planBuckets: Record<PlanAudience, string[]> = {
     plan_week: [],
@@ -350,7 +369,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   };
   for (const member of allEmailedMembers) {
     const email = normalizeAudienceEmail(member.email);
-    if (email && !blocked.has(email)) {
+    if (email && !blocked.has(email) && !alreadyCampaignSent.has(email)) {
       planBuckets[planAudience(member.membership?.plan, legacyRate(member))].push(email);
     }
   }
@@ -380,10 +399,17 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
 
     const hasRecovery = Boolean(member.emailRecovery);
     const recCat = recoveryCategory(member);
+    // Diagnóstico de recovery: cuenta toda la base (aunque ya se les haya invitado).
     if (hasRecovery) {
-      excelRecovered.push(email);
       if (recCat === "quarantine") recoveredFromQuarantine += 1;
       else recoveredFromExcel += 1;
+    }
+
+    // Listas de campaña: solo quien aún NO recibió magic link / invitación.
+    if (alreadyCampaignSent.has(email)) continue;
+
+    if (hasRecovery) {
+      excelRecovered.push(email);
     }
 
     if (member.emailVerified !== true) {
@@ -415,21 +441,33 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     return Boolean(normalizeAudienceEmail(member.emailQuarantine.previousEmail));
   }).length;
 
+  const claimRecoveredRemaining = clean(claimRecovered);
+  const claimNativeRemaining = clean(claimNative);
+  const claimProfileRemaining = clean(claimProfile);
+  const claimActivePlanRemaining = clean(claimActivePlan);
+
+  const remainingActivationEmails = new Set([
+    ...claimProfileRemaining,
+    ...claimActivePlanRemaining,
+    ...inviteRecoverableRemaining,
+  ]).size;
+
   return {
-    claim_recovered: clean(claimRecovered),
-    claim_native: clean(claimNative),
-    claim_profile: clean(claimProfile),
-    claim_active_plan: clean(claimActivePlan),
-    invite_recoverable: inviteRecoverable,
+    claim_recovered: claimRecoveredRemaining,
+    claim_native: claimNativeRemaining,
+    claim_profile: claimProfileRemaining,
+    claim_active_plan: claimActivePlanRemaining,
+    // Solo quienes aún no recibieron invitación/magic link.
+    invite_recoverable: inviteRecoverableRemaining,
     unverified_not_sent: unverifiedNotSent,
     excel_recovered: clean(excelRecovered),
-    imported,
+    imported: importedRemaining,
     unregistered,
     never_registered: neverRegistered,
-    pending: pendingEmails,
+    pending: pendingRemaining,
     never_opened: neverOpened,
     inactive,
-    members: memberEmails,
+    members: membersRemaining,
     winback_90: clean(winback90),
     winback_180: clean(winback180),
     winback_365: clean(winback365),
@@ -437,15 +475,17 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     ...(Object.fromEntries(
       Object.entries(planBuckets).map(([key, emails]) => [key, clean(emails)]),
     ) as Record<PlanAudience, string[]>),
-    all: clean([
-      ...imported,
-      ...pendingEmails,
-      ...memberEmails,
-      ...claimProfile,
-      ...claimActivePlan,
-      ...inviteRecoverable,
-      ...excelRecovered,
-    ]),
+    all: withoutAlreadySent(
+      clean([
+        ...imported,
+        ...pendingEmails,
+        ...memberEmails,
+        ...claimProfile,
+        ...claimActivePlan,
+        ...inviteRecoverable,
+        ...excelRecovered,
+      ]),
+    ),
     suppressed: blocked.size,
     diagnostics: {
       totalMembers: allMembers.length,
@@ -471,9 +511,11 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       quarantineWithPreviousEmail,
       recoveredFromQuarantine,
       recoveredFromExcel,
-      inviteRecoverableEmails: inviteRecoverable.length,
+      inviteRecoverableTotal: inviteRecoverable.length,
+      inviteRecoverableEmails: inviteRecoverableRemaining.length,
       unverifiedNotSentEmails: unverifiedNotSent.length,
       alreadyCampaignSentEmails: alreadyCampaignSent.size,
+      remainingActivationEmails,
     },
   };
 }

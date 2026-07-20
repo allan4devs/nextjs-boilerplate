@@ -64,9 +64,11 @@ type CenterData = {
     quarantineWithPreviousEmail?: number;
     recoveredFromQuarantine?: number;
     recoveredFromExcel?: number;
+    inviteRecoverableTotal?: number;
     inviteRecoverableEmails?: number;
     unverifiedNotSentEmails?: number;
     alreadyCampaignSentEmails?: number;
+    remainingActivationEmails?: number;
   };
   campaigns: Array<{
     id: string;
@@ -172,166 +174,169 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     id: "claim_recovered",
     label: "Activar · Excel / cuarentena",
     detail:
-      "Sin verificar y sin plan activo. Correo alineado por Excel/cuarentena. Campaña de activación (primer día / sin membresía).",
+      "Pendientes de invitar: sin verificar, sin plan activo, correo alineado por Excel/cuarentena. Ya no incluye a quien recibió magic link.",
     group: "Activación",
   },
   {
     id: "claim_native",
     label: "Activar · correo nativo",
-    detail: "Sin verificar, sin plan activo, con correo nativo en ficha (no recovery).",
+    detail:
+      "Pendientes: sin verificar, sin plan, correo nativo. Excluye a quienes ya se les envió invitación.",
     group: "Activación",
   },
   {
     id: "claim_profile",
     label: "Activar · todos sin plan",
-    detail: "Todos sin verificar y sin plan activo (Excel + nativos). No incluye quienes ya tienen membresía vigente.",
+    detail:
+      "Pendientes de activar sin plan (Excel + nativos). Solo correos a los que aún no se mandó magic link.",
     group: "Activación",
   },
   {
     id: "claim_active_plan",
     label: "Confirmar · ya con plan",
     detail:
-      "Sin verificar pero con plan vigente (semanal/quincenal/mensual/senior del Excel). Solo confirmar datos y PIN; no mezclar con activación.",
+      "Pendientes de confirmar: sin verificar con plan vigente. Sin reenviar a quien ya recibió el enlace.",
     group: "Confirmación",
   },
   {
     id: "invite_recoverable",
-    label: "Invitar · correos recuperables",
+    label: "Invitar · aún sin envío",
     detail:
-      "TODOS los correos válidos del Excel/contactos/fichas/cuarentena, sin exigir match de nombre. Excluye verificados, bajas y placeholders. Al encolar se sacan automáticamente los que YA recibieron un envío.",
+      "Correos recuperables sin verificar que todavía no recibieron invitación/magic link. Lista de trabajo limpia.",
     group: "Invitación masiva",
   },
   {
     id: "unverified_not_sent",
     label: "No verificados · no enviados",
     detail:
-      "Solo sin verificar que NUNCA recibieron un correo de campaña. Usá esta lista para el siguiente lote limpio (no re-invita a quien ya se le mandó).",
+      "Misma lista limpia: sin verificar y sin ningún envío de campaña. Preferida para el siguiente lote.",
     group: "Invitación masiva",
   },
   {
     id: "excel_recovered",
     label: "Alineados del Excel",
-    detail: "Todas las fichas con emailRecovery (script). Pueden estar verificadas o no.",
+    detail:
+      "Fichas con emailRecovery que aún no recibieron campaña. (Si el conteo es 0, ya se invitó a todos.)",
     group: "Activación",
   },
   {
     id: "winback_90",
     label: "Win-back 90-179 d",
-    detail: "Membresía vencida hace 90-179 días, con correo único en ficha.",
+    detail: "Vencidos 90-179 d sin campaña enviada aún.",
     group: "Win-back",
   },
   {
     id: "winback_180",
     label: "Win-back 180-364 d",
-    detail: "Vencidos hace 6-12 meses con correo usable.",
+    detail: "Vencidos 6-12 meses sin campaña enviada aún.",
     group: "Win-back",
   },
   {
     id: "winback_365",
     label: "Win-back +1 año",
-    detail: "Vencidos hace más de un año.",
+    detail: "Vencidos +1 año sin campaña enviada aún.",
     group: "Win-back",
   },
   {
     id: "possible_foreign",
     label: "Posibles extranjeros",
-    detail: "Señal blanda (DIMEX / doc 8-12 dígitos / nombres). Activación por correo.",
+    detail: "Señal blanda (DIMEX / doc / nombres). Solo pendientes de invitar.",
     group: "Segmentos",
   },
   {
     id: "never_registered",
     label: "Nunca registrados",
-    detail: "Contactos o invitaciones pendientes sin perfil verificado.",
+    detail: "Sin perfil verificado y sin invitación enviada todavía.",
     group: "Segmentos",
   },
   {
     id: "unregistered",
     label: "Importados sin registro",
-    detail: "Lista importada sin perfil ni invitación pendiente.",
+    detail: "Importados sin perfil ni envío de invitación previo.",
     group: "Segmentos",
   },
   {
     id: "pending",
     label: "Registro pendiente",
-    detail: "Pidieron acceso y aún no confirmaron el correo.",
+    detail: "Pendientes de confirmar correo y sin invitación de campaña enviada.",
     group: "Segmentos",
   },
   {
     id: "never_opened",
     label: "Nunca entraron a la app",
-    detail: "Verificados sin ninguna apertura de la app.",
+    detail: "Verificados sin apertura de app y sin campaña enviada aún.",
     group: "Segmentos",
   },
   {
     id: "inactive",
     label: "Sin abrir app 14 d",
-    detail: "Verificados sin apertura en los últimos 14 días.",
+    detail: "Verificados sin apertura en 14 d y sin campaña enviada aún.",
     group: "Segmentos",
   },
   {
     id: "members",
     label: "Socios verificados",
-    detail: "Perfiles con correo ya verificado.",
+    detail: "Verificados que aún no recibieron un correo de campaña.",
     group: "Segmentos",
   },
   {
     id: "plan_week",
     label: "Plan semanal",
-    detail: "Correos únicos con tarifa semanal (x Tarifa del Excel).",
+    detail: "Tarifa semanal pendientes de campaña (sin envío previo).",
     group: "Planes",
   },
   {
     id: "plan_fortnight",
     label: "Plan quincenal",
-    detail: "Correos únicos con tarifa quincenal.",
+    detail: "Tarifa quincenal pendientes de campaña.",
     group: "Planes",
   },
   {
     id: "plan_month",
     label: "Plan mensual",
-    detail: "Correos únicos con tarifa mensual.",
+    detail: "Tarifa mensual pendientes de campaña.",
     group: "Planes",
   },
   {
     id: "plan_quarter",
     label: "Plan trimestral",
-    detail: "Correos únicos con plan trimestral.",
+    detail: "Plan trimestral pendientes de campaña.",
     group: "Planes",
   },
   {
     id: "plan_free_day",
     label: "Diario / primer día",
-    detail: "Tarifa diaria o plan de primer día gratis.",
+    detail: "Diario o primer día sin campaña enviada aún.",
     group: "Planes",
   },
   {
     id: "plan_senior",
     label: "Adultos mayores",
-    detail: "Plan o clases de adultos mayores con correo usable.",
+    detail: "Adultos mayores pendientes de campaña.",
     group: "Planes",
   },
   {
     id: "no_plan",
     label: "Sin plan",
-    detail: "Correos usables sin tipo de plan ni tarifa.",
+    detail: "Sin plan/tarifa y sin campaña enviada aún.",
     group: "Planes",
   },
   {
     id: "plan_other",
     label: "Otros planes",
-    detail: "Planes especiales o matrícula fuera de las categorías principales.",
+    detail: "Otros planes pendientes de campaña.",
     group: "Planes",
   },
   {
     id: "imported",
     label: "Lista importada",
-    detail: "Contactos activos de hoja / import.",
+    detail: "Importados activos a los que aún no se les envió invitación.",
     group: "Listas",
   },
   {
     id: "all",
     label: "Todos, sin duplicados",
-    detail: "Importados, pendientes, claim y socios consolidados.",
+    detail: "Todo consolidado menos quienes ya recibieron magic link de campaña.",
     group: "Listas",
   },
 ];
@@ -777,6 +782,24 @@ export default function EmailCampaignCenter() {
 
   useEffect(() => { void load(); }, [load]);
 
+  // Si la audiencia elegida ya no tiene pendientes (todos invitados), saltar a la primera con trabajo.
+  useEffect(() => {
+    if (!data) return;
+    const currentCount = data.audiences[form.audience] ?? 0;
+    if (currentCount > 0) return;
+    const next = AUDIENCES.find((item) => (data.audiences[item.id] ?? 0) > 0);
+    if (!next || next.id === form.audience) return;
+    const tpl = templateFor(next.id);
+    setForm({
+      audience: next.id,
+      subject: tpl.subject,
+      title: tpl.title,
+      message: tpl.message,
+      ctaLabel: tpl.ctaLabel,
+      ctaPath: tpl.ctaPath,
+    });
+  }, [data, form.audience]);
+
   async function loadCoverage() {
     setCoverageBusy(true);
     setError("");
@@ -1139,9 +1162,22 @@ export default function EmailCampaignCenter() {
             [data?.diagnostics.totalMembers, "Socios en la base", "Incluye los importados del Excel"],
             [data?.diagnostics.membersWithUsableEmail, "Con correo usable", "Verificados y pendientes de verificar"],
             [data?.diagnostics.importedContactEmails, "Contactos reales", "Direcciones únicas recuperadas del Excel"],
-            [data?.diagnostics.inviteRecoverableEmails ?? data?.audiences.invite_recoverable, "Invitables (todos)", "Recuperables sin verificar (al encolar se excluyen ya enviados)"],
-            [data?.diagnostics.unverifiedNotSentEmails ?? data?.audiences.unverified_not_sent, "No verif. · no enviados", "Solo los que nunca recibieron un correo de campaña"],
-            [data?.diagnostics.alreadyCampaignSentEmails, "Ya enviados", "Recibieron al menos un envío exitoso de campaña"],
+            [
+              data?.diagnostics.remainingActivationEmails ?? data?.diagnostics.inviteRecoverableEmails ?? data?.audiences.invite_recoverable,
+              "Falta enviar",
+              "Activación/invitación pendientes (sin magic link previo)",
+            ],
+            [
+              data?.diagnostics.inviteRecoverableTotal,
+              "Invitables (bruto)",
+              "Recuperables sin verificar, antes de sacar ya-enviados",
+            ],
+            [
+              data?.diagnostics.unverifiedNotSentEmails ?? data?.audiences.unverified_not_sent,
+              "No verif. · no enviados",
+              "Lista limpia: nunca recibieron campaña",
+            ],
+            [data?.diagnostics.alreadyCampaignSentEmails, "Ya enviados", "Tienen magic link / campaña sent · fuera de las listas"],
             [data?.diagnostics.recoveredMembers, "Fichas recuperadas", "Asignación segura y auditada"],
             [data?.diagnostics.recoveredFromExcel, "Desde Excel", "Alineados por nombre/apellidos"],
             [data?.diagnostics.recoveredFromQuarantine, "Desde cuarentena", "Re-sacados con match de nombre"],
@@ -1188,8 +1224,13 @@ export default function EmailCampaignCenter() {
         )}
       </section>
 
-      {(["Activación", "Win-back", "Segmentos", "Planes", "Listas"] as const).map((group) => {
-        const items = AUDIENCES.filter((item) => item.group === group);
+      {(["Activación", "Confirmación", "Invitación masiva", "Win-back", "Segmentos", "Planes", "Listas"] as const).map((group) => {
+        // Solo categorías con gente pendiente: si ya se invitó a todos, la tarjeta no se muestra.
+        const items = AUDIENCES.filter((item) => {
+          if (item.group !== group) return false;
+          if (!data) return true;
+          return (data.audiences[item.id] ?? 0) > 0;
+        });
         if (!items.length) return null;
         return (
           <section key={group} className="space-y-3">
@@ -1199,7 +1240,7 @@ export default function EmailCampaignCenter() {
                 <div
                   key={item.id}
                   className={`border-2 bg-[#0c0c0c] p-4 ${
-                    group === "Activación"
+                    group === "Activación" || group === "Invitación masiva"
                       ? "border-lime-300/35"
                       : "border-white/15"
                   }`}
@@ -1218,8 +1259,9 @@ export default function EmailCampaignCenter() {
         );
       })}
       <p className="text-xs font-bold text-white/40">
-        Bajas/supresiones protegidas: {data?.audiences.suppressed ?? "-"} · Preferí «Activar · Excel /
-        cuarentena» para la campaña masiva de claim.
+        Bajas/supresiones: {data?.audiences.suppressed ?? "-"} · Ya con magic link:{" "}
+        {data?.diagnostics.alreadyCampaignSentEmails ?? "-"} (fuera de todas las listas) · Preferí
+        categorías con conteo &gt; 0 para el siguiente lote.
       </p>
 
       <div className="grid gap-5 xl:grid-cols-2">
@@ -1266,11 +1308,13 @@ export default function EmailCampaignCenter() {
               }}
               className="mt-1 min-h-11 w-full border-2 border-white/20 bg-black px-3 text-sm font-bold text-white"
             >
-              {AUDIENCES.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label} ({data?.audiences[item.id] ?? 0})
-                </option>
-              ))}
+              {AUDIENCES.filter((item) => !data || (data.audiences[item.id] ?? 0) > 0).map(
+                (item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label} ({data?.audiences[item.id] ?? 0})
+                  </option>
+                ),
+              )}
             </select>
           </label>
           <div className="mt-3 border-2 border-white/10 bg-black/40 px-3 py-2 text-[11px] font-semibold leading-relaxed text-white/50">
