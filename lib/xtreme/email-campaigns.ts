@@ -256,14 +256,20 @@ export function newEmailCampaignId() {
   return `email-${randomUUID()}`;
 }
 
-/** Correos que ya recibieron al menos un envío exitoso de campaña. */
+function normalizeCampaignEmail(value: unknown): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+/** Correos (normalizados) que ya recibieron al menos un envío exitoso de campaña / magic link. */
 export async function listAlreadyCampaignSentEmails(db: Db): Promise<Set<string>> {
   const emails = await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).distinct("email", {
     status: "sent",
   });
   return new Set(
     emails
-      .map((e) => String(e || "").trim().toLowerCase())
+      .map((e) => normalizeCampaignEmail(e))
       .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
   );
 }
@@ -405,7 +411,8 @@ export async function stopCampaignQueue(
 
 /**
  * Saca de la cola (skipped) a quien ya tiene un envío sent en cualquier campaña.
- * Evita re-mandar y desbloquea colas viejas con duplicados.
+ * Compara email normalizado (case-insensitive) para no fallar por mayúsculas.
+ * Evita re-mandar magic links y desbloquea colas viejas con duplicados.
  */
 export async function skipAlreadySentInQueue(
   db: Db,
@@ -416,16 +423,31 @@ export async function skipAlreadySentInQueue(
 
   const filter: Record<string, unknown> = {
     status: { $in: ["queued", "sending"] },
-    email: { $in: [...already] },
     ...(campaignId ? { campaignId } : {}),
   };
-  const result = await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).updateMany(filter, {
-    $set: {
-      status: "skipped",
-      updatedAt: new Date(),
-      error: "Ya se le envió un correo de campaña antes; se omite en esta cola.",
+  const pending = await db
+    .collection<{ deliveryKey: string; email?: string }>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION)
+    .find(filter)
+    .project({ deliveryKey: 1, email: 1 })
+    .toArray();
+
+  const keysToSkip = pending
+    .filter((row) => already.has(normalizeCampaignEmail(row.email)))
+    .map((row) => row.deliveryKey)
+    .filter(Boolean);
+
+  if (!keysToSkip.length) return 0;
+
+  const result = await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).updateMany(
+    { deliveryKey: { $in: keysToSkip }, status: { $in: ["queued", "sending"] } },
+    {
+      $set: {
+        status: "skipped",
+        updatedAt: new Date(),
+        error: "Ya se le envió un correo de campaña (magic link) antes; se omite en esta cola.",
+      },
     },
-  });
+  );
   return result.modifiedCount;
 }
 
@@ -523,8 +545,12 @@ async function processOneCampaignBatch(
     forceAll: Boolean(options?.forceUnstick),
   });
 
-  // 2) Quien ya recibió mail de campaña no se vuelve a procesar en esta cola.
+  // 2) Quien ya recibió mail de campaña (magic link) no se vuelve a procesar.
   const alreadySentSkipped = await skipAlreadySentInQueue(db, campaign.id);
+
+  // Set vivo: correos que YA tienen status "sent" (cualquier campaña).
+  // El batch de Resend SOLO incluye emails que no estén acá.
+  const alreadySentEmails = await listAlreadyCampaignSentEmails(db);
 
   let batch = await deliveries
     .find({ campaignId: campaign.id, status: "queued" })
@@ -547,19 +573,31 @@ async function processOneCampaignBatch(
     }
   }
 
+  // Filtrar en memoria: nunca preparar magic link ni meter al batch a quien ya recibió.
+  batch = batch.filter((item) => {
+    const email = normalizeCampaignEmail(item.email);
+    return email && !alreadySentEmails.has(email);
+  });
+
   let sent = 0;
   let failed = 0;
   let skipped = alreadySentSkipped;
 
-  /** Preparamos en serie (claim + DB); el envío va por Resend Batch API (hasta 100). */
+  /**
+   * Preparamos en serie (claim + DB); el envío va por Resend Batch API (hasta 100).
+   * Invariante: pendingSends solo tiene correos sin status "sent" previo.
+   */
   type PendingCampaignSend = {
     deliveryKey: string;
+    email: string;
     ctaPath: string;
     linkKind: "claim" | "app" | "fallback";
     attemptCount: number;
     mail: SendEmailArgs;
   };
   const pendingSends: PendingCampaignSend[] = [];
+  /** Evita dos envíos al mismo correo en el mismo lote HTTP. */
+  const emailsInThisBatch = new Set<string>();
 
   for (const item of batch) {
     // Respetar detención del admin a mitad de lote.
@@ -571,6 +609,40 @@ async function processOneCampaignBatch(
       break;
     }
 
+    const emailNorm = normalizeCampaignEmail(item.email);
+    if (!emailNorm) {
+      skipped += 1;
+      await deliveries.updateOne(
+        { deliveryKey: item.deliveryKey },
+        {
+          $set: {
+            status: "skipped",
+            updatedAt: new Date(),
+            error: "Correo inválido; omitido.",
+          },
+        },
+      );
+      continue;
+    }
+
+    // Barrera dura: ya tiene magic link / campaña enviada → no claim, no batch.
+    if (alreadySentEmails.has(emailNorm) || emailsInThisBatch.has(emailNorm)) {
+      skipped += 1;
+      await deliveries.updateOne(
+        { deliveryKey: item.deliveryKey, status: { $in: ["queued", "sending"] } },
+        {
+          $set: {
+            status: "skipped",
+            updatedAt: new Date(),
+            error: emailsInThisBatch.has(emailNorm)
+              ? "Duplicado en el mismo lote; omitido."
+              : "Ya se le envió un magic link de campaña; omitido del batch.",
+          },
+        },
+      );
+      continue;
+    }
+
     const claimed = await deliveries.updateOne(
       { deliveryKey: item.deliveryKey, status: "queued" },
       { $set: { status: "sending", updatedAt: new Date() }, $inc: { attempts: 1 } },
@@ -579,21 +651,22 @@ async function processOneCampaignBatch(
 
     const attemptCount = Number(item.attempts || 0) + 1;
 
-    // Defensa: si en otra carrera ya se marcó sent el mismo email, no reenviar.
+    // Defensa en DB (race con otro worker): ¿apareció un "sent" del mismo email?
     const already = await deliveries.findOne({
-      email: item.email,
       status: "sent",
       deliveryKey: { $ne: item.deliveryKey },
+      email: { $regex: `^${emailNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
     });
     if (already) {
       skipped += 1;
+      alreadySentEmails.add(emailNorm);
       await deliveries.updateOne(
         { deliveryKey: item.deliveryKey },
         {
           $set: {
             status: "skipped",
             updatedAt: new Date(),
-            error: "Ya se le envió un correo de campaña; omitido.",
+            error: "Ya se le envió un correo de campaña (magic link); omitido.",
           },
         },
       );
@@ -763,8 +836,28 @@ async function processOneCampaignBatch(
       { $set: { ctaPath, linkKind, updatedAt: new Date() } },
     );
 
+    // Último check antes de meter al batch HTTP: solo sin envío previo.
+    if (alreadySentEmails.has(emailNorm) || emailsInThisBatch.has(emailNorm)) {
+      skipped += 1;
+      await deliveries.updateOne(
+        { deliveryKey: item.deliveryKey },
+        {
+          $set: {
+            status: "skipped",
+            updatedAt: new Date(),
+            ctaPath,
+            linkKind,
+            error: "Ya se le envió magic link; no entra al batch de Resend.",
+          },
+        },
+      );
+      continue;
+    }
+
+    emailsInThisBatch.add(emailNorm);
     pendingSends.push({
       deliveryKey: item.deliveryKey,
+      email: emailNorm,
       ctaPath,
       linkKind,
       attemptCount,
@@ -780,7 +873,8 @@ async function processOneCampaignBatch(
     });
   }
 
-  // Un solo request a Resend Batch por chunk (hasta 100). Evita 1 HTTP por socio.
+  // Un solo request a Resend Batch por chunk (hasta 100).
+  // Solo correos sin magic link previo (pendingSends filtrado arriba).
   if (pendingSends.length) {
     const live = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne(
       { id: campaign.id },
@@ -817,6 +911,7 @@ async function processOneCampaignBatch(
         const now = new Date();
         if (result.ok) {
           sent += 1;
+          alreadySentEmails.add(pending.email);
           await deliveries.updateOne(
             { deliveryKey: pending.deliveryKey },
             {
