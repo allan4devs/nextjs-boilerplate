@@ -13,7 +13,6 @@ import {
   ChevronRight,
   ClipboardList,
   CreditCard,
-  DoorOpen,
   Dumbbell,
   Loader2,
   LogOut,
@@ -280,7 +279,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
     setOsModal,
     activeVisit,
     isRegisteringCheckout,
-    registerCheckout,
+    trainedToday,
   } = os;
 
   const [activeId, setActiveId] = useState<string | null>(null);

@@ -170,12 +170,11 @@ button,
   }
 }
 
-.xg-game-modal {
-  animation: xg-pop-in 0.2s ease-out both;
-}
+/* Modal transitions are handled via Tailwind classes in GameModal.tsx */
+/* (fade-in/out + slide-up on mobile, scale on desktop) */
 
 .xg-game-modal-panel {
-  animation: xg-modal-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* layout only — animations via Tailwind */
 }
 
 .xg-game-panel {
