@@ -24,4 +24,5 @@ export type OsModal =
   | { kind: "week" }
   | { kind: "training"; trainingId: Training["id"] }
   | { kind: "badges" }
-  | { kind: "quick-train" };
+  | { kind: "quick-train" }
+  | { kind: "gym-session"; initialStep?: "entry" | "workout" | "exit" };

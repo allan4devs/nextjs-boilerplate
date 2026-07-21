@@ -441,7 +441,7 @@ export function useResumenViewModel(os: MemberOs): {
   }, []);
   const openTrainingTab = useCallback(() => setTab("entrenar"), [setTab]);
   const openQuickTraining = useCallback(
-    () => setOsModal({ kind: "quick-train" }),
+    () => setOsModal({ kind: "gym-session" }),
     [setOsModal],
   );
   const openProgress = useCallback(() => setTab("progreso"), [setTab]);

@@ -49,6 +49,7 @@ import { youtubeThumb, youtubeVideoId } from "./catalog/machines";
 import { isOneDayPlanLabel, membershipPlanDays, membershipRemainingPct } from "./helpers/membership";
 import { dayLabel, todayIso } from "./utils";
 import type { MemberOs } from "./useMemberOs";
+import GymSessionModal from "./GymSessionModal";
 
 const FREE_ACTIVITY_OPTIONS = [
   { id: "pesas", label: "Pesas", emoji: "🏋️" },
@@ -550,7 +551,7 @@ export default function OsModals({ os }: { os: MemberOs }) {
                     key={date}
                     type="button"
                     disabled={!canMark}
-                    onClick={() => setOsModal({ kind: "quick-train" })}
+                    onClick={() => setOsModal({ kind: "gym-session" })}
                     aria-label={
                       done
                         ? `${dayLabel(date)} ${dayOfMonth(date)}: entreno hecho`
@@ -1104,6 +1105,8 @@ export default function OsModals({ os }: { os: MemberOs }) {
           )}
         </div>
       </GameModal>
+      {/* Wizard unificado: Ingreso → Entreno → Salida */}
+      <GymSessionModal os={os} />
     </>
   );
 }

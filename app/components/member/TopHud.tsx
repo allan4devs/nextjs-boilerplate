@@ -39,7 +39,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
               <GameButton
                 variant="orange"
                 className="min-h-9 shrink-0 !px-3 text-xs"
-                onClick={() => setOsModal({ kind: "quick-train" })}
+              onClick={() => setOsModal({ kind: "gym-session" })}
               >
                 <Zap className="h-4 w-4" />
                 <span className="hidden sm:inline">Entreno</span>

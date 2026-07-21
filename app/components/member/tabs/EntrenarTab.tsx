@@ -526,49 +526,60 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
             )}
 
             {activeVisit && (
-              <div className="flex min-h-[3.75rem] flex-col gap-2 border-[3px] border-orange-300 bg-orange-300/10 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
-                <span className="grid h-10 w-10 shrink-0 place-items-center bg-orange-300 text-black">
-                  <DoorOpen className="h-5 w-5" />
+              <div className="flex min-h-[3.75rem] items-center gap-3 border-[3px] border-orange-300 bg-gradient-to-r from-orange-300/15 to-transparent px-3 py-2.5 sm:px-4">
+                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[.16em] text-orange-300">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-orange-300" />
+                  Sesión activa
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-[.18em] text-orange-200">Ingreso activo</p>
-                  <p className="text-sm font-black uppercase">Cuando terminés, marcá salida</p>
-                </div>
+                <p className="ml-1 min-w-0 flex-1 truncate text-sm font-black uppercase">
+                  {activeVisit.elapsedMinutes} min entrenando
+                </p>
                 <button
                   type="button"
                   disabled={isRegisteringCheckout}
-                  onClick={() => {
-                    if (window.confirm("¿Ya terminaste y querés registrar tu salida?")) {
-                      void registerCheckout();
-                    }
-                  }}
-                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 bg-orange-300 px-4 text-xs font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
+                  onClick={() => setOsModal({ kind: "gym-session", initialStep: "exit" })}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-1.5 bg-orange-300 px-3.5 text-[11px] font-black uppercase text-black transition hover:bg-white disabled:opacity-50"
                 >
                   {isRegisteringCheckout ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-                  {isRegisteringCheckout ? "Registrando..." : "Salida"}
+                  {isRegisteringCheckout ? "..." : "Salida"}
                 </button>
               </div>
             )}
 
-            {/* Acciones siempre a la vista */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setOsModal({ kind: "quick-train" })}
-                className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/45 bg-[#d8ff3e]/10 px-3 text-xs font-black uppercase text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/20"
-              >
-                <Sparkles className="h-4 w-4" />
-                ¿Cuánto entrené?
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveId("clases")}
-                className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-orange-300/45 bg-orange-300/10 px-3 text-xs font-black uppercase text-orange-100 transition hover:border-orange-300"
-              >
-                <Dumbbell className="h-4 w-4" />
-                Clases hoy
-              </button>
-            </div>
+
+            {/* CTA principal — Marcar entreno */}
+            <button
+              type="button"
+              onClick={() => setOsModal({ kind: "gym-session" })}
+              className="group relative flex min-h-[4.5rem] w-full items-center gap-4 overflow-hidden border-[3px] border-[#d8ff3e] bg-[#060a01] px-4 text-left transition hover:bg-[#d8ff3e]/5"
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-[#d8ff3e]/10 to-transparent transition-transform duration-500 group-hover:translate-x-0"
+              />
+              <span className="relative grid h-12 w-12 shrink-0 place-items-center bg-[#d8ff3e] text-black transition group-hover:scale-105">
+                <Sparkles className="h-6 w-6" />
+              </span>
+              <div className="relative min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#d8ff3e]">Registrar sesión</p>
+                <p className="truncate text-lg font-black uppercase">
+                  {trainedToday ? "Hoy ya está · ver racha" : "¿Cuánto entrenaste hoy?"}
+                </p>
+              </div>
+              <span className="relative text-[#d8ff3e] transition group-hover:translate-x-1">
+                <ChevronRight className="h-6 w-6" />
+              </span>
+            </button>
+
+            {/* Acción secundaria */}
+            <button
+              type="button"
+              onClick={() => setActiveId("clases")}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 border-[2px] border-orange-300/30 bg-orange-300/6 px-3 text-xs font-black uppercase text-orange-200/80 transition hover:border-orange-300/60 hover:text-orange-100"
+            >
+              <Dumbbell className="h-4 w-4" />
+              Ver clases de hoy
+            </button>
 
             <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {[
