@@ -32,6 +32,8 @@ export type CompleteTodayWorkoutDependencies = {
   repository: MemberRepository;
   recordWorkoutCompleted: (event: WorkoutCompletedEvent) => Promise<void>;
   now?: () => Date;
+  /** Si es true, no se requiere ingreso registrado para completar el entreno. */
+  allowWithoutCheckin?: boolean;
 };
 
 /** Completes the single daily workout after a real check-in for the gym day. */
@@ -44,11 +46,10 @@ export async function completeTodayWorkout(
   const member = await dependencies.repository.findByKey(input.memberKey);
   if (!member) throw new MemberNotFoundError();
 
-  const checkin = await dependencies.repository.findCheckinOnDate(
-    input.memberKey,
-    completedDate,
-  );
-  if (!checkin) throw new MissingTodayCheckinError();
+  const checkin = dependencies.allowWithoutCheckin
+    ? null
+    : await dependencies.repository.findCheckinOnDate(input.memberKey, completedDate);
+  if (!dependencies.allowWithoutCheckin && !checkin) throw new MissingTodayCheckinError();
 
   const entry: WorkoutEntry = {
     id: `workout-${completedDate}-${input.trainingId}`,
@@ -83,7 +84,7 @@ export async function completeTodayWorkout(
   await dependencies.recordWorkoutCompleted({
     memberKey: input.memberKey,
     memberName: member.memberName,
-    checkinId: checkin.id,
+    checkinId: checkin?.id ?? "",
     workout: entry,
   });
 

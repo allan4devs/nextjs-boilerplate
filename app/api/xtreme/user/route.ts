@@ -800,6 +800,7 @@ export async function PATCH(req: NextRequest) {
       const { member: completed, newBadges } = await completeTodayWorkout(
         {
           repository: memberRepository,
+          allowWithoutCheckin: true,
           recordWorkoutCompleted: async ({ memberKey, checkinId, workout }) => {
             await recordEvent(db, {
               type: "workout_logged",
@@ -963,6 +964,7 @@ export async function PATCH(req: NextRequest) {
     const { member: doc, newBadges } = await completeTodayWorkout(
       {
         repository: memberRepository,
+        allowWithoutCheckin: true,
         recordWorkoutCompleted: async ({
           memberKey,
           memberName: persistedMemberName,
