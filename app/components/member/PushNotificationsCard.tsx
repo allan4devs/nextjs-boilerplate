@@ -45,6 +45,18 @@ export default function PushNotificationsCard({ unlocked, compact = false }: Pro
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const refreshAfterSettings = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    window.addEventListener("pageshow", refreshAfterSettings);
+    document.addEventListener("visibilitychange", refreshAfterSettings);
+    return () => {
+      window.removeEventListener("pageshow", refreshAfterSettings);
+      document.removeEventListener("visibilitychange", refreshAfterSettings);
+    };
+  }, [refresh]);
+
   async function onEnable() {
     if (!unlocked) {
       setError("Desbloqueá tu sesión con el PIN para activar avisos en este celular.");
@@ -171,8 +183,9 @@ export default function PushNotificationsCard({ unlocked, compact = false }: Pro
 
       {showDenied && (
         <p className="mt-3 text-xs font-bold leading-relaxed text-red-200/90">
-          Permiso bloqueado. En Android: candado de la barra de dirección → Notificaciones →
-          Permitir. En iOS: Ajustes → Xtreme Gym → Notificaciones.
+          {capability?.isIos
+            ? "iPhone no permite que la app reactive un permiso denegado. Abrí Ajustes → Notificaciones → Xtreme Gym, activá Permitir notificaciones y volvé acá."
+            : "Permití las notificaciones desde la configuración del navegador y volvé acá."}
         </p>
       )}
 
@@ -222,7 +235,7 @@ export default function PushNotificationsCard({ unlocked, compact = false }: Pro
               : showIosHint
                 ? "Ya instalé la app - activar"
                 : showDenied
-                  ? "Reintentar permiso"
+                  ? "Ya lo habilité en Ajustes"
                   : hardBlock
                     ? "No disponible aquí"
                     : "Activar notificaciones"}

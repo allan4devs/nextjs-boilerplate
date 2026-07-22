@@ -58,6 +58,18 @@ export default function PushOptInBanner({ unlocked, memberName }: Props) {
     void evaluate();
   }, [evaluate]);
 
+  useEffect(() => {
+    const evaluateAfterSettings = () => {
+      if (document.visibilityState === "visible") void evaluate();
+    };
+    window.addEventListener("pageshow", evaluateAfterSettings);
+    document.addEventListener("visibilitychange", evaluateAfterSettings);
+    return () => {
+      window.removeEventListener("pageshow", evaluateAfterSettings);
+      document.removeEventListener("visibilitychange", evaluateAfterSettings);
+    };
+  }, [evaluate]);
+
   function dismiss() {
     try {
       localStorage.setItem(DISMISS_TIMESTAMP_KEY, String(Date.now()));

@@ -164,8 +164,9 @@ export async function getPushCapability(): Promise<PushCapability> {
       supported: true,
       canSubscribe: false,
       reason: "permission-denied",
-      message:
-        "Bloqueaste las notificaciones. En el candado del navegador (o Ajustes → Xtreme) permití avisos y volvé a intentar.",
+      message: isIos
+        ? "Los avisos están desactivados en este dispositivo. Abrí Ajustes → Notificaciones → Xtreme Gym → Permitir notificaciones; luego volvé a la app."
+        : "Los avisos están bloqueados. Permitilos desde la configuración de notificaciones del navegador y volvé a intentar.",
       isIos,
       isStandalone: standalone,
       permission,
@@ -246,12 +247,26 @@ export async function enablePushOnThisDevice(): Promise<{
   subscription: PushSubscription;
   message: string;
 }> {
-  const capability = await getPushCapability();
-  if (!capability.canSubscribe) {
-    throw new Error(capability.message);
+  // IMPORTANTE: Safari/iOS exige que requestPermission se invoque mientras
+  // todavía está activo el gesto del tap. No debe haber ningún await (como el
+  // fetch de configuración VAPID) antes de esta llamada.
+  if (!isSecureContextOk()) {
+    throw new Error("Las notificaciones push solo funcionan en una conexión segura.");
+  }
+  if (
+    typeof Notification === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    !("PushManager" in window)
+  ) {
+    throw new Error("Este navegador no admite notificaciones push.");
+  }
+  const ios = isIosDevice();
+  if (ios && !isStandaloneDisplay()) {
+    throw new Error(
+      'En iPhone, agregá Xtreme a la pantalla de inicio, abrila desde el ícono y tocá Activar de nuevo.',
+    );
   }
 
-  // Pedir permiso EXPLÍCITO antes de subscribe (requerido en varios móviles).
   let permission = Notification.permission;
   if (permission === "default") {
     permission = await Notification.requestPermission();
@@ -259,9 +274,17 @@ export async function enablePushOnThisDevice(): Promise<{
   if (permission !== "granted") {
     throw new Error(
       permission === "denied"
-        ? "Bloqueaste las notificaciones. Permitilas en el navegador y reintentá."
+        ? ios
+          ? "El permiso está desactivado en este iPhone. iOS no deja pedirlo otra vez desde la app: abrí Ajustes → Notificaciones → Xtreme Gym, activá Permitir notificaciones y volvé a la app."
+          : "El permiso está bloqueado. Permití las notificaciones en la configuración del navegador y volvé a intentar."
         : "No se otorgó permiso para notificaciones.",
     );
+  }
+
+  // Con el permiso resuelto dentro del gesto ya podemos consultar VAPID.
+  const capability = await getPushCapability();
+  if (!capability.canSubscribe) {
+    throw new Error(capability.message);
   }
 
   const registration = await ensureServiceWorker();
