@@ -431,6 +431,7 @@ export async function sessionSnapshot(db: Db, date: string, memberKeyRaw = "") {
       isMine: boolean;
       bookingId?: string | null;
       status: string;
+      enabled?: boolean;
     }
   > = {};
 
@@ -486,10 +487,60 @@ export async function sessionSnapshot(db: Db, date: string, memberKeyRaw = "") {
       isMine,
       bookingId,
       status: session.status,
+      enabled: session.status === "scheduled",
     };
   }
 
   return byTraining;
+}
+
+export async function toggleClassAvailability(
+  db: Db,
+  args: { trainingId: string; date: string; status: "scheduled" | "cancelled" },
+) {
+  const session = await ensureClassSession(db, {
+    trainingId: args.trainingId,
+    trainingName: args.trainingId,
+    date: args.date,
+  });
+
+  await db.collection<ClassSessionDoc>(CLASS_SESSIONS_COLLECTION).updateOne(
+    { id: session.id },
+    { $set: { status: args.status, updatedAt: new Date() } },
+  );
+
+  return { ok: true, sessionId: session.id, status: args.status };
+}
+
+export async function expelClassAttendee(
+  db: Db,
+  args: { bookingId: string },
+) {
+  const booking = await db.collection<BookingDoc>(BOOKINGS_COLLECTION).findOne({ id: args.bookingId });
+  if (!booking) return { ok: false, message: "Reserva no encontrada." };
+
+  const now = new Date();
+  await db.collection<BookingDoc>(BOOKINGS_COLLECTION).updateOne(
+    { id: args.bookingId },
+    { $set: { status: "no_show", cancelledAt: now, updatedAt: now } },
+  );
+
+  await db.collection<ClassSessionDoc>(CLASS_SESSIONS_COLLECTION).updateOne(
+    { id: booking.sessionId, bookedCount: { $gt: 0 } },
+    { $inc: { bookedCount: -1 }, $set: { updatedAt: now } },
+  );
+  if (booking.entitlementId) {
+    await releaseBookingEntitlement(db, booking.entitlementId, booking.memberKey);
+  }
+
+  const { queuePushMemberEvent } = await import("./member-push");
+  queuePushMemberEvent(db, booking.memberKey, {
+    type: "reservation_cancelled",
+    trainingName: booking.trainingName,
+    trainingDate: booking.trainingDate,
+  });
+
+  return { ok: true, memberName: booking.memberName, memberKey: booking.memberKey };
 }
 
 export async function markAttendance(

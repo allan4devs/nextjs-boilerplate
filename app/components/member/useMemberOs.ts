@@ -433,9 +433,10 @@ export function useMemberOs() {
     );
   }, []);
 
-  const loadReservations = useCallback(async (_name?: string) => {
+  const loadReservations = useCallback(async (targetDate?: string) => {
     // isMine sale solo de la cookie de sesión del socio actual (no del nombre en query).
-    const params = new URLSearchParams({ date: todayIso() });
+    const date = targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) ? targetDate : todayIso();
+    const params = new URLSearchParams({ date });
     const response = await fetch(`/api/xtreme/reservations?${params}`, {
       cache: "no-store",
       credentials: "same-origin",
@@ -1066,10 +1067,12 @@ export function useMemberOs() {
     }
   }
 
-  async function reserveTraining(training: Training) {
+  async function reserveTraining(training: Training, targetDate?: string) {
     if (!unlocked) return;
     setError("");
     setMessage("");
+
+    const dateToBook = targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) ? targetDate : todayIso();
 
     // Gate de UI: sin plan/pase vigente no se llama al API (el backend también bloquea).
     if (!membershipAllowsClassBooking(currentMember.membership)) {
@@ -1097,7 +1100,7 @@ export function useMemberOs() {
           memberName,
           trainingId: training.id,
           trainingName: training.name,
-          trainingDate: todayIso(),
+          trainingDate: dateToBook,
         }),
       });
       const data = (await response.json()) as ReservationsResponse & {
@@ -1139,9 +1142,9 @@ export function useMemberOs() {
           });
           return;
         }
-        throw new Error(data.error ?? MSG.errors.reserve);
+        throw new Error(data.error || MSG.errors.reserve);
       }
-      setReservations(data.reservations ?? {});
+      setReservations(data.reservations);
       await loadGymStatus();
       setMessage(MSG.ok.reserved(training.name));
       trackAction("class_reserved", {
@@ -1155,11 +1158,12 @@ export function useMemberOs() {
     }
   }
 
-  async function cancelReservation(training: Training) {
+  async function cancelReservation(training: Training, targetDate?: string) {
     if (!unlocked) return;
     setError("");
     setMessage("");
     setReservingTrainingId(training.id);
+    const dateToCancel = targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) ? targetDate : todayIso();
 
     try {
       const response = await fetch("/api/xtreme/reservations", {
@@ -1169,7 +1173,7 @@ export function useMemberOs() {
           memberName,
           trainingId: training.id,
           trainingName: training.name,
-          trainingDate: todayIso(),
+          trainingDate: dateToCancel,
         }),
       });
       const data = await readJson<ReservationsResponse>(response);

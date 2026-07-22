@@ -92,11 +92,13 @@ self.addEventListener("push", (event) => {
     renotify: Boolean(data.renotify),
     vibrate: data.vibrate || [120, 60, 120],
     requireInteraction: Boolean(data.requireInteraction),
+    actions: Array.isArray(data.actions) ? data.actions : [],
     data: {
       url: data.url || "/app",
       deliveryKey: data.deliveryKey || "",
       memberKey: data.memberKey || "",
       clickToken: data.clickToken || "",
+      actionUrls: data.actionUrls || {},
     },
   };
 
@@ -105,9 +107,12 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const rawUrl = event.notification.data?.url || "/app";
-  const targetUrl = new URL(rawUrl, self.location.origin).href;
   const data = event.notification.data || {};
+  let rawUrl = data.url || "/app";
+  if (event.action && data.actionUrls && data.actionUrls[event.action]) {
+    rawUrl = data.actionUrls[event.action];
+  }
+  const targetUrl = new URL(rawUrl, self.location.origin).href;
 
   const openOrFocus = async () => {
     const clientsList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });

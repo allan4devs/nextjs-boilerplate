@@ -38,8 +38,12 @@ export default function MobileViewportRuntime() {
     root.dataset.xgPlatform = ios ? "ios" : "other";
     root.dataset.xgDisplayMode = standalone ? "standalone" : "browser";
 
+    let animationFrame = 0;
+    let shortSettleTimer = 0;
+    let longSettleTimer = 0;
+
     const visibleHeight = () => Math.round(viewport?.height ?? window.innerHeight);
-    const updateViewport = () => {
+    const commitViewport = () => {
       const height = visibleHeight();
       const focused = isEditableTarget(document.activeElement);
 
@@ -57,6 +61,18 @@ export default function MobileViewportRuntime() {
       root.dataset.xgKeyboard = keyboardOpen ? "open" : "closed";
     };
 
+    // Safari emite varios valores intermedios mientras muestra u oculta la
+    // barra inferior. Además del siguiente frame, repetimos la lectura cuando
+    // termina la animación para no dejar el shell con una altura transitoria.
+    const updateViewport = () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(shortSettleTimer);
+      window.clearTimeout(longSettleTimer);
+      animationFrame = window.requestAnimationFrame(commitViewport);
+      shortSettleTimer = window.setTimeout(commitViewport, 120);
+      longSettleTimer = window.setTimeout(commitViewport, 360);
+    };
+
     const revealFocusedControl = (event: FocusEvent) => {
       updateViewport();
       const control = event.target;
@@ -70,22 +86,34 @@ export default function MobileViewportRuntime() {
     const afterFocusLeaves = () => window.setTimeout(updateViewport, 160);
     const resetForOrientation = () => {
       largestHeightRef.current = 0;
-      window.setTimeout(updateViewport, 120);
+      updateViewport();
+    };
+    const updateWhenVisible = () => {
+      if (document.visibilityState === "visible") updateViewport();
     };
 
     updateViewport();
     viewport?.addEventListener("resize", updateViewport);
     viewport?.addEventListener("scroll", updateViewport);
+    viewport?.addEventListener("scrollend", updateViewport);
     window.addEventListener("resize", updateViewport);
+    window.addEventListener("pageshow", updateViewport);
     window.addEventListener("orientationchange", resetForOrientation);
+    document.addEventListener("visibilitychange", updateWhenVisible);
     document.addEventListener("focusin", revealFocusedControl);
     document.addEventListener("focusout", afterFocusLeaves);
 
     return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(shortSettleTimer);
+      window.clearTimeout(longSettleTimer);
       viewport?.removeEventListener("resize", updateViewport);
       viewport?.removeEventListener("scroll", updateViewport);
+      viewport?.removeEventListener("scrollend", updateViewport);
       window.removeEventListener("resize", updateViewport);
+      window.removeEventListener("pageshow", updateViewport);
       window.removeEventListener("orientationchange", resetForOrientation);
+      document.removeEventListener("visibilitychange", updateWhenVisible);
       document.removeEventListener("focusin", revealFocusedControl);
       document.removeEventListener("focusout", afterFocusLeaves);
       root.style.removeProperty("--xg-visual-viewport-height");

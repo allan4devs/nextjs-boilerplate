@@ -36,10 +36,27 @@ function configure() {
   return true;
 }
 
+export type PushPayload = {
+  title: string;
+  body: string;
+  url?: string;
+  deliveryKey?: string;
+  memberKey?: string;
+  clickToken?: string;
+  tag?: string;
+  badge?: string;
+  icon?: string;
+  vibrate?: number[];
+  renotify?: boolean;
+  requireInteraction?: boolean;
+  actions?: Array<{ action: string; title: string }>;
+  actionUrls?: Record<string, string>;
+};
+
 export async function sendMemberPush(
   db: Db,
   memberKey: string,
-  payload: { title: string; body: string; url?: string; deliveryKey?: string; memberKey?: string; clickToken?: string },
+  payload: PushPayload,
 ) {
   if (!configure()) return { sent: 0, attempted: 0, failed: 0, skipped: true };
   const collection = db.collection<StoredPushSubscription>(PUSH_SUBSCRIPTIONS_COLLECTION);
@@ -50,7 +67,11 @@ export async function sendMemberPush(
     try {
       await webpush.sendNotification(
         { endpoint: subscription.endpoint, keys: subscription.keys },
-        JSON.stringify({ ...payload, icon: "/pwa-icon-192.png" }),
+        JSON.stringify({
+          icon: "/pwa-icon-192.png",
+          badge: "/pwa-icon-192.png",
+          ...payload,
+        }),
       );
       sent += 1;
     } catch (error) {

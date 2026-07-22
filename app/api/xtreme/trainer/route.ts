@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit } from "@/lib/xtreme/audit";
+import { expelClassAttendee, toggleClassAvailability } from "@/lib/xtreme/inventory";
+import { queuePushMemberEvent } from "@/lib/xtreme/member-push";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { businessDate } from "@/lib/xtreme/business-date";
 import { getTrainerClassesForDate } from "@/lib/xtreme/trainer-classes";
@@ -63,7 +65,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Sesion de entrenador requerida." }, { status: 401 });
   }
   const db = await getDb();
-  const date = businessDate();
+  const dateParam = req.nextUrl.searchParams.get("date");
+  const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : businessDate();
+
   if (req.nextUrl.searchParams.get("view") === "classes") {
     return NextResponse.json(
       { date, todayClasses: await getTrainerClassesForDate(db, date) },
@@ -92,6 +96,26 @@ export async function POST(req: NextRequest) {
   const session = await requireTrainer(req);
   if (!session) return NextResponse.json({ error: "Sesion de entrenador requerida." }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const db = await getDb();
+
+  const action = String(body.action ?? "").trim();
+  if (action === "toggle_class") {
+    const trainingId = String(body.trainingId ?? "").trim();
+    const date = String(body.date ?? businessDate()).trim();
+    const status = body.status === "scheduled" ? "scheduled" : "cancelled";
+    if (!trainingId) return NextResponse.json({ error: "Clase requerida." }, { status: 400 });
+    const result = await toggleClassAvailability(db, { trainingId, date, status });
+    return NextResponse.json({ ...result, todayClasses: await getTrainerClassesForDate(db, date) });
+  }
+
+  if (action === "expel_attendee") {
+    const bookingId = String(body.bookingId ?? "").trim();
+    const date = String(body.date ?? businessDate()).trim();
+    if (!bookingId) return NextResponse.json({ error: "Reserva requerida." }, { status: 400 });
+    const result = await expelClassAttendee(db, { bookingId });
+    return NextResponse.json({ ...result, todayClasses: await getTrainerClassesForDate(db, date) });
+  }
+
   const memberName = normalizeName(body.memberName);
   if (!memberName) return NextResponse.json({ error: "Socio requerido." }, { status: 400 });
   const plan = sanitizePlan(body.plan);
@@ -99,7 +123,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "El plan necesita titulo y al menos una sesion." }, { status: 400 });
   }
   const normalizedName = normalizeKey(memberName);
-  const db = await getDb();
   const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
   if (!existing) return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
   if (existing.activePlanWorkout) {
@@ -108,6 +131,7 @@ export async function POST(req: NextRequest) {
       { status: 409 },
     );
   }
+
   const now = new Date();
   const coachName = String(body.coachName ?? existing.coach ?? "Entrenador Xtreme").trim().slice(0, 60);
   await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
@@ -120,6 +144,10 @@ export async function POST(req: NextRequest) {
       },
     },
   );
+  queuePushMemberEvent(db, normalizedName, {
+    type: "trainer_plan_assigned",
+    planName: plan.title || "Nueva rutina personalizada",
+  });
   await writeAudit(db, {
     actorRole: "trainer",
     action: "trainer.save_plan",

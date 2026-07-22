@@ -47,11 +47,34 @@ export async function fetchTrainerMembers() {
   };
 }
 
-export async function fetchTrainerClasses() {
-  const response = await fetch("/api/xtreme/trainer?view=classes", { cache: "no-store" });
+export async function fetchTrainerClassesForDate(date?: string) {
+  const query = date ? `?view=classes&date=${encodeURIComponent(date)}` : "?view=classes";
+  const response = await fetch(`/api/xtreme/trainer${query}`, { cache: "no-store" });
   if (response.status === 401) return null;
   const data = await payload<Pick<TrainerDashboardResponse, "date" | "todayClasses">>(response);
   return { date: data.date ?? "", todayClasses: data.todayClasses ?? [] };
+}
+
+export async function fetchTrainerClasses() {
+  return fetchTrainerClassesForDate();
+}
+
+export async function toggleClassStatus(trainingId: string, date: string, status: "scheduled" | "cancelled") {
+  const response = await fetch("/api/xtreme/trainer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "toggle_class", trainingId, date, status }),
+  });
+  return payload<{ ok: boolean; todayClasses: TrainerDashboardResponse["todayClasses"] }>(response);
+}
+
+export async function expelClassAttendee(bookingId: string, date: string) {
+  const response = await fetch("/api/xtreme/trainer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "expel_attendee", bookingId, date }),
+  });
+  return payload<{ ok: boolean; todayClasses: TrainerDashboardResponse["todayClasses"] }>(response);
 }
 
 export async function persistTrainerPlan(memberName: string, coachName: string, plan: TrainerPlan) {

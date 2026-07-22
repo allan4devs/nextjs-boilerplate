@@ -191,9 +191,15 @@ export async function processClassReminders(
 
       try {
         const pushResult = await sendMemberPush(db, memberKey, {
-          title: "Tu clase empieza pronto ⏰",
-          body: `${trainingName} a las ${timeLabel} (en ~${mins} min). ${scheduleLabel !== timeLabel ? scheduleLabel + " · " : ""}¡Nos vemos en Xtreme!`,
-          url: "/app",
+          title: "⏰ Tu clase empieza pronto",
+          body: `${trainingName} a las ${timeLabel} (en ~${mins} min). ${scheduleLabel !== timeLabel ? scheduleLabel + " · " : ""}¡Alistá el bulto y nos vemos en Xtreme!`,
+          url: "/app?tab=clases",
+          tag: "xtreme-class-reminder",
+          renotify: true,
+          requireInteraction: true,
+          vibrate: [150, 75, 150, 75, 150],
+          actions: [{ action: "view_class", title: "Ver reserva 🧘" }],
+          actionUrls: { view_class: "/app?tab=clases" },
           deliveryKey,
           memberKey,
           clickToken: notificationClickToken(memberKey, deliveryKey),

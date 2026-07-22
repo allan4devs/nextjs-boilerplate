@@ -6,7 +6,7 @@
  * aqui solo se compone el shell (HUD, nav, dock), los tabs y los modales.
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { CelebrationOverlay } from "./components/gamification";
 import OnboardingTour from "./components/OnboardingTour";
@@ -59,6 +59,12 @@ export default function ExtremeGymSite() {
     setError,
   } = os;
   const resumen = useResumenViewModel(os);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("xg-member-os-active");
+    return () => root.classList.remove("xg-member-os-active");
+  }, []);
 
   const dismissToast = useCallback(() => {
     setMessage("");

@@ -82,9 +82,15 @@ export async function processVisitCheckoutReminders(
 
     try {
       const push = await sendMemberPush(db, memberKey, {
-        title: "¿Ya terminaste tu entreno? 👋",
-        body: "Tu visita sigue abierta. Si ya saliste, registrá la salida desde Member OS.",
-        url: "/app",
+        title: "🚪 ¿Ya terminaste tu entreno?",
+        body: "Tu visita sigue abierta en el gym. Registrá tu salida para liberar espacio y guardar la duración exacta.",
+        url: "/app?action=checkout",
+        tag: "xtreme-checkout-reminder",
+        renotify: true,
+        requireInteraction: true,
+        vibrate: [100, 50, 100],
+        actions: [{ action: "checkout", title: "Registrar Salida 🚪" }],
+        actionUrls: { checkout: "/app?action=checkout" },
         deliveryKey,
         memberKey,
         clickToken: notificationClickToken(memberKey, deliveryKey),

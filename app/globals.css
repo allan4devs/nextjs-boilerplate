@@ -252,6 +252,22 @@ button,
    scrollea. Esto evita que el body haga rubber-band por detrás del dock y
    que position:fixed se despegue al cambiar el viewport visual de iOS. */
 @media (max-width: 1023px) {
+  /* El documento del sitio queda inmóvil detrás del OS. En Safari esto
+     evita que el rubber-band exponga header/footer durante el reajuste de la
+     barra inferior; el único scroll permitido es el panel de contenido. */
+  html.xg-member-os-active,
+  html.xg-member-os-active body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html.xg-member-os-active body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+  }
+
   .xg-member-os {
     position: fixed;
     inset: 0;

@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  expelClassAttendee,
   fetchTrainerClasses,
+  fetchTrainerClassesForDate,
   fetchTrainerMembers,
   loginTrainer,
   logoutTrainer,
   persistTrainerPlan,
+  toggleClassStatus,
   trainerSession,
 } from "../api";
 import { DEFAULT_COACH_NAME } from "../constants";
@@ -290,14 +293,54 @@ export function useTrainerOs() {
     }
   }, [coachName, draft, selected]);
 
+  const changeAgendaDate = useCallback(async (targetDate: string) => {
+    setChecking(true);
+    try {
+      const result = await fetchTrainerClassesForDate(targetDate);
+      if (result) {
+        setTodayClasses(result.todayClasses);
+        setAgendaDate(result.date);
+      }
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "No se pudieron cargar las clases." });
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  const toggleClass = useCallback(async (trainingId: string, status: "scheduled" | "cancelled") => {
+    try {
+      const result = await toggleClassStatus(trainingId, agendaDate, status);
+      if (result.todayClasses) setTodayClasses(result.todayClasses);
+      setNotice({
+        tone: "success",
+        text: status === "scheduled" ? "Clase habilitada para socios." : "Clase deshabilitada/cancelada.",
+      });
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "Error al cambiar estado de la clase." });
+    }
+  }, [agendaDate]);
+
+  const expelAttendee = useCallback(async (bookingId: string) => {
+    if (!window.confirm("¿Seguro que querés expulsar/remover a este socio de la clase?")) return;
+    try {
+      const result = await expelClassAttendee(bookingId, agendaDate);
+      if (result.todayClasses) setTodayClasses(result.todayClasses);
+      setNotice({ tone: "success", text: "Socio removido de la clase exitosamente." });
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "Error al expulsar al socio." });
+    }
+  }, [agendaDate]);
+
   return {
     checking, authenticated, code, setCode, members, todayClasses, agendaDate,
     selected, selectedSignal, stats,
     query, setQuery, filter, setFilter, filteredMembers, tab, setTab, draft, coachName,
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
-    saving, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,
+    saving, dirty, validationError, login, logout, refresh: load, chooseMember, updateDraft,
     updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise,
     deleteExercise, applyTemplate, resetDraft, save,
+    changeAgendaDate, toggleClass, expelAttendee,
   };
 }
 

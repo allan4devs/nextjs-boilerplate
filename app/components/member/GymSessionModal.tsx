@@ -230,13 +230,13 @@ function EntryStep({
         </div>
 
         {/* CTA directo */}
-        <GameButton full variant="lime" onClick={onNext}>
-          <Dumbbell className="h-4 w-4" />
-          Registrar mi entreno de hoy →
+        <GameButton full variant="orange" onClick={onNext}>
+          <LogOut className="h-4 w-4" />
+          Ir a registrar mi salida →
         </GameButton>
 
         <p className="text-center text-[11px] font-bold text-white/30">
-          Ya podés saltar al Paso 2 para marcar lo que entrenaste
+          Tu ingreso ya está registrado · al terminar marcá tu salida
         </p>
       </div>
     );
@@ -687,8 +687,8 @@ export default function GymSessionModal({ os }: { os: MemberOs }) {
   } = os;
 
   const open = osModal?.kind === "gym-session";
-  const initialStep: Step =
-    osModal?.kind === "gym-session" ? (osModal.initialStep ?? "entry") : "entry";
+  const explicitStep = osModal?.kind === "gym-session" ? osModal.initialStep : undefined;
+  const initialStep: Step = explicitStep ?? (activeVisit ? "exit" : "entry");
 
   const [step, setStep]           = useState<Step>(initialStep);
   const [minutes, setMinutes]     = useState(45);
@@ -715,7 +715,7 @@ export default function GymSessionModal({ os }: { os: MemberOs }) {
     setSavedMinutes(45);
     setSavedActivities([]);
     setIsMarkingEntry(false);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, initialStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleActivity = useCallback((label: string) => {
     setActivities((prev) =>
@@ -728,7 +728,7 @@ export default function GymSessionModal({ os }: { os: MemberOs }) {
     setIsMarkingEntry(true);
     await new Promise<void>((r) => setTimeout(r, 800));
     setIsMarkingEntry(false);
-    setStep("workout");
+    setStep("exit");
   }, []);
 
   /* Guardar entreno */
@@ -872,7 +872,7 @@ export default function GymSessionModal({ os }: { os: MemberOs }) {
           hasActiveVisit={hasActiveVisit}
           checkedInAt={activeVisit?.checkedInAt}
           elapsedMinutes={activeVisit?.elapsedMinutes}
-          onNext={() => setStep("workout")}
+          onNext={() => setStep(hasActiveVisit ? "exit" : "workout")}
           onMarkEntry={handleMarkEntry}
           isBusy={isMarkingEntry}
         />

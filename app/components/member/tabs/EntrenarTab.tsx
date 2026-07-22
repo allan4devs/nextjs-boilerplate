@@ -6,7 +6,7 @@
  * al tocar para reservar / check-in sin saturar la pantalla.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
   Check,
@@ -114,7 +114,7 @@ function TrainingCard({
   training: Training;
   unlocked: boolean;
   done: boolean;
-  reservation: { reserved: number; capacity: number; remaining: number; isMine: boolean };
+  reservation: { reserved: number; capacity: number; remaining: number; isMine: boolean; status?: string; enabled?: boolean };
   reservingTrainingId: string;
   savingTrainingId: string;
   date: string;
@@ -128,6 +128,7 @@ function TrainingCard({
   isOneDayPass?: boolean;
 }) {
   const Icon = training.icon;
+  const isClassDisabled = reservation.status === "cancelled" || reservation.enabled === false;
   const isFull = reservation.remaining <= 0 && !reservation.isMine;
   const fillPct = Math.min(
     100,
@@ -138,6 +139,7 @@ function TrainingCard({
   const reserveDisabled =
     !unlocked ||
     Boolean(reservingTrainingId) ||
+    isClassDisabled ||
     (reservation.isMine ? false : isOneDayPass || isFull || !checkIn.canReserve);
   const checkInDisabled =
     !unlocked || Boolean(savingTrainingId) || done || !checkIn.canCheckIn;
@@ -174,7 +176,12 @@ function TrainingCard({
                 Reservado
               </span>
             )}
-            {!done && checkIn.ended && (
+            {isClassDisabled && (
+              <span className="border border-red-400/50 bg-red-500/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-red-200">
+                No habilitada por coach
+              </span>
+            )}
+            {!done && checkIn.ended && !isClassDisabled && (
               <span className="border border-white/20 bg-white/5 px-1.5 py-0.5 text-[9px] font-black uppercase text-white/45">
                 Ya pasó
               </span>
@@ -205,7 +212,12 @@ function TrainingCard({
           <p className="text-sm text-white/64">
             {training.focus} · {training.intensity} · Coach {training.coach}
           </p>
-          {checkIn.hint && !done && (
+          {isClassDisabled && (
+            <p className="text-xs font-bold text-red-300">
+              ⛔ La entrenadora aún no ha habilitado esta clase para socios.
+            </p>
+          )}
+          {checkIn.hint && !done && !isClassDisabled && (
             <p className="text-xs font-semibold text-white/40">{checkIn.hint}</p>
           )}
           <div className="grid grid-cols-2 gap-2">
@@ -226,25 +238,23 @@ function TrainingCard({
               ) : (
                 <ChevronRight className="h-4 w-4" />
               )}
-              {reservation.isMine
-                ? "Cancelar"
-                : isFull
-                  ? "Lleno"
-                  : isOneDayPass
-                    ? "Solo plan"
-                    : needsAccess
-                      ? "Activar acceso"
-                      : "Reservar"}
+              {isClassDisabled
+                ? "No disponible"
+                : reservation.isMine
+                  ? "Cancelar"
+                  : isFull
+                    ? "Lleno"
+                    : isOneDayPass
+                      ? "Solo plan"
+                      : needsAccess
+                        ? "Activar acceso"
+                        : "Reservar"}
             </button>
             <button
               type="button"
               onClick={onComplete}
               disabled={checkInDisabled}
-              className={`inline-flex min-h-12 items-center justify-center gap-2 px-3 py-3 text-xs font-black uppercase transition sm:text-sm ${
-                done
-                  ? "bg-[#d8ff3e] text-black"
-                  : "bg-white text-black hover:bg-[#d8ff3e]"
-              } disabled:cursor-not-allowed disabled:opacity-45`}
+              className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-white/20 bg-white/5 px-3 py-3 text-xs font-black uppercase text-white transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black disabled:cursor-not-allowed disabled:opacity-35 sm:text-sm"
             >
               {savingTrainingId === training.id ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -262,6 +272,12 @@ function TrainingCard({
   );
 }
 
+function getCostaRicaIsoDate(offsetDays = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Costa_Rica" }).format(d);
+}
+
 export default function EntrenarTab({ os }: { os: MemberOs }) {
   const {
     unlocked,
@@ -276,6 +292,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
     completeTraining,
     reserveTraining,
     cancelReservation,
+    loadReservations,
     setOsModal,
     activeVisit,
     isRegisteringCheckout,
@@ -284,6 +301,11 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openTrainingId, setOpenTrainingId] = useState<string | null>(null);
+  const [selectedClassDay, setSelectedClassDay] = useState<"today" | "tomorrow">("today");
+
+  const todayIso = useMemo(() => getCostaRicaIsoDate(0), []);
+  const tomorrowIso = useMemo(() => getCostaRicaIsoDate(1), []);
+  const activeClassDate = selectedClassDay === "today" ? todayIso : tomorrowIso;
 
   const doneCount = TRAININGS.filter((t) => completedToday.has(t.id)).length;
   const hasPlan = Boolean(currentMember.trainingPlan);
@@ -292,19 +314,46 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
   useEffect(() => {
     if (activeWorkout) setActiveId("plan");
   }, [activeWorkout]);
-  const today = todayIso();
+
   const membership = currentMember.membership;
   const isOneDayPass = isOneDayPlanLabel(membership.plan) && membership.daysRemaining >= 0 && membership.status !== "expired";
   const needsAccess = unlocked && !membershipAllowsClassBooking(membership) && !isOneDayPass;
 
   const clasesContent = (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">
-          Hoy · {today}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+        <div className="flex border-2 border-white/15 bg-black/40 p-1">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedClassDay("today");
+              loadReservations(todayIso);
+            }}
+            className={`px-3 py-1.5 text-xs font-black uppercase transition ${
+              selectedClassDay === "today"
+                ? "bg-orange-300 text-black shadow-sm"
+                : "text-white/50 hover:text-white"
+            }`}
+          >
+            Hoy ({todayIso.slice(5)})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedClassDay("tomorrow");
+              loadReservations(tomorrowIso);
+            }}
+            className={`px-3 py-1.5 text-xs font-black uppercase transition ${
+              selectedClassDay === "tomorrow"
+                ? "bg-orange-300 text-black shadow-sm"
+                : "text-white/50 hover:text-white"
+            }`}
+          >
+            Mañana ({tomorrowIso.slice(5)})
+          </button>
+        </div>
         <p className="text-xs font-bold text-white/40">
-          {doneCount}/{TRAININGS.length} hechos
+          {doneCount}/{TRAININGS.length} hechos hoy
         </p>
       </div>
 
@@ -371,7 +420,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
               reservation={reservation}
               reservingTrainingId={reservingTrainingId}
               savingTrainingId={savingTrainingId}
-              date={today}
+              date={activeClassDate}
               expanded={openTrainingId === training.id}
               needsAccess={needsAccess}
               isOneDayPass={isOneDayPass}
@@ -380,8 +429,8 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
               }
               onReserve={() =>
                 reservation.isMine
-                  ? cancelReservation(training)
-                  : reserveTraining(training)
+                  ? cancelReservation(training, activeClassDate)
+                  : reserveTraining(training, activeClassDate)
               }
               onComplete={() => completeTraining(training)}
             />

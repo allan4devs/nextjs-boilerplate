@@ -11,7 +11,7 @@ import {
   sendWinBackEmail,
   type SendEmailResult,
 } from "@/lib/helpers/email";
-import { sendMemberPush } from "@/lib/helpers/push";
+import { sendMemberPush, type PushPayload } from "@/lib/helpers/push";
 import { recordEvent } from "@/lib/xtreme/events";
 import { businessDate } from "@/lib/xtreme/business-date";
 import { notificationClickToken } from "@/lib/xtreme/notification-token";
@@ -135,16 +135,52 @@ export async function GET(req: NextRequest) {
         }
 
         const emailResult = await deliver(trigger, member);
-        const pushPayload =
-            trigger.kind === "streak-risk"
-              ? { title: "Tu racha sigue viva 🔥", body: `Llevás ${trigger.streak} días. Entrená hoy para mantenerla.` }
-              : trigger.kind === "milestone"
-                ? { title: "¡Nuevo hito! 🏆", body: `Llegaste a ${trigger.streak} días de constancia.`, url: "/app" }
-              : trigger.kind === "win-back"
-                ? { title: "Volvé a Xtreme", body: "Lo importante no es la pausa: es retomar.", url: "/app" }
-                : trigger.kind === "monthly-recap"
-                  ? { title: "Tu mes en Xtreme 💪", body: `${trigger.workouts} entrenos y ${trigger.minutes} minutos.`, url: "/app" }
-                  : { title: "Tu membresía Xtreme", body: "Revisá tu fecha de renovación y mantené tu ritmo.", url: "/app" };
+        const pushPayload: PushPayload =
+          trigger.kind === "streak-risk"
+            ? {
+                title: `⚠️ ¡Tu racha de ${trigger.streak} días está en riesgo!`,
+                body: `Llevás ${trigger.streak} días seguidos. Entrená hoy para no perder tu fuego ni tus puntos de XP.`,
+                url: "/app?action=workout",
+                tag: "xtreme-streak-warning",
+                renotify: true,
+                requireInteraction: true,
+                vibrate: [200, 100, 200],
+                actions: [{ action: "train", title: "Entrenar hoy 💪" }],
+                actionUrls: { train: "/app?tab=entrenar" },
+              }
+            : trigger.kind === "milestone"
+              ? {
+                  title: `🏆 ¡Gran hito de constancia!`,
+                  body: `¡Llegaste a ${trigger.streak} días de entreno en Xtreme Gym! Sos un ejemplo.`,
+                  url: "/app?tab=comunidad",
+                  tag: "xtreme-milestone",
+                  actions: [{ action: "streak", title: "Ver racha 🔥" }],
+                  actionUrls: { streak: "/app?tab=comunidad" },
+                }
+            : trigger.kind === "win-back"
+              ? {
+                  title: "🔥 Te extrañamos en Xtreme Gym",
+                  body: "Lo importante no es la pausa, es retomar. ¡Te esperamos hoy en la sala!",
+                  url: "/app?tab=entrenar",
+                  tag: "xtreme-winback",
+                  actions: [{ action: "train", title: "Volver a entrenar 💪" }],
+                  actionUrls: { train: "/app?tab=entrenar" },
+                }
+              : trigger.kind === "monthly-recap"
+                ? {
+                    title: "📊 Tu resumen del mes",
+                    body: `${trigger.workouts} entrenos y ${trigger.minutes} min activos. Tocá para ver tus stats.`,
+                    url: "/app?tab=progreso",
+                    tag: "xtreme-recap",
+                  }
+                : {
+                    title: `⏳ Tu membresía ${trigger.plan || "Xtreme"}`,
+                    body: `Vence en ${trigger.daysRemaining} día(s). Renová a tiempo para no perder tus rachas.`,
+                    url: "/app?modal=checkout",
+                    tag: "xtreme-membership-expiring",
+                    actions: [{ action: "renew", title: "Renovar ahora 💳" }],
+                    actionUrls: { renew: "/app?modal=checkout" },
+                  };
         const pushResult = await sendMemberPush(db, memberKey, {
           ...pushPayload,
           deliveryKey,
