@@ -1,0 +1,7619 @@
+{
+  "generatedAt": "2026-07-19T19:54:44.364Z",
+  "summary": {
+    "mode": "apply",
+    "spreadsheetRows": 2941,
+    "namesWithCandidateEmail": 981,
+    "canonicalContactEmails": 984,
+    "memberRecoveries": 5,
+    "cedulaOnlyFixes": 5,
+    "cedulaConflictResolutions": 4,
+    "quarantineRealigns": 0,
+    "uniqueExcelOwnerRecoveries": 5,
+    "cedulaNameMatchRecoveries": 5,
+    "fuzzyNameRecoveries": 0,
+    "sharedClearMatchRecoveries": 0,
+    "repairedDomains": 5,
+    "formatRepairsFromExcel": 33,
+    "uniqueFormatRepairedEmails": 26,
+    "allRecoverableExcelEmails": 981,
+    "unresolvedSharedEmails": 330,
+    "invalidEmailRows": 6,
+    "placeholderEmailsBlocked": 1110,
+    "identityMismatches": 142,
+    "unsafeExistingAssignments": 0,
+    "quarantinedContacts": 472,
+    "unmatchedExcelNames": 0,
+    "ambiguousMongoNames": 5,
+    "skippedMembers": 1926,
+    "byCategory": {
+      "excel_align": 5,
+      "quarantine_realign": 0,
+      "cedula_only": 5,
+      "cedula_conflict": 4,
+      "identity_mismatch": 142,
+      "shared_conflict": 330
+    }
+  },
+  "writeResult": {
+    "membersMatched": 6,
+    "membersModified": 6,
+    "emailRecoveries": 5,
+    "cedulaOnlyFixes": 5,
+    "cedulaConflictsCleared": 4,
+    "membersQuarantined": 0,
+    "quarantineRealigns": 0,
+    "contactsMatched": 963,
+    "contactsModified": 963,
+    "contactsInserted": 21
+  },
+  "recoveries": [
+    {
+      "memberName": "JAVIER FRANCISCO GONZALEZ MONGE",
+      "email": "javiergonzalezmonge@gmail.com",
+      "previousEmail": null,
+      "sourceRow": 1117,
+      "repairedDomain": true,
+      "domainChange": "gmail.com -> gmail.com",
+      "method": "unique_cedula_name_match",
+      "score": 1,
+      "nameSim": 1,
+      "matchMethod": "exact_cedula",
+      "fromQuarantine": false,
+      "excelName": "JAVIER FRANCISCO GONZALEZ MONGE",
+      "excelCedula": "208900414"
+    },
+    {
+      "memberName": "KELLY JULIANA HERNANDEZ CORDERO",
+      "email": "kellyjuhernandez@gmail.com",
+      "previousEmail": null,
+      "sourceRow": 1195,
+      "repairedDomain": true,
+      "domainChange": "gmail.com -> gmail.com",
+      "method": "unique_cedula_name_match",
+      "score": 1,
+      "nameSim": 1,
+      "matchMethod": "exact_cedula",
+      "fromQuarantine": false,
+      "excelName": "KELLY JULIANA HERNANDEZ CORDERO",
+      "excelCedula": "207300980"
+    },
+    {
+      "memberName": "ANDREY DAVID SALAS ZAMORA",
+      "email": "zamoraandre84@gmail.com",
+      "previousEmail": null,
+      "sourceRow": 2369,
+      "repairedDomain": true,
+      "domainChange": "gmail.com -> gmail.com",
+      "method": "unique_cedula_name_match",
+      "score": 1,
+      "nameSim": 1,
+      "matchMethod": "exact_cedula",
+      "fromQuarantine": false,
+      "excelName": "ANDREY DAVID SALAS ZAMORA",
+      "excelCedula": "206910385"
+    },
+    {
+      "memberName": "Karen Solis Salas",
+      "email": "karenss97.93@gmail.com",
+      "previousEmail": null,
+      "sourceRow": 2559,
+      "repairedDomain": true,
+      "domainChange": "gmail.com -> gmail.com",
+      "method": "unique_cedula_name_match",
+      "score": 1,
+      "nameSim": 1,
+      "matchMethod": "exact_cedula",
+      "fromQuarantine": false,
+      "excelName": "Karen Solis Salas",
+      "excelCedula": "207130948"
+    },
+    {
+      "memberName": "AARON IGNACIO VICTORY HIDALGO",
+      "email": "aaronvh949@gmail.com",
+      "previousEmail": null,
+      "sourceRow": 2833,
+      "repairedDomain": true,
+      "domainChange": "gmail.com -> gmail.com",
+      "method": "unique_cedula_name_match",
+      "score": 0.94,
+      "nameSim": 1,
+      "matchMethod": "exact_cedula",
+      "fromQuarantine": false,
+      "excelName": "AARON IGNACIO VICTORY HIDALGO",
+      "excelCedula": "209050978"
+    }
+  ],
+  "formatRepairs": [
+    {
+      "row": 65,
+      "memberName": "Ignacio Jose Aguilar Aguilar",
+      "raw": "jasoc010396@gotmail.com",
+      "email": "jasoc010396@hotmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gotmail.com",
+      "toDomain": "hotmail.com"
+    },
+    {
+      "row": 110,
+      "memberName": "HELLEN ROXANA ALFARO AGUERO",
+      "raw": "hellenalfa99@xn--gmai-jqa.com",
+      "email": "hellenalfa99@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "xn--gmai-jqa.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 155,
+      "memberName": "CRISTHIAN ALONSO CORRALES JIMENEZ",
+      "raw": "cristhiancorrales700gmail.com",
+      "email": "cristhiancorrales700@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": true,
+      "fromDomain": "gmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 240,
+      "memberName": "VALENTINA ARAYA BERROCAL",
+      "raw": "varayaberrocal@gmil.com",
+      "email": "varayaberrocal@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmil.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 326,
+      "memberName": "Irianna Yuliany Arce Salazar",
+      "raw": "JHOSEFTENCIO@!CLOUD.COM",
+      "email": "jhoseftencio@icloud.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "!cloud.com",
+      "toDomain": "icloud.com"
+    },
+    {
+      "row": 348,
+      "memberName": "VANESSA DE JESUS ARGUELLO SANDI",
+      "raw": "vanearguello@gmil.com",
+      "email": "vanearguello@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmil.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 613,
+      "memberName": "WARREN FRANCISCO CAMPOS ROJAS",
+      "raw": "warrencr17@hotmal.com",
+      "email": "warrencr17@hotmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "hotmal.com",
+      "toDomain": "hotmail.com"
+    },
+    {
+      "row": 959,
+      "memberName": "Angelica Esquivel Ramirez",
+      "raw": "jasoc010396@gotmail.com",
+      "email": "jasoc010396@hotmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gotmail.com",
+      "toDomain": "hotmail.com"
+    },
+    {
+      "row": 1117,
+      "memberName": "JAVIER FRANCISCO GONZALEZ MONGE",
+      "raw": "javiergonzalezmonge.com",
+      "email": "javiergonzalezmonge@gmail.com",
+      "assumedGmail": true,
+      "insertedAt": true,
+      "fromDomain": "gmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 1195,
+      "memberName": "KELLY JULIANA HERNANDEZ CORDERO",
+      "raw": "kellyjuhernandez@",
+      "email": "kellyjuhernandez@gmail.com",
+      "assumedGmail": true,
+      "insertedAt": false,
+      "fromDomain": "gmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 1537,
+      "memberName": "Jose David Mejias Valerio",
+      "raw": "fernando22ch@hamail.com",
+      "email": "fernando22ch@hotmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "hamail.com",
+      "toDomain": "hotmail.com"
+    },
+    {
+      "row": 1627,
+      "memberName": "Diego Alonso Montero Cubillo",
+      "raw": "alonmontero1994@gmai.com",
+      "email": "alonmontero1994@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmai.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 1663,
+      "memberName": "Jose Miguel Mora Morales",
+      "raw": "jmiguel0784@gmial.com",
+      "email": "jmiguel0784@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmial.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 1688,
+      "memberName": "Kiara Morales Delgado",
+      "raw": "lupitaag6@tgmail.com",
+      "email": "lupitaag6@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "tgmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2004,
+      "memberName": "Jose Alberto Ramiez Jimenez",
+      "raw": "alerodriguezamo12@gmaial.com",
+      "email": "alerodriguezamo12@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmaial.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2046,
+      "memberName": "DANNY STEVEN REYES CALDERON",
+      "raw": "danreyes05@gmailc.com",
+      "email": "danreyes05@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmailc.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2054,
+      "memberName": "Carlomagno Rios Sanabria",
+      "raw": "jcarceh@htomail.com",
+      "email": "jcarceh@hotmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "htomail.com",
+      "toDomain": "hotmail.com"
+    },
+    {
+      "row": 2078,
+      "memberName": "SEBASTIAN RODRIGUEZ ARAYA",
+      "raw": "rodriguezarayasebas@gmai.com",
+      "email": "rodriguezarayasebas@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmai.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2181,
+      "memberName": "Andrey Rodríguez Vega",
+      "raw": "rodriguezvega2807@gmial.com",
+      "email": "rodriguezvega2807@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmial.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2198,
+      "memberName": "Elvis Rojas Arce",
+      "raw": "lupitaag6@tgmail.com",
+      "email": "lupitaag6@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "tgmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2209,
+      "memberName": "Maria José Rojas Benavidez",
+      "raw": "pipi052489@gmal.com",
+      "email": "pipi052489@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmal.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2230,
+      "memberName": "Fabian Rojas Espinoza",
+      "raw": "alerodriguezamo12@gmaial.com",
+      "email": "alerodriguezamo12@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmaial.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2317,
+      "memberName": "Felix Saborio Chavarria",
+      "raw": "pipi052489@gmal.com",
+      "email": "pipi052489@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmal.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2369,
+      "memberName": "ANDREY DAVID SALAS ZAMORA",
+      "raw": "zamoraandre84",
+      "email": "zamoraandre84@gmail.com",
+      "assumedGmail": true,
+      "insertedAt": true,
+      "fromDomain": "gmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2402,
+      "memberName": "Nuria Salazar Quesada",
+      "raw": "nuriasalazar52?4gmail.com",
+      "email": "nuriasalazar524@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": true,
+      "fromDomain": "gmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2409,
+      "memberName": "Gabriel Salazar Sanchez",
+      "raw": "laura19112016@gmaill.com",
+      "email": "laura19112016@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "gmaill.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2460,
+      "memberName": "Jhosef Santamaria Brioso",
+      "raw": "JHOSEFTENCIO@!CLOUD.COM",
+      "email": "jhoseftencio@icloud.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "!cloud.com",
+      "toDomain": "icloud.com"
+    },
+    {
+      "row": 2559,
+      "memberName": "Karen Solis Salas",
+      "raw": "karenss97.93",
+      "email": "karenss97.93@gmail.com",
+      "assumedGmail": true,
+      "insertedAt": true,
+      "fromDomain": "gmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2567,
+      "memberName": "Stacy Maria Solis Zamora",
+      "raw": "jcarceh@htomail.com",
+      "email": "jcarceh@hotmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "htomail.com",
+      "toDomain": "hotmail.com"
+    },
+    {
+      "row": 2646,
+      "memberName": "SUAN JOHANNA UMANA MORA",
+      "raw": "soanni15@xn--gmail-rta.com",
+      "email": "soanni15@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "xn--gmail-rta.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2668,
+      "memberName": "JOSELYN VIVIANA VALENCIANO MOLINA",
+      "raw": "joselynvalenciano25gmail.com",
+      "email": "joselynvalenciano25@gmail.com",
+      "assumedGmail": false,
+      "insertedAt": true,
+      "fromDomain": "gmail.com",
+      "toDomain": "gmail.com"
+    },
+    {
+      "row": 2735,
+      "memberName": "Nicolas Vargas Hernandez",
+      "raw": "fernando22ch@hamail.com",
+      "email": "fernando22ch@hotmail.com",
+      "assumedGmail": false,
+      "insertedAt": false,
+      "fromDomain": "hamail.com",
+      "toDomain": "hotmail.com"
+    },
+    {
+      "row": 2833,
+      "memberName": "AARON IGNACIO VICTORY HIDALGO",
+      "raw": "aaronvh949",
+      "email": "aaronvh949@gmail.com",
+      "assumedGmail": true,
+      "insertedAt": true,
+      "fromDomain": "gmail.com",
+      "toDomain": "gmail.com"
+    }
+  ],
+  "cedulaOnlyFixes": [
+    {
+      "memberName": "Maryeli Miranda",
+      "sourceRow": 1581,
+      "method": "cedula_only",
+      "nameSim": 1,
+      "email": null,
+      "emailScore": 0
+    },
+    {
+      "memberName": "Katherine Muñoz Zamora",
+      "cedula": "155831154115",
+      "previousCedula": null,
+      "sourceRow": 1748,
+      "method": "cedula_only",
+      "nameSim": 1,
+      "email": null,
+      "emailScore": 0
+    },
+    {
+      "memberName": "excluido Arce Ruíz",
+      "sourceRow": 319,
+      "method": "cedula_only",
+      "nameSim": 1,
+      "email": null,
+      "emailScore": 0
+    },
+    {
+      "memberName": "Elio Francisco Omedeo Chaves",
+      "sourceRow": 1833,
+      "method": "cedula_only",
+      "nameSim": 1,
+      "email": null,
+      "emailScore": 0
+    },
+    {
+      "memberName": "Juan Daniel Ulate",
+      "sourceRow": 2639,
+      "method": "cedula_only",
+      "nameSim": 1,
+      "email": null,
+      "emailScore": 0
+    }
+  ],
+  "cedulaConflictResolutions": [
+    {
+      "memberName": "excluido Arce Ruíz",
+      "clearCedula": "206070518",
+      "winnerName": "Jairo Arce Ruíz",
+      "winnerScore": 1.3,
+      "loserScore": 0.756,
+      "method": "clear_weaker_duplicate_cedula",
+      "excelName": "Jairo Arce Ruíz"
+    },
+    {
+      "memberName": "Maryeli Miranda",
+      "clearCedula": "15582511",
+      "winnerName": "Michelle Poveda Artola",
+      "winnerScore": 1.3,
+      "loserScore": 0.312,
+      "method": "clear_weaker_duplicate_cedula",
+      "excelName": "Michelle Poveda Artola"
+    },
+    {
+      "memberName": "Elio Francisco Omedeo Chaves",
+      "clearCedula": "204320516",
+      "winnerName": "Elio Francisco Omodeo Chaves",
+      "winnerScore": 1.3,
+      "loserScore": 1.104,
+      "method": "clear_weaker_duplicate_cedula",
+      "excelName": "Elio Francisco Omodeo Chaves"
+    },
+    {
+      "memberName": "Juan Daniel Ulate",
+      "clearCedula": "208240234",
+      "winnerName": "Juan Daniel Ulate Aguilar",
+      "winnerScore": 2.1,
+      "loserScore": 0.8999999999999999,
+      "method": "clear_weaker_duplicate_cedula",
+      "excelName": "Juan Daniel Ulate Aguilar"
+    }
+  ],
+  "quarantineRealigns": [],
+  "unsafeExistingAssignments": [],
+  "identityMismatches": [
+    {
+      "email": "branprado8@gmail.com",
+      "memberName": "Jose Angel Acuña Morales",
+      "sourceRow": 54,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "3101755601",
+      "memberCedula": "3101755601"
+    },
+    {
+      "email": "wilkinvsquez@gmail.com",
+      "memberName": "Emily Acuña Rojas",
+      "sourceRow": 57,
+      "score": 0.28,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "119680840",
+      "memberCedula": "119680840"
+    },
+    {
+      "email": "titaara25@gmail.com",
+      "memberName": "DINA BEATRIZ ARAUZ GONZALEZ",
+      "sourceRow": 234,
+      "score": 0.44,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206720464",
+      "memberCedula": "206720464"
+    },
+    {
+      "email": "gabyach023@gmail.com",
+      "memberName": "Gabriela Judith Araya Chavarria",
+      "sourceRow": 243,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208330249",
+      "memberCedula": "208330249"
+    },
+    {
+      "email": "inversionesvilladeoro@gmail.com",
+      "memberName": "DANNA ARAYA RODRIGUEZ",
+      "sourceRow": 267,
+      "score": 0.27,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "121450690",
+      "memberCedula": "121450690"
+    },
+    {
+      "email": "grupodarrod2@gmail.com",
+      "memberName": "DILAN ANDREY ARAYA RODRIGUEZ",
+      "sourceRow": 270,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207370376",
+      "memberCedula": "207370376"
+    },
+    {
+      "email": "educreafacturaelectronica@gmail.com",
+      "memberName": "Daniela Castillo Salas",
+      "sourceRow": 661,
+      "score": 0.32,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206500838",
+      "memberCedula": "206500838"
+    },
+    {
+      "email": "compras@jcarce.com",
+      "memberName": "ALEJANDRO ARCE SOTO",
+      "sourceRow": 330,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205090259",
+      "memberCedula": "205090259"
+    },
+    {
+      "email": "yesseniajimenezsa@gmail.com",
+      "memberName": "Noe Arguello",
+      "sourceRow": 339,
+      "score": 0.26,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "116470502",
+      "memberCedula": "116470502"
+    },
+    {
+      "email": "noe96argch@gmail.com",
+      "memberName": "NOE ARGUELLO CHACON",
+      "sourceRow": 342,
+      "score": 0.08,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "116470702",
+      "memberCedula": "116470702"
+    },
+    {
+      "email": "mjaq21@hotmail.com",
+      "memberName": "Jose Mario Artavia Aleman",
+      "sourceRow": 389,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208070734",
+      "memberCedula": "208070734"
+    },
+    {
+      "email": "mclorin8269@gmail.com",
+      "memberName": "BRIAN ALONSO BACA BACA",
+      "sourceRow": 408,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208080105",
+      "memberCedula": "208080105"
+    },
+    {
+      "email": "brimasa01@gmail.com",
+      "memberName": "BRITTANY AMPARO BARQUERO HIDALGO",
+      "sourceRow": 431,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208650700",
+      "memberCedula": "208650700"
+    },
+    {
+      "email": "josegambolla@gmail.com",
+      "memberName": "Kristy Barrantes Aguilar",
+      "sourceRow": 435,
+      "score": 0.31,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209710186",
+      "memberCedula": "209710186"
+    },
+    {
+      "email": "v2b2cr@gmail.com",
+      "memberName": "VIVIANA VANESSA BEJARANO BOGANTES",
+      "sourceRow": 466,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206450368",
+      "memberCedula": "206450368"
+    },
+    {
+      "email": "vanessaguilar98@gmail.com",
+      "memberName": "Juan David Beleño Serna",
+      "sourceRow": 468,
+      "score": 0.31,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_name_key",
+      "excelCedula": "11700311",
+      "memberCedula": "117002888708"
+    },
+    {
+      "email": "allanac830@gmail.com",
+      "memberName": "Juan David Beleño Serna",
+      "sourceRow": 469,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "117002888708",
+      "memberCedula": "117002888708"
+    },
+    {
+      "email": "aviladavilaandrea@gmail.com",
+      "memberName": "Luis Diego Bolaños Hernandez",
+      "sourceRow": 528,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208950138",
+      "memberCedula": "208950138"
+    },
+    {
+      "email": "felipe.gadea@gmail.com",
+      "memberName": "Luis Diego Bolaños Hernandez",
+      "sourceRow": 529,
+      "score": 0.39,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208950138",
+      "memberCedula": "208950138"
+    },
+    {
+      "email": "ramcore35@gmail.com",
+      "memberName": "Fernando Oldemar Bonilla Guerra",
+      "sourceRow": 536,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "222222233",
+      "memberCedula": "222222233"
+    },
+    {
+      "email": "info@haroldgamboa.com",
+      "memberName": "Daniela Briceño Chacón",
+      "sourceRow": 553,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "118930303",
+      "memberCedula": "118930303"
+    },
+    {
+      "email": "miamarcelalopezvega@gmail.com",
+      "memberName": "Yensi Jimena Campos Padilla",
+      "sourceRow": 609,
+      "score": 0.29,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "120200339",
+      "memberCedula": "120200339"
+    },
+    {
+      "email": "tatirmrz@hotmail.com",
+      "memberName": "Sharon Cordero Vargas",
+      "sourceRow": 840,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209040674",
+      "memberCedula": "209040674"
+    },
+    {
+      "email": "joanna.mpcr3@gmail.com",
+      "memberName": "Silvia Carranza Rodriguez",
+      "sourceRow": 647,
+      "score": 0.32,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "114930027",
+      "memberCedula": "114930027"
+    },
+    {
+      "email": "facturacion.roy.calvo@gmail.com",
+      "memberName": "Karla Cruz Soto",
+      "sourceRow": 878,
+      "score": 0.34,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "503440926",
+      "memberCedula": "503440926"
+    },
+    {
+      "email": "meyyjossku07@gmail.com",
+      "memberName": "JOSLYN NAOMI CASTRO RUEDA",
+      "sourceRow": 691,
+      "score": 0.44,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209400026",
+      "memberCedula": "209400026"
+    },
+    {
+      "email": "fe.mcinnova@gmail.com",
+      "memberName": "Johan Mauricio Chacón Rodríguez",
+      "sourceRow": 757,
+      "score": 0.29,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208410190",
+      "memberCedula": "208410190"
+    },
+    {
+      "email": "jarguedassc@cr.cirsa.com",
+      "memberName": "Jorge Chaves Berrocal",
+      "sourceRow": 785,
+      "score": 0.44,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "204670686",
+      "memberCedula": "204670686"
+    },
+    {
+      "email": "ali.vale200826@gmail.com",
+      "memberName": "ALYSON VALERIA CHAVES RAMIREZ",
+      "sourceRow": 804,
+      "score": 0.54,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209070796",
+      "memberCedula": "209070796"
+    },
+    {
+      "email": "facturasvolcanarenal@gmail.com",
+      "memberName": "ALLAN ANDRES CHAVES SOLIS",
+      "sourceRow": 808,
+      "score": 0.38,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206410570",
+      "memberCedula": "206410570"
+    },
+    {
+      "email": "colladoquesada@gmail.com",
+      "memberName": "Luis Cisneros Villalobos",
+      "sourceRow": 823,
+      "score": 0.44,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "117270931",
+      "memberCedula": "117270931"
+    },
+    {
+      "email": "gcruma23@gmail.com",
+      "memberName": "GABRIELA CRUZ MATAMOROS",
+      "sourceRow": 874,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207960955",
+      "memberCedula": "207960955"
+    },
+    {
+      "email": "nenita14cr@yahoo.com",
+      "memberName": "Rosa Dorado Chaves",
+      "sourceRow": 910,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206250655",
+      "memberCedula": "206250655"
+    },
+    {
+      "email": "josjj2007@gmail.com",
+      "memberName": "jared Duran Solis",
+      "sourceRow": 925,
+      "score": 0.48000000000000004,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208798286",
+      "memberCedula": "208798286"
+    },
+    {
+      "email": "ralbe06@gmail.com",
+      "memberName": "Randalh Bolaños Esquivel NEW",
+      "sourceRow": 957,
+      "score": 0.4,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_name_key",
+      "excelCedula": "",
+      "memberCedula": ""
+    },
+    {
+      "email": "maesra166@gmail.com",
+      "memberName": "MARIAN MARIA ESQUIVEL RAMIREZ",
+      "sourceRow": 961,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207510976",
+      "memberCedula": "207510976"
+    },
+    {
+      "email": "tito.dm@hotmail.es",
+      "memberName": "Jennifer Floyd Varela",
+      "sourceRow": 997,
+      "score": 0.25,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "901120878",
+      "memberCedula": "901120878"
+    },
+    {
+      "email": "irene.elizondo1990@gmail.com",
+      "memberName": "Luis Diego Gaitan Castro",
+      "sourceRow": 1013,
+      "score": 0.32,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206470297",
+      "memberCedula": "206470297"
+    },
+    {
+      "email": "varagas31@hotmail.com",
+      "memberName": "Jose Alonso Hernandez Lopez",
+      "sourceRow": 1199,
+      "score": 0.3,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208530010",
+      "memberCedula": "208530010"
+    },
+    {
+      "email": "kemlygh@hotmail.com",
+      "memberName": "Kimberly Gamboa Hernandez",
+      "sourceRow": 1035,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206400829",
+      "memberCedula": "206400829"
+    },
+    {
+      "email": "hidrocapsa@gmail.com",
+      "memberName": "FRANCISCO ALBERTO GARCIA MORALES",
+      "sourceRow": 1061,
+      "score": 0.38,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "107940959",
+      "memberCedula": "107940959"
+    },
+    {
+      "email": "jorgepicadozamora@gmail.com",
+      "memberName": "Joaquin Garcia Ramirez",
+      "sourceRow": 1062,
+      "score": 0.38,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208270803",
+      "memberCedula": "208270803"
+    },
+    {
+      "email": "rogecemo@hotmail.com",
+      "memberName": "Jimena García Zamora",
+      "sourceRow": 1068,
+      "score": 0.25,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_name_key",
+      "excelCedula": "208940041",
+      "memberCedula": "208910041"
+    },
+    {
+      "email": "n-aty12011@gmail.com",
+      "memberName": "NATALIA GOMEZ SANDI",
+      "sourceRow": 1081,
+      "score": 0.51,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207910590",
+      "memberCedula": "207910590"
+    },
+    {
+      "email": "tekniriego@yahoo.com",
+      "memberName": "Roberto González Chaverri",
+      "sourceRow": 1104,
+      "score": 0.41000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "401280799",
+      "memberCedula": "401280799"
+    },
+    {
+      "email": "kendyesquivelrojas@gmail.com",
+      "memberName": "John Gonzalez Garcia",
+      "sourceRow": 1109,
+      "score": 0.25,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "402150738",
+      "memberCedula": "402150738"
+    },
+    {
+      "email": "kdanis.694@gmail.com",
+      "memberName": "KRISTEL DANIELA GONZALEZ ROMERO",
+      "sourceRow": 1130,
+      "score": 0.51,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207210594",
+      "memberCedula": "207210594"
+    },
+    {
+      "email": "stfiyoga72@hotmail.com",
+      "memberName": "Stephanie Gonzalez Romero",
+      "sourceRow": 1131,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207770556",
+      "memberCedula": "207770556"
+    },
+    {
+      "email": "lr.hish13@gmail.com",
+      "memberName": "Emily Fabiana Gonzalez Solis",
+      "sourceRow": 1138,
+      "score": 0.41000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209280134",
+      "memberCedula": "209280134"
+    },
+    {
+      "email": "crisroca1977@gmail.com",
+      "memberName": "Rachel Gonzalez Valerio",
+      "sourceRow": 1143,
+      "score": 0.39,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207800960",
+      "memberCedula": "207800960"
+    },
+    {
+      "email": "emmagasa21@gmail.com",
+      "memberName": "EMMANUEL FERNANDO GRANADOS SANCHEZ",
+      "sourceRow": 1154,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207620422",
+      "memberCedula": "207620422"
+    },
+    {
+      "email": "pabloandresromero@gmail.com",
+      "memberName": "Abel Guevara Arce",
+      "sourceRow": 1161,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207190733",
+      "memberCedula": "207190733"
+    },
+    {
+      "email": "verojarab@hotmail.com",
+      "memberName": "Jose Pablo Guevara Leon",
+      "sourceRow": 1166,
+      "score": 0.41000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208040703",
+      "memberCedula": "208040703"
+    },
+    {
+      "email": "gutimaggi1122@gmail.com",
+      "memberName": "LAURA MARIA GUTIERREZ MORA",
+      "sourceRow": 1175,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207100773",
+      "memberCedula": "207100773"
+    },
+    {
+      "email": "hrn585456@gmail.com",
+      "memberName": "NICOLE HERNANDEZ RODRIGUEZ",
+      "sourceRow": 1204,
+      "score": 0.41000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208660388",
+      "memberCedula": "208660388"
+    },
+    {
+      "email": "epas24@hotmail.com",
+      "memberName": "Siury Herrera Salas",
+      "sourceRow": 1226,
+      "score": 0.48000000000000004,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "204170185",
+      "memberCedula": "204170185"
+    },
+    {
+      "email": "gabohs907@gmail.com",
+      "memberName": "GABRIEL HERRERA SCHWARTZ",
+      "sourceRow": 1228,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209230965",
+      "memberCedula": "209230965"
+    },
+    {
+      "email": "jomongero@gmail.com",
+      "memberName": "Flor Maria Hidalgo Jimenez",
+      "sourceRow": 1247,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "202960960",
+      "memberCedula": "202960960"
+    },
+    {
+      "email": "cisjarrr04@gmail.com",
+      "memberName": "CRISTIAN JOSUE JARA BERROCAL",
+      "sourceRow": 1269,
+      "score": 0.46,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208390481",
+      "memberCedula": "208390481"
+    },
+    {
+      "email": "adolfo1084@gmail.com",
+      "memberName": "Dayana Jimenez",
+      "sourceRow": 1281,
+      "score": 0.25,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207440541",
+      "memberCedula": "207440541"
+    },
+    {
+      "email": "pabjimar@gmail.com",
+      "memberName": "PABLO ANDRES JIMENEZ ARAYA",
+      "sourceRow": 1292,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "112640871",
+      "memberCedula": "112640871"
+    },
+    {
+      "email": "judjim33@gmail.com",
+      "memberName": "JUDITH ESPERANZA JIMENEZ GAMBOA",
+      "sourceRow": 1307,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205430154",
+      "memberCedula": "205430154"
+    },
+    {
+      "email": "sjara.m7@gmail.com",
+      "memberName": "Marvin Jiménez Hernández",
+      "sourceRow": 1315,
+      "score": 0.28,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "204420446",
+      "memberCedula": "204420446"
+    },
+    {
+      "email": "iluvatar2006@gmail.com",
+      "memberName": "SEBASTIAN JIMENEZ JARA",
+      "sourceRow": 1318,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208820716",
+      "memberCedula": "208820716"
+    },
+    {
+      "email": "ojhandyworks@yahoo.com",
+      "memberName": "OSCAR MARIO JIMENEZ PORRAS",
+      "sourceRow": 1326,
+      "score": 0.41000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205130773",
+      "memberCedula": "205130773"
+    },
+    {
+      "email": "amorav25@yahoo.com",
+      "memberName": "Yesenia Koschny Alpizar",
+      "sourceRow": 1362,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205750217",
+      "memberCedula": "205750217"
+    },
+    {
+      "email": "seherand28@gmail.com",
+      "memberName": "MILENA LEZCANO GOMEZ",
+      "sourceRow": 1389,
+      "score": 0.46,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "115190398",
+      "memberCedula": "115190398"
+    },
+    {
+      "email": "rosyttag10@yahoo.com",
+      "memberName": "Dayanna López Jiménez",
+      "sourceRow": 1430,
+      "score": 0.21000000000000002,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206520957",
+      "memberCedula": "206520957"
+    },
+    {
+      "email": "gabi6137@gmail.com",
+      "memberName": "MARIA GABRIELA LOPEZ PORRAS",
+      "sourceRow": 1435,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207960236",
+      "memberCedula": "207960236"
+    },
+    {
+      "email": "alomb2510@gmail.com",
+      "memberName": "ESTEBAN ALONSO MADRIGAL BOLANOS",
+      "sourceRow": 1442,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208710585",
+      "memberCedula": "208710585"
+    },
+    {
+      "email": "kimberlycalvo@outlook.es",
+      "memberName": "Brian Alberto Madrigal Gamboa",
+      "sourceRow": 1444,
+      "score": 0.39,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207810014",
+      "memberCedula": "207810014"
+    },
+    {
+      "email": "gquadrosf@gmail.com",
+      "memberName": "Keilyn Manzanares Gonzalez",
+      "sourceRow": 1458,
+      "score": 0.2,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_name_key",
+      "excelCedula": "155822087509",
+      "memberCedula": "15582211"
+    },
+    {
+      "email": "javimc88@outlook.com",
+      "memberName": "Alejandro Medina Amador",
+      "sourceRow": 1509,
+      "score": 0.41000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209300351",
+      "memberCedula": "209300351"
+    },
+    {
+      "email": "delrociomoya@hotmail.com",
+      "memberName": "Carlos David Mejias Rojas",
+      "sourceRow": 1532,
+      "score": 0.31,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208160355",
+      "memberCedula": "208160355"
+    },
+    {
+      "email": "nagisaxd32@gmail.com",
+      "memberName": "MARIA GRACIELA MENDEZ ARIAS",
+      "sourceRow": 1550,
+      "score": 0.46,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208240632",
+      "memberCedula": "208240632"
+    },
+    {
+      "email": "anaisabelalvarado1997@gmail.com",
+      "memberName": "David Mendoza Corrales",
+      "sourceRow": 1565,
+      "score": 0.32,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206140063",
+      "memberCedula": "206140063"
+    },
+    {
+      "email": "pablomma21@gmail.com",
+      "memberName": "Liliana Mendoza González",
+      "sourceRow": 1566,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "800710933",
+      "memberCedula": "800710933"
+    },
+    {
+      "email": "demandozaher@gmail.com",
+      "memberName": "DAVID MENDOZA HERNANDEZ",
+      "sourceRow": 1568,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "701460939",
+      "memberCedula": "701460939"
+    },
+    {
+      "email": "lisa062@gmail.com",
+      "memberName": "LIDIETH MARIELA MENDOZA VARGAS",
+      "sourceRow": 1572,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208040983",
+      "memberCedula": "208040983"
+    },
+    {
+      "email": "emol09@gmail.com",
+      "memberName": "ESTEBAN ANTONIO MOLINA MATA",
+      "sourceRow": 1602,
+      "score": 0.48000000000000004,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "304140642",
+      "memberCedula": "304140642"
+    },
+    {
+      "email": "natymb05@gmail.com",
+      "memberName": "NATALIA MORA BONILLA",
+      "sourceRow": 1648,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "304840955",
+      "memberCedula": "304840955"
+    },
+    {
+      "email": "mfranko27@icloud.com",
+      "memberName": "FRANKLIN STUARTH MORALES VILLALOBOS",
+      "sourceRow": 1708,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208280201",
+      "memberCedula": "208280201"
+    },
+    {
+      "email": "topografiamq@outlook.com",
+      "memberName": "STWARD ANDRES MUNOZ BARQUERO",
+      "sourceRow": 1738,
+      "score": 0.25,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205450164",
+      "memberCedula": "205450164"
+    },
+    {
+      "email": "natystw@yahoo.com",
+      "memberName": "ANA PAULA MUÑOZ QUESADA",
+      "sourceRow": 1745,
+      "score": 0.38,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209570365",
+      "memberCedula": "209570365"
+    },
+    {
+      "email": "crismc_09@hotmail.es",
+      "memberName": "CRISTOPHER MAURICIO MURILLO CORRALES",
+      "sourceRow": 1766,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207290862",
+      "memberCedula": "207290862"
+    },
+    {
+      "email": "mata_mariajo512@gmail.com",
+      "memberName": "Jessica Obregon Ramirez",
+      "sourceRow": 1822,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208300721",
+      "memberCedula": "208300721"
+    },
+    {
+      "email": "wonyar17@gmail.com",
+      "memberName": "WENDY YARLIN OSES MADRIGAL",
+      "sourceRow": 1845,
+      "score": 0.53,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "402220639",
+      "memberCedula": "402220639"
+    },
+    {
+      "email": "danipase92@gmail.com",
+      "memberName": "SARA DANIELA PADILLA SEGURA",
+      "sourceRow": 1851,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207050134",
+      "memberCedula": "207050134"
+    },
+    {
+      "email": "daa040361@gmail.com",
+      "memberName": "Viviana Paniagua Araya",
+      "sourceRow": 1855,
+      "score": 0.48000000000000004,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207760503",
+      "memberCedula": "207760503"
+    },
+    {
+      "email": "britanyvalverde60@gmail.com",
+      "memberName": "Wendy Perez Arce",
+      "sourceRow": 1880,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206940316",
+      "memberCedula": "206940316"
+    },
+    {
+      "email": "rigmonguz@gmail.com",
+      "memberName": "Jose Manuel Pineda",
+      "sourceRow": 1920,
+      "score": 0.3,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208500558",
+      "memberCedula": "208500558"
+    },
+    {
+      "email": "sammy9322.sss@gmail.com",
+      "memberName": "Brandon Prado Mora",
+      "sourceRow": 1946,
+      "score": 0.21000000000000002,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208590609",
+      "memberCedula": "208590609"
+    },
+    {
+      "email": "jackyqa17@gmail.com",
+      "memberName": "Jackiline Quesada Arias",
+      "sourceRow": 1953,
+      "score": 0.5,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_name_key",
+      "excelCedula": "",
+      "memberCedula": ""
+    },
+    {
+      "email": "pelotin25@hotmail.com",
+      "memberName": "FREDDY MARTIN QUESADA PIZARRO",
+      "sourceRow": 1963,
+      "score": 0.51,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "502110297",
+      "memberCedula": "502110297"
+    },
+    {
+      "email": "gerencia@gasmeco.com",
+      "memberName": "LAURA CRISTINA QUIROS CORRALES",
+      "sourceRow": 1983,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "204780649",
+      "memberCedula": "204780649"
+    },
+    {
+      "email": "a.cq@centraldemangueras.com",
+      "memberName": "Jose Carlos Ramirez Corrales",
+      "sourceRow": 2011,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207670440",
+      "memberCedula": "207670440"
+    },
+    {
+      "email": "farodalf@gmail.com",
+      "memberName": "FABIOLA RODRIGUEZ ALFARO",
+      "sourceRow": 2071,
+      "score": 0.54,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208340705",
+      "memberCedula": "208340705"
+    },
+    {
+      "email": "gaboesw11@gmail.com",
+      "memberName": "Esteban Rodriguez Gonzalez",
+      "sourceRow": 2109,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208560968",
+      "memberCedula": "208560968"
+    },
+    {
+      "email": "tey_94@hotmail.es",
+      "memberName": "LUCELLY RODRIGUEZ GONZALEZ",
+      "sourceRow": 2111,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207290298",
+      "memberCedula": "207290298"
+    },
+    {
+      "email": "pri123roguz@gmail.com",
+      "memberName": "PRISCILLA RODRIGUEZ GUZMAN",
+      "sourceRow": 2114,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208980496",
+      "memberCedula": "208980496"
+    },
+    {
+      "email": "sr313745@gmail.com",
+      "memberName": "SILVIA ELENA RODRIGUEZ LORIA",
+      "sourceRow": 2129,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206090847",
+      "memberCedula": "206090847"
+    },
+    {
+      "email": "viniciorr16@gmail.com",
+      "memberName": "AARON FELIPE RODRIGUEZ MARTINEZ",
+      "sourceRow": 2131,
+      "score": 0.31,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209490498",
+      "memberCedula": "209490498"
+    },
+    {
+      "email": "luisf1996f@gmail.com",
+      "memberName": "Sergio Esteban Rodríguez Segura",
+      "sourceRow": 2174,
+      "score": 0.25,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207020128",
+      "memberCedula": "207020128"
+    },
+    {
+      "email": "karadrgz25@gmail.com",
+      "memberName": "CARLA YARITZA RODRIGUEZ VARGAS",
+      "sourceRow": 2180,
+      "score": 0.53,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207460565",
+      "memberCedula": "207460565"
+    },
+    {
+      "email": "crinvoices@ltvco.com",
+      "memberName": "Gabriel Rojas Alfaro",
+      "sourceRow": 2190,
+      "score": 0.38,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207500295",
+      "memberCedula": "207500295"
+    },
+    {
+      "email": "joaquinumana9@gmail.com",
+      "memberName": "Elvis Rojas Arce",
+      "sourceRow": 2199,
+      "score": 0.25,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "40212058",
+      "memberCedula": "40212058"
+    },
+    {
+      "email": "jilmaalfaro@gmail.com",
+      "memberName": "Marian Daniela Rojas Rojas",
+      "sourceRow": 2274,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207580511",
+      "memberCedula": "207580511"
+    },
+    {
+      "email": "19gabysabo@gmail.com",
+      "memberName": "Katherine Vanessa Rojas Solano",
+      "sourceRow": 2279,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206830962",
+      "memberCedula": "206830962"
+    },
+    {
+      "email": "wilmarolo@hotmail.com",
+      "memberName": "WILSON MANUEL ROMAN LOPEZ",
+      "sourceRow": 2286,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206220999",
+      "memberCedula": "206220999"
+    },
+    {
+      "email": "km.ej811@gmail.com",
+      "memberName": "STEYSI YULIANA ROMAN MONTERO",
+      "sourceRow": 2289,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209250615",
+      "memberCedula": "209250615"
+    },
+    {
+      "email": "yensicampos1303@gmail.com",
+      "memberName": "Maikol Roman Salas",
+      "sourceRow": 2290,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205900164",
+      "memberCedula": "205900164"
+    },
+    {
+      "email": "cin0578@gmail.com",
+      "memberName": "Cinthia Ruiz Quesada",
+      "sourceRow": 2313,
+      "score": 0.59,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205310088",
+      "memberCedula": "205310088"
+    },
+    {
+      "email": "sabe08@gmail.com",
+      "memberName": "VICTOR MANUEL SALAS BENAVIDES",
+      "sourceRow": 2341,
+      "score": 0.48000000000000004,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "203640046",
+      "memberCedula": "203640046"
+    },
+    {
+      "email": "laura19112016@gmail.com",
+      "memberName": "Gabriel Salazar Sanchez",
+      "sourceRow": 2409,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208140530",
+      "memberCedula": "208140530"
+    },
+    {
+      "email": "stefasv219@gmail.com",
+      "memberName": "ANA STEPHANIE SEGURA VARGAS",
+      "sourceRow": 2481,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207890319",
+      "memberCedula": "207890319"
+    },
+    {
+      "email": "h3ll3n_04dic@hotmail.com",
+      "memberName": "HELLEN GRACIELA SOLIS ARAGONES",
+      "sourceRow": 2533,
+      "score": 0.44,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207860862",
+      "memberCedula": "207860862"
+    },
+    {
+      "email": "irocha@interananas.com",
+      "memberName": "Dilan Soto Gonzalez",
+      "sourceRow": 2581,
+      "score": 0.31,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208620441",
+      "memberCedula": "208620441"
+    },
+    {
+      "email": "adrismcr@gmail.com",
+      "memberName": "ADRIANA SUJEY SOTO MARIN",
+      "sourceRow": 2588,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205310044",
+      "memberCedula": "205310044"
+    },
+    {
+      "email": "np432433@gmail.com",
+      "memberName": "NELSON JOSUE TAISIGUE PEREZ",
+      "sourceRow": 2609,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208150958",
+      "memberCedula": "208150958"
+    },
+    {
+      "email": "yanisalas83@gmail.com",
+      "memberName": "DAVID UGALDE ARCE",
+      "sourceRow": 2632,
+      "score": 0.44,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207880603",
+      "memberCedula": "207880603"
+    },
+    {
+      "email": "pamelausa22@gmail.com",
+      "memberName": "FELIPE JOSUE UMAÑA SALAS",
+      "sourceRow": 2653,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209350259",
+      "memberCedula": "209350259"
+    },
+    {
+      "email": "fabiancca44@gmail.com",
+      "memberName": "KENDY ARELYS VALDIVIA URBINA",
+      "sourceRow": 2664,
+      "score": 0.52,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209190732",
+      "memberCedula": "209190732"
+    },
+    {
+      "email": "kris-0712@hotmail.com",
+      "memberName": "Kimberly Valerio Guzman",
+      "sourceRow": 2680,
+      "score": 0.37,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206940133",
+      "memberCedula": "206940133"
+    },
+    {
+      "email": "evelinvgonzales@gmail.com",
+      "memberName": "Daniela Valle",
+      "sourceRow": 2690,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205380476",
+      "memberCedula": "205380476"
+    },
+    {
+      "email": "yo040984@gmail.com",
+      "memberName": "JUSTIN ALEJANDRO VARGAS ACUÑA",
+      "sourceRow": 2704,
+      "score": 0.19,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209380416",
+      "memberCedula": "209380416"
+    },
+    {
+      "email": "huberthps04@hotmail.com",
+      "memberName": "Kattia Vargas Brenes",
+      "sourceRow": 2716,
+      "score": 0.41000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205910709",
+      "memberCedula": "205910709"
+    },
+    {
+      "email": "zzzetta0502@gmail.com",
+      "memberName": "SANTIAGO ALONZO VARGAS CESPEDES",
+      "sourceRow": 2720,
+      "score": 0.27,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "208900422",
+      "memberCedula": "208900422"
+    },
+    {
+      "email": "gavake@hotmail.com",
+      "memberName": "JOSE GABRIEL VARGAS KELSH",
+      "sourceRow": 2738,
+      "score": 0.51,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "113980156",
+      "memberCedula": "113980156"
+    },
+    {
+      "email": "lisadeco062@gmail.com",
+      "memberName": "CORINA VARGAS PINEDA",
+      "sourceRow": 2754,
+      "score": 0.41000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "155814151928",
+      "memberCedula": "155814151928"
+    },
+    {
+      "email": "nattyv26@hotmail.com",
+      "memberName": "NATALIA MARCELA VARGAS SERRANO",
+      "sourceRow": 2775,
+      "score": 0.51,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205030861",
+      "memberCedula": "205030861"
+    },
+    {
+      "email": "cmvcadobe@hotmail.com",
+      "memberName": "CARLOS MARIO VASQUEZ CAMBRONERO",
+      "sourceRow": 2793,
+      "score": 0.6,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206580703",
+      "memberCedula": "206580703"
+    },
+    {
+      "email": "natsvr2707@yahoo.com",
+      "memberName": "Natalia Vega Rodríguez",
+      "sourceRow": 2817,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "111790480",
+      "memberCedula": "111790480"
+    },
+    {
+      "email": "zzzceo13@gmail.com",
+      "memberName": "Jazmin Yujing Guo Chen",
+      "sourceRow": 2888,
+      "score": 0.38,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "207460779",
+      "memberCedula": "207460779"
+    },
+    {
+      "email": "clinicadentaldr@gmail.com",
+      "memberName": "SERGIO ANTONIO ZAPATA ARROYO",
+      "sourceRow": 2908,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "205410144",
+      "memberCedula": "205410144"
+    },
+    {
+      "email": "edrezuov@gmail.com",
+      "memberName": "EDGAR RENE ZUNIGA OVIEDO",
+      "sourceRow": 2923,
+      "score": 0.58,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "107880002",
+      "memberCedula": "107880002"
+    },
+    {
+      "email": "lorebovil@hotmail.com",
+      "memberName": "Jason René Zuñiga Montero",
+      "sourceRow": 2931,
+      "score": 0.33,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "118560766",
+      "memberCedula": "118560766"
+    },
+    {
+      "email": "duranmarindavid@gmail.com",
+      "memberName": "Leidy Gabriela Zuñiga Solis",
+      "sourceRow": 2937,
+      "score": 0.35000000000000003,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "206620278",
+      "memberCedula": "206620278"
+    },
+    {
+      "email": "valezuzacr@gmail.com",
+      "memberName": "VALENTINA ZUÑIGA ZAPATA",
+      "sourceRow": 2942,
+      "score": 0.48000000000000004,
+      "reason": "name_email_mismatch",
+      "matchMethod": "exact_cedula",
+      "excelCedula": "209800791",
+      "memberCedula": "209800791"
+    },
+    {
+      "email": "stephaniegonzv@gmail.com",
+      "memberName": "Nulo Arce Salazar",
+      "sourceRow": 329,
+      "score": 0.14,
+      "reason": "name_email_mismatch",
+      "matchMethod": "quarantine_previous",
+      "excelCedula": "",
+      "memberCedula": ""
+    },
+    {
+      "email": "ddudranv@gmail.com",
+      "memberName": "NULO Chacón Alfaro",
+      "sourceRow": 0,
+      "score": 0.17,
+      "reason": "name_email_mismatch",
+      "matchMethod": "quarantine_previous",
+      "excelCedula": "",
+      "memberCedula": ""
+    },
+    {
+      "email": "drarazuzv@gmail.com",
+      "memberName": "NULO Chaves Marin",
+      "sourceRow": 800,
+      "score": 0.22,
+      "reason": "name_email_mismatch",
+      "matchMethod": "quarantine_previous",
+      "excelCedula": "",
+      "memberCedula": ""
+    },
+    {
+      "email": "jsibaja1787@gmail.com",
+      "memberName": "Fabricio Rodriguez Ramirez",
+      "sourceRow": 2155,
+      "score": 0.21000000000000002,
+      "reason": "name_email_mismatch",
+      "matchMethod": "quarantine_previous",
+      "excelCedula": "208290686",
+      "memberCedula": "208290686"
+    }
+  ],
+  "sharedConflicts": [
+    {
+      "email": "diego1609arce@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.15000000000000002,
+      "names": [
+        "Jimena Rojas Gonzalez",
+        "Luis Antonio Abarca Alvarado"
+      ],
+      "cedulas": [
+        "208630339",
+        "208850943"
+      ]
+    },
+    {
+      "email": "fvmadriz@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Flor de los Ángeles Aguilar Flores",
+        "Sebastian Vargas Molina"
+      ],
+      "cedulas": [
+        "116890683",
+        "208740170"
+      ]
+    },
+    {
+      "email": "jorge.picado71@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.03999999999999998,
+      "names": [
+        "Jeudy Rodirguez Jimenez",
+        "Ronulfo Arguello Arrieta"
+      ],
+      "cedulas": [
+        "208310251",
+        "203330768"
+      ]
+    },
+    {
+      "email": "cynthiacerdas07@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0,
+      "names": [
+        "Vilma Chinchilla Cole",
+        "Jennifer Rodríguez Loaiza"
+      ],
+      "cedulas": [
+        "601230822",
+        "208590606"
+      ]
+    },
+    {
+      "email": "chavescamila910@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.03999999999999998,
+      "names": [
+        "Eyleen Paniagua Rojas",
+        "Maria Jose Esquivel Orozco"
+      ],
+      "cedulas": [
+        "104070878",
+        "207720823"
+      ]
+    },
+    {
+      "email": "bazofeifa89@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.12000000000000005,
+      "names": [
+        "Susan Jimenez Bolivar",
+        "Dereck Porras Espinoza"
+      ],
+      "cedulas": [
+        "206680015",
+        "209230758"
+      ]
+    },
+    {
+      "email": "camachochavezadriana1992@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.10000000000000009,
+      "names": [
+        "Alberth Solano Avendaño",
+        "Zaira Montero Miranda"
+      ],
+      "cedulas": [
+        "701600313",
+        "206730283"
+      ]
+    },
+    {
+      "email": "bflor051@gmail.com",
+      "ownerCount": 4,
+      "bestScore": 0.5,
+      "margin": 0.13,
+      "names": [
+        "Julio Chaves Herrera",
+        "Jesus Nuñez Rodriguez Nuñez Rodriguez",
+        "Hazziel Navarrete Rodríguez",
+        "nulo Gonzalez Quesada"
+      ],
+      "cedulas": [
+        "402030119",
+        "603610397",
+        "115270467",
+        ""
+      ]
+    },
+    {
+      "email": "mmumana@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0,
+      "names": [
+        "Jose Adrian Abarca Nuñez",
+        "Edward Grimm Thomas"
+      ],
+      "cedulas": [
+        "206980885",
+        "800850997"
+      ]
+    },
+    {
+      "email": "zmontero2912@hotmail.es",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Melissa Abarca Rodríguez",
+        "Alaniz Quiros Rodriguez"
+      ],
+      "cedulas": [
+        "208080167",
+        "208690958"
+      ]
+    },
+    {
+      "email": "steven_iw@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.13000000000000006,
+      "names": [
+        "Daniela Acevedo Perez",
+        "Greivin Rojas Perez"
+      ],
+      "cedulas": [
+        "801500630",
+        "206150424"
+      ]
+    },
+    {
+      "email": "corellaandres596@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.050000000000000044,
+      "names": [
+        "Cristo Acevedo Sandino",
+        "Luis Fernando Vargas Sandoval"
+      ],
+      "cedulas": [
+        "15583111",
+        "206960360"
+      ]
+    },
+    {
+      "email": "albertoarcecampos2005@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0,
+      "names": [
+        "Jorge Mario Acuña Acuña",
+        "Angie Alfaro rodriguez"
+      ],
+      "cedulas": [
+        "206770264",
+        "208020505"
+      ]
+    },
+    {
+      "email": "rrb@hotmail.es",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0.08999999999999997,
+      "names": [
+        "Karen Acuña Rodriguez",
+        "Nicole Alvarado Chaves"
+      ],
+      "cedulas": [
+        "207710150",
+        "208400487"
+      ]
+    },
+    {
+      "email": "yerlin1823@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.11000000000000004,
+      "names": [
+        "Allan Monge Ruiz",
+        "Jose Miguel Mendez Rojas"
+      ],
+      "cedulas": [
+        "208100896",
+        "207660613"
+      ]
+    },
+    {
+      "email": "cardonafabian1122@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0,
+      "names": [
+        "Jose Mariano Soto Rojas",
+        "María Belén Ruíz Pérez"
+      ],
+      "cedulas": [
+        "207840165",
+        "116560792"
+      ]
+    },
+    {
+      "email": "monserrat26esquivel@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0,
+      "names": [
+        "Jose Mariano Soto Rojas",
+        "María Daniela Durán Valerio"
+      ],
+      "cedulas": [
+        "207840165",
+        "206250385"
+      ]
+    },
+    {
+      "email": "jasoc010396@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.20000000000000007,
+      "names": [
+        "Ignacio Jose Aguilar Aguilar",
+        "Angelica Esquivel Ramirez"
+      ],
+      "cedulas": [
+        "206930292",
+        "209270747"
+      ]
+    },
+    {
+      "email": "alsomo.02@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.12,
+      "names": [
+        "Alex Solis Molina",
+        "Keylor Aguilar Alfaro"
+      ],
+      "cedulas": [
+        "207050243",
+        ""
+      ]
+    },
+    {
+      "email": "psalas270990@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.14,
+      "names": [
+        "María Guadalupe Aguilar Alfaro",
+        "Emanuel Fernandez Pérez"
+      ],
+      "cedulas": [
+        "207600072",
+        "207890310"
+      ]
+    },
+    {
+      "email": "alexaarrieta11@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.5900000000000001,
+      "margin": 0.1885000000000001,
+      "names": [
+        "Maria Belen Chavarria Alfaro",
+        "Jairo Arce Ruíz",
+        "excluido Arce Ruíz"
+      ],
+      "cedulas": [
+        "209510209",
+        "206070518",
+        ""
+      ]
+    },
+    {
+      "email": "rociogomezro@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.43,
+      "margin": 0.589,
+      "names": [
+        "Maria Guadalupe Jimenez Alfaro",
+        "NULO Aguilar Rivera"
+      ],
+      "cedulas": [
+        "207860798",
+        ""
+      ]
+    },
+    {
+      "email": "okyquiros@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0,
+      "names": [
+        "Maria Guadalupe Jimenez Alfaro",
+        "Leonardo Salas Soto"
+      ],
+      "cedulas": [
+        "207860798",
+        "113190023"
+      ]
+    },
+    {
+      "email": "luisa@lapazfruits.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0,
+      "names": [
+        "Vanessa Aguilar Alfaro",
+        "Josué Quesada Ortega"
+      ],
+      "cedulas": [
+        "207780981",
+        "206950146"
+      ]
+    },
+    {
+      "email": "bsleidy485@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.34,
+      "margin": 0.030000000000000027,
+      "names": [
+        "Keilor Rodriguez Alfaro",
+        "Gianina Aguilar Jiménez"
+      ],
+      "cedulas": [
+        "205350073",
+        "206900834"
+      ]
+    },
+    {
+      "email": "jimmy_sa81@yahoo.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.14999999999999997,
+      "names": [
+        "Jessica Cruz Soto",
+        "Fabricio Aguilar Quiros"
+      ],
+      "cedulas": [
+        "503180636",
+        "207670944"
+      ]
+    },
+    {
+      "email": "elimaybe@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.42,
+      "margin": 0.008500000000000008,
+      "names": [
+        "Brayan Aguilar Rivera",
+        "Hairold Cordero Hidalgo",
+        "Carol Cordero Hidalgo"
+      ],
+      "cedulas": [
+        "702610387",
+        "205200865",
+        ""
+      ]
+    },
+    {
+      "email": "kattiabrajmdn@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.07999999999999996,
+      "names": [
+        "Luis Alonso Aguilar Rodriguez",
+        "Luis Gonzalez Vargas"
+      ],
+      "cedulas": [
+        "207930576",
+        "206710448"
+      ]
+    },
+    {
+      "email": "jacunar@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.14999999999999997,
+      "names": [
+        "Luis Guillermo Moreno Rodriguez",
+        "Luis Diego Castro Soto"
+      ],
+      "cedulas": [
+        "208310233",
+        "208940279"
+      ]
+    },
+    {
+      "email": "belenherra14@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.02999999999999997,
+      "names": [
+        "Dilan Soto Gonzalez",
+        "Luis Guillermo Moreno Rodriguez"
+      ],
+      "cedulas": [
+        "208620441",
+        "208310233"
+      ]
+    },
+    {
+      "email": "diegopiedra@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.21000000000000002,
+      "names": [
+        "Pedro David Aguilar Rodriguez",
+        "Fabián Murillo Sánchez"
+      ],
+      "cedulas": [
+        "207970802",
+        "206230691"
+      ]
+    },
+    {
+      "email": "isavargas973@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0,
+      "names": [
+        "Leticia Aguilar Rojas",
+        "Carla Jimenez Quesada"
+      ],
+      "cedulas": [
+        "208310996",
+        "206830659"
+      ]
+    },
+    {
+      "email": "justin2009b50@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.35,
+      "margin": 0.03999999999999998,
+      "names": [
+        "Laura Blanco Meneses",
+        "Alvaro Chaverri Sanchez"
+      ],
+      "cedulas": [
+        "109790823",
+        "207260148"
+      ]
+    },
+    {
+      "email": "kasson182@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Esteban Ramirez Alfaro",
+        "Erick Aguilar Vindas"
+      ],
+      "cedulas": [
+        "208040310",
+        "205700703"
+      ]
+    },
+    {
+      "email": "walter78delgado@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.07000000000000006,
+      "names": [
+        "Juan Carlos Arce Hidalgo",
+        "Carlos Alanís Guerrero"
+      ],
+      "cedulas": [
+        "109590273",
+        "801340246"
+      ]
+    },
+    {
+      "email": "vera.retana@gmail.com",
+      "ownerCount": 4,
+      "bestScore": 0.48,
+      "margin": 0,
+      "names": [
+        "Fabian Perez Ramirez",
+        "Emanuel Antonio Sevilla Torres",
+        "Elam Sibaja Leon",
+        "Nicole Alanís Mora"
+      ],
+      "cedulas": [
+        "208690119",
+        "801080055",
+        "208090022",
+        "208010366"
+      ]
+    },
+    {
+      "email": "seguraramos99@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0,
+      "names": [
+        "Estefania Alcocer Sandino",
+        "Carmen Rodriguez Pacheco"
+      ],
+      "cedulas": [
+        "206520953",
+        "122345678"
+      ]
+    },
+    {
+      "email": "vmlopez928@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.11999999999999994,
+      "names": [
+        "Jose Ricardo Alemán Ulloa",
+        "Diego Quijano Aguilar"
+      ],
+      "cedulas": [
+        "114310340",
+        "115193566"
+      ]
+    },
+    {
+      "email": "velizondosolis@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.20999999999999996,
+      "names": [
+        "Jerry Gerardo Castro Trejos",
+        "Isaac Alfaro Arguedas"
+      ],
+      "cedulas": [
+        "205610517",
+        "208910531"
+      ]
+    },
+    {
+      "email": "da._95salas@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.14000000000000012,
+      "names": [
+        "Diana Mora Ramirez",
+        "Jilma Alfaro Artavia"
+      ],
+      "cedulas": [
+        "208270207",
+        "205110983"
+      ]
+    },
+    {
+      "email": "jeancarlo.rojas24@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.592,
+      "names": [
+        "Kristel Raquel Alfaro Cordero",
+        "nulo Sanchez Vargas"
+      ],
+      "cedulas": [
+        "207080714",
+        ""
+      ]
+    },
+    {
+      "email": "joabmontero1310@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.10000000000000003,
+      "names": [
+        "Fabiana alfaro leon",
+        "Gerson Salazar Cespedes"
+      ],
+      "cedulas": [
+        "207590475",
+        "112550255"
+      ]
+    },
+    {
+      "email": "jcam-jcam@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Adrian Alfaro Pereira",
+        "Fermay Vargas Sandoval"
+      ],
+      "cedulas": [
+        "206600454",
+        "208030252"
+      ]
+    },
+    {
+      "email": "josuelince43@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Jorman Badilla Cortes",
+        "Angie Alfaro rodriguez"
+      ],
+      "cedulas": [
+        "604750979",
+        "208020505"
+      ]
+    },
+    {
+      "email": "guevaramichelle242@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.5,
+      "margin": 0.13,
+      "names": [
+        "Bryan Peraza Ramírez",
+        "Jose Eduardo Cardona Espinoza",
+        "Angie Alfaro rodriguez"
+      ],
+      "cedulas": [
+        "206470096",
+        "206700615",
+        "208020505"
+      ]
+    },
+    {
+      "email": "jcvh02@gmail.com",
+      "ownerCount": 4,
+      "bestScore": 0.42,
+      "margin": 0.25,
+      "names": [
+        "Jose Felipe Carrera Araya",
+        "Luis Alberto Alfaro Ugalde",
+        "Byron Torres Fernandez",
+        "NULO Sanchez Salazar"
+      ],
+      "cedulas": [
+        "207500560",
+        "205600367",
+        "207630878",
+        ""
+      ]
+    },
+    {
+      "email": "alex.alvarado@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Juan Diego Arrieta Arce",
+        "Diego Corrales velez"
+      ],
+      "cedulas": [
+        "208180236",
+        "208120617"
+      ]
+    },
+    {
+      "email": "jorgemario90@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.13000000000000006,
+      "names": [
+        "Maria Jesus Salas Acuña",
+        "Ana Alvarado"
+      ],
+      "cedulas": [
+        "208500551",
+        "208610174"
+      ]
+    },
+    {
+      "email": "maariorb31@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0,
+      "names": [
+        "Warner Alvarado",
+        "Ariana Borbón Quiros"
+      ],
+      "cedulas": [
+        "205061011",
+        "208610375"
+      ]
+    },
+    {
+      "email": "roy12_cr@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0,
+      "names": [
+        "Josue Alvarado Calvo",
+        "Olman Briceño Fallas"
+      ],
+      "cedulas": [
+        "207410373",
+        "106620016"
+      ]
+    },
+    {
+      "email": "dymaso@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Keilyn Alvarado Campos",
+        "Edward Gonzalez Villalobos"
+      ],
+      "cedulas": [
+        "207110073",
+        "205410816"
+      ]
+    },
+    {
+      "email": "yenmadrigalortiz@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.06,
+      "names": [
+        "Ronald Rodriguez Barquero",
+        "Angie Milena Alvarado Morales"
+      ],
+      "cedulas": [
+        "205510136",
+        "208080197"
+      ]
+    },
+    {
+      "email": "spviquez@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6100000000000001,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Josue Alvarado Rodriguez",
+        "Oscar Morales Nuñez"
+      ],
+      "cedulas": [
+        "116840431",
+        "207880723"
+      ]
+    },
+    {
+      "email": "jimenezsheki02@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.36,
+      "margin": 0.019999999999999962,
+      "names": [
+        "Eduardo Alvarado Rodríguez",
+        "Alejandro Arce Marín"
+      ],
+      "cedulas": [
+        "207710475",
+        "207480422"
+      ]
+    },
+    {
+      "email": "mccoygina02@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.15999999999999998,
+      "names": [
+        "Andrés Alonso Salas Mora",
+        "Gabriel Alvarado Rojas"
+      ],
+      "cedulas": [
+        "208030306",
+        "206740535"
+      ]
+    },
+    {
+      "email": "kv518385@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.33,
+      "names": [
+        "Gabriel Alvarado Vargas",
+        "Gina McCoy Obregon"
+      ],
+      "cedulas": [
+        "208380325",
+        "801040360"
+      ]
+    },
+    {
+      "email": "ignacioaa91@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.03999999999999998,
+      "names": [
+        "Victoria Alvarado Villegas",
+        "Angel Vindas Flores"
+      ],
+      "cedulas": [
+        "208310771",
+        "208820136"
+      ]
+    },
+    {
+      "email": "facturas.comercializadorab@gmail.com",
+      "ownerCount": 5,
+      "bestScore": 0.45,
+      "margin": 0,
+      "names": [
+        "Monserrat Esquivel García",
+        "Allan Jimenez Araya",
+        "Cintia Vanessa Alvares Quiroz",
+        "Catalina Rodriguez Gonzalez",
+        "Jefferson Lainez"
+      ],
+      "cedulas": [
+        "402220373",
+        "206840268",
+        "206830932",
+        "206740360",
+        "207550447"
+      ]
+    },
+    {
+      "email": "marisol-cmps@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0,
+      "names": [
+        "Jason Alvarez Castro",
+        "Karolay Vega Allvarez"
+      ],
+      "cedulas": [
+        "402340461",
+        "209330694"
+      ]
+    },
+    {
+      "email": "michael99.mr@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.15999999999999998,
+      "names": [
+        "Irian Rocha Morales",
+        "Edson Alvarez Obando"
+      ],
+      "cedulas": [
+        "603710339",
+        "208100500"
+      ]
+    },
+    {
+      "email": "carlosluishidalgorojas@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Karina Mata Quesada",
+        "Randall Alvarez Obando"
+      ],
+      "cedulas": [
+        "206030975",
+        "207580315"
+      ]
+    },
+    {
+      "email": "garaya9@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Alberto Antonio López",
+        "Emily Camacho Quiros"
+      ],
+      "cedulas": [
+        "155825370",
+        "123456787"
+      ]
+    },
+    {
+      "email": "facturacionasm.02@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.41,
+      "margin": 0.030000000000000027,
+      "names": [
+        "David Huertas Rodriguez",
+        "Joey Apui Briceño"
+      ],
+      "cedulas": [
+        "116740227",
+        "504410695"
+      ]
+    },
+    {
+      "email": "kath_chaves@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0,
+      "names": [
+        "Juan Daniel Araya Gomez",
+        "Ligia Cordoba Soro"
+      ],
+      "cedulas": [
+        "207950444",
+        "203470262"
+      ]
+    },
+    {
+      "email": "norlanr@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.16999999999999998,
+      "margin": 0,
+      "names": [
+        "Steven Araya Jara",
+        "David Rojas Araya"
+      ],
+      "cedulas": [
+        "2087701405",
+        "205960528"
+      ]
+    },
+    {
+      "email": "rretana44@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.10000000000000009,
+      "names": [
+        "Andres Felipe Araya Jimenez",
+        "Roberto Rojas Gutierrez"
+      ],
+      "cedulas": [
+        "208890754",
+        "401670550"
+      ]
+    },
+    {
+      "email": "fersegura26@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6100000000000001,
+      "margin": 0,
+      "names": [
+        "Dereck Araya Rodriguez",
+        "Jose Morera Monge"
+      ],
+      "cedulas": [
+        "201230234",
+        "206850812"
+      ]
+    },
+    {
+      "email": "keilynblanco9@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.36,
+      "margin": 0.019999999999999962,
+      "names": [
+        "Estiven Solís Rodríguez",
+        "Marjorie Arce Calderón"
+      ],
+      "cedulas": [
+        "208580765",
+        "108980140"
+      ]
+    },
+    {
+      "email": "fabianaalfaroleon@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.04999999999999999,
+      "names": [
+        "German López Chacon",
+        "Denice Arce Estrada"
+      ],
+      "cedulas": [
+        "2664754",
+        "207240409"
+      ]
+    },
+    {
+      "email": "irhalka@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.09000000000000002,
+      "names": [
+        "Freddy Arce Gamboa",
+        "Jefry Morera Espinoza"
+      ],
+      "cedulas": [
+        "208730680",
+        "208360645"
+      ]
+    },
+    {
+      "email": "vvrahas@dospinos.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.07,
+      "names": [
+        "Leandro Mejias Sibaja",
+        "Jorge Arce Martinez"
+      ],
+      "cedulas": [
+        "209120621",
+        "116960182"
+      ]
+    },
+    {
+      "email": "celestecch@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0.09999999999999998,
+      "names": [
+        "Jose Antonio Garbanzo Mendez",
+        "Jason Barahona Badilla"
+      ],
+      "cedulas": [
+        "207430840",
+        "207480149"
+      ]
+    },
+    {
+      "email": "karitolmorales15@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.22000000000000014,
+      "names": [
+        "Mariamalia Hidalgo Diaz",
+        "Johanna Arce Salazar"
+      ],
+      "cedulas": [
+        "204730590",
+        "205430874"
+      ]
+    },
+    {
+      "email": "yoyrc@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.27,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Alessandro Lazo Jimenez",
+        "Stephanie Arguedas Arias"
+      ],
+      "cedulas": [
+        "208804957",
+        "114480995"
+      ]
+    },
+    {
+      "email": "ashleyferreto@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45,
+      "margin": 0.050000000000000044,
+      "names": [
+        "Jose Andres Rodriguez Castro",
+        "Greivin Arguello Morales"
+      ],
+      "cedulas": [
+        "208640955",
+        "207540893"
+      ]
+    },
+    {
+      "email": "yisolis96@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.07,
+      "names": [
+        "Greivin Arguello Morales",
+        "Rigoberto Montes Guzmán"
+      ],
+      "cedulas": [
+        "207540893",
+        "205820092"
+      ]
+    },
+    {
+      "email": "ruthvargasv@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0,
+      "names": [
+        "María José Argüello Quirós",
+        "Andres Lara Guzman"
+      ],
+      "cedulas": [
+        "207580122",
+        "119250482"
+      ]
+    },
+    {
+      "email": "dannabetsabega@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.03999999999999998,
+      "names": [
+        "Drusila Argueta Garcia",
+        "Jazmin Jaikel Jimenez"
+      ],
+      "cedulas": [
+        "800960679",
+        "207800575"
+      ]
+    },
+    {
+      "email": "stef.30chell@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0.07999999999999996,
+      "names": [
+        "Froylan León Anchía",
+        "Drusila Argueta Garcia"
+      ],
+      "cedulas": [
+        "209170395",
+        "800960679"
+      ]
+    },
+    {
+      "email": "jassonzm05@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0,
+      "names": [
+        "Brenda Arias Rocha",
+        "Jennifer Sánchez Barrantes"
+      ],
+      "cedulas": [
+        "475875554",
+        "115850075"
+      ]
+    },
+    {
+      "email": "solisestiven1@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.15999999999999998,
+      "names": [
+        "David Milanes Castillo",
+        "Wendy Arias Mora"
+      ],
+      "cedulas": [
+        "114670561",
+        "110840061"
+      ]
+    },
+    {
+      "email": "keirymorales@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Liliana Arias Ruiz",
+        "Michael Masis Montenegro"
+      ],
+      "cedulas": [
+        "503310595",
+        "304800336"
+      ]
+    },
+    {
+      "email": "meyyyycastroo08@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.07999999999999996,
+      "names": [
+        "Bryan Peraza Ramírez",
+        "Fabricio Armijo"
+      ],
+      "cedulas": [
+        "206470096",
+        "118890387"
+      ]
+    },
+    {
+      "email": "mariamoralesv@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0,
+      "names": [
+        "Alexandra Arrieta Alvarado",
+        "Joilin Vega Montero"
+      ],
+      "cedulas": [
+        "208900371",
+        "206600723"
+      ]
+    },
+    {
+      "email": "johan.lobo@hotmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.5,
+      "margin": 0.11000000000000004,
+      "names": [
+        "Karol Tatiana Zuñiga Montero",
+        "MELVIN FABIAN ARRIETA CHAVES",
+        "Felix Saborio Chavarria"
+      ],
+      "cedulas": [
+        "117560562",
+        "207770684",
+        "208130816"
+      ]
+    },
+    {
+      "email": "joamonb@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.14999999999999997,
+      "names": [
+        "Josué Arrieta Vargas",
+        "Kevin Castro Durán"
+      ],
+      "cedulas": [
+        "207720672",
+        "207930558"
+      ]
+    },
+    {
+      "email": "eduardo_aa13@hotmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.5,
+      "margin": 0,
+      "names": [
+        "Gilberth Arroyo Aguilar",
+        "Brandon Salinas Cabrera",
+        "Samuel Salazar Sanchez"
+      ],
+      "cedulas": [
+        "207200163",
+        "604610785",
+        "207120510"
+      ]
+    },
+    {
+      "email": "aaaa@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.17000000000000004,
+      "names": [
+        "Maria Daniela Arroyo Alvarez",
+        "Fabián Murillo Sánchez"
+      ],
+      "cedulas": [
+        "207560267",
+        "206230691"
+      ]
+    },
+    {
+      "email": "nmurillog7@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0,
+      "names": [
+        "Maria Daniela Arroyo Alvarez",
+        "Cinthia Vega Muñoz"
+      ],
+      "cedulas": [
+        "207560267",
+        "206560045"
+      ]
+    },
+    {
+      "email": "erickcamposarguedas@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.43,
+      "margin": 0.050000000000000044,
+      "names": [
+        "Maria Jose Ruiz Alvarez",
+        "Javier Menchaca"
+      ],
+      "cedulas": [
+        "402440039",
+        "116530045"
+      ]
+    },
+    {
+      "email": "acevedoanay0@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.06000000000000005,
+      "names": [
+        "Kay Joel García Arias",
+        "Jose Angel Jimenez Jimenez"
+      ],
+      "cedulas": [
+        "119980059",
+        "206850126"
+      ]
+    },
+    {
+      "email": "alerodriguezamo12@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.18,
+      "names": [
+        "Jose Alberto Ramiez Jimenez",
+        "Fabian Rojas Espinoza"
+      ],
+      "cedulas": [
+        "207730452",
+        "206790826"
+      ]
+    },
+    {
+      "email": "cynthiiasaguilar12@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.36,
+      "margin": 0,
+      "names": [
+        "Joseph Arroyo Montoya",
+        "Roy Calvo Rodríguez"
+      ],
+      "cedulas": [
+        "208100818",
+        "206430024"
+      ]
+    },
+    {
+      "email": "earce@conapdis.go.cr",
+      "ownerCount": 3,
+      "bestScore": 0.5700000000000001,
+      "margin": 0,
+      "names": [
+        "Jose Mario Artavia Aleman",
+        "Yadira Barrantes Marin",
+        "Martha Esquivel Rojas"
+      ],
+      "cedulas": [
+        "208070734",
+        "602640640",
+        "204260163"
+      ]
+    },
+    {
+      "email": "mendezsandoval.mauricio@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5800000000000001,
+      "margin": 0.14000000000000007,
+      "names": [
+        "Marco Antonio Artavio Galeano",
+        "Andres Zumbado Vargas"
+      ],
+      "cedulas": [
+        "205860580",
+        "208760731"
+      ]
+    },
+    {
+      "email": "mabel23sanchez@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5900000000000001,
+      "margin": 0.13000000000000012,
+      "names": [
+        "Andrea Avila Davila",
+        "Hellen Zamora Gonzalez"
+      ],
+      "cedulas": [
+        "118240873",
+        "208000520"
+      ]
+    },
+    {
+      "email": "arquehida@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.06,
+      "names": [
+        "Andy Avila Davila",
+        "Daniel Masis Loaiza"
+      ],
+      "cedulas": [
+        "119000045",
+        "304040884"
+      ]
+    },
+    {
+      "email": "gianiaj.1991@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.14000000000000012,
+      "names": [
+        "Emaría Ávila Solorzano",
+        "Fabiola Campos Chan"
+      ],
+      "cedulas": [
+        "207600051",
+        "117450079"
+      ]
+    },
+    {
+      "email": "verosolisro@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.06000000000000005,
+      "names": [
+        "Sebastian Navarro Fallas",
+        "Bryan Azofeifa Borbon"
+      ],
+      "cedulas": [
+        "208900120",
+        "113960161"
+      ]
+    },
+    {
+      "email": "iriannaarce4@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.54,
+      "margin": 0.13000000000000006,
+      "names": [
+        "Jorman Badilla Cortes",
+        "Daniel Cardenas Jimenez"
+      ],
+      "cedulas": [
+        "604750979",
+        "503140994"
+      ]
+    },
+    {
+      "email": "jennyvf235@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Maria Daniela Saenz Gonzalez",
+        "Justin Segura Salas"
+      ],
+      "cedulas": [
+        "207080067",
+        "207000818"
+      ]
+    },
+    {
+      "email": "dmendozacorrales@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6100000000000001,
+      "margin": 0.8500000000000001,
+      "names": [
+        "Maria Daniela Saenz Gonzalez",
+        "NULO Alfaro Artavia"
+      ],
+      "cedulas": [
+        "207080067",
+        ""
+      ]
+    },
+    {
+      "email": "majime68@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.21000000000000008,
+      "names": [
+        "Melanie Morera Ramirez",
+        "Kattia Barquero Duran"
+      ],
+      "cedulas": [
+        "208460012",
+        "205010269"
+      ]
+    },
+    {
+      "email": "fabric2997@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Kristy Barrantes Aguilar",
+        "Gloriana Vargas Arguedas"
+      ],
+      "cedulas": [
+        "209710186",
+        "208460135"
+      ]
+    },
+    {
+      "email": "maribaji@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.8895000000000001,
+      "names": [
+        "MARILYN PAOLA BARRANTES JIMENEZ",
+        "nulo BARRANTES JIMENEZ"
+      ],
+      "cedulas": [
+        "206790978",
+        ""
+      ]
+    },
+    {
+      "email": "ragj-1516@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.030000000000000027,
+      "names": [
+        "Xinia Barrantes Lara",
+        "Johan Lobo Rodríguez"
+      ],
+      "cedulas": [
+        "207360497",
+        "206850073"
+      ]
+    },
+    {
+      "email": "johan10rl@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.10000000000000009,
+      "names": [
+        "Allan Monge Ruiz",
+        "Jose David Barrientos Arias"
+      ],
+      "cedulas": [
+        "208100896",
+        "205250613"
+      ]
+    },
+    {
+      "email": "stefanysusana01@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.13999999999999996,
+      "names": [
+        "Anthony Josué Barrientos Burga",
+        "Jose Gabriel Galarza López"
+      ],
+      "cedulas": [
+        "207970402",
+        "205660883"
+      ]
+    },
+    {
+      "email": "edinarte0@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Luis Claudio Castro Rojas",
+        "Jacob Barrientos Burga"
+      ],
+      "cedulas": [
+        "206900012",
+        "207380628"
+      ]
+    },
+    {
+      "email": "daniel.masis@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.09000000000000002,
+      "names": [
+        "Patricia Barrientos Rial",
+        "Keith Robbie Gallant"
+      ],
+      "cedulas": [
+        "204430403",
+        "231177000"
+      ]
+    },
+    {
+      "email": "gamboanoelia_97@outlook.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.030000000000000027,
+      "names": [
+        "Camila Belmonte Corrales",
+        "Jose Morera Monge"
+      ],
+      "cedulas": [
+        "120090850",
+        "206850812"
+      ]
+    },
+    {
+      "email": "ebenav21@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6100000000000001,
+      "margin": 0.9590000000000001,
+      "names": [
+        "Emmanuel Benavides Salazar",
+        "NULO Monrroy Miranda"
+      ],
+      "cedulas": [
+        "208180312",
+        "155822786"
+      ]
+    },
+    {
+      "email": "saya962009@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.10000000000000009,
+      "names": [
+        "Emmanuel Benavides Salazar",
+        "Sebastian Serrano Quiros"
+      ],
+      "cedulas": [
+        "208180312",
+        "208070736"
+      ]
+    },
+    {
+      "email": "gaudyvivar@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Santiago Benavidez Arce",
+        "Elena Villalobos Granados"
+      ],
+      "cedulas": [
+        "209070378",
+        "205390714"
+      ]
+    },
+    {
+      "email": "yojeisimur2596@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Leidy Bermudes Sequeira",
+        "Isabel Vargas Sibaja"
+      ],
+      "cedulas": [
+        "207960221",
+        "702530839"
+      ]
+    },
+    {
+      "email": "candresma08@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.14,
+      "names": [
+        "Kevin Morales Campos",
+        "Kevin Bermudez Esquivel"
+      ],
+      "cedulas": [
+        "402680220",
+        "207230202"
+      ]
+    },
+    {
+      "email": "sharon.vindas@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.17000000000000004,
+      "names": [
+        "Karol Vargas",
+        "Diego Cerdas Rojas"
+      ],
+      "cedulas": [
+        "205920970",
+        "113250641"
+      ]
+    },
+    {
+      "email": "tavof51@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.15000000000000008,
+      "names": [
+        "André Vargas Peraza",
+        "Dayana Nallely Berrocal Carvajal"
+      ],
+      "cedulas": [
+        "223366555",
+        "208200849"
+      ]
+    },
+    {
+      "email": "mora.nutricion@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.6300000000000001,
+      "margin": 0.15000000000000013,
+      "names": [
+        "CARLOS LUIS MORALES RUIZ",
+        "Ashley Blanco Berrocal",
+        "Esteban Millon"
+      ],
+      "cedulas": [
+        "207190750",
+        "901200995",
+        "208960521"
+      ]
+    },
+    {
+      "email": "edsonobando18@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Flor María Blanco Sánchez",
+        "Kevin Morales Campos"
+      ],
+      "cedulas": [
+        "203350903",
+        "402680220"
+      ]
+    },
+    {
+      "email": "krb101295@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Jose Luis Bolaños Cespedez",
+        "Edgar Bolaños Perez"
+      ],
+      "cedulas": [
+        "204720035",
+        "203750780"
+      ]
+    },
+    {
+      "email": "keiloroal@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.050000000000000044,
+      "names": [
+        "Giancarlo Varela Salazar",
+        "Jose Luis Bolaños Cespedez"
+      ],
+      "cedulas": [
+        "207150564",
+        "204720035"
+      ]
+    },
+    {
+      "email": "andresvillalobos792@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.03999999999999998,
+      "names": [
+        "Alejandro Borbón Quirós",
+        "Cristian Vega Cordero"
+      ],
+      "cedulas": [
+        "208750596",
+        "303340828"
+      ]
+    },
+    {
+      "email": "nikozm91@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37999999999999995,
+      "margin": 0.039999999999999925,
+      "names": [
+        "Cesar Hidalgo Jimenez",
+        "Luz Mora Hernandez"
+      ],
+      "cedulas": [
+        "205710281",
+        "504230680"
+      ]
+    },
+    {
+      "email": "maryfs123@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.25000000000000006,
+      "names": [
+        "Mayela quesada arce",
+        "Johana Brenes Sandi"
+      ],
+      "cedulas": [
+        "204060218",
+        "206860940"
+      ]
+    },
+    {
+      "email": "bersayalfaro21@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6100000000000001,
+      "margin": 0.050000000000000044,
+      "names": [
+        "Fernando Calderon Delgado",
+        "Yubelkis Lopez Altamirano"
+      ],
+      "cedulas": [
+        "303370301",
+        "155810843400"
+      ]
+    },
+    {
+      "email": "marii-mu@hotmail.es",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.2600000000000001,
+      "names": [
+        "Jose Eduardo Calderon Garcia",
+        "Wilbert daniel Solis"
+      ],
+      "cedulas": [
+        "207520400",
+        "20876"
+      ]
+    },
+    {
+      "email": "natyzapata23@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.030000000000000027,
+      "names": [
+        "Luis Diego Sancho Araya",
+        "Andrea Gonzalez Quesada"
+      ],
+      "cedulas": [
+        "208870547",
+        "205090848"
+      ]
+    },
+    {
+      "email": "mnmol20@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0.10999999999999999,
+      "names": [
+        "Carlos David Mejias Rojas",
+        "Arelis Calvo Vargas"
+      ],
+      "cedulas": [
+        "208160355",
+        "208160321"
+      ]
+    },
+    {
+      "email": "gmatamelendez@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.537,
+      "margin": 0.1285,
+      "names": [
+        "Byron Torres Fernandez",
+        "Fabian Torres Fernandez",
+        "Emily Camacho Mora"
+      ],
+      "cedulas": [
+        "207630878",
+        "",
+        "119590518"
+      ]
+    },
+    {
+      "email": "danihallalfaro@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.08000000000000002,
+      "names": [
+        "Ana Belen Orozco Campos",
+        "Emily Camacho Quiros"
+      ],
+      "cedulas": [
+        "208970849",
+        "123456787"
+      ]
+    },
+    {
+      "email": "maricastrog87@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0,
+      "names": [
+        "Gerson Cambronero",
+        "Amelia Villalobos Porras"
+      ],
+      "cedulas": [
+        "118760528",
+        "207930180"
+      ]
+    },
+    {
+      "email": "adriana.oroscoalo22@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0,
+      "names": [
+        "Erick Campos Arguedas",
+        "Javier Garcia Arias"
+      ],
+      "cedulas": [
+        "402670889",
+        "208400505"
+      ]
+    },
+    {
+      "email": "mariacunah29@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.06000000000000005,
+      "names": [
+        "Fabiola Campos Chan",
+        "Ariel Rojas Cortes"
+      ],
+      "cedulas": [
+        "117450079",
+        "208850900"
+      ]
+    },
+    {
+      "email": "rojasea@hacienda.go.cr",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Josue Campos Murillo",
+        "Pamela Murillo Achia"
+      ],
+      "cedulas": [
+        "207720728",
+        "208490881"
+      ]
+    },
+    {
+      "email": "karlajim6740@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.11000000000000004,
+      "names": [
+        "Maricela Campos Padilla",
+        "Jonathan Rojas Alfaro"
+      ],
+      "cedulas": [
+        "605050337",
+        "207810840"
+      ]
+    },
+    {
+      "email": "anitaac86@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.14000000000000012,
+      "names": [
+        "Ana Beatriz Ruíz Pérez",
+        "Ericka Campos Torres"
+      ],
+      "cedulas": [
+        "117170342",
+        "207150787"
+      ]
+    },
+    {
+      "email": "lblancome@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0.11999999999999994,
+      "names": [
+        "Ericka Campos Torres",
+        "Jose Luis Rodriguez Herrera"
+      ],
+      "cedulas": [
+        "207150787",
+        "00000000"
+      ]
+    },
+    {
+      "email": "fabrirodrig1205@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.009999999999999953,
+      "names": [
+        "Moises Carballo",
+        "Angelina Monge Barrientos"
+      ],
+      "cedulas": [
+        "702680774",
+        "207190725"
+      ]
+    },
+    {
+      "email": "viviana.chaves13@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.08000000000000002,
+      "names": [
+        "Leonardo Cardinale Villagran",
+        "Marco Antonio Mejias Perez"
+      ],
+      "cedulas": [
+        "800560410",
+        "208780784"
+      ]
+    },
+    {
+      "email": "bernny26@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.11999999999999994,
+      "names": [
+        "Santiago Cardona Chaves",
+        "Josue Linares Gonzalez"
+      ],
+      "cedulas": [
+        "209180773",
+        "208170304"
+      ]
+    },
+    {
+      "email": "marcosporrasmiranda648@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.49,
+      "margin": 0,
+      "names": [
+        "Manuel Carmona Rodriguez",
+        "Bernal Vargas Vargas"
+      ],
+      "cedulas": [
+        "112040667",
+        "205110009"
+      ]
+    },
+    {
+      "email": "pamelamurilloa@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.08000000000000002,
+      "names": [
+        "Juan Carlos Carranza Vargas",
+        "Jorge Chaves Berrocal"
+      ],
+      "cedulas": [
+        "206110558",
+        "204670686"
+      ]
+    },
+    {
+      "email": "nialamo@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.20000000000000012,
+      "names": [
+        "Nashamy Castang",
+        "Fabian Jimenez Burga"
+      ],
+      "cedulas": [
+        "208900531",
+        "201470894"
+      ]
+    },
+    {
+      "email": "danivale327@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.07000000000000006,
+      "names": [
+        "Maria José Rojas Benavidez",
+        "Alberto Castro"
+      ],
+      "cedulas": [
+        "207760570",
+        "123456780"
+      ]
+    },
+    {
+      "email": "mariapaulajb@hotmail.es",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.15999999999999998,
+      "names": [
+        "Johan Murillo Agüero",
+        "Alberto Castro"
+      ],
+      "cedulas": [
+        "208690862",
+        "123456780"
+      ]
+    },
+    {
+      "email": "valeryalpizar17@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.02999999999999997,
+      "names": [
+        "Carlos Daniel Zuñiga Vargas",
+        "Rafael Castro Castro"
+      ],
+      "cedulas": [
+        "208120648",
+        "206260648"
+      ]
+    },
+    {
+      "email": "jdmejias@tiendaomega.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Alondra Salas Leon",
+        "Gabriela Castro Hidalgo"
+      ],
+      "cedulas": [
+        "208730085",
+        "205760341"
+      ]
+    },
+    {
+      "email": "facturasmedident26@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Luis Claudio Castro Rojas",
+        "Jafet Soto Castillo"
+      ],
+      "cedulas": [
+        "206900012",
+        "116280784"
+      ]
+    },
+    {
+      "email": "jergercas@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6200000000000001,
+      "margin": 0.23000000000000015,
+      "names": [
+        "Jerry Castro Trejos",
+        "Ivan Salas Ulate"
+      ],
+      "cedulas": [
+        "205610518",
+        "208210959"
+      ]
+    },
+    {
+      "email": "yberrocalgamboa@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.06,
+      "names": [
+        "Aaron Ferreto Salas",
+        "Anthony Cerdas Chacón"
+      ],
+      "cedulas": [
+        "201910151",
+        "402410"
+      ]
+    },
+    {
+      "email": "j.jgr230801@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.15000000000000008,
+      "names": [
+        "Jefry Salas Sandi",
+        "Cynthia Cerdas Rojas"
+      ],
+      "cedulas": [
+        "206620005",
+        "20530746"
+      ]
+    },
+    {
+      "email": "marychiss@hotmail.es",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.13999999999999996,
+      "names": [
+        "Khaleb Cespedes Phillips",
+        "Esteban Ramirez Alfaro"
+      ],
+      "cedulas": [
+        "207830153",
+        "208040310"
+      ]
+    },
+    {
+      "email": "mfrg15012@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.16999999999999998,
+      "margin": 0,
+      "names": [
+        "Khaleb Cespedes Phillips",
+        "Axel Chaves Vilchez"
+      ],
+      "cedulas": [
+        "207830153",
+        "207890292"
+      ]
+    },
+    {
+      "email": "aramoralesdelgado30@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.52,
+      "margin": 0.18000000000000005,
+      "names": [
+        "Deiver Chacon Alfaro",
+        "Elvin Emilio Urbina Alvarez"
+      ],
+      "cedulas": [
+        "206360760",
+        "13411"
+      ]
+    },
+    {
+      "email": "lauraespinoza21@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0,
+      "names": [
+        "Allan Chacon Cordero",
+        "Ashley Gomez Fernandez"
+      ],
+      "cedulas": [
+        "207270357",
+        "208850305"
+      ]
+    },
+    {
+      "email": "jorgeyzayra@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.07000000000000006,
+      "names": [
+        "Johana Sibaja Chaves",
+        "Froylan Chacon Gonzalez"
+      ],
+      "cedulas": [
+        "205820247",
+        "208630188"
+      ]
+    },
+    {
+      "email": "kzunigamontero@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37999999999999995,
+      "margin": 0,
+      "names": [
+        "Johan Mauricio Chacón Rodríguez",
+        "Luis Pablo Viquez Corrales"
+      ],
+      "cedulas": [
+        "208410190",
+        "655965628"
+      ]
+    },
+    {
+      "email": "ricardoaleman@hotmail.es",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.07000000000000006,
+      "names": [
+        "Diego Corrales velez",
+        "Nadia Noelia Chacon Varela"
+      ],
+      "cedulas": [
+        "208120617",
+        "201450145"
+      ]
+    },
+    {
+      "email": "johynny@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.34,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Angelica María Puchino Arias",
+        "Noel Chavarria"
+      ],
+      "cedulas": [
+        "18620111",
+        "206520772"
+      ]
+    },
+    {
+      "email": "fabio.7rm@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.010000000000000009,
+      "names": [
+        "Caleb Ferreto Monge",
+        "Diana Chavarria Alfaro"
+      ],
+      "cedulas": [
+        "208950555",
+        "209100496"
+      ]
+    },
+    {
+      "email": "andyabila5@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.07000000000000006,
+      "names": [
+        "Daniel Chavarria Bolaños",
+        "Ronald Salazar Morera"
+      ],
+      "cedulas": [
+        "118060729",
+        "207120728"
+      ]
+    },
+    {
+      "email": "grodriguez@topografiarodriguez.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.10999999999999999,
+      "names": [
+        "Johan Murillo Agüero",
+        "Daniel Chavarria Bolaños"
+      ],
+      "cedulas": [
+        "208690862",
+        "118060729"
+      ]
+    },
+    {
+      "email": "pablojoelsanchez091@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Elieth Chavarria Porras",
+        "Lauren Quiros Mora"
+      ],
+      "cedulas": [
+        "503070430",
+        "206790142"
+      ]
+    },
+    {
+      "email": "carobj.0812@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6100000000000001,
+      "margin": 0.2700000000000001,
+      "names": [
+        "Ana Belen Rodriguez Castro",
+        "Brenda Chaves Angulo"
+      ],
+      "cedulas": [
+        "208870630",
+        "207930465"
+      ]
+    },
+    {
+      "email": "ia.alfarorodriuez@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.09999999999999998,
+      "names": [
+        "Jose Alonso Hernandez Lopez",
+        "Fernando Chaves Calvo"
+      ],
+      "cedulas": [
+        "208530010",
+        "901340584"
+      ]
+    },
+    {
+      "email": "denisseae94@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45,
+      "margin": 0.06000000000000005,
+      "names": [
+        "German Chaves Chaves",
+        "Allan Morales Quesada"
+      ],
+      "cedulas": [
+        "205430699",
+        "207400971"
+      ]
+    },
+    {
+      "email": "diego.corales.velez@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.09000000000000002,
+      "names": [
+        "Julio Chaves Herrera",
+        "Edward Grimm Thomas"
+      ],
+      "cedulas": [
+        "402030119",
+        "800850997"
+      ]
+    },
+    {
+      "email": "ronald205510136@gmail.com",
+      "ownerCount": 4,
+      "bestScore": 0.67,
+      "margin": 0.20000000000000007,
+      "names": [
+        "Camila Chaves Rojas",
+        "Eylin Salas Salazar",
+        "Josué Quesada Ortega",
+        "Angie Jimenez Herrera"
+      ],
+      "cedulas": [
+        "208740857",
+        "205700222",
+        "206950146",
+        "206550650"
+      ]
+    },
+    {
+      "email": "dayalojimenez@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45,
+      "margin": 0.050000000000000044,
+      "names": [
+        "Magdiel Solis Obando",
+        "Mario Chinchilla Mora"
+      ],
+      "cedulas": [
+        "208110398",
+        "113090086"
+      ]
+    },
+    {
+      "email": "alruizmail@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.09999999999999998,
+      "names": [
+        "Oldemar Quesada Jarquin",
+        "Erick Collado Quesada"
+      ],
+      "cedulas": [
+        "207760796",
+        "208100833"
+      ]
+    },
+    {
+      "email": "james_sm27@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.13,
+      "names": [
+        "Keilyn Vega Rojas",
+        "Hairold Cordero Hidalgo"
+      ],
+      "cedulas": [
+        "208940859",
+        "205200865"
+      ]
+    },
+    {
+      "email": "pabloarcecampos@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.08999999999999997,
+      "names": [
+        "Jairo Adrian Cordero Sancho",
+        "Geisel Perez Sanchez"
+      ],
+      "cedulas": [
+        "209470655",
+        "114960362"
+      ]
+    },
+    {
+      "email": "danielmj313@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Andrés Corella Díaz",
+        "Mauricio Méndez Sandoval"
+      ],
+      "cedulas": [
+        "208370784",
+        "205220302"
+      ]
+    },
+    {
+      "email": "kevinbermudez94@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.56,
+      "margin": 0.08000000000000007,
+      "names": [
+        "Keyterin Rivera Diaz",
+        "Denis Corrales Mora"
+      ],
+      "cedulas": [
+        "703170788",
+        "206520240"
+      ]
+    },
+    {
+      "email": "vrojas1971@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Jose Coto Arroyo",
+        "Maria Ledezma Carvajal"
+      ],
+      "cedulas": [
+        "205530846",
+        "206570709"
+      ]
+    },
+    {
+      "email": "marcos1490@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.3700000000000001,
+      "names": [
+        "Jose Coto Arroyo",
+        "David Picado Zamora"
+      ],
+      "cedulas": [
+        "205530846",
+        "208510316"
+      ]
+    },
+    {
+      "email": "gpaniagua@interananas.com",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0,
+      "names": [
+        "Michael Creagh",
+        "Lydia Vega"
+      ],
+      "cedulas": [
+        "22336656561",
+        "111111110"
+      ]
+    },
+    {
+      "email": "jhonnycorella@gmail.com",
+      "ownerCount": 4,
+      "bestScore": 0.53,
+      "margin": 0.050000000000000044,
+      "names": [
+        "Ariel Serrano Arreola",
+        "Gustavo Fonseca Quadros",
+        "Jefry Salas Sandi",
+        "Aldrick Cruz Fernandez"
+      ],
+      "cedulas": [
+        "121212121",
+        "107600030028",
+        "206620005",
+        "703070578"
+      ]
+    },
+    {
+      "email": "vilmasusana@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Jessica Cruz Soto",
+        "Kendall Stephen Zuñiga"
+      ],
+      "cedulas": [
+        "503180636",
+        "118480734"
+      ]
+    },
+    {
+      "email": "juguetesymascr@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.31,
+      "margin": 0,
+      "names": [
+        "Fabian Cubero Hernandez",
+        "Marilyn Duran Miranda"
+      ],
+      "cedulas": [
+        "209280511",
+        "205940533"
+      ]
+    },
+    {
+      "email": "mv579267@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0.02999999999999997,
+      "names": [
+        "David Cubillo Esquivel",
+        "Andres Lara Guzman"
+      ],
+      "cedulas": [
+        "206570926",
+        "119250482"
+      ]
+    },
+    {
+      "email": "madrizberenisse@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.7195,
+      "names": [
+        "Montserrat Diaz Guillen",
+        "Nulo Avila Davila"
+      ],
+      "cedulas": [
+        "117510811",
+        ""
+      ]
+    },
+    {
+      "email": "fernandobonillaguerra@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.71,
+      "names": [
+        "Leslie Diaz Navarro",
+        "nulo Mejias Perez"
+      ],
+      "cedulas": [
+        "206850227",
+        ""
+      ]
+    },
+    {
+      "email": "diego_andres1807@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6200000000000001,
+      "margin": 0.09000000000000008,
+      "names": [
+        "Gabriel Hernandez Quiros",
+        "Carla Dobles Avila"
+      ],
+      "cedulas": [
+        "207200296",
+        "206670879"
+      ]
+    },
+    {
+      "email": "johanarce@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6200000000000001,
+      "margin": 0.010000000000000009,
+      "names": [
+        "Jean Carlo Durán Arrieta",
+        "Juan Carlos Lopez Castro"
+      ],
+      "cedulas": [
+        "208390304",
+        "206340216"
+      ]
+    },
+    {
+      "email": "brendariasro@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.6645,
+      "names": [
+        "David Duran Marin",
+        "NULO Rosales Diaz"
+      ],
+      "cedulas": [
+        "208460137",
+        ""
+      ]
+    },
+    {
+      "email": "marucapa2010@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.5185,
+      "names": [
+        "Jorge Arturo Elizondo Rodriguez",
+        "NULO Retana Rodriguez"
+      ],
+      "cedulas": [
+        "206860551",
+        ""
+      ]
+    },
+    {
+      "email": "josueguzmansuarez5555@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.52,
+      "margin": 0.11000000000000004,
+      "names": [
+        "Jorge Arturo Elizondo Rodriguez",
+        "Ana Gabriela Linares Matamoros"
+      ],
+      "cedulas": [
+        "206860551",
+        "206370933"
+      ]
+    },
+    {
+      "email": "ema_15_gt@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.08999999999999997,
+      "names": [
+        "Eibynela Esquivel Morera",
+        "Anthony Redondo Duran"
+      ],
+      "cedulas": [
+        "204920317",
+        "208500598"
+      ]
+    },
+    {
+      "email": "vkarlaadirana@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.15000000000000008,
+      "names": [
+        "Henry Triana Torres",
+        "Kendy Nicol Esquivel Rojas"
+      ],
+      "cedulas": [
+        "155825683336",
+        "207630321"
+      ]
+    },
+    {
+      "email": "joi192209@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.37000000000000005,
+      "names": [
+        "John Ferreto",
+        "Alexander Esquivel Segura"
+      ],
+      "cedulas": [
+        "208860378",
+        "115360956"
+      ]
+    },
+    {
+      "email": "talenolaura22@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6200000000000001,
+      "margin": 0.09000000000000008,
+      "names": [
+        "Alexander Esquivel Segura",
+        "Alexsandro Rojas Peraza"
+      ],
+      "cedulas": [
+        "115360956",
+        "207914580"
+      ]
+    },
+    {
+      "email": "k.ati090595@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.23000000000000004,
+      "names": [
+        "Maria Fernanda Esquivel Segura",
+        "Jorge Picado"
+      ],
+      "cedulas": [
+        "115740717",
+        "111122223"
+      ]
+    },
+    {
+      "email": "allangonzalez4@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6300000000000001,
+      "margin": 0.15000000000000013,
+      "names": [
+        "Alvaro Viquez Quesada",
+        "Marco Vinicio Fenandez Porras"
+      ],
+      "cedulas": [
+        "205580001",
+        "206390873"
+      ]
+    },
+    {
+      "email": "analvaradom25@outlook.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.12000000000000005,
+      "names": [
+        "Allan Quesada Olivares",
+        "Mary Paz Fernandez Pérez"
+      ],
+      "cedulas": [
+        "123556659",
+        "208340589"
+      ]
+    },
+    {
+      "email": "xiniabarranteslara@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.34,
+      "margin": 0.6114999999999999,
+      "names": [
+        "John Ferreto",
+        "NULO Gonzalez Valverde"
+      ],
+      "cedulas": [
+        "208860378",
+        ""
+      ]
+    },
+    {
+      "email": "davidwwe21@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.08000000000000002,
+      "names": [
+        "Dayanna López Jiménez",
+        "Gustavo Fonseca Loaiza"
+      ],
+      "cedulas": [
+        "206520957",
+        "206620185"
+      ]
+    },
+    {
+      "email": "chichi_bmx_@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0.10999999999999999,
+      "names": [
+        "Maria Fonseca Mendoza",
+        "Allan Gonzalez Acuña"
+      ],
+      "cedulas": [
+        "15580511",
+        "112090411"
+      ]
+    },
+    {
+      "email": "clintesincorre@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0.010000000000000009,
+      "names": [
+        "Evelyn Sacida Urbina",
+        "Dayana Fonseca Valverde"
+      ],
+      "cedulas": [
+        "209410202",
+        "208850349"
+      ]
+    },
+    {
+      "email": "mfiorela476@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.11000000000000004,
+      "names": [
+        "Fabiana Murillo Artavia",
+        "Felipe Gadea Castro"
+      ],
+      "cedulas": [
+        "207830190",
+        "207390115"
+      ]
+    },
+    {
+      "email": "kimtwain@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.11999999999999994,
+      "names": [
+        "Joaquin Monge Barrientos",
+        "Josthym Aratt Galagarza Montes"
+      ],
+      "cedulas": [
+        "207860951",
+        "119670246"
+      ]
+    },
+    {
+      "email": "stasy.om.28@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.35,
+      "margin": 0.009999999999999953,
+      "names": [
+        "Jose Gabriel Galarza López",
+        "Kimberly Rodriguez Barrantres"
+      ],
+      "cedulas": [
+        "205660883",
+        "207480144"
+      ]
+    },
+    {
+      "email": "w-am@hotmail.es",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.13,
+      "names": [
+        "Priscilla Gamboa Blanco",
+        "David Mendoza Corrales"
+      ],
+      "cedulas": [
+        "208190690",
+        "206140063"
+      ]
+    },
+    {
+      "email": "andres_cr1011@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.06,
+      "names": [
+        "Alejandro Ramirez Hurtado",
+        "Alex Gamboa Jimenez"
+      ],
+      "cedulas": [
+        "207850563",
+        "208540787"
+      ]
+    },
+    {
+      "email": "kokiv1675@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.5,
+      "margin": 0.15000000000000002,
+      "names": [
+        "Rosita García Blanco",
+        "Marcia Hidalgo Diaz",
+        "NULO García Blanco"
+      ],
+      "cedulas": [
+        "205450979",
+        "203960483",
+        "200000001"
+      ]
+    },
+    {
+      "email": "jeancarloduran25@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.7030000000000001,
+      "names": [
+        "Fabian Garcia Vargas",
+        "NULO Corrales Mora"
+      ],
+      "cedulas": [
+        "208910536",
+        ""
+      ]
+    },
+    {
+      "email": "froylanleon15@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.050000000000000044,
+      "names": [
+        "Douglas Alejandro Ghiny Gonzalez",
+        "Douglas Albert Vettkam"
+      ],
+      "cedulas": [
+        "114610835",
+        "223344223"
+      ]
+    },
+    {
+      "email": "mariapaulahidalgo30@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.09999999999999998,
+      "names": [
+        "Alejandro Gonzalez Alvarado",
+        "Andrés Villalobos Muñoz"
+      ],
+      "cedulas": [
+        "208610823",
+        "208620029"
+      ]
+    },
+    {
+      "email": "harolsb@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0,
+      "names": [
+        "Cristhoper Gonzalez Araya",
+        "Daniel Porras Blanco"
+      ],
+      "cedulas": [
+        "208450258",
+        "208950949"
+      ]
+    },
+    {
+      "email": "maythess26@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Danna Gonzalez Argueta",
+        "Heidy Murillo Quesada"
+      ],
+      "cedulas": [
+        "120370590",
+        "205220758"
+      ]
+    },
+    {
+      "email": "danycastillosalas@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.41,
+      "margin": 0.06,
+      "names": [
+        "Fabian Piedra Blanco",
+        "Vera Retana Mora"
+      ],
+      "cedulas": [
+        "207250466",
+        "111490133"
+      ]
+    },
+    {
+      "email": "s.tirodriguez@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.07999999999999996,
+      "names": [
+        "Emmanuel Gonzalez Campos",
+        "Roy Vargas Varela"
+      ],
+      "cedulas": [
+        "206580598",
+        "204610573"
+      ]
+    },
+    {
+      "email": "tuca15.bp@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.15999999999999998,
+      "names": [
+        "David Unfried Peñaranda",
+        "Sandra Gonzalez Gamboa"
+      ],
+      "cedulas": [
+        "206860596",
+        "173456788"
+      ]
+    },
+    {
+      "email": "shernandez65@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.18000000000000005,
+      "names": [
+        "Oscar Vindas Campos",
+        "Abdiel González Mafla"
+      ],
+      "cedulas": [
+        "208730517",
+        "155100363825"
+      ]
+    },
+    {
+      "email": "kkelly1260@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.34,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Katia Jimenez Zamora",
+        "Juan David Gonzalez Martinez"
+      ],
+      "cedulas": [
+        "204980626",
+        "208800292"
+      ]
+    },
+    {
+      "email": "alebh10@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.14000000000000012,
+      "names": [
+        "Alejandra Valerio Cantillano",
+        "Raquel Gonzalez Mora"
+      ],
+      "cedulas": [
+        "207570650",
+        "207540564"
+      ]
+    },
+    {
+      "email": "jrarce071@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.06,
+      "names": [
+        "Gloriana Vargas Arguedas",
+        "Andrea Gonzalez Quesada"
+      ],
+      "cedulas": [
+        "208460135",
+        "205090848"
+      ]
+    },
+    {
+      "email": "michaelmasism@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0,
+      "names": [
+        "Lucia Gonzalez Quesada",
+        "Heylin Salazar Otarola"
+      ],
+      "cedulas": [
+        "208900708",
+        "204960730"
+      ]
+    },
+    {
+      "email": "sergio_rodse@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.08000000000000002,
+      "names": [
+        "Dariana González Reid",
+        "Luis Andrés Jarquín Díaz"
+      ],
+      "cedulas": [
+        "119810558",
+        "208650326"
+      ]
+    },
+    {
+      "email": "kdoblesavila@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45,
+      "margin": 0.030000000000000027,
+      "names": [
+        "Gabriel Gonzalez Villalobos",
+        "Maria Lopez Castro"
+      ],
+      "cedulas": [
+        "206090455",
+        "209180576"
+      ]
+    },
+    {
+      "email": "danielito_261200@icloud.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.07,
+      "names": [
+        "Julián Guerrero Jiménez",
+        "Randy Rodriguez Barrantes"
+      ],
+      "cedulas": [
+        "207340716",
+        "207730987"
+      ]
+    },
+    {
+      "email": "ronaldsalazarbarrantes@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.49,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Sandra Hernández Alvarado",
+        "Abel Guevara Arce"
+      ],
+      "cedulas": [
+        "602640018",
+        "207190733"
+      ]
+    },
+    {
+      "email": "juliamatamoros@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.21000000000000008,
+      "names": [
+        "Jimmy Robles Campos",
+        "Rodrigo Guevara Jimenez"
+      ],
+      "cedulas": [
+        "603080515",
+        "701910806"
+      ]
+    },
+    {
+      "email": "kathytc96@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.09000000000000008,
+      "names": [
+        "Katherine Torres Cordero",
+        "ALLISON GUTIERREZ TORRES"
+      ],
+      "cedulas": [
+        "",
+        "209530519"
+      ]
+    },
+    {
+      "email": "apabari9@yahoo.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.7525000000000001,
+      "names": [
+        "Kenny Daniela Gutierrez Valerio",
+        "NULO Castro Rodriguez"
+      ],
+      "cedulas": [
+        "209210105",
+        ""
+      ]
+    },
+    {
+      "email": "keilorp94@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.15000000000000002,
+      "names": [
+        "Ana Lorena Rojas Elizondo",
+        "Justin Josué Guzmán Suárez"
+      ],
+      "cedulas": [
+        "105620745",
+        "208320244"
+      ]
+    },
+    {
+      "email": "natyaguilarr94@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Karolayn Solis Esquivel",
+        "Jieyang He Chen"
+      ],
+      "cedulas": [
+        "208020231",
+        "119930497"
+      ]
+    },
+    {
+      "email": "chad.murillos@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Maria Belen Herra Araya",
+        "Victor Rojas Gamboa"
+      ],
+      "cedulas": [
+        "208740375",
+        "204670483"
+      ]
+    },
+    {
+      "email": "priloa@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.14000000000000012,
+      "names": [
+        "Carlos Luis Sibaja Arrieta",
+        "Augusto Herrera Herra"
+      ],
+      "cedulas": [
+        "205780121",
+        "701640938"
+      ]
+    },
+    {
+      "email": "trafacturasmax@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.09000000000000002,
+      "names": [
+        "Jean Carlo Rojas Chavez",
+        "Kimberly Herrera Ramirez"
+      ],
+      "cedulas": [
+        "209600870",
+        "206740735"
+      ]
+    },
+    {
+      "email": "vycarballom@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.35,
+      "margin": 0.1515,
+      "names": [
+        "Kimberly Herrera Ramirez",
+        "Fabricio Rodríguez Ramírez"
+      ],
+      "cedulas": [
+        "206740735",
+        "208290686"
+      ]
+    },
+    {
+      "email": "jgarciaz2405@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.13000000000000006,
+      "names": [
+        "Alejandro Rodriguez Amores",
+        "Andrés Herrera Venegas"
+      ],
+      "cedulas": [
+        "208560543",
+        "207530886"
+      ]
+    },
+    {
+      "email": "gamboaalex.ji@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.15000000000000002,
+      "names": [
+        "Alejandro Porras Molina",
+        "Sofia Huertas Rojas"
+      ],
+      "cedulas": [
+        "207660128",
+        "208750150"
+      ]
+    },
+    {
+      "email": "josepablors7@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0,
+      "names": [
+        "María Verónica Jara Berrocal",
+        "Gustavo Olivar Ocampo"
+      ],
+      "cedulas": [
+        "208070519",
+        "701700452"
+      ]
+    },
+    {
+      "email": "nicolealvaradoch@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.06,
+      "names": [
+        "Karla Vanessa Rivera",
+        "Stephanie Jara Murillo"
+      ],
+      "cedulas": [
+        "104560123",
+        "207050386"
+      ]
+    },
+    {
+      "email": "danieldavidmsn@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.10999999999999999,
+      "names": [
+        "Juan Carlos Jimenez Monge",
+        "Johana Zumbado Mora"
+      ],
+      "cedulas": [
+        "207990086",
+        "205400312"
+      ]
+    },
+    {
+      "email": "facturascontaherrera@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Javier Menchaca",
+        "Jossellyn Jimenez Gamboa"
+      ],
+      "cedulas": [
+        "116530045",
+        "207000800"
+      ]
+    },
+    {
+      "email": "maikolroman3012@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.661,
+      "names": [
+        "Jose Manuel Jiménez Gamboa",
+        "NULO Rojas Alfaro"
+      ],
+      "cedulas": [
+        "901420478",
+        ""
+      ]
+    },
+    {
+      "email": "axelchavi@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.030000000000000027,
+      "names": [
+        "Elba Ulloa Dávila",
+        "Karol Maria Jimenez Salas"
+      ],
+      "cedulas": [
+        "107290484",
+        "206460299"
+      ]
+    },
+    {
+      "email": "carmando.1993@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.43,
+      "margin": 0.010000000000000009,
+      "names": [
+        "Evelyn Sacida Martinez",
+        "Keisy Kayen Orozco"
+      ],
+      "cedulas": [
+        "155825676336",
+        "208630703"
+      ]
+    },
+    {
+      "email": "niblasol@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Michell Reyes",
+        "Keisy Kayen Orozco"
+      ],
+      "cedulas": [
+        "155822862303",
+        "208630703"
+      ]
+    },
+    {
+      "email": "mherrer17@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.04999999999999999,
+      "names": [
+        "Kendall Kopper Murillo",
+        "Guiselle Rodriguez Villalobos"
+      ],
+      "cedulas": [
+        "208630373",
+        "104880167"
+      ]
+    },
+    {
+      "email": "faguilar90683@ufide.ac.cr",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.7155,
+      "names": [
+        "Kristel Leon Anchia",
+        "NULO Mendoza González"
+      ],
+      "cedulas": [
+        "208730792",
+        ""
+      ]
+    },
+    {
+      "email": "andrescorreos@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.5825,
+      "names": [
+        "Froylan León Anchía",
+        "NULO Barefoot"
+      ],
+      "cedulas": [
+        "209170395",
+        "200000002"
+      ]
+    },
+    {
+      "email": "trafacturasmaxalvarez@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.36,
+      "margin": 0.010000000000000009,
+      "names": [
+        "Jennifer Lopez Giraldo",
+        "Jose Manuel Loaiziga Ríos"
+      ],
+      "cedulas": [
+        "117003065006",
+        "207480463"
+      ]
+    },
+    {
+      "email": "vjimenez@solgraf.cr",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.25000000000000006,
+      "names": [
+        "Mahiny Madriz Gomez",
+        "Elky Lobo Salas"
+      ],
+      "cedulas": [
+        "115670387",
+        "206220580"
+      ]
+    },
+    {
+      "email": "f.er09@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0.09000000000000002,
+      "names": [
+        "Jose Zamora Villalobos",
+        "Elky Lobo Salas"
+      ],
+      "cedulas": [
+        "208660283",
+        "206220580"
+      ]
+    },
+    {
+      "email": "huellitaseducativasarenal@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Diego José Piedra Araya",
+        "Fabián González López"
+      ],
+      "cedulas": [
+        "207400490",
+        "208870254"
+      ]
+    },
+    {
+      "email": "moralesberny81@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.38,
+      "margin": 0.6214999999999999,
+      "names": [
+        "Jennifer Lopez Giraldo",
+        "nulo Elizondo Solís"
+      ],
+      "cedulas": [
+        "117003065006",
+        ""
+      ]
+    },
+    {
+      "email": "axelchacod@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37999999999999995,
+      "margin": 0,
+      "names": [
+        "Claudia López Herrera",
+        "Ashlye Rivera Gonzalez"
+      ],
+      "cedulas": [
+        "205660900",
+        "703230108"
+      ]
+    },
+    {
+      "email": "jssegura.vri@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0,
+      "names": [
+        "Ana Madrigal Ramirez",
+        "Alejandro Solis Agüero"
+      ],
+      "cedulas": [
+        "206570255",
+        "108690588"
+      ]
+    },
+    {
+      "email": "daguilararce90@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.18000000000000005,
+      "names": [
+        "Berenice Madriz Garita",
+        "Andy Unfried Taleno"
+      ],
+      "cedulas": [
+        "305020441",
+        "209200793"
+      ]
+    },
+    {
+      "email": "hidrocomcr@outlook.es",
+      "ownerCount": 2,
+      "bestScore": 0.34,
+      "margin": 0.010000000000000009,
+      "names": [
+        "Maria Belen Marin Bolaños",
+        "Boris Murillo Quesada"
+      ],
+      "cedulas": [
+        "208910826",
+        "113640908"
+      ]
+    },
+    {
+      "email": "raquelsalazaresquivel@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.09999999999999998,
+      "names": [
+        "Julieth Martinez Florez",
+        "Elena Rojas Chacón"
+      ],
+      "cedulas": [
+        "901180743",
+        "206510578"
+      ]
+    },
+    {
+      "email": "elbaud2023@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.34,
+      "margin": 0.030000000000000027,
+      "names": [
+        "Katherine Rojas Cespedez",
+        "Dixiana Matarrita Soto"
+      ],
+      "cedulas": [
+        "207450518",
+        "602460400"
+      ]
+    },
+    {
+      "email": "jimenezjennifer2000@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.07,
+      "names": [
+        "Andres Mendez Araya",
+        "Kendall Stephen Zuñiga"
+      ],
+      "cedulas": [
+        "208830894",
+        "118480734"
+      ]
+    },
+    {
+      "email": "gardo_ec@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.14999999999999997,
+      "names": [
+        "Edson Mendez Arias",
+        "Mike Priest"
+      ],
+      "cedulas": [
+        "208020624",
+        "123456788"
+      ]
+    },
+    {
+      "email": "salazarvalverde.kattiamaria@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.08000000000000002,
+      "names": [
+        "Maikol Mendez Castro",
+        "Maikol Porras Sánchez"
+      ],
+      "cedulas": [
+        "205500977",
+        "205900750"
+      ]
+    },
+    {
+      "email": "jedosa@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.14000000000000012,
+      "names": [
+        "Carlos Rojas Arias",
+        "Estelia Méndez Jiménez"
+      ],
+      "cedulas": [
+        "114310719",
+        "203810660"
+      ]
+    },
+    {
+      "email": "reiniervisser84@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0.6335,
+      "names": [
+        "David Milanes Castillo",
+        "NULO Acuña Rojas"
+      ],
+      "cedulas": [
+        "114670561",
+        ""
+      ]
+    },
+    {
+      "email": "edjos.97@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.04999999999999993,
+      "names": [
+        "Esteban Millon",
+        "Jordan Villalobos Obando",
+        "Jonathan Villalobos Obando"
+      ],
+      "cedulas": [
+        "208960521",
+        "206050311",
+        ""
+      ]
+    },
+    {
+      "email": "jaferlop34@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.5295,
+      "names": [
+        "Joaquin Gabriel Monge Rodriguez",
+        "nulo Romero Cerdas"
+      ],
+      "cedulas": [
+        "104740969",
+        ""
+      ]
+    },
+    {
+      "email": "josebc3@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.33,
+      "names": [
+        "Joab Montero Montero",
+        "Gia Sudasassi Vargas"
+      ],
+      "cedulas": [
+        "116550832",
+        "402790087"
+      ]
+    },
+    {
+      "email": "paoas_07@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.12000000000000005,
+      "names": [
+        "Kimberth Quesada Zamora",
+        "Katylin Elena Mora Ballestero"
+      ],
+      "cedulas": [
+        "206230010",
+        "206150438"
+      ]
+    },
+    {
+      "email": "ericka.campos.t@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0,
+      "names": [
+        "Diana Morales Castallo",
+        "Jose Pablo Roman Solano"
+      ],
+      "cedulas": [
+        "801140108",
+        "207020022"
+      ]
+    },
+    {
+      "email": "lupitaag6@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Kiara Morales Delgado",
+        "Elvis Rojas Arce"
+      ],
+      "cedulas": [
+        "305630061",
+        "40212058"
+      ]
+    },
+    {
+      "email": "gabbycastro@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.35,
+      "margin": 0.009999999999999953,
+      "names": [
+        "Alondra Morales Solis",
+        "Esteban Shion Solis"
+      ],
+      "cedulas": [
+        "504850710",
+        "119370278"
+      ]
+    },
+    {
+      "email": "ralvarez1542@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.030000000000000027,
+      "names": [
+        "Daniel Nuñez Campos",
+        "Karol Morales Villalobos"
+      ],
+      "cedulas": [
+        "402790905",
+        "207960054"
+      ]
+    },
+    {
+      "email": "luisaarayacastro@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.13000000000000006,
+      "names": [
+        "Jairo Zamora Salas",
+        "Fabiana Murillo Artavia"
+      ],
+      "cedulas": [
+        "207590570",
+        "207830190"
+      ]
+    },
+    {
+      "email": "jostin.sanchez1@icloud.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.10999999999999999,
+      "names": [
+        "Yojeisi Murillo Flores",
+        "Laura Alfaro Agúero"
+      ],
+      "cedulas": [
+        "207880812",
+        "206610118"
+      ]
+    },
+    {
+      "email": "julio22cancer@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.18000000000000005,
+      "names": [
+        "Juan Pablo Segura Araya",
+        "Hazel Murillo Mora"
+      ],
+      "cedulas": [
+        "208020215",
+        "205770104"
+      ]
+    },
+    {
+      "email": "pjuliana.morales@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.06,
+      "names": [
+        "Blanca Valverde Espinoza",
+        "Heidy Murillo Quesada"
+      ],
+      "cedulas": [
+        "155811255",
+        "205220758"
+      ]
+    },
+    {
+      "email": "aleborbon2702@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0.020000000000000018,
+      "names": [
+        "María José Murillo Ulate",
+        "Fauricio Rodriguez Paniagua"
+      ],
+      "cedulas": [
+        "207040135",
+        "304320334"
+      ]
+    },
+    {
+      "email": "imjosecr@aol.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.12,
+      "names": [
+        "Anthony Vasquez Molina",
+        "Felipe Narvaez Cardona"
+      ],
+      "cedulas": [
+        "208530918",
+        "11700211"
+      ]
+    },
+    {
+      "email": "marymarenco38@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.12000000000000005,
+      "names": [
+        "Karla Villalobos Abarca",
+        "Keissy Nuñez Chacón"
+      ],
+      "cedulas": [
+        "701300251",
+        "207900755"
+      ]
+    },
+    {
+      "email": "johanrodriguez3003@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45599999999999996,
+      "margin": 0.16599999999999998,
+      "names": [
+        "Elio Francisco Omodeo Chaves",
+        "Elio Francisco Omedeo Chaves"
+      ],
+      "cedulas": [
+        "204320516",
+        ""
+      ]
+    },
+    {
+      "email": "andreaextramuros76@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.12,
+      "names": [
+        "Carlos Manuel Rojas Hidalgo",
+        "Luis Diego Solis Lopez"
+      ],
+      "cedulas": [
+        "202911326",
+        "209220763"
+      ]
+    },
+    {
+      "email": "cajaroar@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.21000000000000002,
+      "names": [
+        "Alvaro Viquez Quesada",
+        "Neydelin Oses Martínez"
+      ],
+      "cedulas": [
+        "205580001",
+        "119800554"
+      ]
+    },
+    {
+      "email": "sam04salasz@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.12,
+      "names": [
+        "Kimberly Otoya Rojas",
+        "Jose Rodrigo Rodriguez Duran"
+      ],
+      "cedulas": [
+        "112800682",
+        "209100319"
+      ]
+    },
+    {
+      "email": "torrescabreraderis@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.56,
+      "margin": 0.22000000000000003,
+      "names": [
+        "Darren Vargas Rodriguez",
+        "Giovanni Paniagua Jimenez"
+      ],
+      "cedulas": [
+        "208750860",
+        "502670092"
+      ]
+    },
+    {
+      "email": "ktchd03@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0,
+      "names": [
+        "Keylor Gerardo Paniagua Rodríguez",
+        "David Soto Rojas"
+      ],
+      "cedulas": [
+        "207330445",
+        "208210480"
+      ]
+    },
+    {
+      "email": "jazminguo13@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.09000000000000002,
+      "names": [
+        "Giorgio Sudasassi Vargas",
+        "Felix Peralta Olivar"
+      ],
+      "cedulas": [
+        "119710766",
+        "108450362"
+      ]
+    },
+    {
+      "email": "andresz.4@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 0.1200000000000001,
+      "names": [
+        "Pedro Salas Salas",
+        "Emanuel Peraza Peraza"
+      ],
+      "cedulas": [
+        "206790192",
+        "206450871"
+      ]
+    },
+    {
+      "email": "otarola@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0,
+      "names": [
+        "Jorge Eduardo Picado Bravo",
+        "Luis Sibaja Mendoza"
+      ],
+      "cedulas": [
+        "602430893",
+        "117800712"
+      ]
+    },
+    {
+      "email": "ledavgomez@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.09999999999999998,
+      "names": [
+        "Alonso Sanchez Salazar",
+        "Augustin Pieters"
+      ],
+      "cedulas": [
+        "206380876",
+        "105600009"
+      ]
+    },
+    {
+      "email": "calvo.melissa@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.6385,
+      "names": [
+        "Jose Manuel Pineda",
+        "nulo Salazar Esquivel"
+      ],
+      "cedulas": [
+        "208500558",
+        ""
+      ]
+    },
+    {
+      "email": "ramirezsan1021@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.09999999999999998,
+      "names": [
+        "Alberto Poveda",
+        "Jorge Arturo Solis Murillo"
+      ],
+      "cedulas": [
+        "155866544",
+        "208300856"
+      ]
+    },
+    {
+      "email": "charlinfabi@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.09000000000000002,
+      "names": [
+        "Berloith Rojas Calvo",
+        "Arturo Quesada Hidalgo"
+      ],
+      "cedulas": [
+        "206760048",
+        "208060625"
+      ]
+    },
+    {
+      "email": "aurelioarroyoj@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.07,
+      "names": [
+        "Harol Salazar Barrantes",
+        "Daniel Quesada Salas"
+      ],
+      "cedulas": [
+        "206170452",
+        "208270830"
+      ]
+    },
+    {
+      "email": "luisokxf250@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Ashlie Quesada Villalobos",
+        "Maikol Roman Salas"
+      ],
+      "cedulas": [
+        "206430512",
+        "205900164"
+      ]
+    },
+    {
+      "email": "arielrojascr7@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.08000000000000002,
+      "names": [
+        "Alaniz Quiros Rodriguez",
+        "Fabio Andrés Rodriguez Moya"
+      ],
+      "cedulas": [
+        "208690958",
+        "207360110"
+      ]
+    },
+    {
+      "email": "maikolporras@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Nikol Zeledon Montero",
+        "Mabel Ramirez Gutierrez"
+      ],
+      "cedulas": [
+        "206890573",
+        "603770515"
+      ]
+    },
+    {
+      "email": "msalasjimenez03@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 1,
+      "margin": 0,
+      "names": [
+        "MARIA DE LOS ANGELES SALAS JIMENEZ",
+        "ALISSON PAOLA VARGAS SALAS"
+      ],
+      "cedulas": [
+        "207310177",
+        "209740882"
+      ]
+    },
+    {
+      "email": "marijoruiz18@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.48,
+      "margin": 0.7709999999999999,
+      "names": [
+        "Javier Retana Pereira",
+        "NULO Valladarez"
+      ],
+      "cedulas": [
+        "205130424",
+        ""
+      ]
+    },
+    {
+      "email": "jormanbadilla@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6300000000000001,
+      "margin": 0.15000000000000013,
+      "names": [
+        "Johana Sibaja Chaves",
+        "Angelo Riggione Alfaro"
+      ],
+      "cedulas": [
+        "205820247",
+        "207350261"
+      ]
+    },
+    {
+      "email": "jcarceh@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0,
+      "names": [
+        "Carlomagno Rios Sanabria",
+        "Stacy Maria Solis Zamora"
+      ],
+      "cedulas": [
+        "401820952",
+        "208240939"
+      ]
+    },
+    {
+      "email": "andresjarquin71@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Daraniela Rojas Lizano",
+        "Selena Maria Rivas Gonzalez"
+      ],
+      "cedulas": [
+        "206980801",
+        "208150668"
+      ]
+    },
+    {
+      "email": "tatynuthn@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0.019999999999999962,
+      "names": [
+        "Luis Paulo Rivera Suarez",
+        "Xinia Soto Moreno"
+      ],
+      "cedulas": [
+        "208710930",
+        "205090631"
+      ]
+    },
+    {
+      "email": "olmancastro57@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.09000000000000002,
+      "names": [
+        "Keilor Rodriguez Alfaro",
+        "Nicole Rodriguez Cordero"
+      ],
+      "cedulas": [
+        "205350073",
+        "207300062"
+      ]
+    },
+    {
+      "email": "david-soto06@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.39999999999999997,
+      "margin": 0.12,
+      "names": [
+        "Jonathan Salazar Salas",
+        "Kimberly Rodriguez Barrantres"
+      ],
+      "cedulas": [
+        "123658896",
+        "207480144"
+      ]
+    },
+    {
+      "email": "sangonzalez.3007@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.53,
+      "margin": 0.18000000000000005,
+      "names": [
+        "Alonso Rodríguez Esquivel",
+        "David Soto Rojas"
+      ],
+      "cedulas": [
+        "208620149",
+        "208210480"
+      ]
+    },
+    {
+      "email": "a123@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5800000000000001,
+      "margin": 0.08000000000000007,
+      "names": [
+        "Alonso Rodríguez Esquivel",
+        "Lydia Vega"
+      ],
+      "cedulas": [
+        "208620149",
+        "111111110"
+      ]
+    },
+    {
+      "email": "fabi_murilloa@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 0.25000000000000006,
+      "names": [
+        "Fauricio Rodriguez Paniagua",
+        "Xinia Soto Jimenez"
+      ],
+      "cedulas": [
+        "304320334",
+        "111040679"
+      ]
+    },
+    {
+      "email": "nathaliarojasj@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 1,
+      "margin": 0,
+      "names": [
+        "Meylin Rojas Flores",
+        "Nathalia Rojas Johansson",
+        "Kanean Rodriguez Paniagua"
+      ],
+      "cedulas": [
+        "856000",
+        "208360308",
+        "208940042"
+      ]
+    },
+    {
+      "email": "jorfra@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.67,
+      "margin": 1.0155,
+      "names": [
+        "Juan Pablo Rodriguez Rojas",
+        "NULO Martinez Chaves"
+      ],
+      "cedulas": [
+        "207250084",
+        ""
+      ]
+    },
+    {
+      "email": "jalerv@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.74,
+      "margin": 0.06999999999999995,
+      "names": [
+        "Stephanie Valerio Guido",
+        "Alejandro Rodriguez Valenciano",
+        "Carlos Manuel Rojas Hidalgo"
+      ],
+      "cedulas": [
+        "205910357",
+        "207280135",
+        "202911326"
+      ]
+    },
+    {
+      "email": "pipi052489@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0,
+      "names": [
+        "Maria José Rojas Benavidez",
+        "Felix Saborio Chavarria"
+      ],
+      "cedulas": [
+        "207760570",
+        "208130816"
+      ]
+    },
+    {
+      "email": "loaizajennifer13@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.07,
+      "names": [
+        "Glenda Rojas Gomez",
+        "Deris Torres Cabrera"
+      ],
+      "cedulas": [
+        "205760036",
+        "208040427"
+      ]
+    },
+    {
+      "email": "anmode03@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.38999999999999996,
+      "margin": 0.5479999999999999,
+      "names": [
+        "Nathalia Rojas Johansson",
+        "NULO Matamoros Matamoros"
+      ],
+      "cedulas": [
+        "208360308",
+        ""
+      ]
+    },
+    {
+      "email": "jaramos1975@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6100000000000001,
+      "margin": 0.6695000000000001,
+      "names": [
+        "Johan Rojas Lara",
+        "nulo Morales Nuñez"
+      ],
+      "cedulas": [
+        "207680234",
+        ""
+      ]
+    },
+    {
+      "email": "clientesiconcorreo@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.41,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Gloriana Valerio Quiros",
+        "Maricel Rojas Quiros"
+      ],
+      "cedulas": [
+        "208250003",
+        "205170933"
+      ]
+    },
+    {
+      "email": "greivin.s@yahoo.com",
+      "ownerCount": 2,
+      "bestScore": 0.44,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Valeria Vega Steller",
+        "Josue Rojas Ramirez"
+      ],
+      "cedulas": [
+        "207910354",
+        "208700983"
+      ]
+    },
+    {
+      "email": "fernandocalderondelgado75@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.12999999999999995,
+      "names": [
+        "Justin Roman montero",
+        "Kirsten Salazar Esquivel"
+      ],
+      "cedulas": [
+        "209020665",
+        "209270269"
+      ]
+    },
+    {
+      "email": "lylimgo09@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.45999999999999996,
+      "margin": 0.03999999999999998,
+      "names": [
+        "Angelica Solis Quesada",
+        "Laura Salas Aguilar"
+      ],
+      "cedulas": [
+        "207760220",
+        "302580600"
+      ]
+    },
+    {
+      "email": "emilyacunarojas06@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.6575,
+      "names": [
+        "Leonardo Salas Soto",
+        "NULO Mas Marin"
+      ],
+      "cedulas": [
+        "113190023",
+        ""
+      ]
+    },
+    {
+      "email": "jopcotar@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.55,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Marco Vinicio Salazar Acosta",
+        "Jorge Vargas Madriz"
+      ],
+      "cedulas": [
+        "206720067",
+        "208040977"
+      ]
+    },
+    {
+      "email": "aaaaa@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.6000000000000001,
+      "margin": 1.09,
+      "names": [
+        "Jimmy Andres Salazar Arrieta",
+        "NULO Rodríguez Rodríguez"
+      ],
+      "cedulas": [
+        "205630274",
+        ""
+      ]
+    },
+    {
+      "email": "dafnesofiacm@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.42,
+      "margin": 0,
+      "names": [
+        "Brandon Salinas Cabrera",
+        "Allan Sibaja Rojas"
+      ],
+      "cedulas": [
+        "604610785",
+        "207020115"
+      ]
+    },
+    {
+      "email": "fcuevas79@hotmail.es",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.040000000000000036,
+      "names": [
+        "Aaron Sanchez Masis",
+        "Abigail Tenorio Vargas"
+      ],
+      "cedulas": [
+        "119720684",
+        "207610738"
+      ]
+    },
+    {
+      "email": "erick00araya@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.09999999999999998,
+      "names": [
+        "Roberth Ulate Aguilar",
+        "Leonardo Sandi"
+      ],
+      "cedulas": [
+        "207880075",
+        "206880935"
+      ]
+    },
+    {
+      "email": "mainorojas@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.07,
+      "names": [
+        "James Sibaja Monge",
+        "Yendry Serrano Zarate"
+      ],
+      "cedulas": [
+        "10000680",
+        "115020163"
+      ]
+    },
+    {
+      "email": "fabicmps87@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.34,
+      "margin": 0.020000000000000018,
+      "names": [
+        "Laura Alfaro Agüero",
+        "Emanuel Antonio Sevilla Torres"
+      ],
+      "cedulas": [
+        "206610118",
+        "801080055"
+      ]
+    },
+    {
+      "email": "paniaguaviviana@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.37,
+      "margin": 0.6645,
+      "names": [
+        "Victoria Solis",
+        "NULO Chacon Alfaro"
+      ],
+      "cedulas": [
+        "208390170",
+        ""
+      ]
+    },
+    {
+      "email": "jdalvarezs12@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.10000000000000009,
+      "names": [
+        "Jenny Valverde Jimenez",
+        "Carlos Solís Quirós"
+      ],
+      "cedulas": [
+        "107060259",
+        "206400966"
+      ]
+    },
+    {
+      "email": "guevarraabel1993@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5,
+      "margin": 0.14,
+      "names": [
+        "Warner Torres Duran",
+        "Jordan Villalobos Obando"
+      ],
+      "cedulas": [
+        "208460708",
+        "206050311"
+      ]
+    },
+    {
+      "email": "kevincd2793@gmail.com",
+      "ownerCount": 3,
+      "bestScore": 0.3275,
+      "margin": 0.017500000000000016,
+      "names": [
+        "Juan Daniel Ulate Aguilar",
+        "Carlos Daniel Zuñiga Vargas",
+        "Juan Daniel Ulate"
+      ],
+      "cedulas": [
+        "208240234",
+        "208120648",
+        ""
+      ]
+    },
+    {
+      "email": "inule@hotmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.47,
+      "margin": 0.7915,
+      "names": [
+        "Mainor Valladares Lazo",
+        "NULO Muñoz Rojas"
+      ],
+      "cedulas": [
+        "206500319",
+        ""
+      ]
+    },
+    {
+      "email": "naocastror@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.5700000000000001,
+      "margin": 0.785,
+      "names": [
+        "Lucy Villalobos Alfaro",
+        "NULO Gonzalez Alpizar"
+      ],
+      "cedulas": [
+        "203010038",
+        ""
+      ]
+    },
+    {
+      "email": "cosmas.zunnah@gmail.com",
+      "ownerCount": 2,
+      "bestScore": 0.9700000000000001,
+      "margin": 0.06000000000000005,
+      "names": [
+        "Casmas Zunnah",
+        "Monique Zunnah"
+      ],
+      "cedulas": [
+        "",
+        ""
+      ]
+    }
+  ],
+  "invalidRows": [
+    {
+      "row": 156,
+      "memberName": "Jose Alexis Alpiza Rojas",
+      "value": "."
+    },
+    {
+      "row": 516,
+      "memberName": "Erick Blanco Vargas",
+      "value": "xxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "row": 772,
+      "memberName": "Fiorella Chavarria Espinoza",
+      "value": "noindica"
+    },
+    {
+      "row": 825,
+      "memberName": "jerry Cole",
+      "value": "."
+    },
+    {
+      "row": 1283,
+      "memberName": "Diana Jimenez",
+      "value": "Solis"
+    },
+    {
+      "row": 1409,
+      "memberName": "alberth Lopez",
+      "value": "noindica"
+    }
+  ],
+  "unmatchedNames": [],
+  "ambiguousNames": [
+    {
+      "memberName": "Laura Alfaro Agúero",
+      "matches": 2,
+      "row": 111,
+      "cedula": "206610118"
+    },
+    {
+      "memberName": "Laura Alfaro Agüero",
+      "matches": 2,
+      "row": 112,
+      "cedula": "206610118"
+    },
+    {
+      "memberName": "Alondra Morales Solís",
+      "matches": 2,
+      "row": 1707,
+      "cedula": ""
+    },
+    {
+      "memberName": "Fabricio Rodriguez Ramirez",
+      "matches": 2,
+      "row": 2155,
+      "cedula": "208290686"
+    },
+    {
+      "memberName": "Fabricio Rodríguez Ramírez",
+      "matches": 2,
+      "row": 2156,
+      "cedula": "208290686"
+    }
+  ],
+  "skipped": [
+    {
+      "memberName": "Luis Antonio Abarca Alvarado",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Stephanie Acuña Cordero",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Flor de los Ángeles Aguilar Flores",
+      "reason": "correo_actual_preservado",
+      "email": "floresyeylin3860@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Ronulfo Arguello Arrieta",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Heriberto Arroyo Sanchez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Sara Barquero Rio",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Ismael Benavides Salazar",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jeimy Carrillo Zuñiga",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Gilbert Cedeño Machado",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Vilma Chinchilla Cole",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Maria Jose Esquivel Orozco",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Zaira Esquivel Tenorio",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Mariangel Fernandez Solis",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose David Gonzalez Solera",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Susan Jimenez Bolivar",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Zaira Montero Miranda",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Alejandra Montes de Oca Vasquez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jesus Nuñez Rodriguez Nuñez Rodriguez",
+      "reason": "correo_actual_preservado",
+      "email": "grodriguez@topografiarodriguez.com",
+      "score": 0.98
+    },
+    {
+      "memberName": "Sebastian Salas Leon",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Staele Thomas",
+      "reason": "correo_actual_preservado",
+      "email": "staelethomas@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Clay Williams",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Sharon Zuñiga Cruz",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose Adrian Abarca Nuñez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "JOSE ANDRES ABARCA RETANA",
+      "reason": "correo_actual_preservado",
+      "email": "joseandresabarcaretana@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Melissa Abarca Rodríguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Melissa Herrera Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "ANTHONY EVANDER ACEVEDO ESPINALES",
+      "reason": "correo_actual_preservado",
+      "email": "evanderacevedo124@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "JOSE FRANCISCO ACEVEDO MIRANDA",
+      "reason": "correo_actual_preservado",
+      "email": "jfam24@hotmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Daniela Acevedo Perez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Cristo Acevedo Sandino",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Katia Acosto Saborio",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "LUIS ALFREDO ACUNA ACUNA",
+      "reason": "correo_actual_preservado",
+      "email": "coachluisacunacr@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "MARCO VINICIO ACUNA RODRIGUEZ",
+      "reason": "correo_actual_preservado",
+      "email": "marcoviniciorodriguez7@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Jorge Mario Acuña Acuña",
+      "reason": "correo_actual_preservado",
+      "email": "jorgemario90@hotmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Jose Fransico Acuña Arce",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose David Saenz Arce",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Marcela Acuña Blanco",
+      "reason": "correo_actual_preservado",
+      "email": "marcea08@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Belen Acuña Herrera",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose Angel Acuña Morales",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose Miguel Mora Morales",
+      "reason": "correo_actual_preservado",
+      "email": "jmiguel0784@gmail.com",
+      "score": 0.94
+    },
+    {
+      "memberName": "Karen Acuña Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Emily Acuña Rojas",
+      "reason": "correo_actual_preservado",
+      "email": "emilyacunarojas06@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "José Felix Acuña Rojas",
+      "reason": "correo_ya_asignado",
+      "email": "carlosrojashidalgo@gmail.com"
+    },
+    {
+      "memberName": "Jose Alexis Alpiza Rojas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose Miguel Mendez Rojas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose Mariano Soto Rojas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Melanie Acuña Vega",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Danilo Agüero Arce",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Keylor Aguilar",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Ignacio Jose Aguilar Aguilar",
+      "reason": "correo_actual_preservado",
+      "email": "ignacioaa91@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Juan Aguilar Alfaro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Keylor Aguilar Alfaro",
+      "reason": "sin_candidato_claro"
+    },
+    {
+      "memberName": "María Guadalupe Aguilar Alfaro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Maria Belen Chavarria Alfaro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Maria Guadalupe Jimenez Alfaro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "María del Mar Umaña Alfaro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Vanessa Aguilar Alfaro",
+      "reason": "correo_actual_preservado",
+      "email": "vanessaguilar98@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Diego Aguilar Arce",
+      "reason": "correo_actual_preservado",
+      "email": "daguilararce90@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Diego Alonso Miranda Arce",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Karen Aguilar Castro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Rosibel Aguilar Castro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Oscar Aguilar Enriquez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Gianina Aguilar Jiménez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Julio Aguilar Marin",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "MAIKEL GABRIEL AGUILAR MORA",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Fabricio Aguilar Quiros",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Daniel Aguilar Quirós",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Brayan Aguilar Rivera",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Luis Alonso Aguilar Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "LUIS MIGUEL CERDAS RODRIGUEZ",
+      "reason": "correo_actual_preservado",
+      "email": "luismi2001.lmcr@gmail.com",
+      "score": 0.72
+    },
+    {
+      "memberName": "LUIS CARLOS CESPEDES RODRIGUEZ",
+      "reason": "correo_actual_preservado",
+      "email": "cespedes-09@hotmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Luis Guillermo Moreno Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "LUIS ALFONSO SOLIS RODRIGUEZ",
+      "reason": "correo_actual_preservado",
+      "email": "lsolisr_345@yahoo.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Pedro David Aguilar Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Pedro Chacón Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Leticia Aguilar Rojas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Natalia Aguilar Rojas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Alvaro Aguilar Sánchez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Alvaro Chaverri Sanchez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Erick Aguilar Vindas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Carlos Alanís Guerrero",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Nicole Alanís Mora",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Estefania Alcocer Sandino",
+      "reason": "correo_actual_preservado",
+      "email": "estefaniaalcocer89@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "DAVID ALEJANDRO ALEMAN QUESADA",
+      "reason": "correo_actual_preservado",
+      "email": "alemandavid684@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Jose Ricardo Alemán Ulloa",
+      "reason": "correo_actual_preservado",
+      "email": "ricardoaleman@hotmail.es",
+      "score": 0.97
+    },
+    {
+      "memberName": "Douglas Alfaro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "HELLEN ROXANA ALFARO AGUERO",
+      "reason": "correo_actual_preservado",
+      "email": "hellenalfa99@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Isaac Alfaro Arguedas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jilma Alfaro Artavia",
+      "reason": "correo_actual_preservado",
+      "email": "jilmaalfaro@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "ANDREA ALFARO BARQUERO",
+      "reason": "correo_actual_preservado",
+      "email": "andreaalf9@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Elena Alfaro Barrantes",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Gloria Alfaro Barrantes",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Michelle Alfaro Barrantes",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "HAROLD ANDRES ALFARO BLANCO",
+      "reason": "correo_actual_preservado",
+      "email": "haroldalfa28@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Kristel Raquel Alfaro Cordero",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Valery Alfaro Gonzalez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Paz Alfaro Jiménez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Fabiana alfaro leon",
+      "reason": "correo_actual_preservado",
+      "email": "fabianaalfaroleon@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "DAVID JESUS ALFARO MIRANDA",
+      "reason": "correo_actual_preservado",
+      "email": "david8182@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Emiliana Alfaro Murillo",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Ricardo Alfaro Murillo",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Adrian Alfaro Pereira",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Anthony Alfaro Quiros",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Angie Alfaro rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "JOSE FAURICIO ALFARO SAENZ",
+      "reason": "correo_actual_preservado",
+      "email": "fauricio6122@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "JOSE RICARDO BEJARANO SAENZ",
+      "reason": "correo_actual_preservado",
+      "email": "bejaranofe@gmail.com",
+      "score": 0.88
+    },
+    {
+      "memberName": "ANDREA ALFARO SALAZAR",
+      "reason": "correo_actual_preservado",
+      "email": "andrea_as24@hotmail.com",
+      "score": 0.88
+    },
+    {
+      "memberName": "Alvaro Alfaro Segura",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Heidy Alfaro Segura",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Luis Alberto Alfaro Ugalde",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose Daniel Alfaro Vega",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Bersay Alfaro Villalobos",
+      "reason": "correo_actual_preservado",
+      "email": "bersayalfaro21@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Pamela Alfaro Villalobos",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "CRISTHIAN ALONSO CORRALES JIMENEZ",
+      "reason": "correo_actual_preservado",
+      "email": "cristhiancorrales700@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "JUAN LEONARDO ALPIZAR ARCE",
+      "reason": "correo_actual_preservado",
+      "email": "juanalpizar97@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Juan Diego Arrieta Arce",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Rolando Alpizar Arroyo",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Samantha Alpizar Chacón",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Valery Alpizar Gomez",
+      "reason": "correo_actual_preservado",
+      "email": "valeryalpizar17@hotmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Olga Alpizar Rojas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Ana Alvarado",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Isaac Alvarado",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Laura Alvarado",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Warner Alvarado",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Alexander Alvarado Arias",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "MATIAS ALVARADO BENAVIDES",
+      "reason": "correo_actual_preservado",
+      "email": "matiasarj@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Bryan Alvarado Calvo",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Henry Alvarado Calvo",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Josue Alvarado Calvo",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Keilyn Alvarado Campos",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Nicole Alvarado Chaves",
+      "reason": "correo_actual_preservado",
+      "email": "nicolealvaradoch@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Dayana Alvarado Martinez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Angie Milena Alvarado Morales",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Josue Alvarado Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Eduardo Alvarado Rodríguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Gabriel Alvarado Rojas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "SANDRA MARIA ALVARADO ROJAS",
+      "reason": "correo_actual_preservado",
+      "email": "sandra.67ar@gmail.com",
+      "score": 0.88
+    },
+    {
+      "memberName": "Gabriel Alvarado Vargas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "HENRY FABIAN ALVARADO VARGAS",
+      "reason": "correo_actual_preservado",
+      "email": "fabianva1299@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Victoria Alvarado Villegas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Erick Alvarado Zuñiga",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Cintia Vanessa Alvares Quiroz",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Anthony Alvarez Artavia",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jason Alvarez Castro",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "JUAN JOSE ALVAREZ HIDALGO",
+      "reason": "correo_actual_preservado",
+      "email": "juanjose.ah.ucr@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Juan Carlos Arce Hidalgo",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "RACHEL FIORELLA ALVAREZ MURILLO",
+      "reason": "correo_actual_preservado",
+      "email": "rachelalvarezmurillo@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Edson Alvarez Obando",
+      "reason": "correo_actual_preservado",
+      "email": "edsonobando18@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Randall Alvarez Obando",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "DIANA MARIA ALVAREZ QUESADA",
+      "reason": "correo_actual_preservado",
+      "email": "jdalvarezs12@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Marvin Alvarez Salas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose David Alvarez Salazar",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "LILLIAM RUTH ALVAREZ VILLEGAS",
+      "reason": "correo_actual_preservado",
+      "email": "lavruth73@hotmail.com",
+      "score": 0.72
+    },
+    {
+      "memberName": "Jean Carlos Amador",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Katherine Amador Cardona",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "JOHANIA ESTHER AMADOR GONZALEZ",
+      "reason": "correo_actual_preservado",
+      "email": "joha.amador94@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "JOSE ADRIAN AMADOR ROMERO",
+      "reason": "correo_actual_preservado",
+      "email": "joseamador4024@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "OSCAR ANDREY ANCHIA TINOCO",
+      "reason": "correo_actual_preservado",
+      "email": "andreyanchia7@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Tatiana Angulo Sanchez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Alberto Antonio López",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Joey Apui Briceño",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Engels Arafat Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Victoria Aragon Arce",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "ANA VICTORIA ARATA CHAVES",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "JAVIER ARATA CHAVES",
+      "reason": "correo_actual_preservado",
+      "email": "javiarata05@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "JUAN JOSE ARATA RODRIGUEZ",
+      "reason": "correo_actual_preservado",
+      "email": "jaratar17@hotmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Juan Vicente Herrera Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "DINA BEATRIZ ARAUZ GONZALEZ",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Yerlin Aráuz González",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Oscar Roberto Arauz Villareal",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Yerlin Araya Aguilar",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "VALENTINA ARAYA BERROCAL",
+      "reason": "correo_actual_preservado",
+      "email": "varayaberrocal@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Luisa María Araya Castro",
+      "reason": "correo_actual_preservado",
+      "email": "luisaarayacastro@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Gabriela Judith Araya Chavarria",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Erick Alonso Araya Chavarría",
+      "reason": "correo_actual_preservado",
+      "email": "erick00araya@gmail.com",
+      "score": 0.97
+    },
+    {
+      "memberName": "Jazmin Araya Fernandez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Juan Daniel Araya Gomez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Yesenia Araya Huertas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Steven Araya Jara",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Andres Felipe Araya Jimenez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "CRISTHOPER ALBERTO ARAYA JIMENEZ",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "KIMBERLLY DAYANA ARAYA JIMENEZ",
+      "reason": "correo_actual_preservado",
+      "email": "kimarayaj@gmail.com",
+      "score": 0.86
+    },
+    {
+      "memberName": "Luis Diego Araya Jimenez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Valeria Araya Jimenez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Carlos Araya Lopez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "CARLOS MAURICIO MENDOZA LOPEZ",
+      "reason": "correo_actual_preservado",
+      "email": "mauriciocl20@icloud.com",
+      "score": 0.88
+    },
+    {
+      "memberName": "Joseph Araya Mata",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Jose David Araya Molina",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Wilmer Araya Perez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Yamna Araya Quesada",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "DANNA ARAYA RODRIGUEZ",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Dereck Araya Rodriguez",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "DILAN ANDREY ARAYA RODRIGUEZ",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Pablo Araya Rojas",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Roger Araya Saborio",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Gerald Araya Solano",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "MARIELA ARAYA SOLORZANO",
+      "reason": "correo_actual_preservado",
+      "email": "maaraya@coopelesca.co.cr",
+      "score": 0.86
+    },
+    {
+      "memberName": "Marjorie Arce Calderón",
+      "reason": "sin_mejora_clara"
+    },
+    {
+      "memberName": "Alberto Arce Campos",
+      "reason": "correo_actual_preservado",
+      "email": "albertoarcecampos2005@gmail.com",
+      "score": 1
+    },
+    {
+      "memberName": "Allan Arce Campos",
+      "reason": "correo_actual_preservado",
+      "email": "allanac830@gmail.com",
+      "score": 0.86
+    }
+  ]
+}
