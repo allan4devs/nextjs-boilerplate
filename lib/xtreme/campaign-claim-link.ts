@@ -47,6 +47,11 @@ export const CLAIM_LINK_AUDIENCES = new Set([
   "plan_month",
   "plan_senior",
   "all",
+  // Re-engagement que aún no activaron cuenta → magic link
+  "sent_not_registered",
+  "opened_not_registered",
+  "free_day_convert",
+  "plan_expired_recent",
 ]);
 
 /** Enlaces de campaña para activar app: 72 h (lotes grandes). */

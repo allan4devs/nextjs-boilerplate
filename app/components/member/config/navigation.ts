@@ -23,6 +23,6 @@ export const TAB_SUBTITLES: Record<TabId, string> = {
   resumen: "Membresía, racha y próximo paso",
   entrenar: "Plan, clases y check-in del día",
   maquinas: "Guía de máquinas con video",
-  progreso: "Logros, medidas y ranking",
+  progreso: "Logros, historial y ranking",
   perfil: "Carné, PIN, avisos y ayuda",
 };

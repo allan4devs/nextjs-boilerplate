@@ -2,13 +2,14 @@
 
 /**
  * Tab Progreso - inventario de logros, medidas corporales con
- * graficos de tendencia, leaderboard y ultimos entrenos.
+ * graficos de tendencia, leaderboard e historial (ingresos + entrenos).
  */
 
-import { Award, ChevronRight, Flame, Lock, Medal, Ruler, Target, Timer } from "lucide-react";
+import { Award, ChevronRight, Flame, Lock, Medal, Ruler, Target } from "lucide-react";
 import { CHART_CYAN, CHART_LIME, LineTrendChart } from "../../charts";
 import { GameLabel } from "../../GameOS";
 import { BadgeGallery } from "../../gamification";
+import { VisitHistoryList, WorkoutHistoryList } from "../ActivityHistory";
 import Avatar from "../Avatar";
 import type { MemberOs } from "../useMemberOs";
 
@@ -29,7 +30,10 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
     latestMetric,
     metricTrend,
     leaderboard,
-    recentWorkouts,
+    currentMember,
+    visitHistory,
+    totalVisits,
+    isLoadingVisitHistory,
   } = os;
 
   return (
@@ -223,36 +227,13 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
         </div>
       </div>
 
-      <div className="border border-white/10 bg-white/[0.04] p-5">
-        <div className="flex items-center gap-3">
-          <Timer className="h-5 w-5 text-cyan-300" />
-          <h2 className="text-lg font-black uppercase">Ultimos registros</h2>
-        </div>
-        <div className="mt-5 space-y-3">
-          {recentWorkouts.length ? (
-            recentWorkouts.map((workout) => (
-              <div key={workout.id} className="border border-white/10 bg-black/20 p-3">
-                <p className="font-black uppercase">{workout.trainingName}</p>
-                <p className="mt-1 text-xs font-semibold text-white/45">
-                  {workout.completedDate} · {workout.minutes > 0 ? `${workout.minutes} min` : "Sin duración"} · {workout.intensity}
-                </p>
-                {!!workout.exercises?.length && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {workout.exercises.map((exercise) => (
-                      <span key={exercise.id} className="border border-cyan-300/25 bg-cyan-300/[.06] px-2 py-1 text-[10px] font-black uppercase text-cyan-100/70">
-                        {exercise.exerciseName}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className="text-sm font-semibold text-white/45">
-              Todavia no hay registros. Primer entreno y arranca la racha, pura vida.
-            </p>
-          )}
-        </div>
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+        <VisitHistoryList
+          visits={unlocked ? visitHistory : []}
+          totalVisits={unlocked ? totalVisits : 0}
+          loading={unlocked && isLoadingVisitHistory && visitHistory.length === 0}
+        />
+        <WorkoutHistoryList workouts={unlocked ? currentMember.workouts : []} />
       </div>
     </div>
   );

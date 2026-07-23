@@ -104,6 +104,24 @@ export type ActiveVisit = {
   reminderAfterMinutes: number;
 };
 
+/** Registro de ingreso al gym (check-in) para el historial del socio. */
+export type VisitHistoryRecord = {
+  id: string;
+  date: string;
+  checkedInAt: string | null;
+  checkedOutAt: string | null;
+  durationMinutes: number | null;
+  open: boolean;
+  method: "code" | "name" | "pin" | "admin" | "cedula" | "face" | string;
+  by: "kiosk" | "admin" | "reception" | string;
+};
+
+export type VisitHistoryResponse = {
+  activeVisit: ActiveVisit | null;
+  visits: VisitHistoryRecord[];
+  totalVisits: number;
+};
+
 export type Member = {
   memberName: string;
   normalizedName: string;

@@ -23,8 +23,12 @@ import {
   type MemberDoc,
   type PendingRegistrationDoc,
 } from "@/lib/xtreme/shared";
-import type { EmailAudience } from "@/lib/xtreme/email-campaigns";
+import {
+  REENGAGE_COOLDOWN_DAYS,
+  type EmailAudience,
+} from "@/lib/xtreme/email-campaigns";
 import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
+import { membershipStatus } from "@/lib/xtreme/shared";
 
 export const EMAIL_AUDIENCE_IDS = [
   "claim_recovered",
@@ -54,6 +58,15 @@ export const EMAIL_AUDIENCE_IDS = [
   "plan_other",
   "no_plan",
   "all",
+  // Re-engagement / lifecycle (permiten reenvío con cooldown)
+  "sent_not_registered",
+  "opened_not_registered",
+  "registered_never_app",
+  "registered_inactive",
+  "active_app",
+  "plan_expiring",
+  "plan_expired_recent",
+  "free_day_convert",
 ] as const satisfies readonly EmailAudience[];
 
 type ContactDoc = { email: string; status?: string; category?: string; safetyReason?: string };
@@ -86,6 +99,14 @@ export type EmailAudienceDiagnostics = {
   alreadyCampaignSentEmails: number;
   /** Destinatarios que aún faltan en audiencias de activación/invitación (suma lógica de trabajo). */
   remainingActivationEmails: number;
+  /** Ya se les mandó y aún no se registraron (candidatos a re-engagement). */
+  sentNotRegisteredEmails: number;
+  /** Abrieron el enlace y no se registraron. */
+  openedNotRegisteredEmails: number;
+  /** Verificados activos en app (14 d). */
+  activeAppEmails: number;
+  /** Plan por vencer en 1–7 d. */
+  planExpiringEmails: number;
 };
 
 type PlanAudience =
@@ -311,7 +332,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   );
 
   // Ya se les mandó al menos un correo de campaña con éxito (magic link / invitación).
-  // Esas direcciones salen de TODAS las listas de campaña: solo quedan los que falta enviar.
+  // Esas direcciones salen de las listas de primer contacto: solo quedan los que falta enviar.
   const alreadyCampaignSent = new Set(
     (
       await db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).distinct("email", {
@@ -322,9 +343,62 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       .filter(Boolean),
   );
 
+  // Cooldown de re-engagement: no re-tocar a quien recibió correo en los últimos N días.
+  const cooldownSince = new Date(Date.now() - REENGAGE_COOLDOWN_DAYS * 86_400_000);
+  const recentlyCampaignSent = new Set(
+    (
+      await db
+        .collection<{ email?: string }>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION)
+        .find({
+          status: "sent",
+          $or: [
+            { sentAt: { $gte: cooldownSince } },
+            { sentAt: { $exists: false }, updatedAt: { $gte: cooldownSince } },
+          ],
+        })
+        .project({ email: 1 })
+        .toArray()
+    )
+      .map((row) => normalizeAudienceEmail(row.email))
+      .filter(Boolean),
+  );
+
+  // Deliveries de campaña para re-engagement (sent / opened / registered).
+  const campaignDeliveryRows = await db
+    .collection<{
+      email?: string;
+      status?: string;
+      sentAt?: Date;
+      openedAt?: Date;
+      registeredAt?: Date;
+      updatedAt?: Date;
+    }>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION)
+    .find({ status: { $in: ["sent", "opened", "registered"] } })
+    .project({ email: 1, status: 1, sentAt: 1, openedAt: 1, registeredAt: 1, updatedAt: 1 })
+    .toArray();
+
+  const sentNotRegisteredSet = new Set<string>();
+  const openedNotRegisteredSet = new Set<string>();
+  for (const row of campaignDeliveryRows) {
+    const email = normalizeAudienceEmail(row.email);
+    if (!email || blocked.has(email) || verifiedEmailsStrict.has(email)) continue;
+    if (isPlaceholderCampaignEmail(email)) continue;
+    if (row.registeredAt) continue;
+    if (recentlyCampaignSent.has(email)) continue;
+    // Requiere al menos un envío exitoso (status sent/opened/registered en delivery).
+    sentNotRegisteredSet.add(email);
+    if (row.openedAt || row.status === "opened") {
+      openedNotRegisteredSet.add(email);
+    }
+  }
+
   /** Quita a quien ya recibió invitación/magic link de campaña. */
   const withoutAlreadySent = (emails: string[]) =>
     emails.filter((email) => !alreadyCampaignSent.has(normalizeAudienceEmail(email)));
+
+  /** Quita a quien está en cooldown de re-engagement. */
+  const withoutRecentSend = (emails: string[]) =>
+    emails.filter((email) => !recentlyCampaignSent.has(normalizeAudienceEmail(email)));
 
   /** No verificados y sin envío previo → lo que aún falta invitar. */
   const inviteRecoverableRemaining = withoutAlreadySent(inviteRecoverable);
@@ -452,6 +526,61 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
     ...inviteRecoverableRemaining,
   ]).size;
 
+  // ── Re-engagement / lifecycle (sí reenvían; solo respetan cooldown) ──
+  const registeredNeverApp: string[] = [];
+  const registeredInactive: string[] = [];
+  const activeApp: string[] = [];
+  const planExpiring: string[] = [];
+  const planExpiredRecent: string[] = [];
+  const freeDayConvert: string[] = [];
+
+  for (const member of allEmailedMembers) {
+    const email = normalizeAudienceEmail(member.email);
+    if (!email || !uniqueEmails.has(email) || blocked.has(email)) continue;
+    if (recentlyCampaignSent.has(email)) continue;
+
+    const verified = member.emailVerified === true;
+    const nameKey = String(member.normalizedName || "").trim();
+    const openedRecently = Boolean(nameKey && activeKeys.has(nameKey));
+    const openedEver = Boolean(nameKey && everActiveKeys.has(nameKey));
+    const ms = membershipStatus(member.membership);
+    const planLabel = String(member.membership?.plan || "");
+
+    if (verified) {
+      if (!openedEver) registeredNeverApp.push(email);
+      else if (!openedRecently) registeredInactive.push(email);
+      else activeApp.push(email);
+
+      // Plan por vencer: 1–7 días restantes (incluye “vence hoy” = 0).
+      if (
+        ms.daysRemaining >= 0 &&
+        ms.daysRemaining <= 7 &&
+        !isPlaceholderCampaignEmail(email) &&
+        planLabel &&
+        !/sin plan/i.test(planLabel) &&
+        !/primer\s*d[ií]a/i.test(planLabel) &&
+        !/free\s*day/i.test(planLabel)
+      ) {
+        planExpiring.push(email);
+      }
+
+      // Vencido hace 1–29 días (win-back corto; winback_90+ es el de primer contacto).
+      const daysExpired = daysSinceIso(member.membership?.nextBillingDate, todayIso);
+      if (daysExpired != null && daysExpired >= 1 && daysExpired < 90) {
+        planExpiredRecent.push(email);
+      }
+    }
+
+    // Primer día / pase diario — invitar a pasar a un plan de pago.
+    const freeDayBucket = planAudience(member.membership?.plan, legacyRate(member));
+    if (freeDayBucket === "plan_free_day") {
+      freeDayConvert.push(email);
+    }
+  }
+
+  const sentNotRegistered = clean([...sentNotRegisteredSet]);
+  const openedNotRegistered = clean([...openedNotRegisteredSet]);
+
   return {
     claim_recovered: claimRecoveredRemaining,
     claim_native: claimNativeRemaining,
@@ -486,6 +615,15 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
         ...excelRecovered,
       ]),
     ),
+    // Re-engagement (con cooldown ya aplicado).
+    sent_not_registered: sentNotRegistered,
+    opened_not_registered: openedNotRegistered,
+    registered_never_app: clean(registeredNeverApp),
+    registered_inactive: clean(registeredInactive),
+    active_app: clean(activeApp),
+    plan_expiring: clean(planExpiring),
+    plan_expired_recent: clean(planExpiredRecent),
+    free_day_convert: withoutRecentSend(clean(freeDayConvert)),
     suppressed: blocked.size,
     diagnostics: {
       totalMembers: allMembers.length,
@@ -516,6 +654,10 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       unverifiedNotSentEmails: unverifiedNotSent.length,
       alreadyCampaignSentEmails: alreadyCampaignSent.size,
       remainingActivationEmails,
+      sentNotRegisteredEmails: sentNotRegistered.length,
+      openedNotRegisteredEmails: openedNotRegistered.length,
+      activeAppEmails: clean(activeApp).length,
+      planExpiringEmails: clean(planExpiring).length,
     },
   };
 }

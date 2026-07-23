@@ -9,6 +9,8 @@ export type {
   NotificationPrefs,
   PlanItem,
   PlanExercisePrescription,
+  VisitHistoryRecord,
+  VisitHistoryResponse,
   Workout,
   WorkoutExerciseDetail,
 } from "./member";

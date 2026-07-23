@@ -5,7 +5,10 @@ import { writeAudit } from "@/lib/xtreme/audit";
 import {
   assertSafeCampaignCta,
   extractCampaignRegistrationToken,
+  isReengageAudience,
   listAlreadyCampaignSentEmails,
+  listRecentlyCampaignSentEmails,
+  REENGAGE_COOLDOWN_DAYS,
   type EmailAudience,
   type EmailCampaignDoc,
   newEmailCampaignId,
@@ -346,16 +349,24 @@ export async function POST(req: NextRequest) {
       }
       const audiences = await buildAudienceEmails(db);
       const rawRecipients = audiences[audience] ?? [];
-      // Nunca re-encolar a quien ya recibió un envío exitoso de campaña.
-      const alreadySent = await listAlreadyCampaignSentEmails(db);
-      const recipients = rawRecipients.filter((email) => !alreadySent.has(email));
+      // Primer contacto: nunca re-encolar a quien ya tiene sent.
+      // Re-engagement: la audiencia ya respeta cooldown; refuerzo aquí por seguridad.
+      const reengage = isReengageAudience(audience);
+      const blockedSent = reengage
+        ? await listRecentlyCampaignSentEmails(db)
+        : await listAlreadyCampaignSentEmails(db);
+      const recipients = rawRecipients.filter((email) => !blockedSent.has(email));
       const excludedAlreadySent = rawRecipients.length - recipients.length;
       if (!recipients.length) {
         return NextResponse.json(
           {
-            error: alreadySent.size
-              ? `No hay destinatarios nuevos: los ${rawRecipients.length} de esta audiencia ya recibieron un correo de campaña. Usá la audiencia «No verificados · no enviados».`
-              : "La audiencia seleccionada está vacía.",
+            error: reengage
+              ? rawRecipients.length
+                ? `No hay destinatarios fuera del cooldown de ${REENGAGE_COOLDOWN_DAYS} días. Esperá o revisá la audiencia.`
+                : "La audiencia de re-engagement está vacía."
+              : blockedSent.size
+                ? `No hay destinatarios nuevos: los ${rawRecipients.length} de esta audiencia ya recibieron un correo de campaña. Usá «No verificados · no enviados» o una audiencia de re-engagement (p. ej. enviados sin registro).`
+                : "La audiencia seleccionada está vacía.",
             excludedAlreadySent,
           },
           { status: 400 },

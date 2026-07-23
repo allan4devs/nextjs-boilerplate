@@ -30,7 +30,15 @@ type AudienceId =
   | "plan_senior"
   | "plan_other"
   | "no_plan"
-  | "all";
+  | "all"
+  | "sent_not_registered"
+  | "opened_not_registered"
+  | "registered_never_app"
+  | "registered_inactive"
+  | "active_app"
+  | "plan_expiring"
+  | "plan_expired_recent"
+  | "free_day_convert";
 type CampaignProcessSummary = {
   configured: boolean;
   processed: number;
@@ -69,6 +77,10 @@ type CenterData = {
     unverifiedNotSentEmails?: number;
     alreadyCampaignSentEmails?: number;
     remainingActivationEmails?: number;
+    sentNotRegisteredEmails?: number;
+    openedNotRegisteredEmails?: number;
+    activeAppEmails?: number;
+    planExpiringEmails?: number;
   };
   campaigns: Array<{
     id: string;
@@ -170,6 +182,64 @@ const QUARANTINE_REASON_LABELS: Record<string, string> = {
 };
 
 const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: string }> = [
+  // ── Re-engagement (reenvío con cooldown de 5 días) ──
+  {
+    id: "sent_not_registered",
+    label: "★ Enviados · sin registro",
+    detail:
+      "Ya recibieron invitación/magic link y todavía no se registraron. Ideal para 2.º y 3.er aviso (cooldown 5 d).",
+    group: "Re-engagement",
+  },
+  {
+    id: "opened_not_registered",
+    label: "★ Abrieron · sin registro",
+    detail:
+      "Hicieron click en el enlace de campaña y no terminaron el registro. Muy calientes; reenvío con cooldown.",
+    group: "Re-engagement",
+  },
+  {
+    id: "registered_never_app",
+    label: "★ Registrados · nunca app",
+    detail:
+      "Correo verificado y PIN listo, pero nunca abrieron la app. Empujar primer uso (reenvío con cooldown).",
+    group: "Re-engagement",
+  },
+  {
+    id: "registered_inactive",
+    label: "★ Registrados · inactivos 14 d",
+    detail:
+      "Verificados que sí entraron alguna vez pero no abren la app hace 14+ días. Traer de vuelta.",
+    group: "Re-engagement",
+  },
+  {
+    id: "active_app",
+    label: "★ Activos en la app",
+    detail:
+      "Verificados con apertura de app en los últimos 14 días. Motivar más entrenos, reservas y racha.",
+    group: "Re-engagement",
+  },
+  {
+    id: "plan_expiring",
+    label: "★ Plan por vencer (1–7 d)",
+    detail:
+      "Plan de pago vigente que vence en 0–7 días. Recordatorio de renovación amable.",
+    group: "Re-engagement",
+  },
+  {
+    id: "plan_expired_recent",
+    label: "★ Plan vencido 1–89 d",
+    detail:
+      "Membresía vencida hace menos de 90 días. Win-back corto (permite reenvío con cooldown).",
+    group: "Re-engagement",
+  },
+  {
+    id: "free_day_convert",
+    label: "★ Primer día → plan",
+    detail:
+      "Primer día gratis / pase diario. Invitar a elegir plan semanal, quincenal o mensual.",
+    group: "Re-engagement",
+  },
+  // ── Primer contacto ──
   {
     id: "claim_recovered",
     label: "Activar · Excel / cuarentena",
@@ -645,6 +715,94 @@ const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
       "Gracias por leernos. Nos vemos en el piso.",
     ctaLabel: "Ir al sitio",
     ctaPath: "/",
+  },
+  // ── Re-engagement: plantillas listas para encolar ──
+  sent_not_registered: {
+    subject: "Todavía podés activar tu acceso en Xtreme Gym",
+    title: "Te reenviamos el enlace personal",
+    message:
+      "Hola. Hace poco te escribimos de Xtreme Gym (Ciudad Quesada) para activar tu cuenta en la app de socios, y notamos que todavía no terminaste el registro.\n\n" +
+      "No hay presión: si te interesa, con un toque abrís un enlace personal (válido 72 horas), confirmás o corregís tus datos y creás un PIN de 4 dígitos. Después entrás con tu cédula y ese PIN.\n\n" +
+      "En la app podés reservar clases, marcar entrenos y llevar tu carné digital.\n\n" +
+      "Si ya te registraste, ignorá este mensaje. Si no querés más correos, usá el enlace de preferencias al final. Equipo Xtreme Gym · Barrio San Pablo.",
+    ctaLabel: "Activar mi acceso ahora",
+    ctaPath: "/registro/confirmar",
+  },
+  opened_not_registered: {
+    subject: "Te faltó un paso en Xtreme - terminá tu registro",
+    title: "Abriste el enlace… y casi listo",
+    message:
+      "Hola. Vimos que abriste la invitación a la app de Xtreme Gym pero no se completó el registro.\n\n" +
+      "A veces el enlace se cierra a mitad o vence. Acá va uno nuevo (72 horas): revisá nombre, teléfono y cédula, creá tu PIN de 4 dígitos y listo.\n\n" +
+      "Si algo se trabó, escribinos o pasá a recepción y te ayudamos en un toque. Pura vida - Xtreme Gym, Ciudad Quesada.",
+    ctaLabel: "Terminar mi registro",
+    ctaPath: "/registro/confirmar",
+  },
+  registered_never_app: {
+    subject: "Ya tenés cuenta en Xtreme - abrí la app 1 vez",
+    title: "Tu acceso ya está listo",
+    message:
+      "Hola. Tu correo ya está verificado en Xtreme Gym y tu PIN quedó creado… pero todavía no abriste la app.\n\n" +
+      "Te toma un minuto: entrá a la app, poné tu cédula y tu PIN. Vas a ver tu plan (si tenés), reservas, entrenos y el carné digital.\n\n" +
+      "Tip: guardala en la pantalla de inicio del celu como una app. Si olvidaste el PIN, desde la misma pantalla podés pedir uno nuevo al correo.\n\n" +
+      "Te esperamos en el piso. Pura vida.",
+    ctaLabel: "Abrir mi app",
+    ctaPath: "/app",
+  },
+  registered_inactive: {
+    subject: "Hace rato no te vemos en la app de Xtreme",
+    title: "Tu racha y el piso te esperan",
+    message:
+      "Hola. Notamos que hace un tiempo no abrís la app de Xtreme Gym. El gym sigue con fuerza: máquinas, zona funcional y clases.\n\n" +
+      "Entrá un rato, mirá tu plan, marcá un entreno o reservá la clase que te guste. Si el plan se te venció, en Precios o recepción reactivás en minutos.\n\n" +
+      "Cuando quieras, te recibimos en Barrio San Pablo, Ciudad Quesada. Pura vida.",
+    ctaLabel: "Volver a la app",
+    ctaPath: "/app",
+  },
+  active_app: {
+    subject: "Vas bien en Xtreme - subí un nivel más",
+    title: "Para vos que ya usás la app",
+    message:
+      "Hola. Gracias por estar activo en la app de Xtreme Gym. Sos de los que le meten de verdad.\n\n" +
+      "Ideas rápidas para sacarle más jugo esta semana:\n" +
+      "• Marcá cada entreno al salir del gym (racha y XP)\n" +
+      "• Reservá clase de funcional o lo que te guste con anticipación\n" +
+      "• Revisá tu perfil y medidas si querés ver progreso\n" +
+      "• Activá notificaciones si todavía no, para no perder recordatorios\n\n" +
+      "Si querés un plan de trabajo con el coach o una medición, pedilo en recepción.\n\n" +
+      "Seguimos en el piso. Equipo Xtreme · Ciudad Quesada.",
+    ctaLabel: "Seguir entrenando",
+    ctaPath: "/app",
+  },
+  plan_expiring: {
+    subject: "Tu plan en Xtreme se vence pronto",
+    title: "Renová y no pierdas el ritmo",
+    message:
+      "Hola. Tu plan en Xtreme Gym se acerca al vencimiento (en los próximos días).\n\n" +
+      "Para no perder el acceso al piso ni a la app, renovamos en recepción el mismo día o desde la web de precios cuando estés listo. Si tenés dudas de tarifa (semanal, quincenal, mensual, trimestral o adultos mayores), el equipo te orienta.\n\n" +
+      "Gracias por entrenar con nosotros. Te esperamos en Barrio San Pablo, Ciudad Quesada.",
+    ctaLabel: "Ver precios y renovar",
+    ctaPath: "/precios",
+  },
+  plan_expired_recent: {
+    subject: "Tu plan en Xtreme venció - volvé cuando quieras",
+    title: "La puerta sigue abierta",
+    message:
+      "Hola. Tu membresía en Xtreme Gym se venció hace poco y nos gustaría verte de nuevo en el piso.\n\n" +
+      "Podés reactivar el plan en recepción o mirar opciones en Precios. Si ya tenés la app, entrá con tu cédula y PIN; si el acceso se cerró, renovamos y listo.\n\n" +
+      "Sin presión: cuando estés listo, te recibimos. Pura vida - Xtreme Gym, Ciudad Quesada.",
+    ctaLabel: "Reactivar mi plan",
+    ctaPath: "/precios",
+  },
+  free_day_convert: {
+    subject: "¿Y después del primer día en Xtreme?",
+    title: "Elegí el plan que te sirva",
+    message:
+      "Hola. Activaste el primer día o un pase diario en Xtreme Gym. Esperamos que te haya gustado el piso.\n\n" +
+      "Si querés seguir, tenés planes claros: semanal, quincenal, mensual, trimestral y adultos mayores. En recepción te armamos el que mejor se acomode a tu ritmo, o mirá precios en la web.\n\n" +
+      "Con plan activo aprovechás la app, reservas y todo el gym. Te esperamos en Barrio San Pablo, Ciudad Quesada.",
+    ctaLabel: "Ver planes",
+    ctaPath: "/precios",
   },
 };
 
@@ -1177,7 +1335,27 @@ export default function EmailCampaignCenter() {
               "No verif. · no enviados",
               "Lista limpia: nunca recibieron campaña",
             ],
-            [data?.diagnostics.alreadyCampaignSentEmails, "Ya enviados", "Tienen magic link / campaña sent · fuera de las listas"],
+            [data?.diagnostics.alreadyCampaignSentEmails, "Ya enviados", "Tienen magic link · fuera de 1.er contacto; sí entran en re-engagement"],
+            [
+              data?.diagnostics.sentNotRegisteredEmails ?? data?.audiences.sent_not_registered,
+              "Enviados sin registro",
+              "Re-engagement: recibieron mail y no se registraron (fuera de cooldown)",
+            ],
+            [
+              data?.diagnostics.openedNotRegisteredEmails ?? data?.audiences.opened_not_registered,
+              "Abrieron sin registro",
+              "Click en el enlace y no terminaron",
+            ],
+            [
+              data?.diagnostics.activeAppEmails ?? data?.audiences.active_app,
+              "Activos en app",
+              "Verificados con apertura en 14 d",
+            ],
+            [
+              data?.diagnostics.planExpiringEmails ?? data?.audiences.plan_expiring,
+              "Plan por vencer",
+              "1–7 días restantes",
+            ],
             [data?.diagnostics.recoveredMembers, "Fichas recuperadas", "Asignación segura y auditada"],
             [data?.diagnostics.recoveredFromExcel, "Desde Excel", "Alineados por nombre/apellidos"],
             [data?.diagnostics.recoveredFromQuarantine, "Desde cuarentena", "Re-sacados con match de nombre"],
@@ -1224,8 +1402,8 @@ export default function EmailCampaignCenter() {
         )}
       </section>
 
-      {(["Activación", "Confirmación", "Invitación masiva", "Win-back", "Segmentos", "Planes", "Listas"] as const).map((group) => {
-        // Solo categorías con gente pendiente: si ya se invitó a todos, la tarjeta no se muestra.
+      {(["Re-engagement", "Activación", "Confirmación", "Invitación masiva", "Win-back", "Segmentos", "Planes", "Listas"] as const).map((group) => {
+        // Solo categorías con gente: si el conteo es 0, la tarjeta no se muestra.
         const items = AUDIENCES.filter((item) => {
           if (item.group !== group) return false;
           if (!data) return true;
@@ -1240,7 +1418,9 @@ export default function EmailCampaignCenter() {
                 <div
                   key={item.id}
                   className={`border-2 bg-[#0c0c0c] p-4 ${
-                    group === "Activación" || group === "Invitación masiva"
+                    group === "Re-engagement"
+                      ? "border-orange-300/40"
+                      : group === "Activación" || group === "Invitación masiva"
                       ? "border-lime-300/35"
                       : "border-white/15"
                   }`}
@@ -1260,8 +1440,9 @@ export default function EmailCampaignCenter() {
       })}
       <p className="text-xs font-bold text-white/40">
         Bajas/supresiones: {data?.audiences.suppressed ?? "-"} · Ya con magic link:{" "}
-        {data?.diagnostics.alreadyCampaignSentEmails ?? "-"} (fuera de todas las listas) · Preferí
-        categorías con conteo &gt; 0 para el siguiente lote.
+        {data?.diagnostics.alreadyCampaignSentEmails ?? "-"} (fuera del 1.er contacto; sí en
+        re-engagement con cooldown 5 d) · Preferí «Re-engagement» para re-tocar y las categorías con
+        conteo &gt; 0 para el siguiente lote nuevo.
       </p>
 
       <div className="grid gap-5 xl:grid-cols-2">

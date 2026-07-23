@@ -195,7 +195,49 @@ export type EmailAudience =
   | "plan_senior"
   | "plan_other"
   | "no_plan"
-  | "all";
+  | "all"
+  /**
+   * Re-engagement: ya recibieron campaña (sent) y aún NO se registraron/verificaron.
+   * Permite reenvío con cooldown (no bloqueo permanente).
+   */
+  | "sent_not_registered"
+  /** Abrieron el enlace de campaña y aún no se registraron. */
+  | "opened_not_registered"
+  /** Verificados que nunca abrieron la app. */
+  | "registered_never_app"
+  /** Verificados sin apertura de app en 14+ días (sí entraron alguna vez). */
+  | "registered_inactive"
+  /** Verificados activos en la app (últimos 14 d) — motivación / más uso. */
+  | "active_app"
+  /** Plan pagado por vencer en 1–7 días. */
+  | "plan_expiring"
+  /** Plan vencido hace 1–29 días (win-back corto). */
+  | "plan_expired_recent"
+  /** Primer día / pase diario sin plan de pago — convertir. */
+  | "free_day_convert";
+
+/**
+ * Audiencias de re-engagement / lifecycle: SÍ se puede reenviar aunque ya
+ * exista un `sent` histórico. El procesador aplica cooldown (días recientes)
+ * en vez del bloqueo permanente de las campañas de primer contacto.
+ */
+export const REENGAGE_AUDIENCES = new Set<EmailAudience>([
+  "sent_not_registered",
+  "opened_not_registered",
+  "registered_never_app",
+  "registered_inactive",
+  "active_app",
+  "plan_expiring",
+  "plan_expired_recent",
+  "free_day_convert",
+]);
+
+/** Días mínimos entre correos de re-engagement al mismo destinatario. */
+export const REENGAGE_COOLDOWN_DAYS = 5;
+
+export function isReengageAudience(audience: string | undefined | null): boolean {
+  return REENGAGE_AUDIENCES.has(String(audience || "") as EmailAudience);
+}
 
 export type EmailCampaignDoc = {
   id: string;
@@ -270,6 +312,30 @@ export async function listAlreadyCampaignSentEmails(db: Db): Promise<Set<string>
   return new Set(
     emails
       .map((e) => normalizeCampaignEmail(e))
+      .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
+  );
+}
+
+/**
+ * Correos con envío exitoso reciente (cooldown de re-engagement).
+ * Usa sentAt si existe; si no, updatedAt (deliveries viejos sin sentAt).
+ */
+export async function listRecentlyCampaignSentEmails(
+  db: Db,
+  cooldownDays = REENGAGE_COOLDOWN_DAYS,
+): Promise<Set<string>> {
+  const since = new Date(Date.now() - Math.max(1, cooldownDays) * 86_400_000);
+  const rows = await db
+    .collection<{ email?: string }>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION)
+    .find({
+      status: "sent",
+      $or: [{ sentAt: { $gte: since } }, { sentAt: { $exists: false }, updatedAt: { $gte: since } }],
+    })
+    .project({ email: 1 })
+    .toArray();
+  return new Set(
+    rows
+      .map((row) => normalizeCampaignEmail(row.email))
       .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
   );
 }
@@ -410,21 +476,48 @@ export async function stopCampaignQueue(
 }
 
 /**
- * Saca de la cola (skipped) a quien ya tiene un envío sent en cualquier campaña.
- * Compara email normalizado (case-insensitive) para no fallar por mayúsculas.
- * Evita re-mandar magic links y desbloquea colas viejas con duplicados.
+ * Saca de la cola (skipped) a quien no debe reenviarse.
+ * - Campañas de primer contacto: bloqueo permanente si ya hay `sent` en cualquier campaña.
+ * - Re-engagement: solo si hubo envío en los últimos REENGAGE_COOLDOWN_DAYS.
  */
 export async function skipAlreadySentInQueue(
   db: Db,
   campaignId?: string,
 ): Promise<number> {
-  const already = await listAlreadyCampaignSentEmails(db);
+  let useCooldown = false;
+  if (campaignId) {
+    const campaign = await db.collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION).findOne(
+      { id: campaignId },
+      { projection: { audience: 1 } },
+    );
+    useCooldown = isReengageAudience(campaign?.audience);
+  }
+
+  const already = useCooldown
+    ? await listRecentlyCampaignSentEmails(db)
+    : await listAlreadyCampaignSentEmails(db);
   if (!already.size) return 0;
 
   const filter: Record<string, unknown> = {
     status: { $in: ["queued", "sending"] },
     ...(campaignId ? { campaignId } : {}),
   };
+
+  // Sin campaignId: solo aplicar bloqueo permanente a colas de primer contacto.
+  // Las re-engage se manejan por id de campaña al procesar.
+  if (!campaignId) {
+    const open = await db
+      .collection<EmailCampaignDoc>(EMAIL_CAMPAIGNS_COLLECTION)
+      .find({ status: { $in: ["queued", "processing"] } })
+      .project({ id: 1, audience: 1 })
+      .toArray();
+    const firstContactIds = open
+      .filter((c) => !isReengageAudience(c.audience))
+      .map((c) => c.id);
+    if (!firstContactIds.length) return 0;
+    filter.campaignId = { $in: firstContactIds };
+  }
+
   const pending = await db
     .collection<{ deliveryKey: string; email?: string }>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION)
     .find(filter)
@@ -444,7 +537,9 @@ export async function skipAlreadySentInQueue(
       $set: {
         status: "skipped",
         updatedAt: new Date(),
-        error: "Ya se le envió un correo de campaña (magic link) antes; se omite en esta cola.",
+        error: useCooldown
+          ? `Re-engagement en cooldown (${REENGAGE_COOLDOWN_DAYS} d desde el último envío); se omite.`
+          : "Ya se le envió un correo de campaña (magic link) antes; se omite en esta cola.",
       },
     },
   );
@@ -536,6 +631,7 @@ async function processOneCampaignBatch(
   }
 
   const deliveries = db.collection<EmailDeliveryDoc>(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION);
+  const reengage = isReengageAudience(campaign.audience);
 
   // 1) Desbloquear "sending" colgados (antes 10 min → se veía “pegado”).
   // No reencolar si la campaña ya no está activa (cancelada).
@@ -545,12 +641,27 @@ async function processOneCampaignBatch(
     forceAll: Boolean(options?.forceUnstick),
   });
 
-  // 2) Quien ya recibió mail de campaña (magic link) no se vuelve a procesar.
+  // 2) Filtro de reenvío:
+  //    - primer contacto: bloqueo permanente si ya hay sent
+  //    - re-engage: solo cooldown de N días
   const alreadySentSkipped = await skipAlreadySentInQueue(db, campaign.id);
 
-  // Set vivo: correos que YA tienen status "sent" (cualquier campaña).
-  // El batch de Resend SOLO incluye emails que no estén acá.
-  const alreadySentEmails = await listAlreadyCampaignSentEmails(db);
+  // Set vivo de correos que NO deben entrar al batch ahora.
+  const alreadySentEmails = reengage
+    ? await listRecentlyCampaignSentEmails(db)
+    : await listAlreadyCampaignSentEmails(db);
+
+  // En re-engage, también excluir a quien ya quedó sent en ESTA misma campaña.
+  if (reengage) {
+    const sentInThis = await deliveries
+      .find({ campaignId: campaign.id, status: "sent" })
+      .project({ email: 1 })
+      .toArray();
+    for (const row of sentInThis) {
+      const email = normalizeCampaignEmail(row.email);
+      if (email) alreadySentEmails.add(email);
+    }
+  }
 
   let batch = await deliveries
     .find({ campaignId: campaign.id, status: "queued" })
@@ -573,7 +684,7 @@ async function processOneCampaignBatch(
     }
   }
 
-  // Filtrar en memoria: nunca preparar magic link ni meter al batch a quien ya recibió.
+  // Filtrar en memoria: no meter al batch a quien no debe reenviarse ahora.
   batch = batch.filter((item) => {
     const email = normalizeCampaignEmail(item.email);
     return email && !alreadySentEmails.has(email);
@@ -585,7 +696,8 @@ async function processOneCampaignBatch(
 
   /**
    * Preparamos en serie (claim + DB); el envío va por Resend Batch API (hasta 100).
-   * Invariante: pendingSends solo tiene correos sin status "sent" previo.
+   * Invariante primer contacto: pendingSends sin status "sent" previo.
+   * Re-engage: permite reenvío fuera del cooldown.
    */
   type PendingCampaignSend = {
     deliveryKey: string;
@@ -625,7 +737,7 @@ async function processOneCampaignBatch(
       continue;
     }
 
-    // Barrera dura: ya tiene magic link / campaña enviada → no claim, no batch.
+    // Barrera: no reenviar si está en bloqueo (permanente o cooldown) o duplicado en lote.
     if (alreadySentEmails.has(emailNorm) || emailsInThisBatch.has(emailNorm)) {
       skipped += 1;
       await deliveries.updateOne(
@@ -636,7 +748,9 @@ async function processOneCampaignBatch(
             updatedAt: new Date(),
             error: emailsInThisBatch.has(emailNorm)
               ? "Duplicado en el mismo lote; omitido."
-              : "Ya se le envió un magic link de campaña; omitido del batch.",
+              : reengage
+                ? `Re-engagement en cooldown (${REENGAGE_COOLDOWN_DAYS} d); omitido del batch.`
+                : "Ya se le envió un magic link de campaña; omitido del batch.",
           },
         },
       );
@@ -651,26 +765,51 @@ async function processOneCampaignBatch(
 
     const attemptCount = Number(item.attempts || 0) + 1;
 
-    // Defensa en DB (race con otro worker): ¿apareció un "sent" del mismo email?
-    const already = await deliveries.findOne({
-      status: "sent",
-      deliveryKey: { $ne: item.deliveryKey },
-      email: { $regex: `^${emailNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
-    });
-    if (already) {
-      skipped += 1;
-      alreadySentEmails.add(emailNorm);
-      await deliveries.updateOne(
-        { deliveryKey: item.deliveryKey },
-        {
-          $set: {
-            status: "skipped",
-            updatedAt: new Date(),
-            error: "Ya se le envió un correo de campaña (magic link); omitido.",
+    // Defensa en DB (race con otro worker).
+    // Primer contacto: cualquier sent histórico. Re-engage: sent en ESTA campaña o cooldown.
+    if (!reengage) {
+      const already = await deliveries.findOne({
+        status: "sent",
+        deliveryKey: { $ne: item.deliveryKey },
+        email: { $regex: `^${emailNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+      });
+      if (already) {
+        skipped += 1;
+        alreadySentEmails.add(emailNorm);
+        await deliveries.updateOne(
+          { deliveryKey: item.deliveryKey },
+          {
+            $set: {
+              status: "skipped",
+              updatedAt: new Date(),
+              error: "Ya se le envió un correo de campaña (magic link); omitido.",
+            },
           },
-        },
-      );
-      continue;
+        );
+        continue;
+      }
+    } else {
+      const alreadyThis = await deliveries.findOne({
+        campaignId: campaign.id,
+        status: "sent",
+        deliveryKey: { $ne: item.deliveryKey },
+        email: { $regex: `^${emailNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+      });
+      if (alreadyThis) {
+        skipped += 1;
+        alreadySentEmails.add(emailNorm);
+        await deliveries.updateOne(
+          { deliveryKey: item.deliveryKey },
+          {
+            $set: {
+              status: "skipped",
+              updatedAt: new Date(),
+              error: "Ya se envió en esta misma campaña de re-engagement; omitido.",
+            },
+          },
+        );
+        continue;
+      }
     }
 
     // Magic link personal por destinatario (reintento 1x si falla).

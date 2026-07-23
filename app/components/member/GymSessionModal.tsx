@@ -655,8 +655,8 @@ function ExitStep({
           <div className="flex items-start gap-2.5 border-[2px] border-white/15 bg-white/3 p-3.5">
             <Target className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
             <p className="text-xs font-bold leading-5 text-white/45">
-              No hay ingreso abierto. Si querés el historial completo de visitas, pedile a
-              recepción que lo registren.
+              No hay ingreso abierto. Tu historial de visitas e entrenos está en la
+              pestaña Progreso.
             </p>
           </div>
           <GameButton full variant="lime" onClick={onClose}>

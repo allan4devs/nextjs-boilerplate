@@ -55,6 +55,8 @@ import type {
   PlanItem,
   ReservationState,
   ReservationsResponse,
+  VisitHistoryRecord,
+  VisitHistoryResponse,
   WorkoutExerciseDetail,
 } from "./types";
 
@@ -97,6 +99,9 @@ export function useMemberOs() {
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryResponse | null>(null);
   const [isLoadingPayments, setIsLoadingPayments] = useState(false);
   const [activeVisit, setActiveVisit] = useState<ActiveVisit | null>(null);
+  const [visitHistory, setVisitHistory] = useState<VisitHistoryRecord[]>([]);
+  const [totalVisits, setTotalVisits] = useState(0);
+  const [isLoadingVisitHistory, setIsLoadingVisitHistory] = useState(false);
   const [isRegisteringCheckout, setIsRegisteringCheckout] = useState(false);
   const visitReminderShownRef = useRef("");
 
@@ -456,30 +461,44 @@ export function useMemberOs() {
     setGymStatus(data);
   }, []);
 
-  const loadActiveVisit = useCallback(async () => {
+  const loadActiveVisit = useCallback(async (opts?: { silent?: boolean }) => {
     if (!unlocked) return;
+    if (!opts?.silent) setIsLoadingVisitHistory(true);
     try {
       const response = await fetch("/api/xtreme/visit", {
         cache: "no-store",
         credentials: "same-origin",
       });
-      if (response.status === 401 || response.status === 403) return;
-      const data = await readJson<{ activeVisit: ActiveVisit | null }>(response);
+      if (response.status === 401 || response.status === 403) {
+        setActiveVisit(null);
+        setVisitHistory([]);
+        setTotalVisits(0);
+        return;
+      }
+      const data = await readJson<VisitHistoryResponse>(response);
       setActiveVisit(data.activeVisit);
+      setVisitHistory(Array.isArray(data.visits) ? data.visits : []);
+      setTotalVisits(
+        typeof data.totalVisits === "number" ? data.totalVisits : data.visits?.length ?? 0,
+      );
     } catch {
       // Estado complementario: el siguiente poll o reload vuelve a intentar.
+    } finally {
+      if (!opts?.silent) setIsLoadingVisitHistory(false);
     }
   }, [unlocked]);
 
   useEffect(() => {
     if (!unlocked) {
       setActiveVisit(null);
+      setVisitHistory([]);
+      setTotalVisits(0);
       return;
     }
     void loadActiveVisit();
-    const timer = window.setInterval(() => void loadActiveVisit(), 60_000);
+    const timer = window.setInterval(() => void loadActiveVisit({ silent: true }), 60_000);
     const refreshVisibleVisit = () => {
-      if (document.visibilityState === "visible") void loadActiveVisit();
+      if (document.visibilityState === "visible") void loadActiveVisit({ silent: true });
     };
     document.addEventListener("visibilitychange", refreshVisibleVisit);
     return () => {
@@ -1526,5 +1545,9 @@ export function useMemberOs() {
     paymentHistory,
     isLoadingPayments,
     fetchPayments,
+    // visit / check-in history
+    visitHistory,
+    totalVisits,
+    isLoadingVisitHistory,
   };
 }

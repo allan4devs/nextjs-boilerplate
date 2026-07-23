@@ -27,6 +27,8 @@ export type {
   ReservationState,
   Routine,
   Training,
+  VisitHistoryRecord,
+  VisitHistoryResponse,
   Workout,
   WorkoutExerciseDetail,
 } from "./domain";
