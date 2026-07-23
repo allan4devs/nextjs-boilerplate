@@ -8,7 +8,7 @@
  * Sin salidas al sitio público ni al centro de apps: el socio se queda en el OS.
  */
 
-import { ArrowRight, UserRound, X } from "lucide-react";
+import { ArrowRight, LogOut, UserRound, X } from "lucide-react";
 import { GameButton } from "../GameOS";
 import Avatar from "./Avatar";
 import { TABS } from "./constants";
@@ -185,12 +185,14 @@ export default function SideNav({ os }: { os: MemberOs }) {
                 setShowLogin(false);
                 resetMember();
               }}
-              title="Cerrar sesion"
-              className={`w-full border-[3px] border-red-400/25 py-2 text-xs font-black uppercase text-red-200/70 transition hover:border-red-400/50 hover:text-red-200 ${
-                navOpen ? "block" : "lg:hidden"
+              title="Cerrar sesión"
+              aria-label="Cerrar sesión"
+              className={`flex h-12 w-full items-center border-[3px] border-red-400/25 text-xs font-black uppercase text-red-200/70 transition hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-200 sm:h-14 ${
+                navOpen ? "gap-3 px-3" : "justify-center gap-0 px-1 lg:px-0"
               }`}
             >
-              Cerrar sesion
+              <LogOut className="h-5 w-5 shrink-0" />
+              <span className={navOpen ? "block" : "lg:hidden"}>Cerrar sesión</span>
             </button>
           </div>
         )}

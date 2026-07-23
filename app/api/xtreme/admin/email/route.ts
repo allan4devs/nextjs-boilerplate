@@ -5,10 +5,6 @@ import { writeAudit } from "@/lib/xtreme/audit";
 import {
   assertSafeCampaignCta,
   extractCampaignRegistrationToken,
-  isReengageAudience,
-  listAlreadyCampaignSentEmails,
-  listRecentlyCampaignSentEmails,
-  REENGAGE_COOLDOWN_DAYS,
   type EmailAudience,
   type EmailCampaignDoc,
   newEmailCampaignId,
@@ -349,24 +345,14 @@ export async function POST(req: NextRequest) {
       }
       const audiences = await buildAudienceEmails(db);
       const rawRecipients = audiences[audience] ?? [];
-      // Primer contacto: nunca re-encolar a quien ya tiene sent.
-      // Re-engagement: la audiencia ya respeta cooldown; refuerzo aquí por seguridad.
-      const reengage = isReengageAudience(audience);
-      const blockedSent = reengage
-        ? await listRecentlyCampaignSentEmails(db)
-        : await listAlreadyCampaignSentEmails(db);
-      const recipients = rawRecipients.filter((email) => !blockedSent.has(email));
-      const excludedAlreadySent = rawRecipients.length - recipients.length;
+      // Un envío o clic anterior no excluye al destinatario. Las audiencias de
+      // activación ya sacan a quienes completaron el registro/verificación.
+      const recipients = rawRecipients;
+      const excludedAlreadySent = 0;
       if (!recipients.length) {
         return NextResponse.json(
           {
-            error: reengage
-              ? rawRecipients.length
-                ? `No hay destinatarios fuera del cooldown de ${REENGAGE_COOLDOWN_DAYS} días. Esperá o revisá la audiencia.`
-                : "La audiencia de re-engagement está vacía."
-              : blockedSent.size
-                ? `No hay destinatarios nuevos: los ${rawRecipients.length} de esta audiencia ya recibieron un correo de campaña. Usá «No verificados · no enviados» o una audiencia de re-engagement (p. ej. enviados sin registro).`
-                : "La audiencia seleccionada está vacía.",
+            error: "La audiencia seleccionada está vacía.",
             excludedAlreadySent,
           },
           { status: 400 },
@@ -408,7 +394,7 @@ export async function POST(req: NextRequest) {
         action: "email_campaign.queue",
         targetType: "system",
         targetId: id,
-        summary: `Campaña en cola para ${recipients.length} destinatarios (${excludedAlreadySent} ya enviados excluidos)`,
+        summary: `Campaña en cola para ${recipients.length} destinatarios`,
         meta: { audience, subject, excludedAlreadySent },
       });
 
@@ -585,7 +571,7 @@ export async function POST(req: NextRequest) {
         targetType: "system",
         targetId: process.campaignId || "queue",
         summary: process.configured
-          ? `Cola: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos, ${reclaimed} desbloqueados, ${alreadySkipped} ya-enviados sacados`
+          ? `Cola: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos, ${reclaimed} desbloqueados, ${alreadySkipped} duplicados sacados`
           : `Cola no procesada: ${process.error || "correo no configurado"}`,
         meta: { ...process, reclaimed, alreadySkipped },
       });

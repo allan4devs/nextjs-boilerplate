@@ -14,7 +14,6 @@ import {
   Goal,
   HelpCircle,
   Loader2,
-  LogOut,
   Pin,
   QrCode,
   ShieldCheck,
@@ -81,7 +80,6 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
     setMessage,
     setPinMode,
     setShowPin,
-    resetMember,
     paymentHistory,
     isLoadingPayments,
   } = os;
@@ -684,17 +682,6 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
               </div>
             </div>
           </div>
-        }
-        footer={
-          <button
-            type="button"
-            onClick={resetMember}
-            disabled={!memberName}
-            className="inline-flex w-full items-center justify-center gap-2 border-[3px] border-red-400/35 bg-red-500/10 px-4 py-3.5 font-black uppercase text-red-200 transition hover:border-red-400/60 hover:bg-red-500/15 disabled:opacity-45"
-          >
-            <LogOut className="h-5 w-5" />
-            Cerrar sesión
-          </button>
         }
       />
     </div>

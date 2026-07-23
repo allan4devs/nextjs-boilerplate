@@ -182,26 +182,26 @@ const QUARANTINE_REASON_LABELS: Record<string, string> = {
 };
 
 const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: string }> = [
-  // ── Re-engagement (reenvío con cooldown de 5 días) ──
+  // ── Re-engagement ──
   {
     id: "sent_not_registered",
     label: "★ Enviados · sin registro",
     detail:
-      "Ya recibieron invitación/magic link y todavía no se registraron. Ideal para 2.º y 3.er aviso (cooldown 5 d).",
+      "Ya recibieron invitación/magic link y todavía no se registraron. Incluye envíos anteriores para un 2.º o 3.er aviso.",
     group: "Re-engagement",
   },
   {
     id: "opened_not_registered",
     label: "★ Abrieron · sin registro",
     detail:
-      "Hicieron click en el enlace de campaña y no terminaron el registro. Muy calientes; reenvío con cooldown.",
+      "Hicieron click en el enlace de campaña y no terminaron el registro. Permanecen disponibles para seguimiento.",
     group: "Re-engagement",
   },
   {
     id: "registered_never_app",
     label: "★ Registrados · nunca app",
     detail:
-      "Correo verificado y PIN listo, pero nunca abrieron la app. Empujar primer uso (reenvío con cooldown).",
+      "Correo verificado y PIN listo, pero nunca abrieron la app. Empujar el primer uso.",
     group: "Re-engagement",
   },
   {
@@ -229,7 +229,7 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     id: "plan_expired_recent",
     label: "★ Plan vencido 1–89 d",
     detail:
-      "Membresía vencida hace menos de 90 días. Win-back corto (permite reenvío con cooldown).",
+      "Membresía vencida hace menos de 90 días. Win-back corto.",
     group: "Re-engagement",
   },
   {
@@ -244,115 +244,115 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     id: "claim_recovered",
     label: "Activar · Excel / cuarentena",
     detail:
-      "Pendientes de invitar: sin verificar, sin plan activo, correo alineado por Excel/cuarentena. Ya no incluye a quien recibió magic link.",
+      "Sin verificar y sin plan activo, con correo alineado por Excel/cuarentena. Incluye a quien ya recibió o abrió el enlace.",
     group: "Activación",
   },
   {
     id: "claim_native",
     label: "Activar · correo nativo",
     detail:
-      "Pendientes: sin verificar, sin plan, correo nativo. Excluye a quienes ya se les envió invitación.",
+      "Sin verificar y sin plan, con correo nativo. Incluye envíos y clics anteriores.",
     group: "Activación",
   },
   {
     id: "claim_profile",
     label: "Activar · todos sin plan",
     detail:
-      "Pendientes de activar sin plan (Excel + nativos). Solo correos a los que aún no se mandó magic link.",
+      "Pendientes de activar sin plan (Excel + nativos), aunque ya recibieran o abrieran el magic link.",
     group: "Activación",
   },
   {
     id: "claim_active_plan",
     label: "Confirmar · ya con plan",
     detail:
-      "Pendientes de confirmar: sin verificar con plan vigente. Sin reenviar a quien ya recibió el enlace.",
+      "Pendientes de confirmar: sin verificar con plan vigente. Incluye a quien ya recibió el enlace.",
     group: "Confirmación",
   },
   {
     id: "invite_recoverable",
-    label: "Invitar · aún sin envío",
+    label: "Invitar · sin registro",
     detail:
-      "Correos recuperables sin verificar que todavía no recibieron invitación/magic link. Lista de trabajo limpia.",
+      "Correos recuperables sin verificar. Solo se excluyen quienes ya completaron el registro.",
     group: "Invitación masiva",
   },
   {
     id: "unverified_not_sent",
-    label: "No verificados · no enviados",
+    label: "No verificados",
     detail:
-      "Misma lista limpia: sin verificar y sin ningún envío de campaña. Preferida para el siguiente lote.",
+      "Sin verificar, incluso si ya recibieron el correo o hicieron click sin terminar el registro.",
     group: "Invitación masiva",
   },
   {
     id: "excel_recovered",
     label: "Alineados del Excel",
     detail:
-      "Fichas con emailRecovery que aún no recibieron campaña. (Si el conteo es 0, ya se invitó a todos.)",
+      "Fichas con emailRecovery, sin excluirlas por campañas enviadas anteriormente.",
     group: "Activación",
   },
   {
     id: "winback_90",
     label: "Win-back 90-179 d",
-    detail: "Vencidos 90-179 d sin campaña enviada aún.",
+    detail: "Vencidos 90-179 d, aunque ya hayan recibido una campaña.",
     group: "Win-back",
   },
   {
     id: "winback_180",
     label: "Win-back 180-364 d",
-    detail: "Vencidos 6-12 meses sin campaña enviada aún.",
+    detail: "Vencidos 6-12 meses, aunque ya hayan recibido una campaña.",
     group: "Win-back",
   },
   {
     id: "winback_365",
     label: "Win-back +1 año",
-    detail: "Vencidos +1 año sin campaña enviada aún.",
+    detail: "Vencidos +1 año, aunque ya hayan recibido una campaña.",
     group: "Win-back",
   },
   {
     id: "possible_foreign",
     label: "Posibles extranjeros",
-    detail: "Señal blanda (DIMEX / doc / nombres). Solo pendientes de invitar.",
+    detail: "Señal blanda (DIMEX / doc / nombres), sin excluir envíos anteriores.",
     group: "Segmentos",
   },
   {
     id: "never_registered",
     label: "Nunca registrados",
-    detail: "Sin perfil verificado y sin invitación enviada todavía.",
+    detail: "Sin perfil verificado, aunque ya se les haya enviado la invitación.",
     group: "Segmentos",
   },
   {
     id: "unregistered",
     label: "Importados sin registro",
-    detail: "Importados sin perfil ni envío de invitación previo.",
+    detail: "Importados sin perfil verificado; un envío previo no los excluye.",
     group: "Segmentos",
   },
   {
     id: "pending",
     label: "Registro pendiente",
-    detail: "Pendientes de confirmar correo y sin invitación de campaña enviada.",
+    detail: "Pendientes de confirmar correo, incluidos quienes ya abrieron el enlace.",
     group: "Segmentos",
   },
   {
     id: "never_opened",
     label: "Nunca entraron a la app",
-    detail: "Verificados sin apertura de app y sin campaña enviada aún.",
+    detail: "Verificados sin apertura de app, sin excluir campañas anteriores.",
     group: "Segmentos",
   },
   {
     id: "inactive",
     label: "Sin abrir app 14 d",
-    detail: "Verificados sin apertura en 14 d y sin campaña enviada aún.",
+    detail: "Verificados sin apertura en 14 d, sin excluir campañas anteriores.",
     group: "Segmentos",
   },
   {
     id: "members",
     label: "Socios verificados",
-    detail: "Verificados que aún no recibieron un correo de campaña.",
+    detail: "Socios verificados, aunque ya hayan recibido campañas.",
     group: "Segmentos",
   },
   {
     id: "plan_week",
     label: "Plan semanal",
-    detail: "Tarifa semanal pendientes de campaña (sin envío previo).",
+    detail: "Tarifa semanal, sin excluir campañas anteriores.",
     group: "Planes",
   },
   {
@@ -1148,21 +1148,17 @@ export default function EmailCampaignCenter() {
       };
       if (!response.ok) throw new Error(json.error || "No se pudo crear la campaña.");
       const process = json.process;
-      const excluded =
-        json.excludedAlreadySent && json.excludedAlreadySent > 0
-          ? ` (${json.excludedAlreadySent} ya enviados excluidos)`
-          : "";
       if (process && !process.configured) {
         setError(
-          `Campaña en cola (${json.recipients} destinos${excluded}) pero el servidor no puede enviar: ${process.error || "revisá EMAIL_SENDING_ENABLED / Resend"}.`,
+          `Campaña en cola (${json.recipients} destinos) pero el servidor no puede enviar: ${process.error || "revisá EMAIL_SENDING_ENABLED / Resend"}.`,
         );
       } else if (process && (process.processed > 0 || process.sent > 0)) {
         setNotice(
-          `Campaña en cola para ${json.recipients} destinatarios${excluded}. Primer lote: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos. El resto sigue cada ~5 min o con «Procesar cola».`,
+          `Campaña en cola para ${json.recipients} destinatarios. Primer lote: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos. El resto sigue cada ~5 min o con «Procesar cola».`,
         );
       } else {
         setNotice(
-          `Campaña en cola para ${json.recipients} destinatarios${excluded}. El envío continúa en lotes automáticos (~cada 5 min) o con «Procesar cola ahora».`,
+          `Campaña en cola para ${json.recipients} destinatarios. El envío continúa en lotes automáticos (~cada 5 min) o con «Procesar cola ahora».`,
         );
       }
       setCampaignConsent(false); await load();
@@ -1254,7 +1250,7 @@ export default function EmailCampaignCenter() {
         setNotice(
           `Cola: ${process.sent} enviados, ${process.failed} fallidos, ${process.skipped} omitidos` +
             (process.reclaimed ? `, ${process.reclaimed} desbloqueados` : "") +
-            (process.alreadySentSkipped ? `, ${process.alreadySentSkipped} ya-enviados sacados` : "") +
+            (process.alreadySentSkipped ? `, ${process.alreadySentSkipped} duplicados sacados` : "") +
             `. Seguís con «Procesar cola» o el cron (~5 min).`,
         );
       }
@@ -1322,24 +1318,24 @@ export default function EmailCampaignCenter() {
             [data?.diagnostics.importedContactEmails, "Contactos reales", "Direcciones únicas recuperadas del Excel"],
             [
               data?.diagnostics.remainingActivationEmails ?? data?.diagnostics.inviteRecoverableEmails ?? data?.audiences.invite_recoverable,
-              "Falta enviar",
-              "Activación/invitación pendientes (sin magic link previo)",
+              "Falta registrar",
+              "Activación/invitación pendientes, incluso con magic link previo",
             ],
             [
               data?.diagnostics.inviteRecoverableTotal,
-              "Invitables (bruto)",
-              "Recuperables sin verificar, antes de sacar ya-enviados",
+              "Invitables",
+              "Recuperables sin verificar; solo salen al registrarse",
             ],
             [
               data?.diagnostics.unverifiedNotSentEmails ?? data?.audiences.unverified_not_sent,
-              "No verif. · no enviados",
-              "Lista limpia: nunca recibieron campaña",
+              "No verificados",
+              "Incluye enviados y clicks sin registro",
             ],
-            [data?.diagnostics.alreadyCampaignSentEmails, "Ya enviados", "Tienen magic link · fuera de 1.er contacto; sí entran en re-engagement"],
+            [data?.diagnostics.alreadyCampaignSentEmails, "Ya enviados", "Tienen magic link, pero siguen disponibles si no se registraron"],
             [
               data?.diagnostics.sentNotRegisteredEmails ?? data?.audiences.sent_not_registered,
               "Enviados sin registro",
-              "Re-engagement: recibieron mail y no se registraron (fuera de cooldown)",
+              "Recibieron mail y no se registraron",
             ],
             [
               data?.diagnostics.openedNotRegisteredEmails ?? data?.audiences.opened_not_registered,
@@ -1440,9 +1436,8 @@ export default function EmailCampaignCenter() {
       })}
       <p className="text-xs font-bold text-white/40">
         Bajas/supresiones: {data?.audiences.suppressed ?? "-"} · Ya con magic link:{" "}
-        {data?.diagnostics.alreadyCampaignSentEmails ?? "-"} (fuera del 1.er contacto; sí en
-        re-engagement con cooldown 5 d) · Preferí «Re-engagement» para re-tocar y las categorías con
-        conteo &gt; 0 para el siguiente lote nuevo.
+        {data?.diagnostics.alreadyCampaignSentEmails ?? "-"} (siguen en los filtros mientras no
+        completen el registro) · Los clics sin registro también permanecen disponibles.
       </p>
 
       <div className="grid gap-5 xl:grid-cols-2">
