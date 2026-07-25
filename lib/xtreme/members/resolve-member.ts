@@ -15,7 +15,7 @@
 import type { Db } from "mongodb";
 import {
   MEMBERS_COLLECTION,
-  findMemberByCedula,
+  matchCedula,
   memberAccessCode,
   normalizeKey,
   normalizeName,
@@ -54,6 +54,14 @@ function phoneDigits(value: unknown) {
   return String(value ?? "").replace(/\D/g, "");
 }
 
+function isPlaceholderMember(member: MemberDoc) {
+  const placeholder = /^(?:NULO|NULL|SIN NOMBRE)(?:\s|$)/i;
+  return (
+    placeholder.test(String(member.memberName ?? "").trim()) ||
+    placeholder.test(String(member.normalizedName ?? "").trim())
+  );
+}
+
 /** Candidatos con cédula cargados (más liviano que toda la colección). */
 async function membersWithCedula(db: Db) {
   return db
@@ -68,11 +76,31 @@ async function allMembers(db: Db) {
 
 async function resolveByCedula(db: Db, raw: string): Promise<ResolvedMember | null> {
   const digits = digitsOnly(raw);
-  if (digits.length < 6) return null;
+  if (digits.length < 6 || /^0+$/.test(digits)) return null;
 
-  // Match flexible (guiones, endsWith) sobre docs con cédula.
+  // Match exacto normalizado sobre documentos con cédula.
   const withCed = await membersWithCedula(db);
-  const hit = findMemberByCedula(withCed, raw) || findMemberByCedula(withCed, digits);
+  const matches = withCed.filter(
+    (member) => matchCedula(member.cedula, raw) || matchCedula(member.cedula, digits),
+  );
+  let hit = matches.length === 1 ? matches[0] : undefined;
+
+  // Las importaciones históricas pueden dejar una fila "NULO" junto a la
+  // ficha real. No depender del orden de Mongo ni abrir una cuenta ambigua.
+  if (!hit && matches.length > 1) {
+    const realNames = matches.filter((member) => !isPlaceholderMember(member));
+    if (realNames.length === 1) {
+      hit = realNames[0];
+    } else {
+      const verified = realNames.filter((member) => member.emailVerified === true);
+      if (verified.length === 1) {
+        hit = verified[0];
+      } else {
+        const withEmail = realNames.filter((member) => Boolean(String(member.email ?? "").trim()));
+        if (withEmail.length === 1) hit = withEmail[0];
+      }
+    }
+  }
   if (!hit) return null;
   return { member: hit, memberKey: memberKeyOf(hit), resolvedBy: "cedula" };
 }

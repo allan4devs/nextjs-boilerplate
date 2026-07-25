@@ -8,3 +8,5 @@ Guía para agentes de código trabajando en este repo. La guía completa del pro
 - La verificación estándar es `npx tsc --noEmit` + `npm run build` (no requieren servidor).
 - El usuario levanta el dev server él mismo cuando quiere probar en el navegador.
 - Si un servidor quedó corriendo y estorba: `taskkill /F /IM node.exe`, o por puerto: `Get-NetTCPConnection -LocalPort 3000 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`.
+
+tengo varios agentes de codigo corriendo entonces no te extrañes si ves trabajo simultaneo o no comiteado, o se actualiza junto a ti 
