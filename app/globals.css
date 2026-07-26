@@ -482,16 +482,20 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   will-change: transform;
 }
 
-.cinema-hero-photo {
-  filter: saturate(0.82) contrast(1.12) brightness(0.68);
-  transform: scale(1.01);
+.cinema-hero-video {
+  filter: saturate(0.62) contrast(1.2) brightness(0.62);
+  transform: scale(1.015);
+}
+
+.cinema-video-control {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.38);
 }
 
 .cinema-hero-grade {
   background:
-    radial-gradient(circle at 74% 38%, rgba(255, 214, 64, 0.08), transparent 23%),
-    linear-gradient(90deg, rgba(3, 3, 3, 0.98) 0%, rgba(3, 3, 3, 0.91) 35%, rgba(3, 3, 3, 0.48) 68%, rgba(3, 3, 3, 0.73) 100%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 32%, rgba(0, 0, 0, 0.94) 100%);
+    radial-gradient(circle at 68% 36%, rgba(255, 214, 64, 0.1), transparent 24%),
+    linear-gradient(90deg, rgba(3, 3, 3, 0.76) 0%, rgba(3, 3, 3, 0.25) 51%, rgba(3, 3, 3, 0.56) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.32), transparent 34%, rgba(0, 0, 0, 0.93) 100%);
 }
 
 .cinema-fx-canvas {
@@ -667,8 +671,9 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.92));
   }
 
-  .cinema-hero-photo {
-    filter: saturate(0.76) contrast(1.14) brightness(0.58);
+  .cinema-hero-video {
+    filter: saturate(0.68) contrast(1.16) brightness(0.5);
+    object-position: 53% center;
   }
 
   .cinema-hero-grade {

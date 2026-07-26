@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import CinematicLandingFX from "../components/CinematicLandingFX";
-import HeroMediaCarousel from "../components/HeroMediaCarousel";
+import HeroTrainingVideo from "../components/HeroTrainingVideo";
 import CtaBand from "../components/CtaBand";
 import JsonLd from "../components/JsonLd";
 import LandingTrack from "../components/LandingTrack";
@@ -83,16 +83,8 @@ export default function ExtremeGymLandingPage() {
         data-cinema-stage
         className="cinema-home-hero cinema-stage relative isolate overflow-hidden border-b border-white/10 bg-[#050505]"
       >
-        <div className="cinema-stage-image absolute inset-[-2%] z-0">
-          <Image
-            src="/xtreme/piso-pesas-panoramica.webp"
-            alt="Piso de pesas de Xtreme Gym en Ciudad Quesada"
-            fill
-            priority
-            quality={82}
-            sizes="100vw"
-            className="cinema-hero-photo object-cover object-[62%_center]"
-          />
+        <div className="cinema-stage-image absolute inset-[-2%] z-0 overflow-hidden">
+          <HeroTrainingVideo />
         </div>
         <div className="cinema-hero-grade absolute inset-0 z-[1]" />
         <div className="cinema-vignette absolute inset-0 z-[1]" />
@@ -113,22 +105,22 @@ export default function ExtremeGymLandingPage() {
             </span>
           </div>
 
-          <div className="grid flex-1 items-end gap-10 py-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,.55fr)] lg:pb-14 lg:pt-16">
-            <div data-cinema-reveal className="max-w-5xl">
+          <div className="relative flex flex-1 items-end py-9 lg:pb-12 lg:pt-16">
+            <div data-cinema-reveal className="w-full">
               <p className="mb-5 flex items-center gap-3 text-[10px] font-black uppercase tracking-[.28em] text-[#f6c400]">
                 <span className="h-px w-12 bg-[#f6c400]" />
                 Entrenamiento · Ciudad Quesada
               </p>
-              <h1 className="cinema-display max-w-[1050px] text-[clamp(3.35rem,8.8vw,9rem)] font-black uppercase leading-[.78] tracking-[-.07em]">
-                No venís a
-                <span className="block text-[#f6c400]">pasar el rato.</span>
+              <h1 className="cinema-display text-[clamp(4.4rem,13vw,13rem)] font-black uppercase leading-[.68] tracking-[-.085em]">
+                <span className="block">Entrená.</span>
+                <span className="block text-right text-[#f6c400]">En serio.</span>
               </h1>
-              <div className="mt-8 grid max-w-4xl gap-6 border-t border-white/15 pt-6 md:grid-cols-[1fr_auto] md:items-end">
-                <p className="max-w-2xl text-base font-medium leading-7 text-white/62 sm:text-lg sm:leading-8">
-                  Venís a moverte, medir el avance y volver más fuerte. Nosotros ponemos el espacio,
-                  el equipo y la dirección para que esa decisión se sostenga.
+              <div className="mt-8 grid gap-6 border-t border-white/20 pt-6 md:grid-cols-[minmax(0,620px)_1fr] md:items-end md:justify-between">
+                <p className="max-w-xl text-base font-medium leading-7 text-white/72 sm:text-lg sm:leading-8">
+                  Espacio, equipo y dirección para convertir una decisión en constancia.
+                  Tu primer día va por nuestra cuenta.
                 </p>
-                <div className="flex flex-wrap gap-2.5">
+                <div className="flex flex-wrap gap-2.5 md:justify-end">
                   <Link
                     href="/primer-dia"
                     className="cinema-cta inline-flex min-h-13 items-center gap-3 bg-[#f6c400] px-5 text-xs font-black uppercase tracking-[.08em] text-black"
@@ -144,13 +136,6 @@ export default function ExtremeGymLandingPage() {
                 </div>
               </div>
             </div>
-
-            <aside
-              data-cinema-reveal
-              className="cinema-live-card relative self-end overflow-hidden border border-white/20 bg-[#080808]/88 p-2"
-            >
-              <HeroMediaCarousel />
-            </aside>
           </div>
 
           <div className="grid border-t border-white/12 bg-black/20 backdrop-blur-sm sm:grid-cols-[auto_1fr]">
@@ -166,6 +151,14 @@ export default function ExtremeGymLandingPage() {
               ))}
             </div>
           </div>
+          <a
+            href="https://www.pexels.com/video/training-at-gym-12188781/"
+            target="_blank"
+            rel="noreferrer"
+            className="absolute bottom-[5.6rem] right-20 z-20 hidden text-[8px] font-bold uppercase tracking-[.15em] text-white/35 transition hover:text-white md:block"
+          >
+            Video: utopia 36 / Pexels
+          </a>
         </div>
       </section>
 
