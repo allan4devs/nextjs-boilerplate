@@ -632,6 +632,38 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   opacity: 0.92;
 }
 
+.cinema-scene-video {
+  filter: saturate(0.7) contrast(1.16) brightness(0.72);
+  transform: scale(1.035);
+  animation: cinema-video-breathe 12s ease-in-out infinite alternate;
+}
+
+.cinema-scanline {
+  z-index: 2;
+  box-shadow: 0 0 18px rgba(246, 196, 0, 0.6);
+  animation: cinema-scan 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.cinema-marquee-track {
+  animation: cinema-marquee 24s linear infinite;
+}
+
+@keyframes cinema-video-breathe {
+  from { transform: scale(1.035) translate3d(0, 0, 0); }
+  to { transform: scale(1.09) translate3d(-0.7%, -0.4%, 0); }
+}
+
+@keyframes cinema-scan {
+  0%, 12% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 0.8; }
+  72% { transform: translateY(68vh); opacity: 0.35; }
+  73%, 100% { opacity: 0; }
+}
+
+@keyframes cinema-marquee {
+  to { transform: translateX(-50%); }
+}
+
 .cinema-image-frame:hover .cinema-scene-photo {
   filter: saturate(0.95) contrast(1.08) brightness(0.9);
   opacity: 1;
@@ -640,6 +672,10 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 .cinema-path {
   --spot-x: 50%;
   --spot-y: 50%;
+}
+
+.cinema-service-card {
+  min-height: 23rem;
 }
 
 .cinema-card-spotlight {
@@ -699,6 +735,9 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   .cinema-live-card::after,
   .cinema-image-frame::after,
   [data-cinema-reveal],
+    .cinema-scene-video,
+    .cinema-scanline,
+    .cinema-marquee-track,
     .hero-carousel-slide,
     .hero-carousel-copy,
     .hero-carousel-progress {

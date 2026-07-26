@@ -2,20 +2,18 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Activity,
   ArrowDown,
   ArrowRight,
-  CalendarCheck,
-  Dumbbell,
   MapPin,
-  Smartphone,
-  Sparkles,
+  Music2,
 } from "lucide-react";
 import CinematicLandingFX from "../components/CinematicLandingFX";
 import HeroTrainingVideo from "../components/HeroTrainingVideo";
+import ScrollSceneVideo from "../components/ScrollSceneVideo";
 import CtaBand from "../components/CtaBand";
 import JsonLd from "../components/JsonLd";
 import LandingTrack from "../components/LandingTrack";
+import { HOME_CONTENT } from "../lib/home-content";
 import { BUSINESS, SOCIAL_PROOF } from "../lib/site";
 import { gymJsonLd, pageMetadata } from "../lib/seo";
 
@@ -27,51 +25,8 @@ export const metadata: Metadata = pageMetadata({
   absoluteTitle: true,
 });
 
-const SCENES = [
-  {
-    number: "01",
-    eyebrow: "Un piso que responde",
-    title: "Todo para entrenar. Nada para distraerte.",
-    text: "Peso libre, fuerza guiada, cardio y zonas funcionales conviven en un espacio amplio. Llegás con un objetivo y encontrás el equipo para trabajarlo.",
-    image: "/xtreme/piso-maquinas-panoramica.webp",
-    alt: "Piso panorámico de máquinas de Xtreme Gym",
-    href: "/zonas",
-    cta: "Recorrer las zonas",
-    icon: Dumbbell,
-    facts: ["5 zonas", "Equipo completo", "Desde las 5 AM"],
-  },
-  {
-    number: "02",
-    eyebrow: "Member OS",
-    title: "Tu constancia también vive fuera del gym.",
-    text: "Reservas, plan, rachas, progreso y carné digital en una experiencia diseñada para decirte qué sigue, sin convertir tu entrenamiento en otra lista de tareas.",
-    image: "/xtreme/maquinas-y-entrenador-xtreme.webp",
-    alt: "Socio entrenando con acompañamiento en Xtreme Gym",
-    href: "/app",
-    cta: "Abrir la app",
-    icon: Smartphone,
-    facts: ["Reservas reales", "Progreso visible", "Acceso privado"],
-  },
-  {
-    number: "03",
-    eyebrow: "Dirección humana",
-    title: "Tecnología cuando ayuda. Personas cuando importa.",
-    text: "El equipo te orienta, la medición corporal pone contexto y la comunidad hace más fácil volver. No necesitás experiencia: necesitás un buen punto de partida.",
-    image: "/xtreme/zona-funcional-clases.webp",
-    alt: "Entrenamiento guiado en la zona funcional de Xtreme Gym",
-    href: "/beneficios",
-    cta: "Ver lo que incluye",
-    icon: Activity,
-    facts: ["Medición incluida", "Guía de instructores", "Comunidad Xtreme"],
-  },
-] as const;
-
-const PATHS = [
-  { number: "01", title: "Probá el gym", text: "Tu primer día es gratis.", href: "/primer-dia", icon: Sparkles },
-  { number: "02", title: "Elegí tu plan", text: "Semana, quincena o mes.", href: "/precios", icon: CalendarCheck },
-  { number: "03", title: "Conocé las zonas", text: "Encontrá dónde avanzar.", href: "/zonas", icon: Dumbbell },
-  { number: "04", title: "Entrá a Member OS", text: "Tu progreso en un lugar.", href: "/app", icon: Smartphone },
-] as const;
+const content = HOME_CONTENT.es;
+const { scenes: SCENES, paths: PATHS, services: SERVICES } = content;
 
 export default function ExtremeGymLandingPage() {
   return (
@@ -101,7 +56,7 @@ export default function ExtremeGymLandingPage() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f6c400]/60" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f6c400]" />
               </span>
-              Sistema Xtreme · activo
+              {content.systemStatus}
             </span>
           </div>
 
@@ -109,29 +64,28 @@ export default function ExtremeGymLandingPage() {
             <div data-cinema-reveal className="w-full">
               <p className="mb-5 flex items-center gap-3 text-[10px] font-black uppercase tracking-[.28em] text-[#f6c400]">
                 <span className="h-px w-12 bg-[#f6c400]" />
-                Entrenamiento · Ciudad Quesada
+                {content.eyebrow}
               </p>
               <h1 className="cinema-display text-[clamp(4.4rem,13vw,13rem)] font-black uppercase leading-[.68] tracking-[-.085em]">
-                <span className="block">Entrená.</span>
-                <span className="block text-right text-[#f6c400]">En serio.</span>
+                <span className="block">{content.heroLine1}</span>
+                <span className="block text-right text-[#f6c400]">{content.heroLine2}</span>
               </h1>
               <div className="mt-8 grid gap-6 border-t border-white/20 pt-6 md:grid-cols-[minmax(0,620px)_1fr] md:items-end md:justify-between">
                 <p className="max-w-xl text-base font-medium leading-7 text-white/72 sm:text-lg sm:leading-8">
-                  Espacio, equipo y dirección para convertir una decisión en constancia.
-                  Tu primer día va por nuestra cuenta.
+                  {content.heroText}
                 </p>
                 <div className="flex flex-wrap gap-2.5 md:justify-end">
                   <Link
-                    href="/primer-dia"
+                    href={content.primaryHref}
                     className="cinema-cta inline-flex min-h-13 items-center gap-3 bg-[#f6c400] px-5 text-xs font-black uppercase tracking-[.08em] text-black"
                   >
-                    Empezá gratis <ArrowRight className="h-4 w-4" />
+                    {content.primaryCta} <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
-                    href="/precios#inscripcion"
+                    href={content.secondaryHref}
                     className="inline-flex min-h-13 items-center gap-3 border border-white/25 bg-black/25 px-5 text-xs font-black uppercase tracking-[.08em] text-white backdrop-blur-md transition hover:border-white/60 hover:bg-white/10"
                   >
-                    Ver planes
+                    {content.secondaryCta}
                   </Link>
                 </div>
               </div>
@@ -140,7 +94,7 @@ export default function ExtremeGymLandingPage() {
 
           <div className="grid border-t border-white/12 bg-black/20 backdrop-blur-sm sm:grid-cols-[auto_1fr]">
             <a href="#experiencia" className="hidden min-h-20 items-center gap-3 border-r border-white/10 px-5 text-[9px] font-black uppercase tracking-[.2em] text-white/45 transition hover:text-white sm:flex">
-              Descubrí más <ArrowDown className="h-4 w-4 text-[#f6c400]" />
+              {content.discover} <ArrowDown className="h-4 w-4 text-[#f6c400]" />
             </a>
             <div className="grid grid-cols-2 sm:grid-cols-4">
               {SOCIAL_PROOF.map((item) => (
@@ -165,16 +119,26 @@ export default function ExtremeGymLandingPage() {
       <section id="experiencia" className="relative overflow-hidden border-b border-white/10 bg-[#080808] px-5 py-24 sm:px-8 lg:py-36">
         <div className="cinema-orbit absolute left-1/2 top-1/2 h-[46rem] w-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#f6c400]/10" aria-hidden />
         <div data-cinema-reveal className="relative mx-auto max-w-6xl text-center">
-          <p className="text-[10px] font-black uppercase tracking-[.28em] text-[#f6c400]">La idea es simple</p>
+          <p className="text-[10px] font-black uppercase tracking-[.28em] text-[#f6c400]">{content.ideaEyebrow}</p>
           <h2 className="cinema-display mx-auto mt-6 max-w-5xl text-[clamp(3rem,7vw,7rem)] font-black uppercase leading-[.84] tracking-[-.06em]">
-            Un buen gym no te grita.
-            <span className="block text-white/28">Te da razones para volver.</span>
+            {content.ideaTitle}
+            <span className="block text-white/28">{content.ideaHighlight}</span>
           </h2>
           <p className="mx-auto mt-8 max-w-2xl text-base font-medium leading-8 text-white/48 sm:text-lg">
-            Menos fricción. Más claridad. Un lugar que acompaña la decisión que ya tomaste.
+            {content.ideaText}
           </p>
         </div>
       </section>
+
+      <div className="cinema-marquee overflow-hidden border-b border-white/10 bg-[#f6c400] py-3 text-black" aria-hidden="true">
+        <div className="cinema-marquee-track flex w-max items-center gap-7 whitespace-nowrap text-[11px] font-black uppercase tracking-[.24em]">
+          {[0, 1].map((copy) => (
+            <span key={copy} className="flex items-center gap-7">
+              {content.marquee.map((word) => <span key={`${copy}-${word}`} className="flex items-center gap-7">{word} <span>✦</span></span>)}
+            </span>
+          ))}
+        </div>
+      </div>
 
       <div className="bg-[#050505]">
         {SCENES.map((scene, index) => {
@@ -184,18 +148,33 @@ export default function ExtremeGymLandingPage() {
               <div className={`mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center lg:gap-20 ${index % 2 ? "" : ""}`}>
                 <div data-cinema-reveal className={`relative ${index % 2 ? "lg:order-2" : ""}`}>
                   <div className="cinema-image-frame relative aspect-[4/5] overflow-hidden border border-white/12 sm:aspect-[16/11] lg:aspect-[4/5]">
-                    <Image
-                      src={scene.image}
-                      alt={scene.alt}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                      className="cinema-scene-photo object-cover transition duration-1000 hover:scale-[1.025]"
-                    />
+                    {scene.video ? (
+                      <ScrollSceneVideo src={scene.video} poster={scene.image} label={scene.alt} />
+                    ) : (
+                      <Image
+                        src={scene.image}
+                        alt={scene.alt}
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 50vw"
+                        className="cinema-scene-photo object-cover transition duration-1000 hover:scale-[1.025]"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/20" />
+                    <div className="cinema-scanline absolute inset-x-0 top-0 h-px bg-[#f6c400]/70" aria-hidden />
                     <span className="absolute left-5 top-5 text-[10px] font-black uppercase tracking-[.22em] text-[#f6c400]">Scene {scene.number}</span>
                     <div className="absolute bottom-5 left-5 right-5 flex flex-wrap gap-2">
                       {scene.facts.map((fact) => <span key={fact} className="border border-white/20 bg-black/55 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[.12em] backdrop-blur">{fact}</span>)}
                     </div>
+                    {scene.videoHref && (
+                      <a
+                        href={scene.videoHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="absolute right-5 top-5 z-10 text-[8px] font-bold uppercase tracking-[.14em] text-white/45 transition hover:text-white"
+                      >
+                        {scene.videoCredit}
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -216,14 +195,92 @@ export default function ExtremeGymLandingPage() {
         })}
       </div>
 
+      <section className="relative overflow-hidden border-b border-white/10 bg-[#ece9df] px-5 py-24 text-[#090909] sm:px-8 lg:py-32">
+        <div className="cinema-services-glow pointer-events-none absolute -right-40 top-0 h-[36rem] w-[36rem] rounded-full bg-[#f6c400]/35 blur-[120px]" aria-hidden />
+        <div className="relative mx-auto max-w-7xl">
+          <div data-cinema-reveal className="grid gap-8 border-b border-black/15 pb-9 lg:grid-cols-[1fr_.7fr] lg:items-end">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[.25em]">{content.servicesEyebrow}</p>
+              <h2 className="cinema-display mt-4 max-w-4xl text-[clamp(3.5rem,7vw,7.4rem)] font-black uppercase leading-[.78] tracking-[-.065em]">
+                {content.servicesTitle}
+              </h2>
+            </div>
+            <p className="max-w-xl text-base font-semibold leading-7 text-black/58 lg:justify-self-end">
+              {content.servicesText}
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-px overflow-hidden border border-black/15 bg-black/15 md:grid-cols-2 xl:grid-cols-4">
+            {SERVICES.map((service) => {
+              const Icon = service.icon;
+              const content = (
+                <>
+                  <div className="flex items-start justify-between">
+                    <span className="text-[10px] font-black tracking-[.18em] text-black/35">{service.number}</span>
+                    <Icon className="h-5 w-5 text-black/75 transition duration-300 group-hover:scale-110 group-hover:text-black" />
+                  </div>
+                  <div className="mt-16">
+                    <h3 className="text-2xl font-black uppercase leading-none tracking-[-.035em]">{service.title}</h3>
+                    <p className="mt-4 text-sm font-semibold leading-6 text-black/55">{service.text}</p>
+                    <p className="mt-7 border-t border-black/12 pt-4 text-[9px] font-black uppercase tracking-[.14em] text-black/45">
+                      {service.meta}
+                    </p>
+                  </div>
+                </>
+              );
+
+              return "href" in service && service.href ? (
+                <Link key={service.number} href={service.href} className="cinema-service-card group bg-[#f4f1e8] p-6 transition hover:bg-[#f6c400]">
+                  {content}
+                </Link>
+              ) : (
+                <article key={service.number} className="cinema-service-card group bg-[#f4f1e8] p-6 transition hover:bg-white">
+                  {content}
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden border-b border-white/10 bg-[#15100d] px-5 py-20 sm:px-8 lg:py-28">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_50%,rgba(246,196,0,.14),transparent_35%)]" aria-hidden />
+        <div data-cinema-reveal className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.7fr_1.3fr] lg:items-end">
+          <div>
+            <div className="grid h-16 w-16 place-items-center rounded-full border border-[#f6c400]/40 text-[#f6c400]">
+              <Music2 className="h-7 w-7" />
+            </div>
+            <p className="mt-8 text-[10px] font-black uppercase tracking-[.24em] text-[#f6c400]">{content.danceEyebrow}</p>
+            <p className="mt-3 text-sm font-bold uppercase tracking-[.12em] text-white/35">{content.danceTeacher}</p>
+          </div>
+          <div>
+            <p className="cinema-display text-[clamp(3.5rem,7vw,7.5rem)] font-black uppercase leading-[.76] tracking-[-.065em]">
+              {content.danceTitle}
+              <span className="block text-[#f6c400]">{content.danceHighlight}</span>
+            </p>
+            <p className="mt-7 max-w-3xl text-base font-medium leading-8 text-white/58 sm:text-lg">
+              {content.danceText}
+            </p>
+            <a
+              href="https://wa.me/50661792121"
+              target="_blank"
+              rel="noreferrer"
+              className="cinema-cta mt-8 inline-flex min-h-13 items-center gap-3 bg-[#f6c400] px-5 text-xs font-black uppercase tracking-[.1em] text-black"
+            >
+              {content.danceCta} <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-[#0a0a0a] px-5 py-24 sm:px-8 lg:py-32">
         <div className="mx-auto max-w-7xl">
           <div data-cinema-reveal className="flex flex-wrap items-end justify-between gap-6 border-b border-white/12 pb-8">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[.24em] text-[#f6c400]">Tu entrada</p>
-              <h2 className="cinema-display mt-4 text-5xl font-black uppercase leading-[.85] tracking-[-.055em] sm:text-7xl">Elegí por dónde empezar.</h2>
+              <p className="text-[10px] font-black uppercase tracking-[.24em] text-[#f6c400]">{content.pathsEyebrow}</p>
+              <h2 className="cinema-display mt-4 text-5xl font-black uppercase leading-[.85] tracking-[-.055em] sm:text-7xl">{content.pathsTitle}</h2>
             </div>
-            <p className="max-w-md text-sm font-medium leading-7 text-white/45">Cuatro caminos claros. Sin una pared de tarjetas compitiendo por tu atención.</p>
+            <p className="max-w-md text-sm font-medium leading-7 text-white/45">{content.pathsText}</p>
           </div>
 
           <div className="mt-8 grid gap-px bg-white/10 sm:grid-cols-2">
@@ -251,7 +308,7 @@ export default function ExtremeGymLandingPage() {
         </div>
       </section>
 
-      <CtaBand title="La decisión puede empezar hoy. El primer día corre por nuestra cuenta." cta="Ver planes y pagar" />
+      <CtaBand title={content.finalCta} cta={content.finalCtaLabel} />
     </>
   );
 }
