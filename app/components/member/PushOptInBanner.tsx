@@ -13,6 +13,7 @@ import {
   getPushCapability,
   getPushDeviceState,
   showLocalTestNotification,
+  syncPushSubscriptionWithServer,
 } from "@/app/lib/pushClient";
 
 const DISMISS_TIMESTAMP_KEY = "xtreme-push-optin-dismissed-at-v2";
@@ -41,6 +42,12 @@ export default function PushOptInBanner({ unlocked, memberName }: Props) {
       }
       const [cap, device] = await Promise.all([getPushCapability(), getPushDeviceState()]);
       if (device.active && device.permission === "granted") {
+        try {
+          await syncPushSubscriptionWithServer();
+        } catch {
+          // Si la sesión acaba de restaurarse, la tarjeta de Perfil permitirá
+          // reintentar y mostrará el error correspondiente.
+        }
         setVisible(false);
         return;
       }

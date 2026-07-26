@@ -84,6 +84,8 @@ function onlyDigits(value: string) {
 }
 
 function formatCedulaDisplay(value: string) {
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
+  if (/[A-Z]/.test(cleaned)) return cleaned;
   const digits = onlyDigits(value).slice(0, 12);
   if (digits.length <= 1) return digits;
   if (digits.length <= 5) return `${digits.slice(0, 1)}-${digits.slice(1)}`;
@@ -259,8 +261,8 @@ function ConfirmInner() {
     if (!memberName.trim() || memberName.trim().length < 3) {
       hints.memberName = "Escribí tu nombre completo.";
     }
-    if (onlyDigits(cedula).length < 6) {
-      hints.cedula = "La cédula o documento necesita al menos 6 dígitos.";
+    if (cedula.replace(/[^A-Z0-9]/gi, "").length < 5) {
+      hints.cedula = "Escribí un documento de identidad válido.";
     }
     if (onlyDigits(phone).length < 8) {
       hints.phone = "El teléfono necesita al menos 8 dígitos.";
@@ -295,7 +297,7 @@ function ConfirmInner() {
           action: "confirm",
           token,
           memberName: memberName.trim(),
-          cedula: onlyDigits(cedula),
+          cedula: cedula.toUpperCase().replace(/[^A-Z0-9-]/g, ""),
           phone: onlyDigits(phone),
           goal: goal.trim(),
           pin,
@@ -323,7 +325,7 @@ function ConfirmInner() {
       const finalName = json.memberName || memberName.trim();
       try {
         window.localStorage.setItem(STORAGE_KEY, finalName);
-        window.localStorage.setItem(CEDULA_KEY, onlyDigits(cedula));
+        window.localStorage.setItem(CEDULA_KEY, cedula.toUpperCase().replace(/[^A-Z0-9-]/g, ""));
       } catch {
         // localStorage puede fallar en modo privado
       }
@@ -511,12 +513,12 @@ function ConfirmInner() {
                   ) : null}
                 </span>
                 <input
-                  inputMode="numeric"
+                  inputMode="text"
                   autoComplete="off"
                   value={cedula}
                   onChange={(e) => setCedula(formatCedulaDisplay(e.target.value))}
                   className="mt-2 min-h-12 w-full border border-white/15 bg-black px-3 font-bold outline-none focus:border-[#d8ff3e]"
-                  placeholder="1-2345-6789"
+                  placeholder="Cédula, DIMEX o pasaporte"
                 />
                 {fieldHints.cedula ? (
                   <span className="mt-1 block text-xs font-bold text-red-300">{fieldHints.cedula}</span>

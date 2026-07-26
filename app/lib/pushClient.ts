@@ -239,6 +239,45 @@ export async function getPushDeviceState(): Promise<PushDeviceState> {
   }
 }
 
+async function registerSubscriptionOnServer(subscription: PushSubscription): Promise<void> {
+  const response = await fetch("/api/xtreme/push", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subscription: subscription.toJSON() }),
+  });
+  const data = (await response.json().catch(() => ({}))) as { error?: string };
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Entrá con tu PIN en la app y volvé a activar las notificaciones.");
+    }
+    throw new Error(data.error || "No se pudo registrar el dispositivo para push.");
+  }
+}
+
+/**
+ * Vuelve a asociar con el socio la suscripción que ya existe en este navegador.
+ * Es especialmente importante en una PWA instalada: el endpoint puede ser
+ * distinto al de la pestaña web o renovarse sin que cambie el permiso visible.
+ */
+export async function syncPushSubscriptionWithServer(): Promise<boolean> {
+  if (
+    typeof Notification === "undefined" ||
+    Notification.permission !== "granted" ||
+    !("serviceWorker" in navigator) ||
+    !("PushManager" in window)
+  ) {
+    return false;
+  }
+
+  const registration = await ensureServiceWorker();
+  const subscription = await registration.pushManager.getSubscription();
+  if (!subscription) return false;
+
+  await registerSubscriptionOnServer(subscription);
+  return true;
+}
+
 /**
  * Pide permiso, suscribe al push manager y registra el endpoint en el server.
  * Debe llamarse desde un gesto del usuario (tap).
@@ -309,24 +348,18 @@ export async function enablePushOnThisDevice(): Promise<{
     });
   }
 
-  const response = await fetch("/api/xtreme/push", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subscription: subscription.toJSON() }),
-  });
-  const data = (await response.json().catch(() => ({}))) as { error?: string };
-  if (!response.ok) {
+  try {
+    await registerSubscriptionOnServer(subscription);
+  } catch (error) {
     // Si el server rechaza (ej. sin sesión), limpiamos la sub local para no dejar estado a medias.
-    if (response.status === 401 || response.status === 403) {
+    if (error instanceof Error && error.message.includes("PIN")) {
       try {
         await subscription.unsubscribe();
       } catch {
         // ignore
       }
-      throw new Error("Entrá con tu PIN en la app y volvé a activar las notificaciones.");
     }
-    throw new Error(data.error || "No se pudo registrar el dispositivo para push.");
+    throw error;
   }
 
   return {

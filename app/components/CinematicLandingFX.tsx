@@ -102,6 +102,48 @@ export default function CinematicLandingFX() {
       return () => card.removeEventListener("pointermove", move);
     });
 
+    const orbits = document.querySelectorAll<HTMLElement>(".cinema-orbit");
+    let orbitFrame = 0;
+    const updateOrbits = () => {
+      const viewportHeight = window.innerHeight || 1;
+      orbits.forEach((orbit) => {
+        const section = orbit.parentElement;
+        if (!section) return;
+        const rect = section.getBoundingClientRect();
+        const progress = Math.min(1, Math.max(0, (viewportHeight - rect.top) / (viewportHeight + rect.height)));
+        const centered = progress * 2 - 1;
+        const travel = compactViewport ? 32 : 74;
+        const drift = compactViewport ? 14 : 32;
+        orbit.style.setProperty("--orbit-y", `${centered * travel}px`);
+        orbit.style.setProperty("--orbit-x", `${Math.sin(progress * Math.PI) * drift}px`);
+        orbit.style.setProperty("--orbit-scale", String(0.86 + progress * 0.3));
+        orbit.style.setProperty("--orbit-rotation", `${centered * 14}deg`);
+        orbit.style.setProperty("--orbit-inner-x", `${centered * -21}px`);
+        orbit.style.setProperty("--orbit-inner-y", `${centered * 14}px`);
+        orbit.style.setProperty("--orbit-inner-scale", String(1.08 - progress * 0.12));
+        orbit.style.setProperty("--orbit-inner-rotation", `${centered * -25}deg`);
+        orbit.style.setProperty("--orbit-core-x", `${centered * 32}px`);
+        orbit.style.setProperty("--orbit-core-y", `${centered * -18}px`);
+        orbit.style.setProperty("--orbit-core-scale", String(0.9 + progress * 0.22));
+        orbit.style.setProperty("--orbit-core-rotation", `${centered * 32}deg`);
+      });
+      orbitFrame = 0;
+    };
+    const requestOrbitUpdate = () => {
+      if (reducedMotion || orbitFrame) return;
+      orbitFrame = requestAnimationFrame(updateOrbits);
+    };
+    updateOrbits();
+    if (!reducedMotion) {
+      window.addEventListener("scroll", requestOrbitUpdate, { passive: true });
+      window.addEventListener("resize", requestOrbitUpdate, { passive: true });
+    }
+    const cleanupOrbits = () => {
+      if (orbitFrame) cancelAnimationFrame(orbitFrame);
+      window.removeEventListener("scroll", requestOrbitUpdate);
+      window.removeEventListener("resize", requestOrbitUpdate);
+    };
+
     let targetX = 0;
     let targetY = 0;
     let parallaxFrame = 0;
@@ -128,6 +170,7 @@ export default function CinematicLandingFX() {
     });
     if (!gl) {
       return () => {
+        cleanupOrbits();
         revealObserver.disconnect();
         cardCleanups.forEach((cleanup) => cleanup());
         stage.removeEventListener("pointermove", onPointerMove);
@@ -202,6 +245,7 @@ export default function CinematicLandingFX() {
       running = false;
       if (frame) cancelAnimationFrame(frame);
       if (parallaxFrame) cancelAnimationFrame(parallaxFrame);
+      cleanupOrbits();
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
       revealObserver.disconnect();

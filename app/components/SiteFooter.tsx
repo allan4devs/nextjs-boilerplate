@@ -62,20 +62,23 @@ export default function SiteFooter() {
             </div>
           </div>
 
-          <nav className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm font-black uppercase tracking-[0.12em] text-white/55 sm:grid-cols-3 lg:justify-items-end">
+          <nav className="grid grid-cols-2 gap-px self-start overflow-hidden border border-white/12 bg-white/10 text-xs font-black uppercase tracking-[0.12em] text-white/60 sm:grid-cols-3">
             {NAV_LINKS.map((link) => (
-              <Link key={link.href} href={english ? englishHrefs[NAV_LINKS.indexOf(link)] : link.href} className="transition hover:text-[#f6c400]">
+              <Link key={link.href} href={english ? englishHrefs[NAV_LINKS.indexOf(link)] : link.href} className="flex min-h-14 items-center justify-center bg-[#090909] px-4 text-center transition hover:bg-[#f6c400] hover:text-black">
                 {english ? navLabels[NAV_LINKS.indexOf(link)] : link.label}
               </Link>
             ))}
-            <Link href={english ? "/en/benefits" : "/beneficios"} className="transition hover:text-[#f6c400]">
+            <Link href={english ? "/en/benefits" : "/beneficios"} className="flex min-h-14 items-center justify-center bg-[#090909] px-4 text-center transition hover:bg-[#f6c400] hover:text-black">
               {english ? "Benefits" : "Beneficios"}
+            </Link>
+            <Link href="/valari" className="flex min-h-14 items-center justify-center border border-[#f6c400]/20 bg-[#f6c400]/10 px-4 text-center text-[#f6c400] transition hover:bg-[#f6c400] hover:text-black">
+              Valari Dance
             </Link>
             <a
               href={BUSINESS.maps}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 transition hover:text-[#f6c400]"
+              className="flex min-h-14 items-center justify-center gap-2 bg-[#090909] px-4 text-center transition hover:bg-[#f6c400] hover:text-black"
             >
               <MapPin className="h-4 w-4" />
               {english ? "Map" : "Mapa"}

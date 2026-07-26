@@ -14,6 +14,7 @@ import {
   getPushDeviceState,
   sendTestPush,
   showLocalTestNotification,
+  syncPushSubscriptionWithServer,
   type PushCapability,
 } from "@/app/lib/pushClient";
 
@@ -35,11 +36,19 @@ export default function PushNotificationsCard({ unlocked, compact = false }: Pro
       const [cap, device] = await Promise.all([getPushCapability(), getPushDeviceState()]);
       setCapability(cap);
       setActive(device.active && device.permission === "granted");
+      if (unlocked && device.active && device.permission === "granted") {
+        try {
+          await syncPushSubscriptionWithServer();
+        } catch {
+          // La tarjeta conserva el estado local; el botón de prueba mostrará
+          // cualquier problema de sesión o servidor de forma explícita.
+        }
+      }
     } catch {
       setCapability(null);
       setActive(false);
     }
-  }, []);
+  }, [unlocked]);
 
   useEffect(() => {
     void refresh();

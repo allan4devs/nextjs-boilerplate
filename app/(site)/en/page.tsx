@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, MapPin, Music2 } from "lucide-react";
+import { ArrowDown, ArrowRight, MapPin } from "lucide-react";
 import CinematicLandingFX from "../../components/CinematicLandingFX";
 import CtaBand from "../../components/CtaBand";
 import HeroTrainingVideo from "../../components/HeroTrainingVideo";
@@ -178,32 +178,14 @@ export default function EnglishLandingPage() {
             </div>
             <p className="max-w-xl text-base font-semibold leading-7 text-black/58 lg:justify-self-end">{content.servicesText}</p>
           </div>
-          <div className="mt-8 grid gap-px overflow-hidden border border-black/15 bg-black/15 md:grid-cols-2 xl:grid-cols-4">
+          <div className="cinema-services-grid mt-8 grid gap-px overflow-hidden border border-black/15 bg-black/15 md:grid-cols-2 xl:grid-cols-4">
             {content.services.map((service) => {
               const Icon = service.icon;
-              const body = <><div className="flex items-start justify-between"><span className="text-[10px] font-black tracking-[.18em] text-black/35">{service.number}</span><Icon className="h-5 w-5 text-black/75 transition duration-300 group-hover:scale-110 group-hover:text-black" /></div><div className="mt-16"><h3 className="text-2xl font-black uppercase leading-none tracking-[-.035em]">{service.title}</h3><p className="mt-4 text-sm font-semibold leading-6 text-black/55">{service.text}</p><p className="mt-7 border-t border-black/12 pt-4 text-[9px] font-black uppercase tracking-[.14em] text-black/45">{service.meta}</p></div></>;
+              const body = <><Image src={service.image} alt="" fill sizes="(max-width: 768px) 100vw, 25vw" className="cinema-service-photo pointer-events-none object-cover" /><div className="cinema-service-shade pointer-events-none absolute inset-0" /><div className="cinema-service-light pointer-events-none absolute inset-0" /><div className="cinema-service-sweep pointer-events-none absolute inset-y-0 -left-1/2 w-1/3" /><span className="cinema-service-ghost pointer-events-none absolute -right-2 top-8 font-black leading-none">{service.number}</span><div className="relative z-10 flex items-start justify-between"><span className="cinema-service-index text-[10px] font-black tracking-[.18em]">{service.number}</span><span className="cinema-service-icon grid h-11 w-11 place-items-center border border-black/15"><Icon className="h-5 w-5" /></span></div><div className="relative z-10 mt-16"><h3 className="cinema-service-title text-2xl font-black uppercase leading-none tracking-[-.035em]">{service.title}</h3><p className="cinema-service-copy mt-4 text-sm font-semibold leading-6">{service.text}</p><p className="cinema-service-meta mt-7 flex items-center justify-between gap-3 border-t pt-4 text-[9px] font-black uppercase tracking-[.14em]">{service.meta}{"href" in service && service.href ? <ArrowRight className="h-4 w-4 shrink-0" /> : null}</p></div></>;
               return "href" in service && service.href
-                ? <Link key={service.number} href={service.href} className="cinema-service-card group bg-[#f4f1e8] p-6 transition hover:bg-[#f6c400]">{body}</Link>
-                : <article key={service.number} className="cinema-service-card group bg-[#f4f1e8] p-6 transition hover:bg-white">{body}</article>;
+                ? <Link key={service.number} href={service.href} data-cinema-card className="cinema-service-card group relative isolate overflow-hidden bg-[#f4f1e8] p-6">{body}</Link>
+                : <article key={service.number} data-cinema-card className="cinema-service-card group relative isolate overflow-hidden bg-[#f4f1e8] p-6">{body}</article>;
             })}
-          </div>
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden border-b border-white/10 bg-[#15100d] px-5 py-20 sm:px-8 lg:py-28">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_50%,rgba(246,196,0,.14),transparent_35%)]" aria-hidden />
-        <div data-cinema-reveal className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.7fr_1.3fr] lg:items-end">
-          <div>
-            <div className="grid h-16 w-16 place-items-center rounded-full border border-[#f6c400]/40 text-[#f6c400]"><Music2 className="h-7 w-7" /></div>
-            <p className="mt-8 text-[10px] font-black uppercase tracking-[.24em] text-[#f6c400]">{content.danceEyebrow}</p>
-            <p className="mt-3 text-sm font-bold uppercase tracking-[.12em] text-white/35">{content.danceTeacher}</p>
-          </div>
-          <div>
-            <p className="cinema-display text-[clamp(3.5rem,7vw,7.5rem)] font-black uppercase leading-[.76] tracking-[-.065em]">{content.danceTitle}<span className="block text-[#f6c400]">{content.danceHighlight}</span></p>
-            <p className="mt-7 max-w-3xl text-base font-medium leading-8 text-white/58 sm:text-lg">{content.danceText}</p>
-            <a href="https://wa.me/50661792121" target="_blank" rel="noreferrer" className="cinema-cta mt-8 inline-flex min-h-13 items-center gap-3 bg-[#f6c400] px-5 text-xs font-black uppercase tracking-[.1em] text-black">
-              {content.danceCta} <ArrowRight className="h-4 w-4" />
-            </a>
           </div>
         </div>
       </section>
@@ -212,12 +194,11 @@ export default function EnglishLandingPage() {
         <div className="mx-auto max-w-7xl">
           <div data-cinema-reveal className="flex flex-wrap items-end justify-between gap-6 border-b border-white/12 pb-8">
             <div><p className="text-[10px] font-black uppercase tracking-[.24em] text-[#f6c400]">{content.pathsEyebrow}</p><h2 className="cinema-display mt-4 text-5xl font-black uppercase leading-[.85] tracking-[-.055em] sm:text-7xl">{content.pathsTitle}</h2></div>
-            <p className="max-w-md text-sm font-medium leading-7 text-white/45">{content.pathsText}</p>
           </div>
           <div className="mt-8 grid gap-px bg-white/10 sm:grid-cols-2">
             {content.paths.map((path) => {
               const Icon = path.icon;
-              return <Link key={path.number} href={path.href} data-cinema-card className="cinema-path group relative min-h-52 overflow-hidden bg-[#080808] p-6 sm:p-8"><div className="cinema-card-spotlight pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100" /><div className="relative flex h-full flex-col justify-between"><div className="flex items-start justify-between"><span className="text-[10px] font-black tracking-[.18em] text-white/28">{path.number}</span><Icon className="h-5 w-5 text-[#f6c400]" /></div><div className="mt-14 flex items-end justify-between gap-4"><div><h3 className="text-2xl font-black uppercase sm:text-3xl">{path.title}</h3><p className="mt-2 text-sm font-medium text-white/42">{path.text}</p></div><ArrowRight className="h-5 w-5 shrink-0 text-white/35 transition group-hover:translate-x-1 group-hover:text-[#f6c400]" /></div></div></Link>;
+              return <Link key={path.number} href={path.href} data-cinema-card className="cinema-path group relative min-h-52 overflow-hidden bg-[#080808] p-6 sm:p-8"><div className="cinema-card-spotlight pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100" /><div className="relative flex h-full flex-col justify-between"><div className="flex items-start justify-between"><span className="text-[10px] font-black tracking-[.18em] text-white/28">{path.number}</span><Icon className="h-5 w-5 text-[#f6c400]" /></div><div className="mt-14 flex items-end justify-between gap-4"><div><h3 className="text-2xl font-black uppercase sm:text-3xl">{path.title}</h3><p className="mt-2 text-sm font-medium text-white/42">{path.text}</p><span className="mt-5 inline-flex border border-[#f6c400]/45 px-3 py-2 text-[9px] font-black uppercase tracking-[.16em] text-[#f6c400]">Open now</span></div><ArrowRight className="h-5 w-5 shrink-0 text-white/35 transition group-hover:translate-x-1 group-hover:text-[#f6c400]" /></div></div></Link>;
             })}
           </div>
         </div>

@@ -11,6 +11,13 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
+function normalizeIdentityDocument(value: string) {
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
+  const digits = onlyDigits(cleaned);
+  const isCostaRicanShape = !/[A-Z]/.test(cleaned) && digits.length <= 9;
+  return isCostaRicanShape ? formatCrCedula(cleaned) : cleaned;
+}
+
 /** Cédula tica: 9 dígitos → 2-0685-0160 (provincia-tomo-asiento). */
 function formatCrCedula(value: string) {
   const digits = onlyDigits(value).slice(0, 9);
@@ -26,7 +33,7 @@ function looksLikeEmail(value: string) {
 function detectMode(value: string): IdentityMode {
   const raw = value.trim();
   if (!raw) return "email";
-  if (looksLikeEmail(raw) || /[a-zA-Z]/.test(raw)) return "email";
+  if (looksLikeEmail(raw)) return "email";
   return "cedula";
 }
 
@@ -84,14 +91,14 @@ function FreeDayRegisterFormInner({
     const nextMode = detectMode(fromQuery);
     setMode(nextMode);
     if (nextMode === "email") setEmail(fromQuery.trim());
-    else setCedula(formatCrCedula(fromQuery));
+    else setCedula(normalizeIdentityDocument(fromQuery));
   }, [searchParams]);
 
   const identityForResend = mode === "email" ? email : cedula;
   const canSubmit =
     mode === "email"
       ? email.trim().includes("@")
-      : onlyDigits(cedula).length >= 6 && (!needsEmail || extraEmail.trim().includes("@"));
+      : cedula.replace(/[^A-Z0-9]/gi, "").length >= 5 && (!needsEmail || extraEmail.trim().includes("@"));
 
   async function sendLink(opts: {
     mode: IdentityMode;
@@ -108,7 +115,7 @@ function FreeDayRegisterFormInner({
       if (opts.mode === "email") {
         payload.email = opts.emailValue.trim();
       } else {
-        payload.cedula = onlyDigits(opts.cedulaValue);
+        payload.cedula = normalizeIdentityDocument(opts.cedulaValue);
         if (forced) payload.email = forced;
       }
 
@@ -291,9 +298,6 @@ function FreeDayRegisterFormInner({
     );
   }
 
-  const digits = onlyDigits(cedula);
-  const cedulaComplete = digits.length === 9;
-
   return (
     <form
       id="registro"
@@ -384,63 +388,26 @@ function FreeDayRegisterFormInner({
         <label className="mt-4 block">
           <span className="mb-1.5 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-white/45">
             <CreditCard className="h-3.5 w-3.5" />
-            Cédula de identidad (CR)
+            Documento de identidad
           </span>
           <input
             type="text"
             required
             autoComplete="off"
-            inputMode="numeric"
-            pattern="[0-9\-]*"
-            maxLength={11}
+            inputMode="text"
+            maxLength={20}
             value={cedula}
             onChange={(e) => {
-              setCedula(formatCrCedula(e.target.value));
+              setCedula(normalizeIdentityDocument(e.target.value));
               setNeedsEmail(false);
               setError("");
             }}
-            placeholder="2-0685-0160"
+            placeholder="Cédula, DIMEX o pasaporte"
             className="w-full border border-white/15 bg-black/40 px-4 py-3 font-mono text-lg font-bold tracking-wide text-white outline-none placeholder:text-white/30 focus:border-[#f6c400]"
           />
           <span className="mt-1.5 block text-xs font-semibold text-white/35">
-            Formato tico:{" "}
-            <span className="font-mono text-white/55"># #### ####</span>
-            {" → "}
-            <span className="font-mono text-[#f6c400]/80">2-0685-0160</span>
-            {digits.length > 0 && (
-              <>
-                {" · "}
-                {digits.length}/9 dígitos
-                {cedulaComplete ? " ✓" : ""}
-              </>
-            )}
+            Puede ser de Costa Rica o de otro país. Escribilo tal como aparece en el documento; no necesitás elegir país.
           </span>
-          {/* Ayuda visual de los 3 bloques de la cédula */}
-          <div
-            className="mt-3 grid grid-cols-[1fr_2.2fr_2.2fr] gap-2"
-            aria-hidden
-          >
-            {[
-              { label: "Prov.", value: digits.slice(0, 1), slots: 1 },
-              { label: "Tomo", value: digits.slice(1, 5), slots: 4 },
-              { label: "Asiento", value: digits.slice(5, 9), slots: 4 },
-            ].map((block) => (
-              <div
-                key={block.label}
-                className="border border-white/10 bg-black/30 px-2 py-2 text-center"
-              >
-                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/30">
-                  {block.label}
-                </p>
-                <p className="mt-1 font-mono text-sm font-black tracking-[0.2em] text-white/80">
-                  {(block.value + "·".repeat(Math.max(0, block.slots - block.value.length))).slice(
-                    0,
-                    block.slots,
-                  )}
-                </p>
-              </div>
-            ))}
-          </div>
         </label>
       )}
 

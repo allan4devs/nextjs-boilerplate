@@ -18,7 +18,7 @@ export function normalizePhone(value: unknown) {
 }
 
 export function normalizeCedula(value: unknown) {
-  return String(value ?? "").replace(/[^\d-]/g, "").slice(0, 20);
+  return String(value ?? "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
 }
 
 export function cedulaDigits(value: unknown) {

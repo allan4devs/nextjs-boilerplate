@@ -97,17 +97,17 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     if (looksLikeEmail(identityRaw)) email = normalizeEmail(identityRaw);
     else cedulaRaw = normalizeCedula(identityRaw);
   }
-  const digits = cedulaDigits(cedulaRaw);
+  const documentLength = cedulaRaw.replace(/[^A-Z0-9]/gi, "").length;
 
-  if ((!email || !isValidEmail(email)) && digits.length < 6) {
+  if ((!email || !isValidEmail(email)) && documentLength < 5) {
     return NextResponse.json(
-      { error: "Ingresá un correo válido o tu cédula (mínimo 6 dígitos)." },
+      { error: "Ingresá un correo válido o un documento de identidad válido." },
       { status: 400 },
     );
   }
 
   const db = await getDb();
-  const rateSubject = email || `cedula:${digits}`;
+  const rateSubject = email || `documento:${cedulaRaw}`;
   const rate = await authAttemptStatus(db, req, {
     scope: "public_registration_start",
     subject: rateSubject,
@@ -120,7 +120,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
         outcome: "blocked",
         reason: "rate_limit",
         source,
-        identityHint: email ? maskedEmail(email) : `cedula:${digits.slice(-4)}`,
+        identityHint: email ? maskedEmail(email) : `documento:${cedulaRaw.slice(-4)}`,
         requestFingerprint: requestFingerprint(req),
       },
     });
@@ -132,8 +132,8 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
 
   let boundMember: MemberDoc | null = null;
 
-  if (digits.length >= 6) {
-    const byCedula = await resolveMember(db, { cedula: digits });
+  if (documentLength >= 5) {
+    const byCedula = await resolveMember(db, { cedula: cedulaRaw });
     if (byCedula?.member) boundMember = byCedula.member;
   }
 
@@ -162,7 +162,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
   const wantsEmailCorrection =
     Boolean(boundMember?.emailVerified === true) &&
     Boolean(email && isValidEmail(email)) &&
-    Boolean(digits.length >= 6) &&
+    Boolean(documentLength >= 5) &&
     Boolean(boundStoredEmail) &&
     email !== boundStoredEmail;
 
@@ -179,7 +179,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
       properties: {
         outcome: "existing_verified_account",
         source,
-        identityHint: email ? maskedEmail(email) : `cedula:${digits.slice(-4)}`,
+        identityHint: email ? maskedEmail(email) : `documento:${cedulaRaw.slice(-4)}`,
         requestFingerprint: requestFingerprint(req),
       },
     });
@@ -323,7 +323,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
       emailSent: result.ok,
       boundProfile: Boolean(expectedMemberKey),
       identityHint: maskedEmail(email),
-      viaCedula: digits.length >= 6,
+      viaCedula: documentLength >= 5,
       requestFingerprint: requestFingerprint(req),
     },
   }).catch(() => {});
@@ -638,14 +638,13 @@ async function confirmRegistration(req: NextRequest, body: Record<string, unknow
   const pin = String(body.pin ?? "").trim();
   const pinConfirm = String(body.pinConfirm ?? "").trim();
   const email = pending.email;
-  const digits = cedulaDigits(cedula);
 
   if (!memberName) {
     return NextResponse.json({ error: "El nombre es requerido." }, { status: 400 });
   }
-  if (!cedula || digits.length < 6) {
+  if (!cedula || cedula.replace(/[^A-Z0-9]/gi, "").length < 5) {
     return NextResponse.json(
-      { error: "La cédula es requerida (mínimo 6 dígitos). Revisá que esté bien." },
+      { error: "El documento de identidad es requerido. Revisá que esté bien." },
       { status: 400 },
     );
   }
