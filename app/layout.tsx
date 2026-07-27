@@ -90,7 +90,7 @@ export default function RootLayout({
           />
         </noscript>
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=AW-18016737230"
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18350075343"
           strategy="afterInteractive"
         />
         <Script id="google-ads-tag" strategy="afterInteractive">
