@@ -19,12 +19,12 @@ export default function TopHud({ os }: { os: MemberOs }) {
   } = os;
 
   return (
-    <header className="xg-safe-top sticky top-0 z-30 border-b-[3px] border-white/15 bg-[#050505]/95 backdrop-blur-md lg:pl-[84px]">
-      <div className="flex h-12 items-center gap-2 px-2 sm:h-14 sm:gap-3 sm:px-3">
+    <header className="xg-safe-top sticky top-0 z-30 border-b-2 border-white/15 bg-[#050505]/95 backdrop-blur-md lg:pl-[76px]">
+      <div className="flex h-11 items-center gap-1.5 px-2 sm:h-12 sm:gap-2 sm:px-3">
         <button
           type="button"
           onClick={() => setNavOpen(true)}
-          className="grid h-11 w-11 shrink-0 place-items-center border-[3px] border-white/20 bg-black/40 text-white lg:hidden"
+          className="grid h-9 w-9 shrink-0 place-items-center border-2 border-white/20 bg-black/40 text-white lg:hidden"
           aria-label="Abrir navegación"
         >
           <Menu className="h-5 w-5" />

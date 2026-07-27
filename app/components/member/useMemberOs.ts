@@ -102,6 +102,7 @@ export function useMemberOs() {
   const [visitHistory, setVisitHistory] = useState<VisitHistoryRecord[]>([]);
   const [totalVisits, setTotalVisits] = useState(0);
   const [isLoadingVisitHistory, setIsLoadingVisitHistory] = useState(false);
+  const [isRegisteringCheckin, setIsRegisteringCheckin] = useState(false);
   const [isRegisteringCheckout, setIsRegisteringCheckout] = useState(false);
   const visitReminderShownRef = useRef("");
 
@@ -524,8 +525,42 @@ export function useMemberOs() {
     return () => window.clearTimeout(timer);
   }, [activeVisit]);
 
-  const registerCheckout = useCallback(async () => {
-    if (!unlocked || !activeVisit || isRegisteringCheckout) return;
+  const registerCheckin = useCallback(async (): Promise<boolean> => {
+    if (!unlocked || activeVisit || isRegisteringCheckin) return false;
+    setError("");
+    setMessage("");
+    setIsRegisteringCheckin(true);
+    try {
+      const response = await fetch("/api/xtreme/visit", {
+        method: "PUT",
+        credentials: "same-origin",
+      });
+      const data = await readJson<{
+        activeVisit: ActiveVisit;
+        status?: GymStatus;
+      }>(response);
+      setActiveVisit(data.activeVisit);
+      if (data.status) setGymStatus(data.status);
+      setMessage("Ingreso registrado. El tiempo ya está corriendo.");
+      trackAction("visit_checkin", { tab: "resumen", label: "ok" });
+      return true;
+    } catch (err) {
+      requirePinAgain(err, "No se pudo registrar tu ingreso.");
+      void loadActiveVisit();
+      return false;
+    } finally {
+      setIsRegisteringCheckin(false);
+    }
+  }, [
+    activeVisit,
+    isRegisteringCheckin,
+    loadActiveVisit,
+    requirePinAgain,
+    unlocked,
+  ]);
+
+  const registerCheckout = useCallback(async (): Promise<number | null> => {
+    if (!unlocked || !activeVisit || isRegisteringCheckout) return null;
     setError("");
     setMessage("");
     setIsRegisteringCheckout(true);
@@ -551,9 +586,11 @@ export function useMemberOs() {
         tab: "resumen",
         label: duration > 0 ? `${duration}min` : "ok",
       });
+      return duration;
     } catch (err) {
       requirePinAgain(err, "No se pudo registrar tu salida.");
       void loadActiveVisit();
+      return null;
     } finally {
       setIsRegisteringCheckout(false);
     }
@@ -1515,6 +1552,7 @@ export function useMemberOs() {
     quickTraining,
     selectedTraining,
     activeVisit,
+    isRegisteringCheckin,
     isRegisteringCheckout,
     // acciones
     finishTour,
@@ -1539,6 +1577,7 @@ export function useMemberOs() {
     uploadPhoto,
     activateReminder,
     loadActiveVisit,
+    registerCheckin,
     registerCheckout,
     resetMember,
     // payment history

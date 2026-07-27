@@ -20,7 +20,7 @@ export function GameLabel({ children, tone = "lime", className = "" }: GameLabel
     yellow: "text-yellow-300",
   } as const;
   return (
-    <p className={`text-[10px] font-black uppercase tracking-[0.22em] sm:text-[11px] ${tones[tone]} ${className}`}>
+    <p className={`text-[9px] font-black uppercase tracking-[0.18em] sm:text-[10px] ${tones[tone]} ${className}`}>
       {children}
     </p>
   );
@@ -75,27 +75,27 @@ export function GamePanel({
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`xg-game-panel relative w-full overflow-hidden border-[3px] ${border} ${game.panel} ${game.shadow} text-left ${
+      className={`xg-game-panel relative w-full overflow-hidden border-2 ${border} ${game.panel} ${game.shadow} text-left ${
         onClick
           ? "xg-lift transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
           : ""
       } ${className}`}
     >
       {(title || action) && (
-        <div className={`flex items-center gap-2 border-b-[3px] ${border} ${headerBg} ${compact ? "px-3 py-2" : "px-3 py-2.5 sm:px-4"}`}>
+        <div className={`flex items-center gap-2 border-b-2 ${border} ${headerBg} ${compact ? "px-2.5 py-1.5" : "px-3 py-2"}`}>
           {Icon && (
-            <span className="grid h-8 w-8 shrink-0 place-items-center border-2 border-black/40 bg-[#d8ff3e] text-black">
+            <span className="grid h-7 w-7 shrink-0 place-items-center border-2 border-black/40 bg-[#d8ff3e] text-black">
               <Icon className="h-4 w-4" />
             </span>
           )}
           <div className="min-w-0 flex-1">
-            {title && <p className="truncate text-xs font-black uppercase tracking-[0.12em] text-white sm:text-sm">{title}</p>}
-            {subtitle && <p className="truncate text-[11px] font-bold text-white/45">{subtitle}</p>}
+            {title && <p className="truncate text-[11px] font-black uppercase tracking-[0.1em] text-white sm:text-xs">{title}</p>}
+            {subtitle && <p className="truncate text-[10px] font-bold text-white/45">{subtitle}</p>}
           </div>
           {action}
         </div>
       )}
-      <div className={`${compact ? "p-3" : "p-3 sm:p-4"} ${bodyClassName}`}>{children}</div>
+      <div className={`${compact ? "p-2.5" : "p-3"} ${bodyClassName}`}>{children}</div>
     </Tag>
   );
 }
@@ -139,7 +139,7 @@ export function GameStat({
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`xg-game-stat flex min-h-[88px] flex-col justify-between border-[3px] ${borders[tone]} bg-black/50 p-3 text-left ${game.shadow} ${
+      className={`xg-game-stat flex min-h-[72px] flex-col justify-between border-2 ${borders[tone]} bg-black/50 p-2.5 text-left ${game.shadow} ${
         onClick
           ? "xg-lift transition hover:bg-white/[0.04] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
           : ""
@@ -149,8 +149,8 @@ export function GameStat({
         <GameLabel tone={tone === "white" ? "white" : tone} className="leading-tight">{label}</GameLabel>
         {Icon && <Icon className={`h-4 w-4 shrink-0 ${labels[tone]}`} />}
       </div>
-      <div className="mt-2 text-2xl font-black uppercase leading-none tracking-tight text-white [text-shadow:0_0_18px_rgba(255,255,255,0.22)] sm:text-3xl">{value}</div>
-      {hint && <p className="mt-1.5 text-[11px] font-bold uppercase tracking-wide text-white/40">{hint}</p>}
+      <div className="mt-1.5 text-xl font-black uppercase leading-none tracking-tight text-white [text-shadow:0_0_18px_rgba(255,255,255,0.22)] sm:text-2xl">{value}</div>
+      {hint && <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-white/40">{hint}</p>}
     </Tag>
   );
 }

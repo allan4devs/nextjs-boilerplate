@@ -97,7 +97,7 @@ export function GameModal({
 
   return (
     <div
-      className={`xg-game-modal fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4 transition-all duration-[240ms] ${
+      className={`xg-game-modal fixed inset-0 z-[70] grid place-items-end overflow-hidden p-0 sm:place-items-center sm:p-5 transition-all duration-[240ms] ${
         visible ? "opacity-100" : "opacity-0"
       }`}
       role="dialog"
@@ -132,7 +132,7 @@ export function GameModal({
       <div
         ref={panelRef}
         tabIndex={-1}
-        className={`xg-game-modal-panel relative flex max-h-[92dvh] w-full flex-col border-[3px] ${border} ${game.panelRaised} outline-none sm:max-h-[88vh] ${width} transition-all duration-[240ms] ${
+        className={`xg-game-modal-panel relative flex h-auto max-h-[calc(100dvh-env(safe-area-inset-top,0px))] min-h-0 w-full flex-col overflow-hidden border-[3px] ${border} ${game.panelRaised} outline-none sm:max-h-[calc(100dvh-2.5rem)] ${width} transition-all duration-[240ms] ${
           visible
             ? "translate-y-0 opacity-100 shadow-[6px_6px_0_rgba(0,0,0,0.65),0_0_60px_var(--modal-glow)]"
             : "translate-y-4 opacity-0 shadow-none sm:translate-y-0 sm:scale-95"
@@ -141,7 +141,7 @@ export function GameModal({
       >
         {/* ── Header ── */}
         <div
-          className={`flex shrink-0 items-center gap-3 border-b-[3px] border-black/25 ${headerBg} px-3 py-3 text-black sm:px-4`}
+          className={`relative z-10 flex shrink-0 items-center gap-3 border-b-[3px] border-black/25 ${headerBg} px-3 py-3 text-black shadow-[0_5px_18px_rgba(0,0,0,.35)] sm:px-4`}
         >
           {Icon && (
             <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black/30 bg-black/15">
@@ -167,20 +167,20 @@ export function GameModal({
             type="button"
             onClick={onClose}
             aria-label="Cerrar modal"
-            className="group grid h-11 w-11 shrink-0 place-items-center border-2 border-black/30 bg-black/10 transition hover:bg-black/25 active:scale-90"
+            className="group grid h-11 w-11 shrink-0 place-items-center border-2 border-black/50 bg-black/15 transition hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black active:scale-95"
           >
             <X className="h-5 w-5 transition group-hover:rotate-90" />
           </button>
         </div>
 
         {/* ── Contenido scrolleable ── */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-5">
+        <div className="xg-game-modal-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable] sm:p-5">
           {children}
         </div>
 
         {/* ── Footer ── */}
         {footer && (
-          <div className="shrink-0 border-t-[3px] border-white/15 bg-black/40 p-3 sm:p-4">
+          <div className="relative z-10 shrink-0 border-t-[3px] border-white/15 bg-[#090909] p-3 shadow-[0_-5px_18px_rgba(0,0,0,.35)] sm:p-4">
             {footer}
           </div>
         )}
