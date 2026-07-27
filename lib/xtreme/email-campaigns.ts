@@ -14,6 +14,7 @@ import {
 } from "@/lib/xtreme/campaign-claim-link";
 import { hashRegistrationToken } from "@/lib/xtreme/registration-token";
 import { campaignClickPath } from "@/lib/xtreme/campaign-click";
+import { currentCampaignDayStart } from "@/lib/xtreme/email-campaign-policy";
 import {
   EMAIL_CAMPAIGN_DELIVERIES_COLLECTION,
   EMAIL_CAMPAIGNS_COLLECTION,
@@ -735,6 +736,35 @@ async function processOneCampaignBatch(
             status: "skipped",
             updatedAt: new Date(),
             error: "Ya se envió a este correo dentro de la misma campaña; omitido.",
+          },
+        },
+      );
+      continue;
+    }
+
+    // Barrera diaria entre campañas. Protege campañas encoladas en paralelo o
+    // antes de que se refrescara la vista del admin.
+    const recentOtherCampaign = await deliveries.findOne({
+      campaignId: { $ne: campaign.id },
+      status: "sent",
+      $or: [
+        { sentAt: { $gte: currentCampaignDayStart() } },
+        {
+          sentAt: { $exists: false },
+          updatedAt: { $gte: currentCampaignDayStart() },
+        },
+      ],
+      email: { $regex: `^${emailNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+    });
+    if (recentOtherCampaign) {
+      skipped += 1;
+      await deliveries.updateOne(
+        { deliveryKey: item.deliveryKey },
+        {
+          $set: {
+            status: "skipped",
+            updatedAt: new Date(),
+            error: "Omitido: ya recibió otra campaña hoy.",
           },
         },
       );

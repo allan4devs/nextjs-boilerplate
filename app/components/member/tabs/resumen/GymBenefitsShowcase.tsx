@@ -210,16 +210,16 @@ export default function GymBenefitsShowcase({ onGoTab }: Props) {
                   className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-105"
                   style={{ backgroundImage: `url(${item.image})` }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/25" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.38)_0%,rgba(0,0,0,.22)_35%,rgba(0,0,0,.82)_68%,rgba(0,0,0,.98)_100%)]" />
                 <div className="relative flex h-full min-h-[120px] flex-col justify-between p-3">
                   <span className="grid h-9 w-9 place-items-center border-2 border-black/40 bg-[#d8ff3e] text-black">
                     <Icon className="h-4 w-4" />
                   </span>
                   <span>
-                    <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-[#d8ff3e]">
+                    <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-[#d8ff3e]">
                       {item.eyebrow}
                     </span>
-                    <span className="mt-0.5 block text-sm font-black uppercase leading-tight">
+                    <span className="mt-1 block text-sm font-black uppercase leading-tight text-balance sm:text-base">
                       {item.title}
                     </span>
                   </span>
@@ -235,13 +235,13 @@ export default function GymBenefitsShowcase({ onGoTab }: Props) {
               className="relative h-28 bg-cover bg-center sm:h-36"
               style={{ backgroundImage: `url(${zone.image})` }}
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-black/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-black/65 to-black/20" />
               <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">
                     {zone.eyebrow}
                   </p>
-                  <h3 className="text-xl font-black uppercase sm:text-2xl">{zone.title}</h3>
+                  <h3 className="text-xl font-black uppercase leading-none text-balance sm:text-2xl">{zone.title}</h3>
                 </div>
                 <zone.icon className="h-8 w-8 text-[#d8ff3e]" />
               </div>

@@ -84,7 +84,7 @@ export const HOME_CONTENT = {
     ],
     services: [
       { number: "01", title: "Entrenamiento en sala", text: "Medición, rutina y acompañamiento de un instructor o instructora de planta.", meta: "Medición · rutina · acompañamiento", image: "/xtreme/maquinas-y-entrenador-xtreme.webp", icon: Dumbbell },
-      { number: "02", title: "Semipersonalizado", text: "Entrenamiento en grupos de máximo seis integrantes con un profesional a cargo.", meta: "Grupos de hasta 6 personas", image: "/xtreme/zona-funcional-clases.webp", icon: Users },
+      { number: "02", title: "Semi­personalizado", text: "Entrenamiento en grupos de máximo seis integrantes con un profesional a cargo.", meta: "Grupos de hasta 6 personas", image: "/xtreme/zona-funcional-clases.webp", icon: Users },
       { number: "03", title: "Zona VIP", text: "Área exclusiva dirigida por el coach Alberto Castro Porras.", meta: "Contacto · 8387-6209", image: "/xtreme/zona-entrenamiento-vip.webp", href: "https://wa.me/50683876209", icon: Sparkles },
       { number: "04", title: "InBody", text: "Mediciones antropométricas para orientar mejor tu plan de entrenamiento.", meta: "Datos para entrenar con dirección", image: "/xtreme/consultorio-medicion-corporal.webp", icon: Ruler },
       { number: "05", title: "Sala de bronceado", text: "Un espacio dedicado para conseguir y mantener el tono de piel que buscás.", meta: "Bienestar · imagen personal", image: "/xtreme/recepcion-sala-espera.webp", icon: Sun },

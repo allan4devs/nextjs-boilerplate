@@ -116,21 +116,21 @@ export default function HeroMediaCarousel() {
       <div className="absolute inset-0 z-[2] ring-1 ring-inset ring-white/10" />
 
       <div className="absolute left-4 right-4 top-4 z-[4] flex items-center justify-between gap-3">
-        <span className="inline-flex min-w-0 items-center gap-2 text-[9px] font-black uppercase tracking-[.18em] text-white">
+        <span className="inline-flex min-w-0 items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-white">
           <ScanLine className="h-4 w-4 shrink-0 text-[#f6c400]" />
           <span className="truncate">{SLIDES[active].label}</span>
         </span>
-        <span className="shrink-0 text-[9px] font-black uppercase tracking-[.18em] text-[#f6c400]">
+        <span className="shrink-0 text-[10px] font-black uppercase tracking-[.16em] text-[#f6c400]">
           {String(active + 1).padStart(2, "0")} / {String(SLIDES.length).padStart(2, "0")}
         </span>
       </div>
 
       <div className="absolute inset-x-4 bottom-4 z-[4]">
         <div key={active} className="hero-carousel-copy">
-          <p className="cinema-display text-[clamp(1.55rem,2.2vw,2.15rem)] font-black uppercase leading-[.92] tracking-[-.035em]">
+          <p className="cinema-display text-[clamp(1.55rem,2.2vw,2.15rem)] font-black uppercase leading-[.92] tracking-[-.035em] text-balance">
             {SLIDES[active].title}
           </p>
-          <p className="mt-3 text-[9px] font-bold uppercase tracking-[.16em] text-white/52">
+          <p className="mt-3 text-[10px] font-bold uppercase leading-4 tracking-[.16em] text-white/62 text-pretty">
             {SLIDES[active].detail}
           </p>
         </div>

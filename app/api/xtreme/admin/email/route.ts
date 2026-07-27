@@ -345,8 +345,8 @@ export async function POST(req: NextRequest) {
       }
       const audiences = await buildAudienceEmails(db);
       const rawRecipients = audiences[audience] ?? [];
-      // Un envío o clic anterior no excluye al destinatario. Las audiencias de
-      // activación ya sacan a quienes completaron el registro/verificación.
+      // buildAudienceEmails excluye únicamente a quienes ya recibieron una
+      // campaña durante el día calendario actual de Costa Rica.
       const recipients = rawRecipients;
       const excludedAlreadySent = 0;
       if (!recipients.length) {

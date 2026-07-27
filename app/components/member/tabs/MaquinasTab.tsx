@@ -89,7 +89,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
                 className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-105"
                 style={{ backgroundImage: `url(${machine.image})` }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/75 to-black/30" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.42)_0%,rgba(0,0,0,.28)_32%,rgba(0,0,0,.84)_66%,rgba(0,0,0,.98)_100%)]" />
               <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${machine.accent}`} />
               <div className="relative flex flex-1 flex-col justify-between p-3 sm:p-3.5">
                 <div className="flex items-start justify-between gap-2">
@@ -109,7 +109,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
                   <GameLabel tone="white">
                     {machine.zone} · {machine.level}
                   </GameLabel>
-                  <h2 className="mt-1 text-sm font-black uppercase leading-tight drop-shadow sm:text-base">
+                  <h2 className="mt-1 text-sm font-black uppercase leading-tight text-balance drop-shadow sm:text-base">
                     {machine.name}
                   </h2>
                   <div className="mt-2 flex flex-wrap gap-1">

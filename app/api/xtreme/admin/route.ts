@@ -161,15 +161,44 @@ export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const date = todayIso();
+    const coreOnly = req.nextUrl.searchParams.get("scope") === "core";
 
-    await fixUnactivatedDayPasses(db).catch(() => null);
+    // La reparación es mantenimiento, no debe bloquear la primera pintura del admin.
+    if (!coreOnly) await fixUnactivatedDayPasses(db).catch(() => null);
 
-    const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray();
-
-    // Invitaciones de campaña (magic link) ya enviadas + PINs creados.
-    const [campaignSentEmailsRaw, pinKeysRaw] = await Promise.all([
+    // El núcleo operativo no tiene dependencias entre sí: consultar en paralelo reduce
+    // considerablemente el tiempo de entrada, especialmente con Mongo en cold start.
+    const weekStartIso = daysAgoIso(6);
+    const [
+      docs,
+      campaignSentEmailsRaw,
+      pinKeysRaw,
+      reservationDocs,
+      checkinDocs,
+      occupancySnapshot,
+      opsAlerts,
+      weekCheckins,
+    ] = await Promise.all([
+      db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).toArray(),
       db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).distinct("email", { status: "sent" }),
       db.collection(PINS_COLLECTION).distinct("normalizedName"),
+      db
+        .collection<{ trainingId: string }>(RESERVATIONS_COLLECTION)
+        .find({ trainingDate: date, status: "reserved" })
+        .toArray(),
+      db
+        .collection<CheckinDoc>(CHECKINS_COLLECTION)
+        .find({ date })
+        .sort({ checkedInAt: -1 })
+        .limit(100)
+        .toArray(),
+      computeOccupancy(db),
+      listOpenOpsAlerts(db, 20),
+      db
+        .collection<CheckinDoc>(CHECKINS_COLLECTION)
+        .find({ date: { $gte: weekStartIso } })
+        .project<{ date: string; normalizedName: string }>({ date: 1, normalizedName: 1 })
+        .toArray(),
     ]);
     const campaignSentEmails = new Set(
       campaignSentEmailsRaw
@@ -211,11 +240,6 @@ export async function GET(req: NextRequest) {
     const expired = members.filter((m) => m.membershipStatus === "expired").length;
     const activeMemberships = members.filter((m) => m.membershipStatus === "active").length;
 
-    const reservationDocs = await db
-      .collection<{ trainingId: string }>(RESERVATIONS_COLLECTION)
-      .find({ trainingDate: date, status: "reserved" })
-      .toArray();
-
     const classes = TRAININGS.map((t) => ({
       trainingId: t.id,
       trainingName: t.name,
@@ -223,23 +247,7 @@ export async function GET(req: NextRequest) {
       reserved: reservationDocs.filter((r) => r.trainingId === t.id).length,
     }));
 
-    const checkinDocs = await db
-      .collection<CheckinDoc>(CHECKINS_COLLECTION)
-      .find({ date })
-      .sort({ checkedInAt: -1 })
-      .limit(100)
-      .toArray();
-
-    const occupancySnapshot = await computeOccupancy(db);
-    const opsAlerts = await listOpenOpsAlerts(db, 20);
-
     // Serie de ingresos al gym de los ultimos 7 dias (para la grafica)
-    const weekStartIso = daysAgoIso(6);
-    const weekCheckins = await db
-      .collection<CheckinDoc>(CHECKINS_COLLECTION)
-      .find({ date: { $gte: weekStartIso } })
-      .project<{ date: string; normalizedName: string }>({ date: 1, normalizedName: 1 })
-      .toArray();
     const checkinSeries: { date: string; checkins: number; unique: number }[] = [];
     for (let i = 6; i >= 0; i -= 1) {
       const day = daysAgoIso(i);
@@ -291,7 +299,7 @@ export async function GET(req: NextRequest) {
       })),
     };
 
-    if (role === "super") {
+    if (role === "super" && !coreOnly) {
       payload.revenue = await revenueSummary(db);
       try {
         payload.staffSecurity = await countActiveStaffSessions(db);
@@ -301,47 +309,45 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Socios conectados ahora (sesiones Member OS + bitácora reciente). No es staff.
-    try {
-      payload.onlineMembers = await listOnlineMembers(db);
-    } catch (onlineErr) {
-      console.error("XTREME ADMIN ONLINE MEMBERS", onlineErr);
-      payload.onlineMembers = { count: 0, windowMinutes: 5, members: [] };
-    }
-
-    // Phase 3: Growth strip for all admin roles (funnel, not full revenue detail)
-    try {
-      const { computeGrowthSnapshot } = await import("@/lib/xtreme/growth");
-      payload.growth = await computeGrowthSnapshot(db, 30);
-    } catch (growthErr) {
-      console.error("XTREME ADMIN GROWTH", growthErr);
-      payload.growth = null;
-    }
-
-    // Bitácora de uso (páginas, tabs, acciones por sesión de navegador)
-    try {
-      const { computeUsageBitacora } = await import("@/lib/xtreme/session-analytics");
-      payload.usage = await computeUsageBitacora(db, 14);
-    } catch (usageErr) {
-      console.error("XTREME ADMIN USAGE BITACORA", usageErr);
-      payload.usage = null;
-    }
-
-    // System health card
-    try {
-      const lifecycle = await db.collection("xtreme_gym_job_runs").findOne(
-        { job: "lifecycle" },
-        { sort: { startedAt: -1 }, projection: { _id: 0, status: 1, startedAt: 1, finishedAt: 1, summary: 1 } },
-      );
-      payload.system = {
-        lifecycle,
-        lifecycleStale:
-          !lifecycle?.startedAt ||
-          Date.now() - new Date(lifecycle.startedAt).getTime() > 36 * 60 * 60_000,
-        checkedAt: new Date().toISOString(),
-      };
-    } catch {
-      payload.system = null;
+    if (!coreOnly) {
+      // Analítica y salud no bloquean el acceso inicial. En la carga completa se
+      // ejecutan juntas y el cliente reemplaza progresivamente el payload core.
+      const [onlineMembers, growth, usage, system] = await Promise.all([
+        listOnlineMembers(db).catch((onlineErr) => {
+          console.error("XTREME ADMIN ONLINE MEMBERS", onlineErr);
+          return { count: 0, windowMinutes: 5, members: [] };
+        }),
+        import("@/lib/xtreme/growth")
+          .then(({ computeGrowthSnapshot }) => computeGrowthSnapshot(db, 30))
+          .catch((growthErr) => {
+            console.error("XTREME ADMIN GROWTH", growthErr);
+            return null;
+          }),
+        import("@/lib/xtreme/session-analytics")
+          .then(({ computeUsageBitacora }) => computeUsageBitacora(db, 14))
+          .catch((usageErr) => {
+            console.error("XTREME ADMIN USAGE BITACORA", usageErr);
+            return null;
+          }),
+        db
+          .collection("xtreme_gym_job_runs")
+          .findOne(
+            { job: "lifecycle" },
+            { sort: { startedAt: -1 }, projection: { _id: 0, status: 1, startedAt: 1, finishedAt: 1, summary: 1 } },
+          )
+          .then((lifecycle) => ({
+            lifecycle,
+            lifecycleStale:
+              !lifecycle?.startedAt ||
+              Date.now() - new Date(lifecycle.startedAt).getTime() > 36 * 60 * 60_000,
+            checkedAt: new Date().toISOString(),
+          }))
+          .catch(() => null),
+      ]);
+      payload.onlineMembers = onlineMembers;
+      payload.growth = growth;
+      payload.usage = usage;
+      payload.system = system;
     }
 
     return NextResponse.json(payload);

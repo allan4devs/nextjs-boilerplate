@@ -187,7 +187,7 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     id: "sent_not_registered",
     label: "★ Enviados · sin registro",
     detail:
-      "Ya recibieron invitación/magic link y todavía no se registraron. Incluye envíos anteriores para un 2.º o 3.er aviso.",
+      "Ya recibieron invitación/magic link y todavía no se registraron; se excluyen solo si recibieron campaña hoy.",
     group: "Re-engagement",
   },
   {
@@ -251,7 +251,7 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     id: "claim_native",
     label: "Activar · correo nativo",
     detail:
-      "Sin verificar y sin plan, con correo nativo. Incluye envíos y clics anteriores.",
+      "Sin verificar y sin plan, con correo nativo; excluye únicamente envíos de hoy.",
     group: "Activación",
   },
   {
@@ -286,7 +286,7 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
     id: "excel_recovered",
     label: "Alineados del Excel",
     detail:
-      "Fichas con emailRecovery, sin excluirlas por campañas enviadas anteriormente.",
+      "Fichas con emailRecovery que todavía no recibieron una campaña hoy.",
     group: "Activación",
   },
   {
@@ -310,13 +310,13 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
   {
     id: "possible_foreign",
     label: "Posibles extranjeros",
-    detail: "Señal blanda (DIMEX / doc / nombres), sin excluir envíos anteriores.",
+    detail: "Señal blanda (DIMEX / doc / nombres); excluye únicamente envíos de hoy.",
     group: "Segmentos",
   },
   {
     id: "never_registered",
     label: "Nunca registrados",
-    detail: "Sin perfil verificado, aunque ya se les haya enviado la invitación.",
+    detail: "Sin perfil verificado que todavía no recibió una invitación hoy.",
     group: "Segmentos",
   },
   {
@@ -334,13 +334,13 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
   {
     id: "never_opened",
     label: "Nunca entraron a la app",
-    detail: "Verificados sin apertura de app, sin excluir campañas anteriores.",
+    detail: "Verificados sin apertura de app que todavía no recibieron campaña hoy.",
     group: "Segmentos",
   },
   {
     id: "inactive",
     label: "Sin abrir app 14 d",
-    detail: "Verificados sin apertura en 14 d, sin excluir campañas anteriores.",
+    detail: "Verificados sin apertura en 14 d que todavía no recibieron campaña hoy.",
     group: "Segmentos",
   },
   {
@@ -352,7 +352,7 @@ const AUDIENCES: Array<{ id: AudienceId; label: string; detail: string; group: s
   {
     id: "plan_week",
     label: "Plan semanal",
-    detail: "Tarifa semanal, sin excluir campañas anteriores.",
+    detail: "Tarifa semanal; excluye únicamente a quienes recibieron campaña hoy.",
     group: "Planes",
   },
   {
@@ -1271,8 +1271,9 @@ export default function EmailCampaignCenter() {
             <h2 className="font-black uppercase">Centro de correos</h2>
           </div>
           <p className="mt-2 max-w-3xl text-sm font-semibold text-white/55">
-            Importá contactos, armá audiencias y enviá en lotes. Las bajas de marketing se
-            excluyen solas; recibos y códigos de cuenta siempre se entregan.
+            Importá contactos, armá audiencias y enviá en lotes. Las bajas se excluyen solas y
+            quienes ya recibieron campaña hoy no vuelven a aparecer hasta mañana. Recibos y
+            códigos de cuenta siempre se entregan.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

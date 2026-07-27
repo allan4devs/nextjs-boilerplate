@@ -217,7 +217,7 @@ export default function ZonasPage() {
                     </span>
                     <div className="absolute bottom-5 left-5 right-5 flex flex-wrap gap-2">
                       {zone.details.slice(0, 2).map((detail) => (
-                        <span key={detail} className="border border-white/20 bg-black/60 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[.1em] backdrop-blur">
+                        <span key={detail} className="border border-white/20 bg-black/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[.1em] backdrop-blur">
                           {detail}
                         </span>
                       ))}
@@ -281,11 +281,11 @@ export default function ZonasPage() {
                   sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover transition duration-700 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-                  <p className="text-[9px] font-black uppercase tracking-[.2em] text-[#f6c400]">{space.eyebrow}</p>
-                  <h3 className="mt-2 text-2xl font-black uppercase">{space.title}</h3>
-                  <p className="mt-2 max-w-md text-sm font-semibold leading-6 text-white/62">{space.text}</p>
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.18)_0%,transparent_30%,rgba(0,0,0,.6)_58%,rgba(0,0,0,.98)_100%)]" />
+                <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
+                  <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#f6c400]">{space.eyebrow}</p>
+                  <h3 className="mt-2 text-[clamp(1.5rem,2.1vw,2rem)] font-black uppercase leading-[.95] tracking-[-.035em] text-balance">{space.title}</h3>
+                  <p className="mt-3 max-w-md text-sm font-medium leading-6 text-white/72 text-pretty">{space.text}</p>
                 </div>
               </article>
             ))}

@@ -758,7 +758,7 @@ export default function XtremeAdminPage() {
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/xtreme/admin", { cache: "no-store" });
+      const response = await fetch("/api/xtreme/admin?scope=core", { cache: "no-store" });
       if (response.status === 401) {
         setError("Codigo incorrecto.");
         setCode("");
@@ -772,6 +772,17 @@ export default function XtremeAdminPage() {
       if (json.role !== "super") {
         setTab((current) => (current === "ingresos" || current === "correos" ? "resumen" : current));
       }
+
+      // El panel ya puede usarse con el núcleo operativo. Revenue, growth,
+      // bitácora y salud llegan después sin mantener bloqueada la pantalla.
+      void fetch("/api/xtreme/admin", { cache: "no-store" })
+        .then(async (fullResponse) => {
+          const fullJson = (await fullResponse.json()) as AdminData & { error?: string };
+          if (fullResponse.ok) setData(fullJson);
+        })
+        .catch(() => {
+          // El core permanece funcional aunque falle una métrica secundaria.
+        });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de conexion.");
     } finally {

@@ -144,19 +144,25 @@ export default function ContactoPage() {
           </div>
 
           <div className="grid content-start gap-3">
-            <div className="relative aspect-[16/7] overflow-hidden border border-white/10">
+            <div className="group relative min-h-56 overflow-hidden border border-white/10">
               <Image
                 src="/xtreme/fachada-xtreme-gym.webp"
                 alt="Fachada y entrada de Xtreme Gym"
                 fill
                 sizes="(max-width: 1024px) 100vw, 40vw"
                 quality={74}
-                className="object-cover"
+                className="object-cover transition duration-700 group-hover:scale-[1.03]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
-              <span className="absolute bottom-3 left-3 text-xs font-black uppercase tracking-[0.16em] text-[#f6c400]">
-                Esta es nuestra entrada
-              </span>
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.12)_0%,transparent_38%,rgba(0,0,0,.94)_100%)]" />
+              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5">
+                <div>
+                  <span className="block text-[10px] font-black uppercase tracking-[.2em] text-[#f6c400]">Ubicación</span>
+                  <span className="mt-1 block text-xl font-black uppercase leading-none tracking-[-.025em] text-white">
+                    Esta es nuestra entrada
+                  </span>
+                </div>
+                <MapPin className="h-5 w-5 shrink-0 text-[#f6c400]" />
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {CONTACT_ACTIONS.map(({ href, label, detail, icon: Icon, external, primary }) => {

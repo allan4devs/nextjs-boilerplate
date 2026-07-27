@@ -37,7 +37,7 @@ export default function HeroTrainingVideo() {
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="auto"
         poster="/xtreme/piso-pesas-panoramica.webp"
         onPause={() => setPaused(true)}
         onPlay={() => setPaused(false)}
@@ -45,10 +45,13 @@ export default function HeroTrainingVideo() {
       >
         <source src="/xtreme/hero-training-pexels.mp4" type="video/mp4" />
       </video>
+      <div className="cinema-video-progress absolute inset-x-0 bottom-0 z-10 h-[3px] bg-white/10" aria-hidden>
+        <span className="block h-full bg-[#f6c400]" />
+      </div>
       <button
         type="button"
         onClick={togglePlayback}
-        className="cinema-video-control absolute bottom-5 right-5 z-20 grid h-11 w-11 place-items-center rounded-full border border-white/30 bg-black/55 text-white backdrop-blur-md transition hover:border-[#f6c400] hover:bg-[#f6c400] hover:text-black"
+        className="cinema-video-control absolute right-6 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-black/35 text-white backdrop-blur-xl transition hover:border-[#f6c400] hover:bg-[#f6c400] hover:text-black"
         aria-label={paused ? "Reproducir video" : "Pausar video"}
       >
         {paused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}

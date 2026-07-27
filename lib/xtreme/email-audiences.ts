@@ -26,6 +26,7 @@ import {
 import { type EmailAudience } from "@/lib/xtreme/email-campaigns";
 import { isSafeCampaignMemberEmail, memberEmailNameScore } from "@/lib/xtreme/email-identity";
 import { membershipStatus } from "@/lib/xtreme/shared";
+import { currentCampaignDayStart } from "@/lib/xtreme/email-campaign-policy";
 
 export const EMAIL_AUDIENCE_IDS = [
   "claim_recovered",
@@ -241,8 +242,9 @@ export type AudienceEmailMap = Record<EmailAudience, string[]> & {
 
 export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   const todayIso = new Date().toISOString().slice(0, 10);
+  const campaignTodayCutoff = currentCampaignDayStart();
 
-  const [contacts, allContacts, allMembers, pending, suppressed, recentlyActive, everActive] =
+  const [contacts, allContacts, allMembers, pending, suppressed, recentlyActive, everActive, recentlyEmailed] =
     await Promise.all([
       db
         .collection<ContactDoc>(EMAIL_CONTACTS_COLLECTION)
@@ -281,6 +283,13 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
         occurredAt: { $gte: new Date(Date.now() - 14 * 24 * 60 * 60_000) },
       }),
       db.collection(EVENTS_COLLECTION).distinct<string>("memberId", { type: "app_opened" }),
+      db.collection(EMAIL_CAMPAIGN_DELIVERIES_COLLECTION).distinct<string>("email", {
+        status: "sent",
+        $or: [
+          { sentAt: { $gte: campaignTodayCutoff } },
+          { sentAt: { $exists: false }, updatedAt: { $gte: campaignTodayCutoff } },
+        ],
+      }),
     ]);
 
   const membersWithEmail = allMembers.filter((member) => normalizeAudienceEmail(member.email));
@@ -298,8 +307,13 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
   );
 
   const blocked = new Set(suppressed.map(normalizeAudienceEmail).filter(Boolean));
+  const emailedToday = new Set(recentlyEmailed.map(normalizeAudienceEmail).filter(Boolean));
   const clean = (values: unknown[]) => [
-    ...new Set(values.map(normalizeAudienceEmail).filter((email) => email && !blocked.has(email))),
+    ...new Set(
+      values
+        .map(normalizeAudienceEmail)
+        .filter((email) => email && !blocked.has(email) && !emailedToday.has(email)),
+    ),
   ];
 
   const imported = clean(contacts.map((row) => row.email));
@@ -572,7 +586,7 @@ export async function buildAudienceEmails(db: Db): Promise<AudienceEmailMap> {
       ...inviteRecoverable,
       ...excelRecovered,
     ]),
-    // Re-engagement, sin excluir por fecha del último envío.
+    // Re-engagement: `clean` excluye únicamente a quienes recibieron campaña hoy.
     sent_not_registered: sentNotRegistered,
     opened_not_registered: openedNotRegistered,
     registered_never_app: clean(registeredNeverApp),

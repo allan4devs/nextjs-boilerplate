@@ -469,6 +469,10 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   min-height: calc(100svh - 56px - env(safe-area-inset-top, 0px));
 }
 
+.cinema-home-hero {
+  background: #050505;
+}
+
 @media (min-width: 1024px) {
   .cinema-home-hero,
   .cinema-home-hero-shell {
@@ -483,8 +487,9 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 }
 
 .cinema-hero-video {
-  filter: saturate(0.62) contrast(1.2) brightness(0.62);
-  transform: scale(1.015);
+  filter: saturate(0.78) contrast(1.14) brightness(0.7);
+  transform: scale(1.04);
+  animation: cinema-hero-drift 18s ease-in-out infinite alternate;
 }
 
 .cinema-video-control {
@@ -493,9 +498,8 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 
 .cinema-hero-grade {
   background:
-    radial-gradient(circle at 68% 36%, rgba(255, 214, 64, 0.1), transparent 24%),
-    linear-gradient(90deg, rgba(3, 3, 3, 0.76) 0%, rgba(3, 3, 3, 0.25) 51%, rgba(3, 3, 3, 0.56) 100%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.32), transparent 34%, rgba(0, 0, 0, 0.93) 100%);
+    radial-gradient(circle at 50% 42%, rgba(246, 196, 0, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.08) 31%, rgba(0, 0, 0, 0.16) 57%, rgba(0, 0, 0, 0.82) 100%);
 }
 
 .cinema-fx-canvas {
@@ -505,8 +509,34 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 
 .cinema-vignette {
   background:
-    radial-gradient(circle at 70% 46%, transparent 0 16%, rgba(0, 0, 0, 0.2) 48%, rgba(0, 0, 0, 0.78) 100%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 7vw);
+    radial-gradient(ellipse at 50% 45%, transparent 0 28%, rgba(0, 0, 0, 0.18) 58%, rgba(0, 0, 0, 0.68) 100%);
+}
+
+.cinema-hero-title {
+  text-shadow: 0 18px 70px rgba(0, 0, 0, 0.48);
+}
+
+.cinema-hero-pill,
+.cinema-hero-dock {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.cinema-video-progress span {
+  width: 100%;
+  transform-origin: left center;
+  animation: cinema-video-progress 12s linear infinite;
+}
+
+@keyframes cinema-hero-drift {
+  from { transform: scale(1.04) translate3d(-0.4%, 0, 0); }
+  to { transform: scale(1.095) translate3d(0.8%, -0.4%, 0); }
+}
+
+@keyframes cinema-video-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 .cinema-display {
@@ -707,12 +737,10 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 .cinema-service-card {
   --spot-x: 50%;
   --spot-y: 50%;
-  min-height: 23rem;
-  color: #090909;
+  min-height: 32rem;
+  color: white;
   transform: translateZ(0);
   transition:
-    color 450ms cubic-bezier(0.2, 0.75, 0.2, 1),
-    background-color 450ms cubic-bezier(0.2, 0.75, 0.2, 1),
     transform 500ms cubic-bezier(0.2, 0.75, 0.2, 1),
     box-shadow 500ms cubic-bezier(0.2, 0.75, 0.2, 1);
 }
@@ -724,8 +752,8 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, transparent 49.7%, rgba(0, 0, 0, 0.045) 50%, transparent 50.3%),
-    linear-gradient(0deg, transparent 49.7%, rgba(0, 0, 0, 0.04) 50%, transparent 50.3%);
+    linear-gradient(90deg, transparent 49.7%, rgba(255, 255, 255, 0.045) 50%, transparent 50.3%),
+    linear-gradient(0deg, transparent 49.7%, rgba(255, 255, 255, 0.04) 50%, transparent 50.3%);
   background-size: 4.5rem 4.5rem;
   opacity: 0.38;
   transform: scale(1.08);
@@ -755,9 +783,9 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 
 .cinema-service-photo {
   z-index: 0;
-  filter: grayscale(1) saturate(0.55) contrast(1.18);
-  opacity: 0;
-  transform: scale(1.2) translate3d(3%, 0, 0);
+  filter: saturate(0.72) contrast(1.08) brightness(0.82);
+  opacity: 1;
+  transform: scale(1.025);
   transition:
     opacity 500ms ease,
     filter 900ms ease,
@@ -767,9 +795,9 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 .cinema-service-shade {
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(5, 5, 5, 0.18), rgba(5, 5, 5, 0.96) 78%),
-    linear-gradient(90deg, rgba(5, 5, 5, 0.82), transparent 76%);
-  opacity: 0;
+    linear-gradient(180deg, rgba(5, 5, 5, 0.38) 0%, rgba(5, 5, 5, 0.04) 34%, rgba(5, 5, 5, 0.52) 58%, rgba(5, 5, 5, 0.98) 100%),
+    linear-gradient(90deg, rgba(5, 5, 5, 0.42), transparent 72%);
+  opacity: 1;
   transition: opacity 500ms ease;
 }
 
@@ -784,7 +812,7 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   z-index: 0;
   font-size: clamp(8rem, 12vw, 12rem);
   letter-spacing: -0.12em;
-  color: rgba(0, 0, 0, 0.035);
+  color: rgba(255, 255, 255, 0.055);
   transform: translate3d(18%, -12%, 0) rotate(-8deg);
   transition:
     color 450ms ease,
@@ -794,15 +822,16 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 .cinema-service-index,
 .cinema-service-copy,
 .cinema-service-meta {
-  color: rgba(9, 9, 9, 0.48);
+  color: rgba(255, 255, 255, 0.72);
   transition: color 400ms ease;
 }
 
 .cinema-service-icon {
   position: relative;
   overflow: hidden;
-  color: rgba(9, 9, 9, 0.78);
-  background: rgba(255, 255, 255, 0.16);
+  color: #090909;
+  background: #f6c400;
+  backdrop-filter: blur(12px);
   transition:
     color 450ms cubic-bezier(0.2, 0.75, 0.2, 1),
     background-color 450ms cubic-bezier(0.2, 0.75, 0.2, 1),
@@ -827,6 +856,12 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 }
 
 .cinema-service-title {
+  max-width: 100%;
+  font-size: clamp(1.35rem, 1.65vw, 1.75rem);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+  hyphens: auto;
   transition:
     color 400ms ease,
     transform 600ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -834,12 +869,36 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 }
 
 .cinema-service-copy {
-  max-width: 18rem;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 .cinema-service-meta {
-  border-color: rgba(9, 9, 9, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
   transition: color 400ms ease, border-color 400ms ease, transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .cinema-service-card {
+    min-height: 34rem;
+    padding-inline: 1.25rem;
+  }
+
+  .cinema-service-title {
+    font-size: 1.28rem;
+  }
+
+  .cinema-service-copy {
+    font-size: 0.8rem;
+    line-height: 1.35rem;
+  }
+
+  .cinema-service-meta {
+    letter-spacing: 0.1em;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -847,7 +906,6 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   .cinema-service-card:focus-visible {
     z-index: 5;
     color: white;
-    background: #090909;
     transform: translate3d(0, -7px, 0);
     box-shadow:
       0 28px 65px -24px rgba(0, 0, 0, 0.72),
@@ -860,7 +918,6 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   .cinema-service-card:focus-visible::before {
     opacity: 0.15;
     transform: scale(1) rotate(0.6deg);
-    filter: invert(1);
   }
 
   .cinema-service-card:hover::after,
@@ -875,9 +932,9 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 
   .cinema-service-card:hover .cinema-service-photo,
   .cinema-service-card:focus-visible .cinema-service-photo {
-    opacity: 0.5;
-    filter: grayscale(0.2) saturate(0.92) contrast(1.08);
-    transform: scale(1.04) translate3d(0, 0, 0);
+    opacity: 1;
+    filter: saturate(1) contrast(1.08) brightness(0.9);
+    transform: scale(1.08) translate3d(0, 0, 0);
   }
 
   .cinema-service-card:hover .cinema-service-shade,
@@ -886,8 +943,8 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   }
 
   .cinema-services-grid:has(.cinema-service-card:hover) .cinema-service-card:not(:hover) {
-    opacity: 0.62;
-    filter: saturate(0.55);
+    opacity: 0.82;
+    filter: saturate(0.7);
   }
 
   .cinema-service-card:hover .cinema-service-sweep,
@@ -929,7 +986,7 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   .cinema-service-card:focus-visible .cinema-service-title {
     color: white;
     letter-spacing: -0.045em;
-    transform: translateX(5px);
+    transform: translateY(-3px);
   }
 
   .cinema-service-card:hover .cinema-service-copy,
@@ -977,15 +1034,20 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   }
 
   .cinema-hero-video {
-    filter: saturate(0.82) contrast(1.08) brightness(0.82);
+    filter: saturate(0.86) contrast(1.1) brightness(0.72);
     object-position: 53% center;
   }
 
   .cinema-hero-grade {
     background:
       radial-gradient(circle at 68% 28%, rgba(255, 214, 64, 0.08), transparent 28%),
-      linear-gradient(180deg, rgba(2, 2, 2, 0.14) 0%, rgba(2, 2, 2, 0.12) 39%, rgba(2, 2, 2, 0.82) 100%),
-      linear-gradient(90deg, rgba(2, 2, 2, 0.38), rgba(2, 2, 2, 0.04));
+      linear-gradient(180deg, rgba(2, 2, 2, 0.34) 0%, rgba(2, 2, 2, 0.08) 39%, rgba(2, 2, 2, 0.86) 100%);
+  }
+
+  .cinema-video-control {
+    right: 1rem;
+    top: 5rem;
+    transform: none;
   }
 
   .zones-cinema-hero .cinema-hero-grade {
@@ -1024,6 +1086,11 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
     .hero-carousel-copy,
     .hero-carousel-progress {
     transition: none !important;
+    animation: none !important;
+  }
+
+  .cinema-hero-video,
+  .cinema-video-progress span {
     animation: none !important;
   }
 

@@ -58,20 +58,30 @@ export default function BeneficiosPage() {
           </div>
           <GymBenefitsGrid />
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {BENEFIT_IMAGES.map((item) => (
-              <figure key={item.src} className="group relative aspect-[4/3] overflow-hidden border border-white/10 bg-black">
+          <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {BENEFIT_IMAGES.map((item, index) => (
+              <figure
+                key={item.src}
+                className={`group relative min-h-72 overflow-hidden border border-white/10 bg-black ${
+                  index === 0 ? "lg:col-span-2" : ""
+                }`}
+              >
                 <Image
                   src={item.src}
                   alt={item.alt}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   quality={72}
-                  className="object-cover opacity-75 transition duration-500 group-hover:scale-105 group-hover:opacity-95"
+                  className="object-cover opacity-85 transition duration-700 group-hover:scale-105 group-hover:opacity-100"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                <figcaption className="absolute bottom-4 left-4 text-sm font-black uppercase tracking-[0.14em] text-[#f6c400]">
-                  {item.label}
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.18)_0%,transparent_38%,rgba(0,0,0,.94)_100%)]" />
+                <figcaption className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 text-white">
+                  <span className="text-[clamp(1.25rem,2vw,1.75rem)] font-black uppercase leading-none tracking-[-.035em] text-balance">
+                    {item.label}
+                  </span>
+                  <span className="shrink-0 text-[10px] font-black uppercase tracking-[.18em] text-[#f6c400]">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                 </figcaption>
               </figure>
             ))}
