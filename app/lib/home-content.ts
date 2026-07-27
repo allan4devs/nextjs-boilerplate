@@ -15,16 +15,16 @@ const sharedMedia = {
   machinesVideo: "/xtreme/scene-machines-pexels.mp4",
   machinesCredit: "Navdeep Singh / Pexels",
   machinesCreditHref: "https://www.pexels.com/video/person-working-out-in-the-gym-14183169/",
-  strengthVideo: "/xtreme/scene-strength-pexels.mp4",
-  strengthCredit: "Pressmaster / Pexels",
-  strengthCreditHref: "https://www.pexels.com/video/a-woman-lifting-heavy-weights-in-a-gym-3195395/",
+  strengthVideo: "/xtreme/hero-training-pexels.mp4",
+  strengthCredit: "utopia 36 / Pexels",
+  strengthCreditHref: "https://www.pexels.com/video/training-at-gym-12188781/",
 } as const;
 
 export const HOME_CONTENT = {
   es: {
     systemStatus: "Sistema Xtreme · activo",
     eyebrow: "Entrenamiento · Ciudad Quesada",
-    heroLine1: "Entrená.",
+    heroLine1: "Entrena.",
     heroLine2: "En serio.",
     heroText: "Espacio, equipo y dirección para convertir una decisión en constancia. Tu primer día va por nuestra cuenta.",
     primaryCta: "Empezá gratis",

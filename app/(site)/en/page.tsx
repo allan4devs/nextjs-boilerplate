@@ -43,7 +43,11 @@ export default function EnglishLandingPage() {
 
       <section data-cinema-stage className="cinema-home-hero cinema-stage relative isolate overflow-hidden border-b border-white/10 bg-[#050505]">
         <div className="cinema-stage-image absolute inset-[-2%] z-0 overflow-hidden">
-          <HeroTrainingVideo />
+          <HeroTrainingVideo
+            src="/xtreme/scene-strength-pexels.mp4"
+            poster="/xtreme/zona-funcional-clases.webp"
+            label="Athlete strength training with weights in a gym"
+          />
         </div>
         <div className="cinema-hero-grade absolute inset-0 z-[1]" />
         <div className="cinema-vignette absolute inset-0 z-[1]" />
@@ -102,8 +106,8 @@ export default function EnglishLandingPage() {
               ))}
             </div>
           </div>
-          <a href="https://www.pexels.com/video/training-at-gym-12188781/" target="_blank" rel="noreferrer" className="absolute right-10 top-20 z-20 hidden text-[8px] font-bold uppercase tracking-[.15em] text-white/35 transition hover:text-white md:block">
-            Video: utopia 36 / Pexels
+          <a href="https://www.pexels.com/video/a-woman-lifting-heavy-weights-in-a-gym-3195395/" target="_blank" rel="noreferrer" className="absolute right-10 top-20 z-20 hidden text-[8px] font-bold uppercase tracking-[.15em] text-white/35 transition hover:text-white md:block">
+            Video: Pressmaster / Pexels
           </a>
         </div>
       </section>

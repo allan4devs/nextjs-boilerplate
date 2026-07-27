@@ -3,7 +3,15 @@
 import { Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-export default function HeroTrainingVideo() {
+export default function HeroTrainingVideo({
+  src = "/xtreme/scene-strength-pexels.mp4",
+  poster = "/xtreme/zona-funcional-clases.webp",
+  label = "Entrenamiento de fuerza en un gimnasio",
+}: {
+  src?: string;
+  poster?: string;
+  label?: string;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [paused, setPaused] = useState(false);
 
@@ -38,12 +46,12 @@ export default function HeroTrainingVideo() {
         loop
         playsInline
         preload="auto"
-        poster="/xtreme/piso-pesas-panoramica.webp"
+        poster={poster}
         onPause={() => setPaused(true)}
         onPlay={() => setPaused(false)}
-        aria-label="Entrenamiento con pesas y acompañamiento en un gimnasio"
+        aria-label={label}
       >
-        <source src="/xtreme/hero-training-pexels.mp4" type="video/mp4" />
+        <source src={src} type="video/mp4" />
       </video>
       <div className="cinema-video-progress absolute inset-x-0 bottom-0 z-10 h-[3px] bg-white/10" aria-hidden>
         <span className="block h-full bg-[#f6c400]" />

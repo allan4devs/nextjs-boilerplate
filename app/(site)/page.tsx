@@ -38,7 +38,11 @@ export default function ExtremeGymLandingPage() {
         className="cinema-home-hero cinema-stage relative isolate overflow-hidden border-b border-white/10 bg-[#050505]"
       >
         <div className="cinema-stage-image absolute inset-[-2%] z-0 overflow-hidden">
-          <HeroTrainingVideo />
+          <HeroTrainingVideo
+            src="/xtreme/scene-strength-pexels.mp4"
+            poster="/xtreme/zona-funcional-clases.webp"
+            label="Atleta entrenando fuerza con pesas en el gimnasio"
+          />
         </div>
         <div className="cinema-hero-grade absolute inset-0 z-[1]" />
         <div className="cinema-vignette absolute inset-0 z-[1]" />
@@ -106,12 +110,12 @@ export default function ExtremeGymLandingPage() {
             {content.discover} <ArrowDown className="h-4 w-4 text-[#f6c400]" />
           </a>
           <a
-            href="https://www.pexels.com/video/training-at-gym-12188781/"
+            href="https://www.pexels.com/video/a-woman-lifting-heavy-weights-in-a-gym-3195395/"
             target="_blank"
             rel="noreferrer"
             className="absolute right-10 top-20 z-20 hidden text-[8px] font-bold uppercase tracking-[.15em] text-white/35 transition hover:text-white md:block"
           >
-            Video: utopia 36 / Pexels
+            Video: Pressmaster / Pexels
           </a>
         </div>
       </section>

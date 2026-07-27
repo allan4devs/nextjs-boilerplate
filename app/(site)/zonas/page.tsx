@@ -91,21 +91,29 @@ export default function ZonasPage() {
       >
         <div className="cinema-stage-image absolute inset-[-2%] z-0 overflow-hidden">
           <video
-            className="h-full w-full object-cover"
+            className="cinema-hero-video h-full w-full object-cover"
             autoPlay
             muted
             loop
             playsInline
-            preload="metadata"
-            poster="/xtreme/piso-pesas-panoramica.webp"
-            aria-label="Entrenamiento en el piso de Xtreme Gym"
+            preload="auto"
+            poster="/xtreme/piso-maquinas-panoramica.webp"
+            aria-label="Recorrido por máquinas y zonas de entrenamiento"
           >
-            <source src="/xtreme/hero-training-pexels.mp4" type="video/mp4" />
+            <source src="/xtreme/scene-machines-pexels.mp4" type="video/mp4" />
           </video>
         </div>
         <div className="cinema-hero-grade absolute inset-0 z-[1]" />
         <div className="cinema-vignette absolute inset-0 z-[1]" />
         <CinematicLandingFX />
+        <a
+          href="https://www.pexels.com/video/person-working-out-in-the-gym-14183169/"
+          target="_blank"
+          rel="noreferrer"
+          className="absolute right-8 top-5 z-20 hidden text-[8px] font-bold uppercase tracking-[.15em] text-white/40 transition hover:text-white lg:block"
+        >
+          Video: Navdeep Singh / Pexels
+        </a>
 
         <div className="cinema-home-hero-shell relative z-10 mx-auto flex max-w-[1500px] flex-col px-5 sm:px-8 lg:px-12">
           <div className="flex items-center justify-between border-b border-white/10 py-4 text-[10px] font-black uppercase tracking-[.22em] text-white/45">
