@@ -1769,6 +1769,84 @@ export function adminNotificationAddress() {
   return process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || "aallanrd@gmail.com";
 }
 
+export function adminNotificationRecipients() {
+  const recipients = adminNotificationAddress()
+    .split(/[;,]/)
+    .map((email) => email.trim())
+    .filter(Boolean);
+  return [...new Set(recipients)];
+}
+
+export async function sendAdminPaymentNotification(args: {
+  paymentId: string;
+  customerName: string;
+  phone?: string;
+  email?: string;
+  optionLabel: string;
+  amountCrc: number;
+  amountUsd: number;
+  currency: string;
+  method: string;
+  date: string;
+  reference?: string | null;
+  source: "site" | "member_app";
+}) {
+  const sourceLabel = args.source === "member_app" ? "Member OS" : "sitio web de Xtreme Gym";
+  const crc = new Intl.NumberFormat("es-CR", {
+    style: "currency",
+    currency: "CRC",
+    maximumFractionDigits: 0,
+  }).format(args.amountCrc);
+  const usd = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: args.currency || "USD",
+  }).format(args.amountUsd);
+
+  return sendEmail({
+    to: adminNotificationRecipients(),
+    managePreferences: false,
+    idempotencyKey: `admin-payment-${args.paymentId}`,
+    tags: [
+      { name: "category", value: "admin_payment" },
+      { name: "source", value: args.source },
+    ],
+    subject: `Pago confirmado: ${args.customerName} · ${args.optionLabel}`,
+    text: [
+      "Se confirmó un pago en línea en Xtreme Gym.",
+      "",
+      `Cliente: ${args.customerName}`,
+      `Plan o servicio: ${args.optionLabel}`,
+      `Monto: ${crc} (${usd})`,
+      `Origen: ${sourceLabel}`,
+      `Método: ${args.method}`,
+      `Fecha: ${args.date}`,
+      args.phone ? `Teléfono: ${args.phone}` : "",
+      args.email ? `Correo: ${args.email}` : "",
+      args.reference ? `Referencia: ${args.reference}` : "",
+      `ID interno: ${args.paymentId}`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    html: layout(
+      "Nuevo pago confirmado",
+      `<p style="font-size:14px;line-height:1.7;">Una persona completó un pago en línea desde el <strong>${escapeHtml(sourceLabel)}</strong>.</p>
+      <table style="border-collapse:collapse;margin:12px 0;">
+        ${row("Cliente", escapeHtml(args.customerName))}
+        ${row("Plan o servicio", escapeHtml(args.optionLabel))}
+        ${row("Monto", `${escapeHtml(crc)} (${escapeHtml(usd)})`)}
+        ${row("Origen", escapeHtml(sourceLabel))}
+        ${row("Método", escapeHtml(args.method))}
+        ${row("Fecha", escapeHtml(args.date))}
+        ${args.phone ? row("Teléfono", escapeHtml(args.phone)) : ""}
+        ${args.email ? row("Correo", escapeHtml(args.email)) : ""}
+        ${args.reference ? row("Referencia", escapeHtml(args.reference)) : ""}
+        ${row("ID interno", escapeHtml(args.paymentId))}
+      </table>
+      <p style="font-size:13px;line-height:1.6;color:#6b6b66;">El pago y la membresía correspondiente ya quedaron procesados por el sistema.</p>`,
+    ),
+  });
+}
+
 export async function sendAdminEmailOptOutNotification(args: {
   email: string;
   reason: string;

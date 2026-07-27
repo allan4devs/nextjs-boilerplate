@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Heart, MessageCircle, Music2, Sparkles, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, CalendarDays, Heart, MapPin, MessageCircle, Music2, Sparkles, Users } from "lucide-react";
+import HeroTrainingVideo from "../../components/HeroTrainingVideo";
 import { pageMetadata } from "../../lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -14,36 +15,68 @@ const whatsapp = "https://wa.me/50661792121";
 export default function ValariPage() {
   return (
     <>
-      <section className="relative isolate min-h-[calc(100svh-72px)] overflow-hidden bg-[#110d0a] px-5 py-16 sm:px-8 lg:py-24">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(246,196,0,.24),transparent_32%),radial-gradient(circle_at_15%_80%,rgba(192,55,34,.18),transparent_30%)]" />
-        <div className="absolute -right-24 top-10 h-[34rem] w-[34rem] rounded-full border border-[#f6c400]/15" />
-        <div className="absolute -right-2 top-32 h-[22rem] w-[22rem] rounded-full border border-[#f6c400]/10" />
-        <div className="relative mx-auto grid max-w-7xl gap-14 lg:grid-cols-[.65fr_1.35fr] lg:items-end">
-          <div>
-            <div className="grid h-16 w-16 place-items-center rounded-full border border-[#f6c400]/45 text-[#f6c400]">
-              <Music2 className="h-7 w-7" />
-            </div>
-            <p className="mt-9 text-[10px] font-black uppercase tracking-[.25em] text-[#f6c400]">Dance studio · Ciudad Quesada</p>
-            <p className="mt-3 text-sm font-black uppercase tracking-[.14em] text-white/42">Profesora Natalia Zapata</p>
+      <section className="cinema-home-hero cinema-stage relative isolate overflow-hidden border-b border-white/10 bg-[#050505]">
+        <div className="cinema-stage-image absolute inset-[-2%] z-0 overflow-hidden">
+          <HeroTrainingVideo
+            src="/valari/hero-bachata-pixabay.mp4"
+            poster="/valari/hero-bachata-pixabay.jpg"
+            label="Pareja bailando bachata"
+          />
+        </div>
+        <div className="absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(5,3,2,.9)_0%,rgba(5,3,2,.46)_48%,rgba(5,3,2,.24)_100%),linear-gradient(0deg,rgba(5,3,2,.93)_0%,transparent_55%,rgba(5,3,2,.45)_100%)]" />
+        <div className="cinema-vignette absolute inset-0 z-[1]" />
+
+        <div className="cinema-home-hero-shell relative z-10 mx-auto flex max-w-[1600px] flex-col px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+          <div className="flex items-center justify-between gap-4 text-[10px] font-black uppercase tracking-[.18em] text-white/70">
+            <span className="cinema-hero-pill inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-black/25 px-4 backdrop-blur-xl">
+              <MapPin className="h-3.5 w-3.5 text-[#f6c400]" />
+              Ciudad Quesada
+            </span>
+            <span className="cinema-hero-pill hidden min-h-11 items-center gap-2 rounded-full border border-white/15 bg-black/25 px-4 backdrop-blur-xl sm:inline-flex">
+              <Music2 className="h-3.5 w-3.5 text-[#f6c400]" />
+              Profesora Natalia Zapata
+            </span>
           </div>
-          <div>
-            <h1 className="cinema-display text-[clamp(4.5rem,11vw,11rem)] font-black uppercase leading-[.68] tracking-[-.075em]">
-              Valari
-              <span className="block text-[#f6c400]">Dance</span>
-              <span className="block text-white/28">Studio.</span>
-            </h1>
-            <p className="mt-9 max-w-3xl text-lg font-semibold leading-8 text-white/62">
-              Salsa, bachata y baile popular para diferentes niveles. Aprendé, soltate y disfrutá cada paso en un espacio con energía y dirección.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a href={whatsapp} target="_blank" rel="noreferrer" className="inline-flex min-h-14 items-center gap-3 bg-[#f6c400] px-6 text-xs font-black uppercase tracking-[.1em] text-black transition hover:bg-white">
+
+          <div className="relative flex flex-1 items-center py-16 sm:py-20">
+            <div className="w-full max-w-6xl">
+              <p className="mb-6 flex items-center gap-3 text-[10px] font-black uppercase tracking-[.28em] text-white/72">
+                <span className="h-px w-8 bg-[#f6c400]" />
+                Salsa · bachata · baile popular
+              </p>
+              <h1 className="cinema-display cinema-hero-title max-w-6xl text-[clamp(4.4rem,11vw,11rem)] font-black uppercase leading-[.7] tracking-[-.085em]">
+                Sentí el ritmo.
+                <span className="block text-[#f6c400]">Bailá Valari.</span>
+              </h1>
+            </div>
+          </div>
+
+          <div className="cinema-hero-dock grid overflow-hidden rounded-[1.5rem] border border-white/15 bg-black/40 backdrop-blur-2xl lg:grid-cols-[minmax(0,1.2fr)_auto] lg:items-stretch">
+            <div className="p-5 sm:p-6">
+              <p className="max-w-2xl text-sm font-medium leading-6 text-white/78 sm:text-base sm:leading-7">
+                Aprendé salsa, bachata y baile popular con técnica, confianza y una energía que se siente desde el primer paso.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 border-t border-white/10 p-4 lg:border-l lg:border-t-0">
+              <a href={whatsapp} target="_blank" rel="noreferrer" className="cinema-cta inline-flex min-h-12 items-center gap-3 rounded-full bg-[#f6c400] px-5 text-xs font-black uppercase tracking-[.08em] text-black">
                 Consultar clases <MessageCircle className="h-5 w-5" />
               </a>
-              <a href="#servicios" className="inline-flex min-h-14 items-center gap-3 border border-white/25 px-6 text-xs font-black uppercase tracking-[.1em] transition hover:border-[#f6c400] hover:text-[#f6c400]">
+              <a href="#servicios" className="inline-flex min-h-12 items-center gap-3 rounded-full border border-white/25 bg-white/[.06] px-5 text-xs font-black uppercase tracking-[.08em] text-white transition hover:border-white/60 hover:bg-white/10">
                 Ver opciones <ArrowRight className="h-4 w-4" />
               </a>
             </div>
           </div>
+          <a href="#servicios" className="mx-auto mt-4 inline-flex min-h-11 items-center gap-3 text-[10px] font-black uppercase tracking-[.2em] text-white/60 transition hover:text-white">
+            Descubrí Valari <ArrowDown className="h-4 w-4 text-[#f6c400]" />
+          </a>
+          <a
+            href="https://pixabay.com/videos/dance-bachata-italy-love-couple-129523/"
+            target="_blank"
+            rel="noreferrer"
+            className="absolute right-10 top-20 z-20 hidden text-[8px] font-bold uppercase tracking-[.15em] text-white/35 transition hover:text-white md:block"
+          >
+            Video: Reydeloficial / Pixabay
+          </a>
         </div>
       </section>
 

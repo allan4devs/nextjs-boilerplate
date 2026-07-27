@@ -53,7 +53,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 | `XTREME_ADMIN_CODE` / `XTREME_SUPER_ADMIN_CODE` | Códigos separados por rol; largos y aleatorios; sin defaults en prod |
 | `CRON_SECRET` | Auth del job lifecycle (Bearer) |
 | `RESEND_API_KEY` / `SMTP_FROM` | Correos (registro, PIN, recibos, lifecycle) |
-| `ADMIN_NOTIFICATION_EMAIL` | Destino de alertas críticas y resumen operativo diario |
+| `ADMIN_NOTIFICATION_EMAIL` | Admin(s) que reciben pagos, alertas y resumen diario; separar varios correos con coma o punto y coma |
 | `NEXT_PUBLIC_APP_URL` | URL canónica HTTPS |
 | `PAYPAL_MODE=live` | + `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` / `NEXT_PUBLIC_PAYPAL_CLIENT_ID` |
 

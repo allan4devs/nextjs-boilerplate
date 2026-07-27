@@ -3,6 +3,7 @@ import { getPayPalAccessToken, getPayPalApiBaseUrl } from "@/lib/helpers/paypal"
 import { getDb } from "@/lib/helpers/mongodb";
 import {
   sendPaymentAppInviteEmail,
+  sendAdminPaymentNotification,
   sendAdminOperationalAlert,
   sendPaymentReceiptEmail,
 } from "@/lib/helpers/email";
@@ -551,6 +552,28 @@ export async function POST(req: NextRequest) {
           context: { paymentId: payment.id, captureID: payment.paypalCaptureId, member: normalizedName },
         });
       }
+    }
+
+    const adminNotification = await sendAdminPaymentNotification({
+      paymentId: payment.id,
+      customerName,
+      phone: payment.phone,
+      email: payment.email,
+      optionLabel: payment.optionLabel,
+      amountCrc: payment.amountCrc,
+      amountUsd: payment.amountUsd,
+      currency: payment.currency,
+      method: payment.method,
+      date: payment.date,
+      reference: payment.paypalCaptureId,
+      source: pending.source === "member_app" ? "member_app" : "site",
+    });
+    if (!adminNotification.ok) {
+      console.error("Xtreme admin payment notification failed:", {
+        paymentId: payment.id,
+        code: adminNotification.code,
+        error: adminNotification.error,
+      });
     }
 
     return NextResponse.json({
