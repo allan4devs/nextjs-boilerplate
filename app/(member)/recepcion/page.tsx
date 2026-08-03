@@ -135,6 +135,8 @@ export default function RecepcionPage() {
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPlan, setRegPlan] = useState("Xtreme Mensual");
+  const [regLastPaidAt, setRegLastPaidAt] = useState("");
+  const [regNextBillingDate, setRegNextBillingDate] = useState("");
   const [regPhoto, setRegPhoto] = useState("");
   const [regFaceHash, setRegFaceHash] = useState("");
   const [regCheckIn, setRegCheckIn] = useState(true);
@@ -716,6 +718,8 @@ export default function RecepcionPage() {
           phone: regPhone,
           email: regEmail,
           plan: regPlan,
+          lastPaidAt: regLastPaidAt || undefined,
+          nextBillingDate: regNextBillingDate || undefined,
           photoUrl: regPhoto || undefined,
           faceHash: regFaceHash || undefined,
           checkInNow: editingMemberKey ? false : regCheckIn,
@@ -746,6 +750,8 @@ export default function RecepcionPage() {
       setRegCedula("");
       setRegPhone("");
       setRegEmail("");
+      setRegLastPaidAt("");
+      setRegNextBillingDate("");
       setRegPhoto("");
       setRegFaceHash("");
       setEditingMemberKey("");
@@ -1233,6 +1239,8 @@ export default function RecepcionPage() {
                       setRegPhone(selected.phone ?? "");
                       setRegEmail(selected.email ?? "");
                       setRegPlan(selected.plan || "Xtreme Mensual");
+                      setRegLastPaidAt(selected.lastPaidAt ?? "");
+                      setRegNextBillingDate(selected.nextBillingDate ?? "");
                       setRegPhoto(selected.photoUrl ?? "");
                       setRegFaceHash("");
                       setRegCheckIn(false);
@@ -1411,7 +1419,7 @@ export default function RecepcionPage() {
                         : "Sin correo mágico. Ideal para walk-in. Opcional: foto + rostro en el acto."}
                     </p>
                     {editingMemberKey && (
-                      <button type="button" onClick={() => { setEditingMemberKey(""); setRegName(""); setRegCedula(""); setRegPhone(""); setRegEmail(""); setRegPhoto(""); setRegPlan("Xtreme Mensual"); setRegCheckIn(true); }} className="mt-3 text-[10px] font-black uppercase tracking-wide text-white/45 underline hover:text-white">
+                      <button type="button" onClick={() => { setEditingMemberKey(""); setRegName(""); setRegCedula(""); setRegPhone(""); setRegEmail(""); setRegPhoto(""); setRegPlan("Xtreme Mensual"); setRegLastPaidAt(""); setRegNextBillingDate(""); setRegCheckIn(true); }} className="mt-3 text-[10px] font-black uppercase tracking-wide text-white/45 underline hover:text-white">
                         Cancelar edición
                       </button>
                     )}
@@ -1468,6 +1476,25 @@ export default function RecepcionPage() {
                       <option className="text-black">Trimestral</option>
                     </select>
                   </Field>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Fecha en que pagó">
+                      <input
+                        type="date"
+                        value={regLastPaidAt}
+                        onChange={(e) => setRegLastPaidAt(e.target.value)}
+                        className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                      />
+                    </Field>
+                    <Field label="Fecha de vencimiento">
+                      <input
+                        type="date"
+                        value={regNextBillingDate}
+                        onChange={(e) => setRegNextBillingDate(e.target.value)}
+                        className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                      />
+                    </Field>
+                  </div>
 
                   {!editingMemberKey && <label className="flex items-center gap-2 text-sm font-bold text-white/70">
                     <input

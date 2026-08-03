@@ -30,6 +30,8 @@ export type MemberHit = {
   goal?: string;
   accessCode?: string;
   plan: string;
+  lastPaidAt?: string;
+  nextBillingDate?: string;
   membershipStatus: MembershipStatus;
   daysRemaining: number;
   streak: number;

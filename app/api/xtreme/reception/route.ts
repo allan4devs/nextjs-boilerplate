@@ -526,6 +526,8 @@ export async function POST(req: NextRequest) {
       const phone = normalizePhone(body.phone);
       const email = normalizeEmail(body.email);
       const plan = String(body.plan ?? "").trim();
+      const lastPaidAt = String(body.lastPaidAt ?? "").trim();
+      const nextBillingDate = String(body.nextBillingDate ?? "").trim();
       if (!memberKey || !memberName || !cedula || !phone) {
         return NextResponse.json({ error: "Nombre, cédula y teléfono son requeridos." }, { status: 400 });
       }
@@ -543,6 +545,8 @@ export async function POST(req: NextRequest) {
       }
       const set: Record<string, unknown> = { memberName, cedula, phone, email, updatedAt: now };
       if (plan) set["membership.plan"] = plan;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(lastPaidAt)) set["membership.lastPaidAt"] = lastPaidAt;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(nextBillingDate)) set["membership.nextBillingDate"] = nextBillingDate;
       await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne({ normalizedName: memberKey }, { $set: set });
       await writeAudit(db, {
         actorRole: role,
@@ -550,7 +554,7 @@ export async function POST(req: NextRequest) {
         targetType: "member",
         targetId: memberKey,
         summary: `Datos personales actualizados en recepción: ${memberName}`,
-        meta: { cedula, phone, email, plan },
+        meta: { cedula, phone, email, plan, lastPaidAt, nextBillingDate },
       });
       const updated = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: memberKey });
       return NextResponse.json({ ok: true, created: false, member: updated ? toAdminMember(updated) : null, message: "Datos personales actualizados." });
@@ -571,6 +575,12 @@ export async function POST(req: NextRequest) {
             .replace(/[^0-9a-f]/g, "")
         : "";
       const checkInNow = body.checkInNow !== false;
+      const lastPaidAt = /^\d{4}-\d{2}-\d{2}$/.test(String(body.lastPaidAt ?? ""))
+        ? String(body.lastPaidAt)
+        : now.toISOString().slice(0, 10);
+      const requestedBillingDate = /^\d{4}-\d{2}-\d{2}$/.test(String(body.nextBillingDate ?? ""))
+        ? String(body.nextBillingDate)
+        : addMonths(now, 1).toISOString().slice(0, 10);
 
       if (!memberName) {
         return NextResponse.json({ error: "El nombre es requerido." }, { status: 400 });
@@ -648,14 +658,16 @@ export async function POST(req: NextRequest) {
       if (!existing) {
         set.membership = {
           plan,
-          nextBillingDate: addMonths(now, 1).toISOString().slice(0, 10),
+          lastPaidAt,
+          nextBillingDate: requestedBillingDate,
           startedAt: now.toISOString().slice(0, 10),
           status: "active",
         };
       } else if (!existing.membership) {
         set.membership = {
           plan,
-          nextBillingDate: addMonths(now, 1).toISOString().slice(0, 10),
+          lastPaidAt,
+          nextBillingDate: requestedBillingDate,
           startedAt: now.toISOString().slice(0, 10),
           status: "active",
         };
