@@ -50,3 +50,6 @@ agents/
 skills/
 .scripts/*
 public/
+
+.vercel
+.env*.local

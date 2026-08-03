@@ -519,6 +519,43 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (action === "update_member") {
+      const memberKey = normalizeKey(String(body.memberKey ?? ""));
+      const memberName = normalizeName(body.memberName);
+      const cedula = normalizeCedula(body.cedula);
+      const phone = normalizePhone(body.phone);
+      const email = normalizeEmail(body.email);
+      const plan = String(body.plan ?? "").trim();
+      if (!memberKey || !memberName || !cedula || !phone) {
+        return NextResponse.json({ error: "Nombre, cédula y teléfono son requeridos." }, { status: 400 });
+      }
+      if (email && !isValidEmail(email)) {
+        return NextResponse.json({ error: "Correo inválido." }, { status: 400 });
+      }
+      const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: memberKey });
+      if (!existing) return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+      const duplicate = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+        normalizedName: { $ne: memberKey },
+        $or: [{ cedula }, { phone }],
+      });
+      if (duplicate) {
+        return NextResponse.json({ error: `La cédula o teléfono ya pertenece a ${duplicate.memberName}.` }, { status: 409 });
+      }
+      const set: Record<string, unknown> = { memberName, cedula, phone, email, updatedAt: now };
+      if (plan) set["membership.plan"] = plan;
+      await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne({ normalizedName: memberKey }, { $set: set });
+      await writeAudit(db, {
+        actorRole: role,
+        action: "member.update_profile_reception",
+        targetType: "member",
+        targetId: memberKey,
+        summary: `Datos personales actualizados en recepción: ${memberName}`,
+        meta: { cedula, phone, email, plan },
+      });
+      const updated = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: memberKey });
+      return NextResponse.json({ ok: true, created: false, member: updated ? toAdminMember(updated) : null, message: "Datos personales actualizados." });
+    }
+
     if (action === "register") {
       const memberName = normalizeName(body.memberName);
       const cedula = normalizeCedula(body.cedula);
