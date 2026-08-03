@@ -26,6 +26,8 @@ export const EMAIL_CONTACTS_COLLECTION = "xtreme_gym_email_contacts";
 export const EMAIL_CAMPAIGNS_COLLECTION = "xtreme_gym_email_campaigns";
 export const EMAIL_CAMPAIGN_DELIVERIES_COLLECTION = "xtreme_gym_email_campaign_deliveries";
 export const EMAIL_SUPPRESSIONS_COLLECTION = "xtreme_gym_email_suppressions";
+export const RECEPTION_DUTIES_COLLECTION = "xtreme_gym_reception_duties";
+export const RECEPTION_CONTROLS_COLLECTION = "xtreme_gym_reception_controls";
 
 export const FREE_FIRST_DAY_OFFER_ID = "free-first-day";
 export const FREE_FIRST_DAY_PLAN_LABEL = "Primer día gratis";

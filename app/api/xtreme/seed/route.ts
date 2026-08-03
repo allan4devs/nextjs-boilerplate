@@ -5,6 +5,7 @@ import {
   MEMBERS_COLLECTION,
   PAYMENTS_COLLECTION,
   PINS_COLLECTION,
+  RECEPTION_DUTIES_COLLECTION,
   RESERVATIONS_COLLECTION,
   TRAININGS,
   formatAccessCode,
@@ -57,6 +58,28 @@ const PLANS = [
 ];
 const COACHES = ["Coach Xtreme", "Funcional", "Zona lower", "Circuito"];
 const METHODS = ["cash", "sinpe", "transfer", "paypal"] as const;
+
+const RECEPTION_DUTIES = [
+  { id: "resp-caja", kind: "responsibility", area: "Caja y pagos", order: 10, title: "Custodiar caja y medios de pago", description: "Manejar efectivo, tarjeta y SINPE; documentar diferencias y entregar el dinero según el procedimiento." },
+  { id: "resp-servicio", kind: "responsibility", area: "Atención al cliente", order: 20, title: "Atender socios y consultas", description: "Resolver consultas, orientar sobre membresías, VIP, entrenamientos, InBody y cámara de bronceado." },
+  { id: "resp-facturacion", kind: "responsibility", area: "Facturación", order: 30, title: "Controlar documentos electrónicos", description: "Administrar el correo de facturación, confirmar XML ante Hacienda y archivar comprobantes." },
+  { id: "resp-inventario", kind: "responsibility", area: "Inventario y compras", order: 40, title: "Controlar inventario y proveedores", description: "Revisar existencias, preparar pedidos, recibir mercadería, verificar cantidades y actualizar costos." },
+  { id: "resp-rrhh", kind: "responsibility", area: "Recursos Humanos", order: 50, title: "Apoyar la gestión de colaboradores", description: "Preparar planillas CCSS e INS, altas, bajas, incapacidades, permisos y documentación de respaldo." },
+  { id: "resp-ventas", kind: "responsibility", area: "Ventas y servicios", order: 60, title: "Registrar ventas y servicios adicionales", description: "Controlar bebidas, suplementos, bronceadores, entrenamientos personales, InBody, VIP y bronceado." },
+  { id: "day-caja-apertura", kind: "daily", area: "Caja", order: 10, title: "Revisar apertura y fondo de caja", description: "Confirmar efectivo inicial y funcionamiento de datáfono y SINPE." },
+  { id: "day-correo", kind: "daily", area: "Facturación", order: 20, title: "Revisar correo y XML de facturación", description: "Atender comprobantes pendientes y confirmar documentos cuando corresponda." },
+  { id: "day-citas", kind: "daily", area: "Operación", order: 30, title: "Revisar agenda y servicios del día", description: "Verificar citas de bronceado, InBody, entrenamientos y solicitudes VIP." },
+  { id: "day-inventario", kind: "daily", area: "Inventario", order: 40, title: "Revisar productos críticos", description: "Validar faltantes de bebidas, suplementos, bronceadores y suministros de recepción." },
+  { id: "day-registros", kind: "daily", area: "Administración", order: 50, title: "Actualizar ventas e ingresos extraordinarios", description: "Dejar registrados pagos, ventas, servicios y movimientos fuera de lo habitual." },
+  { id: "day-cierre", kind: "daily", area: "Caja", order: 60, title: "Completar cierre y entrega de caja", description: "Conciliar efectivo, tarjeta y SINPE; documentar y entregar el dinero." },
+  { id: "month-ingresos", kind: "monthly", area: "Finanzas", order: 10, title: "Cierre mensual de ingresos", description: "Consolidar ingresos ordinarios y extraordinarios del período." },
+  { id: "month-pagos", kind: "monthly", area: "Finanzas", order: 20, title: "Conciliación por formas de pago", description: "Comparar efectivo, tarjeta y SINPE contra los registros del mes." },
+  { id: "month-personales", kind: "monthly", area: "Servicios", order: 30, title: "Reporte de entrenamientos personales", description: "Consolidar sesiones, cobros y comisiones de entrenadores." },
+  { id: "month-servicios", kind: "monthly", area: "Servicios", order: 40, title: "Reporte de InBody, VIP y bronceado", description: "Resumir ventas, sesiones, paquetes utilizados y saldos pendientes." },
+  { id: "month-productos", kind: "monthly", area: "Ventas", order: 50, title: "Ganancia por venta de productos", description: "Calcular ventas, costos y margen de bebidas, suplementos y bronceadores." },
+  { id: "month-clientes", kind: "monthly", area: "Clientes", order: 60, title: "Conteo de clientes nuevos y adultos mayores", description: "Reportar altas del mes y participación del programa de adultos mayores." },
+  { id: "month-ccss", kind: "monthly", area: "Recursos Humanos", order: 70, title: "Planillas CCSS e INS", description: "Preparar planillas, movimientos de personal e incidencias del período." },
+] as const;
 
 function isoDaysAgo(days: number) {
   const d = new Date();
@@ -203,6 +226,7 @@ export async function POST(req: NextRequest) {
     const pinsCol = db.collection(PINS_COLLECTION);
     const paymentsCol = db.collection(PAYMENTS_COLLECTION);
     const checkinsCol = db.collection(CHECKINS_COLLECTION);
+    const receptionDutiesCol = db.collection(RECEPTION_DUTIES_COLLECTION);
 
     const clearFilter = wipeAll ? {} : { seeded: true };
     await Promise.all([
@@ -211,6 +235,7 @@ export async function POST(req: NextRequest) {
       pinsCol.deleteMany(clearFilter),
       paymentsCol.deleteMany(clearFilter),
       checkinsCol.deleteMany(clearFilter),
+      receptionDutiesCol.deleteMany(clearFilter),
     ]);
 
     const now = new Date();
@@ -337,6 +362,17 @@ export async function POST(req: NextRequest) {
     });
     if (checkins.length) await checkinsCol.insertMany(checkins);
 
+    await receptionDutiesCol.insertMany(
+      RECEPTION_DUTIES.map((duty) => ({
+        ...duty,
+        active: true,
+        completedPeriods: [],
+        seeded: true,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    );
+
     return NextResponse.json({
       ok: true,
       wipeAll,
@@ -344,6 +380,7 @@ export async function POST(req: NextRequest) {
       insertedReservations: reservations.length,
       insertedPayments: payments.length,
       insertedCheckins: checkins.length,
+      insertedReceptionDuties: RECEPTION_DUTIES.length,
       pin: SEED_PIN,
     });
   } catch (err) {

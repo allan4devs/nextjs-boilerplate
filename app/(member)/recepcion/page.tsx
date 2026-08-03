@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
   CheckCircle2,
+  ClipboardList,
   CreditCard,
   DoorOpen,
   IdCard,
@@ -17,6 +18,7 @@ import {
   ScanFace,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
   Send,
   UserPlus,
   Users,
@@ -30,6 +32,8 @@ import {
   GameLabel,
 } from "../../components/GameOS";
 import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
+import ReceptionDutiesPanel from "../../components/reception/ReceptionDutiesPanel";
+import ReceptionControlsPanel from "../../components/reception/ReceptionControlsPanel";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
@@ -63,7 +67,7 @@ type ActiveVisit = {
   checkedInAt: string;
 };
 
-type Tab = "home" | "inside" | "cedula" | "face" | "register" | "invite" | "chat";
+type Tab = "home" | "duties" | "controls" | "inside" | "cedula" | "face" | "register" | "invite" | "chat";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -113,6 +117,7 @@ export default function RecepcionPage() {
   const [cedula, setCedula] = useState("");
   const [query, setQuery] = useState("");
   const [member, setMember] = useState<MemberHit | null>(null);
+  const [searchMatches, setSearchMatches] = useState<MemberHit[]>([]);
   const [faceMatches, setFaceMatches] = useState<MemberHit[]>([]);
   const [isLooking, setIsLooking] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
@@ -158,6 +163,7 @@ export default function RecepcionPage() {
 
   const cedulaInputRef = useRef<HTMLInputElement | null>(null);
   const lookupTimer = useRef<number | null>(null);
+  const nameLookupTimer = useRef<number | null>(null);
   const barcodeScanBusyRef = useRef(false);
   const lastBarcodeRef = useRef("");
 
@@ -344,11 +350,17 @@ export default function RecepcionPage() {
         const json = (await res.json()) as {
           status?: GymStatus;
           member?: MemberHit | null;
+          matches?: MemberHit[];
           error?: string;
         };
         if (json.status) setStatus(json.status);
+        setSearchMatches(json.matches ?? []);
         if (!json.member) {
           setMember(null);
+          if ((json.matches?.length ?? 0) > 1) {
+            setError("");
+            return null;
+          }
           setError(
             json.error ||
               "Socio no encontrado. La cédula es la clave principal; también nombre o código de 8 dígitos.",
@@ -356,10 +368,12 @@ export default function RecepcionPage() {
           return null;
         }
         setMember(json.member);
+        if (!json.matches) setSearchMatches([]);
         return json.member;
       } catch {
         setError("Error de conexión.");
         setMember(null);
+        setSearchMatches([]);
         return null;
       } finally {
         setIsLooking(false);
@@ -387,6 +401,23 @@ export default function RecepcionPage() {
       if (lookupTimer.current) window.clearTimeout(lookupTimer.current);
     };
   }, [cedula, unlocked, tab, lookupMember]);
+
+  // Búsqueda en vivo por nombre/teléfono: espera brevemente mientras se escribe.
+  useEffect(() => {
+    if (!unlocked || tab !== "cedula") return;
+    const value = query.trim();
+    if (nameLookupTimer.current) window.clearTimeout(nameLookupTimer.current);
+    if (value.length < 2) {
+      setSearchMatches([]);
+      return;
+    }
+    nameLookupTimer.current = window.setTimeout(() => {
+      void lookupMember({ q: value });
+    }, 240);
+    return () => {
+      if (nameLookupTimer.current) window.clearTimeout(nameLookupTimer.current);
+    };
+  }, [query, unlocked, tab, lookupMember]);
 
   // Lee la cédula en memoria: nunca guarda ni envía una foto del documento.
   useEffect(() => {
@@ -547,15 +578,6 @@ export default function RecepcionPage() {
     } finally {
       setCheckingOutId("");
     }
-  }
-
-  async function searchFallback(e?: React.FormEvent) {
-    e?.preventDefault();
-    const q = query.trim();
-    if (!q) return;
-    // classify + params viven en memberLookup (cédula > código > nombre)
-    const hit = await lookupMember({ q });
-    if (hit) setMember(hit);
   }
 
   async function scanFace() {
@@ -898,6 +920,8 @@ export default function RecepcionPage() {
             {(
               [
                 { id: "home" as const, label: "Mostrador", icon: LayoutDashboard },
+                { id: "duties" as const, label: "Deberes", icon: ClipboardList },
+                { id: "controls" as const, label: "Controles", icon: SlidersHorizontal },
                 { id: "inside" as const, label: "Adentro", icon: Users },
                 { id: "cedula" as const, label: "Cedula", icon: IdCard },
                 ...(FACE_RECOGNITION_ENABLED
@@ -957,6 +981,8 @@ export default function RecepcionPage() {
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <ReceptionAction icon={LogOut} eyebrow={`${inside.length} dentro`} title="Registrar salida" description="Buscá por nombre o cédula y marcá la salida con un toque." tone="orange" onClick={() => setTab("inside")} />
+                  <ReceptionAction icon={ClipboardList} eyebrow="Control operativo" title="Deberes y reportes" description="Revisá responsabilidades, pendientes de hoy y reportes del mes." tone="cyan" onClick={() => setTab("duties")} />
+                  <ReceptionAction icon={SlidersHorizontal} eyebrow="VIP · servicios · ventas" title="Paneles de control" description="Registrá adultos mayores, bronceado, recibos de luz y ventas del mostrador." tone="violet" onClick={() => setTab("controls")} />
                   <ReceptionAction icon={IdCard} eyebrow="Acceso rápido" title="Ingresar socio" description="Escaneá o digitá la cédula y confirmá el ingreso." tone="lime" onClick={() => setTab("cedula")} />
                   <ReceptionAction icon={UserPlus} eyebrow="Persona nueva" title="Registrar persona" description="Nombre, cédula, teléfono, correo, plan, foto e ingreso inmediato." tone="cyan" onClick={() => setTab("register")} />
                   <ReceptionAction icon={Mail} eyebrow="Solo necesita correo" title="Invitar a la app" description="Envíe un enlace para crear la cuenta, sin primer día gratis ni plan automático." tone="violet" onClick={() => setTab("invite")} />
@@ -979,6 +1005,8 @@ export default function RecepcionPage() {
                 </div>
               </div>
             )}
+            {tab === "duties" && <ReceptionDutiesPanel />}
+            {tab === "controls" && <ReceptionControlsPanel />}
             {tab === "inside" && (
               <InsideRoster
                 visits={inside}
@@ -1176,24 +1204,6 @@ export default function RecepcionPage() {
                     )}
                   </div>
 
-                  {/* Teclado numerico rapido (tablet) - estilo juego */}
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"].map((key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => {
-                          if (key === "clear") setCedula("");
-                          else if (key === "back") setCedula((v) => v.slice(0, -1));
-                          else setCedula((v) => (v + key).slice(0, 20));
-                        }}
-                        className="min-h-[52px] border-[3px] border-white/20 bg-black/40 py-3.5 text-xl font-black text-white shadow-[3px_3px_0_rgba(0,0,0,.45)] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black active:translate-x-px active:translate-y-px active:shadow-none"
-                      >
-                        {key === "clear" ? "C" : key === "back" ? "⌫" : key}
-                      </button>
-                    ))}
-                  </div>
-
                   <MemberPreview
                     member={member}
                     error={error}
@@ -1206,24 +1216,30 @@ export default function RecepcionPage() {
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/35">
                     Alternativa · nombre o codigo
                   </p>
-                  <form onSubmit={(e) => void searchFallback(e)} className="mt-3 flex gap-2">
-                    <div className="relative flex-1">
+                  <div className="mt-3">
+                    <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                       <input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Nombre, telefono o codigo"
-                        className="w-full border border-white/15 bg-black/40 py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-[#d8ff3e]/60"
+                        placeholder="Escribí el nombre, apellido o teléfono"
+                        autoComplete="off"
+                        className="w-full border-[3px] border-white/15 bg-black/40 py-4 pl-11 pr-12 text-base font-black outline-none focus:border-cyan-300/70"
                       />
+                      {isLooking && <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-cyan-300" />}
                     </div>
-                    <button
-                      type="submit"
-                      disabled={isLooking || !query.trim()}
-                      className="border border-white/15 px-4 text-xs font-black uppercase tracking-wide text-white/70 hover:border-white/30 disabled:opacity-40"
-                    >
-                      Buscar
-                    </button>
-                  </form>
+                    <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">
+                      Los resultados aparecen automáticamente mientras escribís
+                    </p>
+                  </div>
+                  <SearchMatchList
+                    matches={searchMatches}
+                    onSelect={(selected) => {
+                      setMember(selected);
+                      setSearchMatches([]);
+                      setError("");
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -1596,6 +1612,48 @@ export default function RecepcionPage() {
       </div>
 
     </main>
+  );
+}
+
+function SearchMatchList({
+  matches,
+  onSelect,
+}: {
+  matches: MemberHit[];
+  onSelect: (member: MemberHit) => void;
+}) {
+  if (matches.length < 2) return null;
+  return (
+    <div className="mt-3 border-[3px] border-cyan-300/35 bg-cyan-300/[0.04] p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">
+        {matches.length} personas encontradas · seleccioná una
+      </p>
+      <div className="mt-3 grid max-h-[28rem] gap-2 overflow-y-auto pr-1">
+        {matches.map((candidate) => (
+          <button
+            key={candidate.normalizedName}
+            type="button"
+            onClick={() => onSelect(candidate)}
+            className="group flex min-w-0 items-center gap-4 border-[3px] border-white/15 bg-black/50 p-4 text-left transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/[0.06]"
+          >
+            <div className="scale-110"><Avatar name={candidate.memberName} photoUrl={candidate.photoUrl} /></div>
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-black uppercase leading-tight text-white sm:text-lg">
+                {candidate.memberName}
+              </span>
+              <span className="mt-2 flex flex-wrap gap-1.5">
+                {candidate.plan && <span className="bg-white/10 px-2 py-1 text-[10px] font-black uppercase text-white/55">{candidate.plan}</span>}
+                <span className={`px-2 py-1 text-[10px] font-black uppercase ${candidate.membershipStatus === "expired" ? "bg-orange-400/15 text-orange-200" : "bg-[#d8ff3e]/15 text-[#d8ff3e]"}`}>
+                  {MEMBERSHIP_STATUS_LABELS[candidate.membershipStatus] ?? candidate.membershipStatus}
+                </span>
+                {candidate.cedula && <span className="bg-white/5 px-2 py-1 text-[10px] font-bold text-white/35">Céd. {candidate.cedula}</span>}
+              </span>
+            </span>
+            <span className="shrink-0 border-[3px] border-[#d8ff3e]/45 px-3 py-2 text-[10px] font-black uppercase text-[#d8ff3e] group-hover:bg-[#d8ff3e] group-hover:text-black">Seleccionar</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

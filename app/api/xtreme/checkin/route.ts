@@ -38,6 +38,10 @@ function isValidFaceHash(value: string) {
   return /^[0-9a-f]{16}$/i.test(value);
 }
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** Public kiosk view - no phone/email/cédula/access code leakage. */
 function toKioskMember(
   doc: MemberDoc,
@@ -135,6 +139,37 @@ export async function GET(req: NextRequest) {
 
     if (!q && !codeDigits && !cedula) {
       return NextResponse.json({ status, member: null });
+    }
+
+    if (staff && q && !codeDigits && !cedula) {
+      const terms = q.split(/\s+/).filter(Boolean).slice(0, 5);
+      const nameFilters = terms.map((term) => ({
+        $or: [
+          { memberName: { $regex: escapeRegex(term), $options: "i" } },
+          { normalizedName: { $regex: escapeRegex(term), $options: "i" } },
+        ],
+      }));
+      const digits = q.replace(/\D/g, "");
+      const filter = digits.length >= 3
+        ? { $or: [{ phone: { $regex: escapeRegex(digits) } }, { cedula: { $regex: escapeRegex(digits) } }, ...(nameFilters.length ? [{ $and: nameFilters }] : [])] }
+        : { $and: nameFilters };
+      const docs = await db.collection<MemberDoc>(MEMBERS_COLLECTION)
+        .find(filter).sort({ memberName: 1 }).limit(15).toArray();
+      const matches = await Promise.all(
+        docs.map((doc) => withKioskFlag(db, doc, { resolvedBy: "search" }, true)),
+      );
+      if (!matches.length) {
+        return NextResponse.json(
+          { status, member: null, matches: [], error: MEMBER_NOT_FOUND_MESSAGE },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json({
+        status,
+        member: matches.length === 1 ? matches[0] : null,
+        matches,
+        resolvedBy: "search",
+      });
     }
 
     // Fuente única: cédula > memberKey > código > nombre/teléfono
