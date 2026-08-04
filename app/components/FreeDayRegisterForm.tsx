@@ -79,6 +79,8 @@ function FreeDayRegisterFormInner({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [website, setWebsite] = useState("");
+  const [formStartedAt] = useState(() => Date.now());
 
   useEffect(() => {
     const fromQuery =
@@ -109,7 +111,12 @@ function FreeDayRegisterFormInner({
     setError("");
     setBusy(true);
     try {
-      const payload: Record<string, unknown> = { action: "start", source };
+      const payload: Record<string, unknown> = {
+        action: "start",
+        source,
+        website,
+        formStartedAt,
+      };
       const forced = (opts.forcedEmail || "").trim();
 
       if (opts.mode === "email") {
@@ -304,6 +311,19 @@ function FreeDayRegisterFormInner({
       onSubmit={(e) => void onSubmit(e)}
       className={`border border-white/10 bg-[#0e0e0e] p-6 sm:p-8 ${className}`}
     >
+      <div className="hidden" aria-hidden="true">
+        <label>
+          Sitio web
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            value={website}
+            onChange={(event) => setWebsite(event.target.value)}
+          />
+        </label>
+      </div>
       <div className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
         <span className="text-[#f6c400]">1. Correo o cédula</span>
         <span aria-hidden>→</span>

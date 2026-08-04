@@ -223,6 +223,8 @@ export type PendingRegistrationDoc = {
   expectedMemberName?: string | null;
   paymentId?: string | null;
   createdAt: Date;
+  /** Último correo de registro solicitado; evita usar el formulario como relay. */
+  lastSentAt?: Date;
   /**
    * campaign = magic link de campañas admin.
    * email_change = actualizar correo de cuenta ya registrada (cédula + PIN).

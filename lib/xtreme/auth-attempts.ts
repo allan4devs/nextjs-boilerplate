@@ -223,6 +223,40 @@ export async function recordFailedAuthAttempt(
 }
 
 /**
+ * Registra actividad en un flujo público en los dos ejes que consulta
+ * authAttemptStatus: identidad y dirección IP. Debe llamarse también cuando
+ * el request fue válido: enviar correos a muchas identidades distintas es
+ * precisamente el abuso que el límite por IP pretende detener.
+ */
+export async function recordPublicAuthAttempt(
+  db: Db,
+  req: NextRequest,
+  args: {
+    scope: string;
+    subject: string;
+    subjectMaxAttempts?: number;
+    ipMaxAttempts?: number;
+    windowMs?: number;
+  },
+) {
+  const windowMs = args.windowMs ?? 15 * 60_000;
+  const [subject, ip] = await Promise.all([
+    applyFailedAttempt(db, subjectKey(args.scope, args.subject), {
+      scope: args.scope,
+      maxAttempts: args.subjectMaxAttempts ?? 3,
+      windowMs,
+    }),
+    applyFailedAttempt(db, ipKey(req, args.scope), {
+      scope: `${args.scope}:ip`,
+      maxAttempts: args.ipMaxAttempts ?? 6,
+      windowMs,
+    }),
+  ]);
+
+  return { subject, ip, blocked: subject.blocked || ip.blocked };
+}
+
+/**
  * Registra un intento fallido de PIN en AMBOS ejes (cuenta + IP).
  * Máximos recomendados para PIN de 4 dígitos:
  *   - Por cuenta: 5 intentos → lockout exponencial 1h/2h/4h/8h/24h
