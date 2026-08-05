@@ -13,24 +13,29 @@ type Props = {
   onCheckout: ResumenActions["registerCheckout"];
 };
 
-function durationLabel(totalMinutes: number) {
-  const hours   = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (!hours) return `${minutes} min`;
-  return `${hours} h${minutes ? ` ${minutes} min` : ""}`;
+function durationLabel(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours ? `${hours} h ` : ""}${minutes} min ${seconds} s`;
 }
 
 export default function ActiveVisitPanel({ visit, onCheckout }: Props) {
-  /* Timer en vivo — incrementa cada 60 s */
-  const [liveMin, setLiveMin] = useState(visit.elapsedMinutes);
-  useEffect(() => {
-    setLiveMin(visit.elapsedMinutes);
-    const id = setInterval(() => setLiveMin((m) => m + 1), 60_000);
-    return () => clearInterval(id);
-  }, [visit.elapsedMinutes]);
+  const checkedInAtMs = new Date(visit.checkedInAt).getTime();
+  const elapsedSeconds = () =>
+    Math.max(0, Math.floor((Date.now() - checkedInAtMs) / 1_000));
+  const [liveSeconds, setLiveSeconds] = useState(elapsedSeconds);
 
-  const h = Math.floor(liveMin / 60);
-  const m = liveMin % 60;
+  useEffect(() => {
+    const refresh = () => setLiveSeconds(elapsedSeconds());
+    refresh();
+    const id = window.setInterval(refresh, 1_000);
+    return () => clearInterval(id);
+  }, [checkedInAtMs]);
+
+  const h = Math.floor(liveSeconds / 3_600);
+  const m = Math.floor((liveSeconds % 3_600) / 60);
+  const s = liveSeconds % 60;
   const urgente = visit.reminderDue;
 
   return (
@@ -79,9 +84,13 @@ export default function ActiveVisitPanel({ visit, onCheckout }: Props) {
               <span className="mb-1.5 text-xl font-black text-[#d8ff3e]/60">
                 {h > 0 ? "m" : "min"}
               </span>
+              <span className="text-5xl font-black tabular-nums leading-none text-[#d8ff3e] sm:text-6xl">
+                {String(s).padStart(2, "0")}
+              </span>
+              <span className="mb-1.5 text-xl font-black text-[#d8ff3e]/60">s</span>
             </div>
             <p className="mt-1.5 text-xs font-bold text-white/40">
-              {durationLabel(liveMin)} entrenando en Xtreme Gym
+              {durationLabel(liveSeconds)} entrenando en Xtreme Gym
             </p>
 
             {/* Recordatorio */}

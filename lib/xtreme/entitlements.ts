@@ -494,6 +494,63 @@ export async function activateDayPassOnCheckin(
   return db.collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION).findOne({ id: target.id });
 }
 
+/**
+ * Cierra un pase de un día al terminar la visita que lo activó.
+ * El grant se conserva como exhausted para impedir que el primer día gratis
+ * vuelva a otorgarse, pero la membresía visible queda vencida inmediatamente.
+ */
+export async function exhaustDayPassOnCheckout(
+  db: Db,
+  memberKey: string,
+  date = todayIso(),
+): Promise<EntitlementDoc | null> {
+  const target = await db.collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION).findOne({
+    memberKey,
+    kind: "day_pass",
+    activatedOn: date,
+    status: "active",
+  });
+  if (!target) return null;
+
+  const now = new Date();
+  const updated = await db.collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION).updateOne(
+    { id: target.id, memberKey, status: "active" },
+    {
+      $set: {
+        status: "exhausted",
+        remainingBookings: 0,
+        updatedAt: now,
+      },
+    },
+  );
+  if (!updated.modifiedCount) return null;
+
+  await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+    {
+      normalizedName: memberKey,
+      "membership.plan": target.label || target.offerId || "Pase del día",
+    },
+    {
+      $set: {
+        "membership.status": "expired",
+        "membership.nextBillingDate": addDaysIso(date, -1),
+        updatedAt: now,
+      },
+    },
+  );
+
+  await writeLedger(db, {
+    memberKey,
+    entitlementId: target.id,
+    action: "consume",
+    deltaBookings: -1,
+    note: `Pase de una visita agotado al registrar salida (${date})`,
+    source: target.source,
+  });
+
+  return db.collection<EntitlementDoc>(ENTITLEMENTS_COLLECTION).findOne({ id: target.id });
+}
+
 export async function grantEntitlement(
   db: Db,
   partial: Omit<EntitlementDoc, "createdAt" | "updatedAt" | "status"> & { status?: EntitlementStatus },

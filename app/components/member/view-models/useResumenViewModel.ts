@@ -15,6 +15,7 @@ type SummaryStat = {
 
 export type ResumenViewModel = {
   activeVisit: {
+    checkedInAt: string;
     checkedInAtLabel: string;
     elapsedMinutes: number;
     reminderAfterMinutes: number;
@@ -241,6 +242,7 @@ export function useResumenViewModel(os: MemberOs): {
     return {
       activeVisit: activeVisit
         ? {
+            checkedInAt: activeVisit.checkedInAt,
             checkedInAtLabel: new Intl.DateTimeFormat("es-CR", {
               hour: "numeric",
               minute: "2-digit",

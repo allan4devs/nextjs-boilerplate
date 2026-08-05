@@ -11,7 +11,10 @@ import {
   inviteBaseUrlFromRequest,
   inviteExistingMemberToApp,
 } from "@/lib/xtreme/member-app-invite";
-import { activateDayPassOnCheckin } from "@/lib/xtreme/entitlements";
+import {
+  activateDayPassOnCheckin,
+  exhaustDayPassOnCheckout,
+} from "@/lib/xtreme/entitlements";
 import {
   CHECKINS_COLLECTION,
   MEMBERS_COLLECTION,
@@ -433,6 +436,11 @@ export async function POST(req: NextRequest) {
       );
       if (!updated.modifiedCount) {
         return NextResponse.json({ error: "La salida ya habia sido registrada." }, { status: 409 });
+      }
+      try {
+        await exhaustDayPassOnCheckout(db, openCheckin.normalizedName, openCheckin.date);
+      } catch (error) {
+        console.error("XTREME RECEPTION DAY PASS EXHAUST ERROR", error);
       }
 
       const durationMinutes = Math.max(
