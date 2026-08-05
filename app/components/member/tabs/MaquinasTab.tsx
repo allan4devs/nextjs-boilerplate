@@ -75,7 +75,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      <div className="grid grid-cols-1 gap-3 min-[560px]:grid-cols-2 lg:grid-cols-3">
         {filtered.map((machine) => {
           const ZoneIcon = ZONE_ICONS[machine.zone] ?? Dumbbell;
           return (
@@ -83,15 +83,15 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
               key={machine.id}
               type="button"
               onClick={() => setOsModal({ kind: "machine", machineId: machine.id })}
-              className="group relative flex min-h-[168px] flex-col overflow-hidden border-[3px] border-white/20 bg-[#0c0c0c] text-left shadow-[4px_4px_0_rgba(0,0,0,.55)] transition active:translate-x-px active:translate-y-px active:shadow-none hover:border-[#d8ff3e]/50 sm:min-h-[180px]"
+              className="group relative flex min-h-[190px] flex-col overflow-hidden border-[2px] border-white/25 bg-[#0c0c0c] text-left shadow-[4px_4px_0_rgba(0,0,0,.55)] transition focus-visible:border-[#d8ff3e] focus-visible:outline-none active:translate-x-px active:translate-y-px active:shadow-none hover:border-[#d8ff3e] sm:min-h-[210px]"
             >
               <div
                 className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-105"
                 style={{ backgroundImage: `url(${machine.image})` }}
               />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.42)_0%,rgba(0,0,0,.28)_32%,rgba(0,0,0,.84)_66%,rgba(0,0,0,.98)_100%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.28)_0%,rgba(0,0,0,.16)_34%,rgba(0,0,0,.88)_68%,rgba(0,0,0,.98)_100%)]" />
               <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${machine.accent}`} />
-              <div className="relative flex flex-1 flex-col justify-between p-3 sm:p-3.5">
+              <div className="relative flex flex-1 flex-col justify-between p-3.5 sm:p-4">
                 <div className="flex items-start justify-between gap-2">
                   <span
                     className={`grid h-10 w-10 place-items-center bg-gradient-to-br ${machine.accent} text-black shadow-[2px_2px_0_rgba(0,0,0,.35)] sm:h-11 sm:w-11`}
@@ -109,7 +109,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
                   <GameLabel tone="white">
                     {machine.zone} · {machine.level}
                   </GameLabel>
-                  <h2 className="mt-1 text-sm font-black uppercase leading-tight text-balance drop-shadow sm:text-base">
+                  <h2 className="mt-1.5 text-base font-black uppercase leading-[1.08] text-balance drop-shadow sm:text-lg">
                     {machine.name}
                   </h2>
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -119,7 +119,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
                       </GameChip>
                     ))}
                   </div>
-                  <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#d8ff3e] group-hover:underline">
+                  <p className="mt-3 inline-flex border-t border-[#d8ff3e]/35 pt-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#d8ff3e] group-hover:underline">
                     Abrir guía →
                   </p>
                 </div>
@@ -237,6 +237,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
         panels={panels}
         activeId={activeId}
         onActiveChange={setActiveId}
+        modalSize="full"
         title="Guía de máquinas"
         subtitle="Fotos del piso + videos de técnica - tocá y abrí la guía."
         header={

@@ -46,3 +46,10 @@ scripts/email-recovery-report.json
 
 # Local data exports (emails / PII — never commit)
 /exports/
+agents/
+skills/
+.scripts/*
+public/
+
+.vercel
+.env*.local

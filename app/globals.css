@@ -174,7 +174,27 @@ button,
 /* (fade-in/out + slide-up on mobile, scale on desktop) */
 
 .xg-game-modal-panel {
-  /* layout only — animations via Tailwind */
+  box-sizing: border-box;
+  contain: layout paint;
+}
+
+.xg-game-modal-scroll {
+  scrollbar-color: rgba(216, 255, 62, 0.72) rgba(255, 255, 255, 0.08);
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.xg-game-modal-scroll::-webkit-scrollbar {
+  width: 9px;
+}
+
+.xg-game-modal-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.xg-game-modal-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid #111;
+  background: rgba(216, 255, 62, 0.78);
 }
 
 .xg-game-panel {
@@ -1132,10 +1152,16 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 /* Chunkier touch targets on small screens */
 @media (max-width: 640px) {
   .xg-game-modal-panel {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px));
     border-left-width: 0;
     border-right-width: 0;
     border-bottom-width: 0;
     border-radius: 0;
+  }
+
+  .xg-game-modal-scroll {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    scrollbar-gutter: auto;
   }
 }
 

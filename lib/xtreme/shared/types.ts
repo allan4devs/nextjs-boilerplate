@@ -3,6 +3,7 @@ import type { StaffRole } from "./config";
 
 export type Membership = {
   plan?: string;
+  lastPaidAt?: string;
   nextBillingDate?: string;
   startedAt?: string;
   status?: "active" | "warning" | "expired";

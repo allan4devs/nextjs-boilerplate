@@ -8,7 +8,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { trackAction } from "@/app/lib/analytics/session-client";
 import { GameModal } from "../GameOS";
 
@@ -38,6 +38,7 @@ export type PanelHubProps = {
   /** Pie fijo (ej. cerrar sesión). */
   footer?: ReactNode;
   className?: string;
+  modalSize?: "sm" | "md" | "lg" | "full";
   /**
    * controlled: si se pasa, el padre maneja la selección.
    * Útil cuando un tab necesita sincronizar sub-paneles.
@@ -96,6 +97,7 @@ export default function PanelHub({
   header,
   footer,
   className = "",
+  modalSize = "lg",
   activeId,
   onActiveChange,
 }: PanelHubProps) {
@@ -191,7 +193,17 @@ export default function PanelHub({
         subtitle={active?.hint}
         icon={active?.icon}
         tone={MODAL_TONE[active?.tone ?? "lime"]}
-        size="lg"
+        size={modalSize}
+        footer={
+          <button
+            type="button"
+            onClick={() => setSelected(null)}
+            className="flex min-h-12 w-full items-center justify-center gap-2 border-[2px] border-white/20 bg-white/[0.06] text-xs font-black uppercase tracking-[0.12em] text-white transition hover:border-[#d8ff3e] hover:text-[#d8ff3e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e]"
+          >
+            <X className="h-4 w-4" />
+            Cerrar
+          </button>
+        }
       >
         {active?.content}
       </GameModal>

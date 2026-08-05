@@ -33,7 +33,7 @@ export function GameHudPill({
       type={onClick ? "button" : undefined}
       onClick={onClick}
       title={label}
-      className={`inline-flex min-h-9 items-center gap-1 border-2 bg-black/55 py-1 sm:min-h-10 sm:gap-1.5 ${
+      className={`inline-flex min-h-8 items-center gap-1 border bg-black/55 py-0.5 sm:min-h-9 sm:gap-1.5 ${
         compact ? "px-1.5 sm:px-2" : "px-2"
       } ${colors[tone]} ${onClick ? "transition active:scale-[0.98]" : ""} ${className}`}
     >
@@ -45,7 +45,7 @@ export function GameHudPill({
       >
         {label}
       </span>
-      <span className="text-sm font-black uppercase leading-none tabular-nums">{value}</span>
+      <span className="text-xs font-black uppercase leading-none tabular-nums">{value}</span>
     </Tag>
   );
 }
@@ -65,7 +65,7 @@ export function GameDockItem({ label, icon: Icon, active, onClick, tourId, atten
       type="button"
       data-tour={tourId}
       onClick={onClick}
-      className={`relative flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 border-t-[3px] px-0.5 transition sm:min-h-[58px] sm:px-1 ${
+      className={`relative flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 border-t-2 px-0.5 transition sm:min-h-[50px] sm:px-1 ${
         active
           ? "border-t-[#d8ff3e] bg-gradient-to-b from-[#d8ff3e]/20 to-transparent text-[#d8ff3e]"
           : "border-t-transparent text-white/45 active:bg-white/[0.06] active:text-white"
@@ -77,7 +77,7 @@ export function GameDockItem({ label, icon: Icon, active, onClick, tourId, atten
           className="absolute right-[calc(50%-18px)] top-1.5 h-2.5 w-2.5 animate-pulse rounded-full border-2 border-[#0a0a0a] bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,.9)]"
         />
       )}
-      <Icon className={`h-5 w-5 shrink-0 ${active ? "xg-dock-active-icon" : ""}`} strokeWidth={active ? 2.5 : 2} />
+      <Icon className={`h-4 w-4 shrink-0 ${active ? "xg-dock-active-icon" : ""}`} strokeWidth={active ? 2.5 : 2} />
       <span className="max-w-full truncate text-[8px] font-black uppercase tracking-[0.06em] sm:text-[9px] sm:tracking-[0.08em]">
         {label}
       </span>

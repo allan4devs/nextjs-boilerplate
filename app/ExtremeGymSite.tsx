@@ -119,8 +119,8 @@ export default function ExtremeGymSite() {
       <BottomDock os={os} showChat={Boolean(unlocked && memberName)} />
 
       <section
-        className={`xg-os-content relative mx-auto max-w-[1600px] px-3 py-3 transition-[padding] sm:px-6 sm:py-5 ${
-          navOpen ? "lg:pl-[268px] lg:pr-10" : "lg:pl-[104px] lg:pr-10"
+        className={`xg-os-content relative mx-auto max-w-[1720px] px-2.5 py-2.5 transition-[padding] sm:px-4 sm:py-3 ${
+          navOpen ? "lg:pl-[244px] lg:pr-6" : "lg:pl-[92px] lg:pr-6"
         }`}
       >
         {/* Ancla del primer paso del tour: zona superior del contenido. */}
@@ -139,7 +139,7 @@ export default function ExtremeGymSite() {
             </div>
           </div>
         ) : (
-          <div key={tab} className="space-y-3 sm:space-y-4">
+          <div key={tab} className="space-y-2.5 sm:space-y-3">
             {tab === "resumen" && <ResumenTab model={resumen.model} actions={resumen.actions} />}
             {tab === "entrenar" && <EntrenarTab os={os} />}
             {tab === "vida" && <VidaTab os={os} />}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
+import { businessDate } from "@/lib/xtreme/business-date";
 import { recordEvent } from "@/lib/xtreme/events";
 import {
   findActiveMemberVisit,
@@ -8,7 +9,12 @@ import {
 import {
   CHECKINS_COLLECTION,
   computeOccupancy,
+  formatAccessCode,
+  memberAccessCode,
+  membershipStatus,
+  MEMBERS_COLLECTION,
   type CheckinDoc,
+  type MemberDoc,
 } from "@/lib/xtreme/shared";
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 
@@ -84,6 +90,72 @@ export async function GET(req: NextRequest) {
     console.error("XTREME MEMBER VISIT GET", error);
     return NextResponse.json(
       { error: "No se pudo consultar tu visita activa." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await requireMemberSession(req);
+    if (!isSession(session)) return session;
+
+    const db = await getDb();
+    const now = new Date();
+    const openVisit = await findActiveMemberVisit(db, session.memberKey, now);
+    if (openVisit) {
+      return NextResponse.json({
+        ok: true,
+        duplicate: true,
+        activeVisit: presentActiveMemberVisit(openVisit, now),
+        status: await computeOccupancy(db),
+      });
+    }
+
+    const member = await db
+      .collection<MemberDoc>(MEMBERS_COLLECTION)
+      .findOne({ normalizedName: session.memberKey });
+    if (!member) {
+      return NextResponse.json({ error: "No encontramos tu perfil de socio." }, { status: 404 });
+    }
+
+    const checkin: CheckinDoc = {
+      id: `chk-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
+      memberName: session.memberName,
+      normalizedName: session.memberKey,
+      accessCode: formatAccessCode(memberAccessCode(session.memberKey)),
+      method: "pin",
+      membershipStatus: membershipStatus(member.membership).status,
+      date: businessDate(now),
+      checkedInAt: now,
+      checkedOutAt: null,
+      by: "kiosk",
+      note: "Ingreso desde Member OS",
+    };
+
+    await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+    await recordEvent(db, {
+      type: "checkin_completed",
+      memberId: session.memberKey,
+      source: "member_app",
+      entity: { type: "checkin", id: checkin.id },
+      properties: {
+        method: "member_session",
+        membershipStatus: checkin.membershipStatus,
+        date: checkin.date,
+        selfService: true,
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      activeVisit: presentActiveMemberVisit(checkin, now),
+      status: await computeOccupancy(db),
+    });
+  } catch (error) {
+    console.error("XTREME MEMBER VISIT PUT", error);
+    return NextResponse.json(
+      { error: "No se pudo registrar tu ingreso." },
       { status: 500 },
     );
   }

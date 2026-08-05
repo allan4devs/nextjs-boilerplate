@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
   CheckCircle2,
+  ClipboardList,
   CreditCard,
   DoorOpen,
   IdCard,
@@ -14,9 +15,11 @@ import {
   LogOut,
   Mail,
   MessageCircle,
+  Pencil,
   ScanFace,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
   Send,
   UserPlus,
   Users,
@@ -30,6 +33,8 @@ import {
   GameLabel,
 } from "../../components/GameOS";
 import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
+import ReceptionDutiesPanel from "../../components/reception/ReceptionDutiesPanel";
+import ReceptionControlsPanel from "../../components/reception/ReceptionControlsPanel";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
@@ -63,7 +68,7 @@ type ActiveVisit = {
   checkedInAt: string;
 };
 
-type Tab = "home" | "inside" | "cedula" | "face" | "register" | "invite" | "chat";
+type Tab = "home" | "duties" | "controls" | "inside" | "cedula" | "face" | "register" | "invite" | "chat";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -113,6 +118,7 @@ export default function RecepcionPage() {
   const [cedula, setCedula] = useState("");
   const [query, setQuery] = useState("");
   const [member, setMember] = useState<MemberHit | null>(null);
+  const [searchMatches, setSearchMatches] = useState<MemberHit[]>([]);
   const [faceMatches, setFaceMatches] = useState<MemberHit[]>([]);
   const [isLooking, setIsLooking] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
@@ -129,9 +135,12 @@ export default function RecepcionPage() {
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPlan, setRegPlan] = useState("Xtreme Mensual");
+  const [regLastPaidAt, setRegLastPaidAt] = useState("");
+  const [regNextBillingDate, setRegNextBillingDate] = useState("");
   const [regPhoto, setRegPhoto] = useState("");
   const [regFaceHash, setRegFaceHash] = useState("");
   const [regCheckIn, setRegCheckIn] = useState(true);
+  const [editingMemberKey, setEditingMemberKey] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteResult, setInviteResult] = useState("");
@@ -158,6 +167,7 @@ export default function RecepcionPage() {
 
   const cedulaInputRef = useRef<HTMLInputElement | null>(null);
   const lookupTimer = useRef<number | null>(null);
+  const nameLookupTimer = useRef<number | null>(null);
   const barcodeScanBusyRef = useRef(false);
   const lastBarcodeRef = useRef("");
 
@@ -344,11 +354,17 @@ export default function RecepcionPage() {
         const json = (await res.json()) as {
           status?: GymStatus;
           member?: MemberHit | null;
+          matches?: MemberHit[];
           error?: string;
         };
         if (json.status) setStatus(json.status);
+        setSearchMatches(json.matches ?? []);
         if (!json.member) {
           setMember(null);
+          if ((json.matches?.length ?? 0) > 1) {
+            setError("");
+            return null;
+          }
           setError(
             json.error ||
               "Socio no encontrado. La cédula es la clave principal; también nombre o código de 8 dígitos.",
@@ -356,10 +372,12 @@ export default function RecepcionPage() {
           return null;
         }
         setMember(json.member);
+        if (!json.matches) setSearchMatches([]);
         return json.member;
       } catch {
         setError("Error de conexión.");
         setMember(null);
+        setSearchMatches([]);
         return null;
       } finally {
         setIsLooking(false);
@@ -387,6 +405,23 @@ export default function RecepcionPage() {
       if (lookupTimer.current) window.clearTimeout(lookupTimer.current);
     };
   }, [cedula, unlocked, tab, lookupMember]);
+
+  // Búsqueda en vivo por nombre/teléfono: espera brevemente mientras se escribe.
+  useEffect(() => {
+    if (!unlocked || tab !== "cedula") return;
+    const value = query.trim();
+    if (nameLookupTimer.current) window.clearTimeout(nameLookupTimer.current);
+    if (value.length < 2) {
+      setSearchMatches([]);
+      return;
+    }
+    nameLookupTimer.current = window.setTimeout(() => {
+      void lookupMember({ q: value });
+    }, 240);
+    return () => {
+      if (nameLookupTimer.current) window.clearTimeout(nameLookupTimer.current);
+    };
+  }, [query, unlocked, tab, lookupMember]);
 
   // Lee la cédula en memoria: nunca guarda ni envía una foto del documento.
   useEffect(() => {
@@ -549,15 +584,6 @@ export default function RecepcionPage() {
     }
   }
 
-  async function searchFallback(e?: React.FormEvent) {
-    e?.preventDefault();
-    const q = query.trim();
-    if (!q) return;
-    // classify + params viven en memberLookup (cédula > código > nombre)
-    const hit = await lookupMember({ q });
-    if (hit) setMember(hit);
-  }
-
   async function scanFace() {
     const video = videoRef.current;
     if (!video || !cameraOn) {
@@ -685,15 +711,18 @@ export default function RecepcionPage() {
         method: "POST",
         headers: headers(true),
         body: JSON.stringify({
-          action: "register",
+          action: editingMemberKey ? "update_member" : "register",
+          memberKey: editingMemberKey || undefined,
           memberName: regName,
           cedula: regCedula,
           phone: regPhone,
           email: regEmail,
           plan: regPlan,
+          lastPaidAt: regLastPaidAt || undefined,
+          nextBillingDate: regNextBillingDate || undefined,
           photoUrl: regPhoto || undefined,
           faceHash: regFaceHash || undefined,
-          checkInNow: regCheckIn,
+          checkInNow: editingMemberKey ? false : regCheckIn,
         }),
       });
       const json = (await res.json()) as {
@@ -721,8 +750,11 @@ export default function RecepcionPage() {
       setRegCedula("");
       setRegPhone("");
       setRegEmail("");
+      setRegLastPaidAt("");
+      setRegNextBillingDate("");
       setRegPhoto("");
       setRegFaceHash("");
+      setEditingMemberKey("");
       setMember(null);
       void loadPanel(true);
       setTab("cedula");
@@ -904,19 +936,17 @@ export default function RecepcionPage() {
             {(
               [
                 { id: "home" as const, label: "Mostrador", icon: LayoutDashboard },
+                { id: "duties" as const, label: "Deberes", icon: ClipboardList },
+                { id: "controls" as const, label: "Controles", icon: SlidersHorizontal },
                 { id: "inside" as const, label: "Adentro", icon: Users },
                 { id: "cedula" as const, label: "Cedula", icon: IdCard },
                 ...(FACE_RECOGNITION_ENABLED
                   ? [{ id: "face" as const, label: "Rostro", icon: ScanFace }]
                   : []),
-                { id: "register" as const, label: "Registro", icon: UserPlus },
-                { id: "invite" as const, label: "Invitar", icon: Mail },
-                { id: "chat" as const, label: "Chat", icon: MessageCircle },
               ] as const
             ).map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
-              const showBadge = t.id === "chat" && chatUnread > 0 && !active;
               return (
                 <button
                   key={t.id}
@@ -934,11 +964,6 @@ export default function RecepcionPage() {
                 >
                   <span className="relative">
                     <Icon className="h-5 w-5 sm:h-4 sm:w-4" />
-                    {showBadge && (
-                      <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center bg-red-500 px-0.5 text-[9px] font-black text-white">
-                        {chatUnread > 9 ? "9+" : chatUnread}
-                      </span>
-                    )}
                   </span>
                   {t.label}
                 </button>
@@ -955,18 +980,12 @@ export default function RecepcionPage() {
                     <h1 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">¿Qué necesita hacer?</h1>
                     <p className="mt-2 max-w-2xl text-sm font-bold text-white/45">Todo lo del mostrador está acá. Administración, reportes y configuración viven en tu panel separado.</p>
                   </div>
-                  {chatUnread > 0 && (
-                    <button type="button" onClick={() => setTab("chat")} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-red-400 bg-red-500/15 px-4 text-xs font-black uppercase text-red-200">
-                      <MessageCircle className="h-4 w-4" /> {chatUnread} chat{chatUnread === 1 ? "" : "s"} pendiente{chatUnread === 1 ? "" : "s"}
-                    </button>
-                  )}
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <ReceptionAction icon={LogOut} eyebrow={`${inside.length} dentro`} title="Registrar salida" description="Buscá por nombre o cédula y marcá la salida con un toque." tone="orange" onClick={() => setTab("inside")} />
+                  <ReceptionAction icon={ClipboardList} eyebrow="Control operativo" title="Deberes y reportes" description="Revisá responsabilidades, pendientes de hoy y reportes del mes." tone="cyan" onClick={() => setTab("duties")} />
+                  <ReceptionAction icon={SlidersHorizontal} eyebrow="VIP · servicios · ventas" title="Paneles de control" description="Registrá adultos mayores, bronceado, recibos de luz y ventas del mostrador." tone="violet" onClick={() => setTab("controls")} />
                   <ReceptionAction icon={IdCard} eyebrow="Acceso rápido" title="Ingresar socio" description="Escaneá o digitá la cédula y confirmá el ingreso." tone="lime" onClick={() => setTab("cedula")} />
-                  <ReceptionAction icon={UserPlus} eyebrow="Persona nueva" title="Registrar persona" description="Nombre, cédula, teléfono, correo, plan, foto e ingreso inmediato." tone="cyan" onClick={() => setTab("register")} />
-                  <ReceptionAction icon={Mail} eyebrow="Solo necesita correo" title="Invitar a la app" description="Envíe un enlace para crear la cuenta, sin primer día gratis ni plan automático." tone="violet" onClick={() => setTab("invite")} />
-                  <ReceptionAction icon={MessageCircle} eyebrow={chatUnread > 0 ? String(chatUnread) + " por atender" : "Atención en vivo"} title="Responder chat" description="Lea conversaciones, responda consultas y cierre casos resueltos." tone="orange" onClick={() => setTab("chat")} />
                   {FACE_RECOGNITION_ENABLED ? (
                     <ReceptionAction icon={ScanFace} eyebrow="Cámara" title="Ingreso por rostro" description="Reconocé socios enrolados o agregá el rostro al perfil." tone="violet" onClick={() => setTab("face")} />
                   ) : (
@@ -985,6 +1004,8 @@ export default function RecepcionPage() {
                 </div>
               </div>
             )}
+            {tab === "duties" && <ReceptionDutiesPanel />}
+            {tab === "controls" && <ReceptionControlsPanel />}
             {tab === "inside" && (
               <InsideRoster
                 visits={inside}
@@ -1182,24 +1203,6 @@ export default function RecepcionPage() {
                     )}
                   </div>
 
-                  {/* Teclado numerico rapido (tablet) - estilo juego */}
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"].map((key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => {
-                          if (key === "clear") setCedula("");
-                          else if (key === "back") setCedula((v) => v.slice(0, -1));
-                          else setCedula((v) => (v + key).slice(0, 20));
-                        }}
-                        className="min-h-[52px] border-[3px] border-white/20 bg-black/40 py-3.5 text-xl font-black text-white shadow-[3px_3px_0_rgba(0,0,0,.45)] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black active:translate-x-px active:translate-y-px active:shadow-none"
-                      >
-                        {key === "clear" ? "C" : key === "back" ? "⌫" : key}
-                      </button>
-                    ))}
-                  </div>
-
                   <MemberPreview
                     member={member}
                     error={error}
@@ -1212,24 +1215,46 @@ export default function RecepcionPage() {
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/35">
                     Alternativa · nombre o codigo
                   </p>
-                  <form onSubmit={(e) => void searchFallback(e)} className="mt-3 flex gap-2">
-                    <div className="relative flex-1">
+                  <div className="mt-3">
+                    <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                       <input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Nombre, telefono o codigo"
-                        className="w-full border border-white/15 bg-black/40 py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-[#d8ff3e]/60"
+                        placeholder="Escribí el nombre, apellido o teléfono"
+                        autoComplete="off"
+                        className="w-full border-[3px] border-white/15 bg-black/40 py-4 pl-11 pr-12 text-base font-black outline-none focus:border-cyan-300/70"
                       />
+                      {isLooking && <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-cyan-300" />}
                     </div>
-                    <button
-                      type="submit"
-                      disabled={isLooking || !query.trim()}
-                      className="border border-white/15 px-4 text-xs font-black uppercase tracking-wide text-white/70 hover:border-white/30 disabled:opacity-40"
-                    >
-                      Buscar
-                    </button>
-                  </form>
+                    <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">
+                      Los resultados aparecen automáticamente mientras escribís
+                    </p>
+                  </div>
+                  <SearchMatchList
+                    matches={searchMatches}
+                    onSelect={(selected) => {
+                      setMember(selected);
+                      setSearchMatches([]);
+                      setError("");
+                    }}
+                    onEdit={(selected) => {
+                      setEditingMemberKey(selected.normalizedName);
+                      setRegName(selected.memberName);
+                      setRegCedula(selected.cedula ?? "");
+                      setRegPhone(selected.phone ?? "");
+                      setRegEmail(selected.email ?? "");
+                      setRegPlan(selected.plan || "Xtreme Mensual");
+                      setRegLastPaidAt(selected.lastPaidAt ?? "");
+                      setRegNextBillingDate(selected.nextBillingDate ?? "");
+                      setRegPhoto(selected.photoUrl ?? "");
+                      setRegFaceHash("");
+                      setRegCheckIn(false);
+                      setSearchMatches([]);
+                      setError("");
+                      setTab("register");
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -1389,14 +1414,21 @@ export default function RecepcionPage() {
                 <form onSubmit={(e) => void registerWalkin(e)} className="space-y-3">
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d8ff3e]/80">
-                      Alta en mostrador
+                      {editingMemberKey ? "Ficha personal" : "Alta en mostrador"}
                     </p>
                     <h2 className="mt-1 text-2xl font-black uppercase tracking-tight">
-                      Nuevo socio
+                      {editingMemberKey ? "Editar datos del socio" : "Nuevo socio"}
                     </h2>
                     <p className="mt-2 text-sm font-bold text-white/45">
-                      Sin correo magico. Ideal para walk-in. Opcional: foto + rostro en el acto.
+                      {editingMemberKey
+                        ? "Actualizá la información y guardá los cambios en la ficha personal."
+                        : "Sin correo mágico. Ideal para walk-in. Opcional: foto + rostro en el acto."}
                     </p>
+                    {editingMemberKey && (
+                      <button type="button" onClick={() => { setEditingMemberKey(""); setRegName(""); setRegCedula(""); setRegPhone(""); setRegEmail(""); setRegPhoto(""); setRegPlan("Xtreme Mensual"); setRegLastPaidAt(""); setRegNextBillingDate(""); setRegCheckIn(true); }} className="mt-3 text-[10px] font-black uppercase tracking-wide text-white/45 underline hover:text-white">
+                        Cancelar edición
+                      </button>
+                    )}
                   </div>
 
                   <Field label="Nombre completo" required>
@@ -1451,7 +1483,26 @@ export default function RecepcionPage() {
                     </select>
                   </Field>
 
-                  <label className="flex items-center gap-2 text-sm font-bold text-white/70">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Fecha en que pagó">
+                      <input
+                        type="date"
+                        value={regLastPaidAt}
+                        onChange={(e) => setRegLastPaidAt(e.target.value)}
+                        className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                      />
+                    </Field>
+                    <Field label="Fecha de vencimiento">
+                      <input
+                        type="date"
+                        value={regNextBillingDate}
+                        onChange={(e) => setRegNextBillingDate(e.target.value)}
+                        className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
+                      />
+                    </Field>
+                  </div>
+
+                  {!editingMemberKey && <label className="flex items-center gap-2 text-sm font-bold text-white/70">
                     <input
                       type="checkbox"
                       checked={regCheckIn}
@@ -1459,7 +1510,7 @@ export default function RecepcionPage() {
                       className="h-4 w-4 accent-[#d8ff3e]"
                     />
                     Registrar ingreso ahora
-                  </label>
+                  </label>}
 
                   {error && tab === "register" && (
                     <p className="flex items-center gap-2 text-sm font-bold text-red-400">
@@ -1475,9 +1526,9 @@ export default function RecepcionPage() {
                     {isRegistering ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <UserPlus className="h-5 w-5" />
+                      editingMemberKey ? <CheckCircle2 className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />
                     )}
-                    {regCheckIn ? "Registrar e ingresar" : "Solo registrar"}
+                    {editingMemberKey ? "Guardar cambios" : regCheckIn ? "Registrar e ingresar" : "Solo registrar"}
                   </button>
                 </form>
 
@@ -1541,6 +1592,34 @@ export default function RecepcionPage() {
         </section>
 
         <aside className="space-y-3 sm:space-y-4">
+          <div className="border-[3px] border-violet-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
+            <GameLabel tone="cyan">Atención y personas</GameLabel>
+            <div className="mt-3 grid gap-2">
+              <SidePanelAction
+                active={tab === "register"}
+                icon={UserPlus}
+                label="Registrar persona"
+                detail="Alta e ingreso"
+                onClick={() => setTab("register")}
+              />
+              <SidePanelAction
+                active={tab === "invite"}
+                icon={Mail}
+                label="Invitar a la app"
+                detail="Enviar por correo"
+                onClick={() => setTab("invite")}
+              />
+              <SidePanelAction
+                active={tab === "chat"}
+                icon={MessageCircle}
+                label="Responder chat"
+                detail={chatUnread > 0 ? `${chatUnread} pendiente${chatUnread === 1 ? "" : "s"}` : "Sin pendientes"}
+                badge={chatUnread}
+                onClick={() => setTab("chat")}
+              />
+            </div>
+          </div>
+
           <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
             <GameLabel tone="cyan" className="flex items-center gap-2">
               <Users className="h-3.5 w-3.5" /> Ahora en el gym
@@ -1602,6 +1681,55 @@ export default function RecepcionPage() {
       </div>
 
     </main>
+  );
+}
+
+function SearchMatchList({
+  matches,
+  onSelect,
+  onEdit,
+}: {
+  matches: MemberHit[];
+  onSelect: (member: MemberHit) => void;
+  onEdit: (member: MemberHit) => void;
+}) {
+  if (!matches.length) return null;
+  return (
+    <div className="mt-3 border-[3px] border-cyan-300/35 bg-cyan-300/[0.04] p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">
+        {matches.length} personas encontradas · seleccioná una
+      </p>
+      <div className="mt-3 grid max-h-[28rem] gap-2 overflow-y-auto pr-1">
+        {matches.map((candidate) => (
+          <article
+            key={candidate.normalizedName}
+            className="flex min-w-0 flex-wrap items-center gap-4 border-[3px] border-white/15 bg-black/50 p-4"
+          >
+            <div className="scale-110"><Avatar name={candidate.memberName} photoUrl={candidate.photoUrl} /></div>
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-black uppercase leading-tight text-white sm:text-lg">
+                {candidate.memberName}
+              </span>
+              <span className="mt-2 flex flex-wrap gap-1.5">
+                {candidate.plan && <span className="bg-white/10 px-2 py-1 text-[10px] font-black uppercase text-white/55">{candidate.plan}</span>}
+                <span className={`px-2 py-1 text-[10px] font-black uppercase ${candidate.membershipStatus === "expired" ? "bg-orange-400/15 text-orange-200" : "bg-[#d8ff3e]/15 text-[#d8ff3e]"}`}>
+                  {MEMBERSHIP_STATUS_LABELS[candidate.membershipStatus] ?? candidate.membershipStatus}
+                </span>
+                {candidate.cedula && <span className="bg-white/5 px-2 py-1 text-[10px] font-bold text-white/35">Céd. {candidate.cedula}</span>}
+              </span>
+            </span>
+            <span className="flex shrink-0 gap-2">
+              <button type="button" onClick={() => onEdit(candidate)} className="inline-flex min-h-10 items-center gap-1.5 border-[3px] border-cyan-300/45 px-3 text-[10px] font-black uppercase text-cyan-200 hover:bg-cyan-300 hover:text-black">
+                <Pencil className="h-3.5 w-3.5" /> Editar datos
+              </button>
+              <button type="button" onClick={() => onSelect(candidate)} className="min-h-10 border-[3px] border-[#d8ff3e]/45 px-3 text-[10px] font-black uppercase text-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black">
+                Seleccionar
+              </button>
+            </span>
+          </article>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1736,6 +1864,49 @@ function ReceptionAction({
       <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] opacity-65">{eyebrow}</p>
       <p className="mt-1 text-2xl font-black uppercase tracking-tight text-white">{title}</p>
       <p className="mt-2 text-sm font-bold leading-6 text-white/45">{description}</p>
+    </button>
+  );
+}
+
+function SidePanelAction({
+  active,
+  icon: Icon,
+  label,
+  detail,
+  badge = 0,
+  onClick,
+}: {
+  active: boolean;
+  icon: typeof IdCard;
+  label: string;
+  detail: string;
+  badge?: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative flex min-h-16 w-full items-center gap-3 border-[3px] p-3 text-left transition ${
+        active
+          ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
+          : "border-white/15 bg-black/45 text-white hover:border-violet-300/60"
+      }`}
+    >
+      <span className={`grid h-10 w-10 shrink-0 place-items-center ${active ? "bg-black/15" : "bg-violet-300/10 text-violet-200"}`}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-black uppercase leading-tight">{label}</span>
+        <span className={`mt-0.5 block text-[10px] font-bold uppercase tracking-wide ${active ? "text-black/55" : badge ? "text-orange-300" : "text-white/35"}`}>
+          {detail}
+        </span>
+      </span>
+      {badge > 0 && (
+        <span className={`grid h-7 min-w-7 place-items-center px-1 text-xs font-black ${active ? "bg-black text-[#d8ff3e]" : "bg-red-500 text-white"}`}>
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </button>
   );
 }

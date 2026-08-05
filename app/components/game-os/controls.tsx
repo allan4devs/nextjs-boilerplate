@@ -32,7 +32,7 @@ export function GameButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`xg-shine inline-flex min-h-12 items-center justify-center gap-2 border-[3px] px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] shadow-[3px_3px_0_rgba(0,0,0,0.5)] transition active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none sm:text-sm ${variants[variant]} ${full ? "w-full" : ""} ${className}`}
+      className={`xg-shine inline-flex min-h-10 items-center justify-center gap-1.5 border-2 px-3 py-2 text-[11px] font-black uppercase tracking-[0.1em] shadow-[2px_2px_0_rgba(0,0,0,0.5)] transition active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none sm:text-xs ${variants[variant]} ${full ? "w-full" : ""} ${className}`}
     >
       {children}
     </button>
@@ -55,7 +55,7 @@ export function GameChip({ children, tone = "default", className = "" }: GameChi
     yellow: "border-yellow-300/45 bg-yellow-300/12 text-yellow-100",
   } as const;
   return (
-    <span className={`inline-flex items-center border-2 px-2 py-1 text-[10px] font-black uppercase tracking-wide sm:text-[11px] ${tones[tone]} ${className}`}>
+    <span className={`inline-flex items-center border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide sm:text-[10px] ${tones[tone]} ${className}`}>
       {children}
     </span>
   );

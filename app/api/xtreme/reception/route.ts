@@ -519,6 +519,47 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (action === "update_member") {
+      const memberKey = normalizeKey(String(body.memberKey ?? ""));
+      const memberName = normalizeName(body.memberName);
+      const cedula = normalizeCedula(body.cedula);
+      const phone = normalizePhone(body.phone);
+      const email = normalizeEmail(body.email);
+      const plan = String(body.plan ?? "").trim();
+      const lastPaidAt = String(body.lastPaidAt ?? "").trim();
+      const nextBillingDate = String(body.nextBillingDate ?? "").trim();
+      if (!memberKey || !memberName || !cedula || !phone) {
+        return NextResponse.json({ error: "Nombre, cédula y teléfono son requeridos." }, { status: 400 });
+      }
+      if (email && !isValidEmail(email)) {
+        return NextResponse.json({ error: "Correo inválido." }, { status: 400 });
+      }
+      const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: memberKey });
+      if (!existing) return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+      const duplicate = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({
+        normalizedName: { $ne: memberKey },
+        $or: [{ cedula }, { phone }],
+      });
+      if (duplicate) {
+        return NextResponse.json({ error: `La cédula o teléfono ya pertenece a ${duplicate.memberName}.` }, { status: 409 });
+      }
+      const set: Record<string, unknown> = { memberName, cedula, phone, email, updatedAt: now };
+      if (plan) set["membership.plan"] = plan;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(lastPaidAt)) set["membership.lastPaidAt"] = lastPaidAt;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(nextBillingDate)) set["membership.nextBillingDate"] = nextBillingDate;
+      await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne({ normalizedName: memberKey }, { $set: set });
+      await writeAudit(db, {
+        actorRole: role,
+        action: "member.update_profile_reception",
+        targetType: "member",
+        targetId: memberKey,
+        summary: `Datos personales actualizados en recepción: ${memberName}`,
+        meta: { cedula, phone, email, plan, lastPaidAt, nextBillingDate },
+      });
+      const updated = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: memberKey });
+      return NextResponse.json({ ok: true, created: false, member: updated ? toAdminMember(updated) : null, message: "Datos personales actualizados." });
+    }
+
     if (action === "register") {
       const memberName = normalizeName(body.memberName);
       const cedula = normalizeCedula(body.cedula);
@@ -534,6 +575,12 @@ export async function POST(req: NextRequest) {
             .replace(/[^0-9a-f]/g, "")
         : "";
       const checkInNow = body.checkInNow !== false;
+      const lastPaidAt = /^\d{4}-\d{2}-\d{2}$/.test(String(body.lastPaidAt ?? ""))
+        ? String(body.lastPaidAt)
+        : now.toISOString().slice(0, 10);
+      const requestedBillingDate = /^\d{4}-\d{2}-\d{2}$/.test(String(body.nextBillingDate ?? ""))
+        ? String(body.nextBillingDate)
+        : addMonths(now, 1).toISOString().slice(0, 10);
 
       if (!memberName) {
         return NextResponse.json({ error: "El nombre es requerido." }, { status: 400 });
@@ -611,14 +658,16 @@ export async function POST(req: NextRequest) {
       if (!existing) {
         set.membership = {
           plan,
-          nextBillingDate: addMonths(now, 1).toISOString().slice(0, 10),
+          lastPaidAt,
+          nextBillingDate: requestedBillingDate,
           startedAt: now.toISOString().slice(0, 10),
           status: "active",
         };
       } else if (!existing.membership) {
         set.membership = {
           plan,
-          nextBillingDate: addMonths(now, 1).toISOString().slice(0, 10),
+          lastPaidAt,
+          nextBillingDate: requestedBillingDate,
           startedAt: now.toISOString().slice(0, 10),
           status: "active",
         };

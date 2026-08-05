@@ -45,14 +45,14 @@ export default function SideNav({ os }: { os: MemberOs }) {
         />
       )}
       <aside
-        className={`xg-side-nav fixed left-0 z-50 flex w-[min(272px,88vw)] flex-col border-r-[3px] border-white/15 bg-[#090909] shadow-[8px_0_0_rgba(0,0,0,.45)] transition-[width,transform] duration-300 lg:w-[72px] ${
+        className={`xg-side-nav fixed left-0 z-50 flex w-[min(252px,88vw)] flex-col border-r-2 border-white/15 bg-[#090909] shadow-[6px_0_0_rgba(0,0,0,.45)] transition-[width,transform] duration-300 lg:w-[64px] ${
           navOpen
-            ? "translate-x-0 lg:w-[240px]"
-            : "-translate-x-full lg:w-[72px] lg:translate-x-0"
+            ? "translate-x-0 lg:w-[220px]"
+            : "-translate-x-full lg:w-[64px] lg:translate-x-0"
         }`}
       >
         {/* Header: en mobile queda bajo el notch; en desktop al tope del rail */}
-        <div className="xg-side-nav-header flex h-14 shrink-0 items-center justify-between border-b-[3px] border-white/15 bg-[#d8ff3e]/10 px-3">
+        <div className="xg-side-nav-header flex h-12 shrink-0 items-center justify-between border-b-2 border-white/15 bg-[#d8ff3e]/10 px-2.5">
           <div className={navOpen ? "block" : "lg:hidden"}>
             <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">
               Xtreme Gym
@@ -147,7 +147,7 @@ export default function SideNav({ os }: { os: MemberOs }) {
           )}
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 py-3">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-1.5 py-2">
           {TABS.filter((item) => item.id !== "perfil").map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
@@ -162,7 +162,7 @@ export default function SideNav({ os }: { os: MemberOs }) {
                   closeNav();
                   setOsModal(null);
                 }}
-                className={`flex h-12 w-full items-center gap-3 border-[3px] px-3 text-left text-xs font-black uppercase tracking-[.1em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] sm:h-14 ${
+                className={`flex h-10 w-full items-center gap-2.5 border-2 px-2.5 text-left text-[11px] font-black uppercase tracking-[.08em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] sm:h-11 ${
                   active
                     ? "border-[#d8ff3e] bg-[#d8ff3e]/15 text-[#d8ff3e] shadow-[0_0_18px_rgba(216,255,62,0.18)]"
                     : "border-transparent text-white/50 hover:border-white/15 hover:bg-white/[.05] hover:text-white"

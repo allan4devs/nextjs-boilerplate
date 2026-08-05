@@ -119,6 +119,7 @@ export function toAdminMember(doc: MemberDoc) {
     totalMinutes: workouts.reduce((sum, workout) => sum + (workout.minutes || 0), 0),
     lastWorkoutDate: workouts.map((workout) => workout.completedDate).filter(Boolean).sort().at(-1) ?? null,
     plan: membership.plan,
+    lastPaidAt: doc.membership?.lastPaidAt ?? doc.membership?.startedAt ?? "",
     membershipStatus: membership.status,
     daysRemaining: membership.daysRemaining,
     nextBillingDate: membership.nextBillingDate,
