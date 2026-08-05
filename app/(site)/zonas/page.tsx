@@ -297,6 +297,22 @@ export default function ZonasPage() {
                 </div>
               </article>
             ))}
+            <Link href="/bronceado" data-cinema-card className="group relative overflow-hidden bg-black">
+              <Image
+                src="/xtreme/recepcion-sala-espera.webp"
+                alt="Área de cámara de bronceado de Xtreme Gym"
+                fill
+                sizes="(max-width: 768px) 100vw, 25vw"
+                className="object-cover transition duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.18)_0%,transparent_25%,rgba(0,0,0,.98)_100%)]" />
+              <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
+                <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#f6c400]">Bienestar e imagen personal</p>
+                <h3 className="mt-2 text-2xl font-black uppercase leading-none">Cámara de bronceado</h3>
+                <p className="mt-3 text-sm font-medium text-white/72">Sesiones desde ₡4.500. Conocé paquetes, horarios y recomendaciones.</p>
+                <span className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase text-[#f6c400]">Ver información <ArrowRight className="h-4 w-4" /></span>
+              </div>
+            </Link>
           </div>
         </div>
       </section>

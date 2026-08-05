@@ -71,6 +71,11 @@ export default function SiteFooter() {
             <Link href={english ? "/en/benefits" : "/beneficios"} className="flex min-h-14 items-center justify-center bg-[#090909] px-4 text-center transition hover:bg-[#f6c400] hover:text-black">
               {english ? "Benefits" : "Beneficios"}
             </Link>
+            {!english && (
+              <Link href="/bronceado" className="flex min-h-14 items-center justify-center bg-[#090909] px-4 text-center transition hover:bg-[#f6c400] hover:text-black">
+                Cámara de bronceado
+              </Link>
+            )}
             <Link href="/valari" className="flex min-h-14 items-center justify-center border border-[#f6c400]/20 bg-[#f6c400]/10 px-4 text-center text-[#f6c400] transition hover:bg-[#f6c400] hover:text-black">
               Valari Dance
             </Link>

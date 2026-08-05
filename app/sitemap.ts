@@ -10,6 +10,7 @@ const ROUTES: Array<{
   { path: "/precios", changeFrequency: "weekly", priority: 0.9 },
   { path: "/zonas", changeFrequency: "monthly", priority: 0.8 },
   { path: "/beneficios", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/bronceado", changeFrequency: "monthly", priority: 0.8 },
   { path: "/adultos-mayores", changeFrequency: "monthly", priority: 0.8 },
   { path: "/primer-dia", changeFrequency: "monthly", priority: 0.8 },
   { path: "/preguntas", changeFrequency: "monthly", priority: 0.7 },

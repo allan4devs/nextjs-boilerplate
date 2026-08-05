@@ -48,27 +48,15 @@ export const HERO_IMAGES = [
 
 export const ZONES = [
   {
-    icon: Zap,
-    title: "Calistenia",
-    eyebrow: "Barras / funcional",
-    text: "Un espacio para dominar tu cuerpo, mejorar la movilidad y desarrollar fuerza funcional.",
-    image: "/xtreme/zona-funcional-turf.webp",
-    details: [
-      "Barras funcionales y ejercicios con peso corporal",
-      "Trabajo de core, coordinación y control",
-      "Circuitos funcionales para distintos niveles",
-    ],
-  },
-  {
     icon: Dumbbell,
-    title: "Peso libre",
-    eyebrow: "Pesas / mancuernas",
-    text: "Todo lo necesario para trabajar fuerza, masa muscular y progresión de cargas en serio.",
-    image: "/xtreme/zona-mancuernas.webp",
+    title: "Tren superior",
+    eyebrow: "Pecho / espalda / brazos",
+    text: "Máquinas excelentes y opciones variadas para trabajar cada grupo muscular con intención.",
+    image: "/xtreme/maquinas-y-entrenador-xtreme.webp",
     details: [
-      "Mancuernas, barras, discos y bancos",
-      "Opciones para principiantes y avanzados",
-      "Equipo para hipertrofia, fuerza y composición corporal",
+      "Equipos para pecho, espalda, hombros y brazos",
+      "Máquinas guiadas y trabajo con peso libre",
+      "Variedad para una rutina completa y progresiva",
     ],
   },
   {
@@ -84,6 +72,18 @@ export const ZONES = [
     ],
   },
   {
+    icon: Dumbbell,
+    title: "Peso libre",
+    eyebrow: "Pesas / mancuernas",
+    text: "Todo lo necesario para trabajar fuerza, masa muscular y progresión de cargas en serio.",
+    image: "/xtreme/zona-mancuernas.webp",
+    details: [
+      "Mancuernas, barras, discos y bancos",
+      "Opciones para principiantes y avanzados",
+      "Equipo para hipertrofia, fuerza y composición corporal",
+    ],
+  },
+  {
     icon: Flame,
     title: "Pierna",
     eyebrow: "Pierna / glúteo",
@@ -96,15 +96,15 @@ export const ZONES = [
     ],
   },
   {
-    icon: Dumbbell,
-    title: "Tren superior",
-    eyebrow: "Pecho / espalda / brazos",
-    text: "Máquinas excelentes y opciones variadas para trabajar cada grupo muscular con intención.",
-    image: "/xtreme/maquinas-y-entrenador-xtreme.webp",
+    icon: Zap,
+    title: "Calistenia",
+    eyebrow: "Barras / funcional",
+    text: "Un espacio para dominar tu cuerpo, mejorar la movilidad y desarrollar fuerza funcional.",
+    image: "/xtreme/zona-funcional-turf.webp",
     details: [
-      "Equipos para pecho, espalda, hombros y brazos",
-      "Máquinas guiadas y trabajo con peso libre",
-      "Variedad para una rutina completa y progresiva",
+      "Barras funcionales y ejercicios con peso corporal",
+      "Trabajo de core, coordinación y control",
+      "Circuitos funcionales para distintos niveles",
     ],
   },
 ];
@@ -217,6 +217,11 @@ export const TRUST_POINTS = [
 ];
 
 export const FAQS = [
+  {
+    question: "¿Xtreme Gym tiene cámara de bronceado?",
+    answer:
+      "Sí. Contamos con cámara de bronceado y opciones de 1, 5, 10 o 20 sesiones. El bronceador se vende por separado. Consultá precios, horarios, vigencia de paquetes y recomendaciones en la página de Cámara de bronceado.",
+  },
   {
     question: "¿Qué beneficios incluye entrenar en Xtreme Gym?",
     answer:

@@ -877,6 +877,12 @@ export default function RecepcionPage() {
             tone="lime"
           />
           <Link
+            href="/recepcion/ventas"
+            className="inline-flex min-h-11 items-center border-[3px] border-[#d8ff3e]/55 px-3 py-2 text-xs font-black uppercase tracking-wide text-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black"
+          >
+            Inventario y ventas
+          </Link>
+          <Link
             href="/admin"
             className="inline-flex min-h-11 items-center border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-white/40 hover:text-white"
           >

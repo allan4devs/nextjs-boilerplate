@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Sun } from "lucide-react";
 import CtaBand from "../../components/CtaBand";
 import GymBenefitsGrid from "../../components/GymBenefitsGrid";
 import PageHero from "../../components/PageHero";
@@ -57,6 +57,16 @@ export default function BeneficiosPage() {
             </p>
           </div>
           <GymBenefitsGrid />
+
+          <Link href="/bronceado" className="group mt-6 grid gap-5 border border-[#f6c400]/45 bg-[#f6c400]/[0.07] p-6 transition hover:border-[#f6c400] sm:grid-cols-[auto_1fr_auto] sm:items-center">
+            <span className="grid h-14 w-14 place-items-center bg-[#f6c400] text-black"><Sun className="h-7 w-7" /></span>
+            <span>
+              <span className="block text-xs font-black uppercase tracking-[.2em] text-[#f6c400]">Área de bienestar</span>
+              <span className="mt-2 block text-2xl font-black uppercase">Cámara de bronceado</span>
+              <span className="mt-1 block text-sm font-semibold text-white/55">Sesiones desde ₡4.500 y paquetes de hasta 20 sesiones.</span>
+            </span>
+            <span className="inline-flex items-center gap-2 text-xs font-black uppercase">Ver precios y horarios <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+          </Link>
 
           <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {BENEFIT_IMAGES.map((item, index) => (
