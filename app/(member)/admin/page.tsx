@@ -48,6 +48,7 @@ import {
   GameLabel,
 } from "../../components/GameOS";
 import EmailCampaignCenter from "../../components/admin/EmailCampaignCenter";
+import StaffThemeToggle from "../../components/StaffThemeToggle";
 
 type PlanItem = {
   id: string;
@@ -697,6 +698,7 @@ function SortableMemberHeader({
 
 export default function XtremeAdminPage() {
   const [code, setCode] = useState("");
+  const [staffName, setStaffName] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [data, setData] = useState<AdminData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -793,8 +795,11 @@ export default function XtremeAdminPage() {
   useEffect(() => {
     void (async () => {
       const response = await fetch("/api/xtreme/staff-session?surface=admin", { cache: "no-store" });
-      const session = (await response.json()) as { authenticated?: boolean };
-      if (session.authenticated) await load("session");
+      const session = (await response.json()) as { authenticated?: boolean; staffName?: string | null };
+      if (session.authenticated) {
+        setStaffName(session.staffName ?? "");
+        await load("session");
+      }
     })();
   }, [load]);
 
@@ -809,8 +814,9 @@ export default function XtremeAdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ surface: "admin", code: accessCode }),
       });
-      const json = (await response.json()) as { error?: string };
+      const json = (await response.json()) as { error?: string; staffName?: string | null };
       if (!response.ok) throw new Error(json.error || "Codigo incorrecto.");
+      setStaffName(json.staffName ?? "");
       setCodeInput("");
       await load("session");
     } catch (err) {
@@ -1562,6 +1568,7 @@ export default function XtremeAdminPage() {
   async function logout() {
     await fetch("/api/xtreme/staff-session?surface=admin", { method: "DELETE" });
     setCode("");
+    setStaffName("");
     setData(null);
   }
 
@@ -1633,6 +1640,7 @@ export default function XtremeAdminPage() {
             <h1 className="mt-1 text-xl font-black uppercase tracking-tight sm:text-3xl">
               Panel de administracion
             </h1>
+            {staffName && <p className="mt-1 text-xs font-black uppercase tracking-[.16em] text-[#d8ff3e]">Sesión de {staffName}</p>}
             <p className="mt-1 hidden text-sm font-bold text-white/50 sm:block">
               Socios, planes, accesos y progreso · toca paneles y modales
               {isSuper ? " · super: ingresos" : ""}
@@ -1651,6 +1659,7 @@ export default function XtremeAdminPage() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <StaffThemeToggle />
             <Link
               href="/entrenador"
               className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-cyan-300/10 px-3 py-2 text-xs font-black uppercase text-cyan-200 sm:text-sm"

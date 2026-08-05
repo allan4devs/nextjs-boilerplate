@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Banknote, Check, Download, Loader2, Minus, PackageOpen, Plus, Save, Smartphone, Split, ShoppingCart, Trash2 } from "lucide-react";
+import { Banknote, Check, Download, Loader2, Minus, PackageOpen, Plus, Save, Search, Smartphone, Split, ShoppingCart, Trash2, X } from "lucide-react";
 import { GameChip, GameLabel } from "../GameOS";
 import InventoryReporterPages from "./InventoryReporterPages";
 
@@ -29,11 +29,17 @@ function money(value: number) {
   return new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 0 }).format(value);
 }
 
+function searchable(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
 export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sales" }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [drafts, setDrafts] = useState<Record<string, { quantity: string; cameraQuantity: string; warehouseQuantity: string; price: string }>>({});
   const [cart, setCart] = useState<Record<string, number>>({});
   const [category, setCategory] = useState<"all" | Category>("all");
+  const [query, setQuery] = useState("");
+  const [stock, setStock] = useState<"all" | "available" | "low" | "out">("all");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -64,7 +70,17 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
 
   useEffect(() => { void load(); }, [load]);
 
-  const visible = category === "all" ? products : products.filter((p) => p.category === category);
+  const visible = useMemo(() => {
+    const term = searchable(query);
+    return products.filter((product) => {
+      if (category !== "all" && product.category !== category) return false;
+      if (stock === "available" && product.quantity <= 0) return false;
+      if (stock === "low" && (product.quantity <= 0 || product.quantity > 2)) return false;
+      if (stock === "out" && product.quantity > 0) return false;
+      if (!term) return true;
+      return searchable(`${product.name} ${product.id} ${CATEGORY_LABEL[product.category]}`).includes(term);
+    });
+  }, [category, products, query, stock]);
   const cartLines = products.filter((p) => (cart[p.id] ?? 0) > 0);
   const cartUnits = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
   const total = useMemo(() => cartLines.reduce((sum, p) => sum + p.price * (cart[p.id] ?? 0), 0), [cart, cartLines]);
@@ -166,6 +182,21 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
 
       {mode === "inventory" && <InventoryReporterPages />}
 
+      <section className="mt-5 border-[3px] border-white/15 bg-black/30 p-3 sm:p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Buscar productos</span>
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/35" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} type="search" autoComplete="off" placeholder="Buscar por producto, categoría o código" className="min-h-14 w-full border-[3px] border-white/20 bg-[#050505] pl-12 pr-12 text-base font-black outline-none placeholder:text-white/25 focus:border-[#d8ff3e]" />
+            {query && <button type="button" onClick={() => setQuery("")} aria-label="Limpiar búsqueda" className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center text-white/35 hover:text-white"><X className="h-4 w-4" /></button>}
+          </label>
+          <div className="grid grid-cols-4 gap-1.5">
+            {([{"id":"all","label":"Todos"},{"id":"available","label":"Disponibles"},{"id":"low","label":"Pocos"},{"id":"out","label":"Agotados"}] as const).map((item) => <button key={item.id} type="button" onClick={() => setStock(item.id)} className={`min-h-11 border-2 px-2 text-[9px] font-black uppercase sm:text-[10px] ${stock === item.id ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/15 text-white/45 hover:text-white"}`}>{item.label}</button>)}
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] font-black uppercase tracking-[.15em] text-white/35">{visible.length} de {products.length} productos</p>
+      </section>
+
       <div className="xg-mobile-scroll mt-5 flex gap-2 overflow-x-auto pb-1">
         {(["all", "bebidas", "proteinas", "creatinas", "hidratantes", "chicles"] as const).map((id) => (
           <button key={id} type="button" onClick={() => setCategory(id)} className={`min-h-10 shrink-0 border-[3px] px-3 text-xs font-black uppercase ${category === id ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/15 text-white/55"}`}>
@@ -220,6 +251,7 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
             </article>
           );
         })}
+        {!visible.length && <div className="border-[3px] border-dashed border-white/15 p-8 text-center sm:col-span-2"><Search className="mx-auto h-8 w-8 text-white/20" /><p className="mt-3 text-sm font-black uppercase text-white/45">No hay productos que coincidan</p><button type="button" onClick={() => { setQuery(""); setCategory("all"); setStock("all"); }} className="mt-4 min-h-10 border-2 border-[#d8ff3e]/50 px-4 text-xs font-black uppercase text-[#d8ff3e]">Limpiar filtros</button></div>}
       </div>
 
       {mode === "sales" && (

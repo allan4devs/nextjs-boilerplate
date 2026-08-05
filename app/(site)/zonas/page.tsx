@@ -47,9 +47,9 @@ const QUICK_FACTS = [
 const SUPPORT_SPACES = [
   {
     image: "/xtreme/zona-entrenamiento-vip.webp",
-    eyebrow: "Dirección cercana",
-    title: "Zona VIP",
-    text: "Un espacio exclusivo para entrenamiento personalizado o semiprivado con objetivos y seguimiento definidos.",
+    eyebrow: "Área independiente · acceso aparte",
+    title: "Área VIP · Alberto",
+    text: "Servicio exclusivo administrado por Alberto, con clientes y condiciones propias. No forma parte del acceso regular a las zonas del gimnasio.",
     className: "md:col-span-2 md:row-span-2",
   },
   {
@@ -342,7 +342,7 @@ export default function ZonasPage() {
               { icon: Users, title: "Hasta 6 personas", text: "Un grupo pequeño para recibir atención real." },
               { icon: UserRoundCheck, title: "Coach a cargo", text: "Corrección de técnica y seguimiento constante." },
               { icon: Clock3, title: "Tres días", text: "Lunes, miércoles y viernes, mañana o tarde." },
-              { icon: ShieldCheck, title: "Acceso incluido", text: "Usá todas las zonas del gimnasio sin límite." },
+              { icon: ShieldCheck, title: "Zonas regulares incluidas", text: "Usá las zonas regulares del gimnasio sin límite. El área VIP se contrata por aparte." },
             ].map((item) => (
               <article key={item.title} className="group min-h-52 bg-[#f4f1e8] p-6 transition hover:bg-white">
                 <item.icon className="h-6 w-6" />
@@ -370,7 +370,7 @@ export default function ZonasPage() {
               </div>
             ))}
             <Link href="/precios#inscripcion" className="group flex min-h-36 items-end justify-between bg-[#f6c400] p-5 text-black transition hover:bg-white sm:col-span-2">
-              <span className="text-2xl font-black uppercase">Ver planes para todas las zonas</span>
+              <span className="text-2xl font-black uppercase">Ver planes para las zonas regulares</span>
               <ArrowRight className="h-6 w-6 shrink-0 transition group-hover:translate-x-1.5" />
             </Link>
           </div>

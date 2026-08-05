@@ -6,9 +6,10 @@ import {
   ADMIN_CODE,
   RECEPTION_CODE,
   STAFF_SESSIONS_COLLECTION,
+  STAFF_PINS,
   SUPER_ADMIN_CODE,
   TRAINER_CODE,
-  resolveStaffRole,
+  resolveStaffCredential,
   type StaffRole,
 } from "./shared";
 import { SESSION_IDLE_TIMEOUT_MS } from "./session-policy";
@@ -33,6 +34,8 @@ type StaffSessionDoc = {
   tokenHash: string;
   surface: StaffSurface;
   role: StaffRole;
+  staffId?: string | null;
+  staffName?: string | null;
   createdAt: Date;
   expiresAt: Date;
   lastSeenAt: Date;
@@ -52,7 +55,7 @@ type StaffSessionDoc = {
 export function staffAuthEpoch() {
   return createHash("sha256")
     .update(
-      `staff-auth|${ADMIN_CODE}|${SUPER_ADMIN_CODE}|${RECEPTION_CODE}|${TRAINER_CODE}|v1`,
+      `staff-auth|${ADMIN_CODE}|${SUPER_ADMIN_CODE}|${RECEPTION_CODE}|${TRAINER_CODE}|${Object.values(STAFF_PINS).join("|")}|v2`,
     )
     .digest("hex")
     .slice(0, 24);
@@ -61,6 +64,8 @@ export function staffAuthEpoch() {
 export type StaffSession = {
   surface: StaffSurface;
   role: StaffRole;
+  staffId: string | null;
+  staffName: string | null;
   tokenHash: string;
   expiresAt: Date;
 };
@@ -91,7 +96,7 @@ export function roleCanUseSurface(role: StaffRole, surface: StaffSurface) {
 
 export async function createStaffSession(
   db: Db,
-  args: { surface: StaffSurface; role: StaffRole; userAgent?: string },
+  args: { surface: StaffSurface; role: StaffRole; staffId?: string | null; staffName?: string | null; userAgent?: string },
 ) {
   const token = randomBytes(32).toString("base64url");
   const now = new Date();
@@ -100,6 +105,8 @@ export async function createStaffSession(
     tokenHash: hashToken(token),
     surface: args.surface,
     role: args.role,
+    staffId: args.staffId ?? null,
+    staffName: args.staffName ?? null,
     createdAt: now,
     expiresAt,
     lastSeenAt: now,
@@ -133,8 +140,8 @@ export function authenticateStaffCode(code: string, surface: StaffSurface) {
     : surface === "admin"
       ? ["super", "admin"]
       : ["super", "admin", "reception"];
-  const role = resolveStaffRole(code, allowedRoles);
-  return role && roleCanUseSurface(role, surface) ? role : null;
+  const credential = resolveStaffCredential(code, allowedRoles);
+  return credential && roleCanUseSurface(credential.role, surface) ? credential : null;
 }
 
 export async function resolveStaffSession(
@@ -177,6 +184,8 @@ export async function resolveStaffSession(
   return {
     surface,
     role: doc.role,
+    staffId: doc.staffId ?? null,
+    staffName: doc.staffName ?? null,
     tokenHash: doc.tokenHash,
     expiresAt: new Date(doc.expiresAt),
   };

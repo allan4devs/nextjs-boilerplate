@@ -51,6 +51,10 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 | `XTREME_RECEPTION_CODE` | Código exclusivo para recepción e ingreso; largo y aleatorio |
 | `XTREME_TRAINER_CODE` | Código exclusivo de Trainer OS; solo permite planes y seguimiento técnico |
 | `XTREME_ADMIN_CODE` / `XTREME_SUPER_ADMIN_CODE` | Códigos separados por rol; largos y aleatorios; sin defaults en prod |
+| `XTREME_ALLAN_PIN`, `XTREME_ALEJANDRO_PIN`, `XTREME_EILEEN_PIN` | PIN individual de cada super admin; configurar valores distintos y seguros |
+| `XTREME_VERONICA_PIN`, `XTREME_VALESKA_PIN` | PIN individual de recepción |
+| `XTREME_KENGIE_PIN`, `XTREME_JOSUE_PIN` | PIN individual de Trainer OS |
+| `XTREME_ALBERTO_VIP_PIN` | PIN reservado para el futuro panel VIP limitado; no abre Admin OS general |
 | `CRON_SECRET` | Auth del job lifecycle (Bearer) |
 | `RESEND_API_KEY` / `SMTP_FROM` | Correos (registro, PIN, recibos, lifecycle) |
 | `ADMIN_NOTIFICATION_EMAIL` | Admin(s) que reciben pagos, alertas y resumen diario; separar varios correos con coma o punto y coma |

@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bolt, Check, Crown, Droplets, Loader2, Plus, RefreshCw, ShoppingBasket, Sun, UsersRound } from "lucide-react";
+import { Bolt, Check, Crown, Loader2, Plus, RefreshCw, Sun, UsersRound } from "lucide-react";
 import { GameLabel } from "@/app/components/GameOS";
 
-type Kind = "vip" | "seniors" | "tanning" | "electricity" | "sales";
+export type ReceptionControlKind = "vip" | "seniors" | "tanning" | "electricity";
+type Kind = ReceptionControlKind;
 type RecordItem = { id: string; kind: Kind; date: string; name: string; detail: string; quantity: number; amount: number; status: "pending" | "paid" | "completed"; paymentMethod: string; note: string; createdAt: string };
 
 const PANELS = {
@@ -12,14 +13,13 @@ const PANELS = {
   seniors: { label: "Adultos mayores", title: "Control de adultos mayores", icon: UsersRound, name: "Clase o responsable", detail: "Horario / grupo", quantity: "Asistencia", amount: "Monto recibido", tone: "text-cyan-300 border-cyan-300/45 bg-cyan-300" },
   tanning: { label: "Bronceado", title: "Cámara de bronceado", icon: Sun, name: "Nombre del cliente", detail: "Paquete o sesión", quantity: "Sesiones usadas", amount: "Monto cobrado", tone: "text-orange-300 border-orange-300/45 bg-orange-300" },
   electricity: { label: "Pagos de luz", title: "Control de pagos de luz", icon: Bolt, name: "Proveedor / medidor", detail: "Período facturado", quantity: "Consumo kWh", amount: "Monto del recibo", tone: "text-yellow-300 border-yellow-300/45 bg-yellow-300" },
-  sales: { label: "Ventas", title: "Batidos, agua y productos", icon: ShoppingBasket, name: "Producto vendido", detail: "Presentación / sabor", quantity: "Cantidad", amount: "Total de la venta", tone: "text-[#d8ff3e] border-[#d8ff3e]/45 bg-[#d8ff3e]" },
 } as const;
 
 function today() { return new Date().toISOString().slice(0, 10); }
 function money(value: number) { return new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 0 }).format(value); }
 
-export default function ReceptionControlsPanel() {
-  const [kind, setKind] = useState<Kind>("vip");
+export default function ReceptionControlsPanel({ initialKind = "vip", single = false }: { initialKind?: ReceptionControlKind; single?: boolean }) {
+  const [kind, setKind] = useState<Kind>(initialKind);
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,12 +73,12 @@ export default function ReceptionControlsPanel() {
 
   return <div>
     <GameLabel tone="lime">Registros operativos · MongoDB</GameLabel>
-    <h1 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">Paneles de control</h1>
-    <p className="mt-2 text-sm font-bold text-white/45">Registrá cobros, asistencias, sesiones, recibos y ventas desde recepción.</p>
+    <h1 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">{single ? panel.title : "Paneles de control"}</h1>
+    <p className="mt-2 text-sm font-bold text-white/45">{single ? "Registrá movimientos y revisá el historial de este control." : "Registrá controles de VIP, adultos mayores, bronceado y recibos desde recepción."}</p>
 
-    <div className="xg-mobile-scroll mt-5 flex gap-2 overflow-x-auto pb-2">
+    {!single && <div className="xg-mobile-scroll mt-5 flex gap-2 overflow-x-auto pb-2">
       {(Object.keys(PANELS) as Kind[]).map((id) => { const item = PANELS[id]; const Icon = item.icon; return <button key={id} type="button" onClick={() => changeKind(id)} className={`flex min-h-14 shrink-0 items-center gap-2 border-[3px] px-4 text-xs font-black uppercase ${kind === id ? `${item.tone.split(" ")[2]} border-black text-black` : "border-white/15 bg-black/35 text-white/50 hover:text-white"}`}><Icon className="h-4 w-4" />{item.label}</button>; })}
-    </div>
+    </div>}
 
     <div className="mt-4 grid gap-3 sm:grid-cols-4">
       <Stat label="Registros este mes" value={String(summary.entries)} />
@@ -91,7 +91,7 @@ export default function ReceptionControlsPanel() {
       <div className="flex items-center gap-3"><PanelIcon className={`h-6 w-6 ${panel.tone.split(" ")[0]}`} /><h2 className="text-xl font-black uppercase">{panel.title}</h2></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Input label="Fecha"><input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="control-input" /></Input>
-        <Input label={panel.name}><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={kind === "sales" ? "Agua 600 ml" : "Escribí acá"} className="control-input" /></Input>
+        <Input label={panel.name}><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Escribí acá" className="control-input" /></Input>
         <Input label={panel.detail}><input value={form.detail} onChange={(e) => setForm({ ...form, detail: e.target.value })} placeholder="Detalle opcional" className="control-input" /></Input>
         <Input label={panel.quantity}><input type="number" min="0" step="1" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} className="control-input" /></Input>
         <Input label={panel.amount}><input type="number" min="0" step="1" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="₡" className="control-input" /></Input>

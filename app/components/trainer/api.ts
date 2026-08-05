@@ -13,7 +13,7 @@ async function payload<T>(response: Response): Promise<T> {
 
 export async function trainerSession() {
   const response = await fetch("/api/xtreme/staff-session?surface=trainer", { cache: "no-store" });
-  return payload<{ authenticated?: boolean; role?: string | null }>(response);
+  return payload<{ authenticated?: boolean; role?: string | null; staffName?: string | null }>(response);
 }
 
 export async function loginTrainer(code: string) {
@@ -21,7 +21,7 @@ export async function loginTrainer(code: string) {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ surface: "trainer", code }),
   });
-  return payload<{ authenticated?: boolean }>(response);
+  return payload<{ authenticated?: boolean; staffName?: string | null }>(response);
 }
 
 export async function logoutTrainer() {

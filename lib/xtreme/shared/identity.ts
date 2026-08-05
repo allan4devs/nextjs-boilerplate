@@ -7,7 +7,9 @@ import {
   TRAINER_CODE,
   type AdminRole,
   type StaffRole,
+  STAFF_PINS,
 } from "./config";
+import { STAFF_DIRECTORY, type StaffId } from "../staff-directory";
 
 export function normalizeEmail(value: unknown) {
   return String(value ?? "").trim().toLowerCase().slice(0, 80);
@@ -124,4 +126,23 @@ export function resolveStaffRole(
   if (allowedRoles.includes("reception") && safeCodeEqual(value, RECEPTION_CODE)) return "reception";
   if (allowedRoles.includes("trainer") && safeCodeEqual(value, TRAINER_CODE)) return "trainer";
   return null;
+}
+
+export type StaffCredential = { id: StaffId | null; name: string | null; role: StaffRole };
+
+/** Resuelve primero PIN individual y conserva códigos legacy durante la transición. */
+export function resolveStaffCredential(
+  code: string,
+  allowedRoles: readonly StaffRole[] = ["super", "admin", "reception", "trainer"],
+): StaffCredential | null {
+  const value = code.trim();
+  if (!value) return null;
+  for (const person of STAFF_DIRECTORY) {
+    if (person.role === "vip_admin" || !allowedRoles.includes(person.role)) continue;
+    if (safeCodeEqual(value, STAFF_PINS[person.id])) {
+      return { id: person.id, name: person.name, role: person.role };
+    }
+  }
+  const role = resolveStaffRole(value, allowedRoles);
+  return role ? { id: null, name: null, role } : null;
 }

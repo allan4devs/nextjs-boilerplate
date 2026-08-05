@@ -63,24 +63,16 @@ export default function InventoryReporterPages() {
         <GameChip tone="cyan">3 responsables</GameChip>
       </div>
 
-      <div className="xg-mobile-scroll mt-4 flex gap-2 overflow-x-auto pb-1">
-        {(["resumen", "david", "aurelia", "alberto"] as const).map((id) => {
-          const label = id === "resumen" ? "Resumen" : REPORTERS.find((item) => item.id === id)?.name ?? id;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setActive(id)}
-              className={`min-h-11 shrink-0 border-[3px] px-4 text-xs font-black uppercase ${active === id ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/15 text-white/55 hover:border-white/35 hover:text-white"}`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      <div className="mt-4 grid items-start gap-4 md:grid-cols-[190px_minmax(0,1fr)]">
+        <aside className="grid gap-2 border-[3px] border-white/10 bg-black/25 p-2">
+          {(["resumen", "david", "aurelia", "alberto"] as const).map((id) => {
+            const label = id === "resumen" ? "Resumen" : REPORTERS.find((item) => item.id === id)?.name ?? id;
+            return <button key={id} type="button" onClick={() => setActive(id)} className={`min-h-11 border-[3px] px-3 text-left text-xs font-black uppercase ${active === id ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/15 text-white/55 hover:border-white/35 hover:text-white"}`}>{label}</button>;
+          })}
+        </aside>
 
       {active === "resumen" ? (
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           {REPORTERS.map((reporter) => (
             <button
               key={reporter.id}
@@ -100,7 +92,7 @@ export default function InventoryReporterPages() {
           ))}
         </div>
       ) : selected ? (
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
           <div className="border-[3px] border-white/15 bg-black/35 p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -141,6 +133,7 @@ export default function InventoryReporterPages() {
           </aside>
         </div>
       ) : null}
+      </div>
     </section>
   );
 }

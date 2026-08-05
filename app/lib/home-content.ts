@@ -83,9 +83,9 @@ export const HOME_CONTENT = {
       { number: "04", title: "Entrá a Member OS", text: "Tu progreso en un lugar.", href: "/app", icon: Smartphone },
     ],
     services: [
-      { number: "01", title: "Entrenamiento en sala", text: "Medición, rutina y acompañamiento de un instructor o instructora de planta.", meta: "Medición · rutina · acompañamiento", image: "/xtreme/maquinas-y-entrenador-xtreme.webp", icon: Dumbbell },
+      { number: "01", title: "Entrenamiento en sala", text: "Medición, rutina y acompañamiento de Kengie por la mañana y Josué por la tarde.", meta: "Kengie · mañana | Josué · tarde", image: "/xtreme/maquinas-y-entrenador-xtreme.webp", icon: Dumbbell },
       { number: "02", title: "Semi­personalizado", text: "Entrenamiento en grupos de máximo seis integrantes con un profesional a cargo.", meta: "Grupos de hasta 6 personas", image: "/xtreme/zona-funcional-clases.webp", icon: Users },
-      { number: "03", title: "Zona VIP", text: "Área exclusiva dirigida por el coach Alberto Castro Porras.", meta: "Contacto · 8387-6209", image: "/xtreme/zona-entrenamiento-vip.webp", href: "https://wa.me/50683876209", icon: Sparkles },
+      { number: "03", title: "Área VIP", text: "Servicio independiente administrado por Alberto Castro Porras; acceso y condiciones por aparte.", meta: "VIP no incluido en planes regulares · 8387-6209", image: "/xtreme/zona-entrenamiento-vip.webp", href: "https://wa.me/50683876209", icon: Sparkles },
       { number: "04", title: "InBody", text: "Mediciones antropométricas para orientar mejor tu plan de entrenamiento.", meta: "Datos para entrenar con dirección", image: "/xtreme/consultorio-medicion-corporal.webp", icon: Ruler },
       { number: "05", title: "Cámara de bronceado", text: "Sesiones individuales y paquetes para conseguir o mantener el tono que buscás.", meta: "Desde ₡4.500 · ver precios", image: "/xtreme/recepcion-sala-espera.webp", href: "/bronceado", icon: Sun },
       { number: "06", title: "Batidos proteicos", text: "Opciones prácticas para complementar o reponer energía.", meta: "Recuperación · energía", image: "/xtreme/piso-pesas-panoramica.webp", icon: GlassWater },

@@ -60,6 +60,18 @@ export const TRAINER_CODE = adminEnv("XTREME_TRAINER_CODE", "xtreme-trainer");
 export const ADMIN_CODE = adminEnv("XTREME_ADMIN_CODE", "xtreme-admin");
 export const SUPER_ADMIN_CODE = adminEnv("XTREME_SUPER_ADMIN_CODE", "xtreme-super");
 
+/** PIN individuales de staff. Sin fallback: en producción se configuran como secretos. */
+export const STAFF_PINS = {
+  allan: process.env.XTREME_ALLAN_PIN?.trim() ?? "",
+  alejandro: process.env.XTREME_ALEJANDRO_PIN?.trim() ?? "",
+  eileen: process.env.XTREME_EILEEN_PIN?.trim() ?? "",
+  veronica: process.env.XTREME_VERONICA_PIN?.trim() ?? "",
+  valeska: process.env.XTREME_VALESKA_PIN?.trim() ?? "",
+  kengie: process.env.XTREME_KENGIE_PIN?.trim() ?? "",
+  josue: process.env.XTREME_JOSUE_PIN?.trim() ?? "",
+  alberto: process.env.XTREME_ALBERTO_VIP_PIN?.trim() ?? "",
+} as const;
+
 export const TRAININGS = [
   { id: "fuerza-total", name: "Fuerza Total", capacity: 8 },
   { id: "hiit-quemador", name: "HIIT Quemador", capacity: 12 },

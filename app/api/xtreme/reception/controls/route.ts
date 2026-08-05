@@ -5,7 +5,7 @@ import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
 
-const KINDS = ["vip", "seniors", "tanning", "electricity", "sales"] as const;
+const KINDS = ["vip", "seniors", "tanning", "electricity"] as const;
 type ControlKind = (typeof KINDS)[number];
 
 type ControlDoc = {

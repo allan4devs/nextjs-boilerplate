@@ -21,7 +21,7 @@ export default function TrainerOs() {
   return <main className="min-h-screen bg-[#050505] text-white">
     <header className="sticky top-0 z-40 border-b-[3px] border-cyan-300/35 bg-[#050505]/95 backdrop-blur">
       <div className="mx-auto flex max-w-[1680px] flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-6">
-        <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center bg-cyan-300 text-black"><Dumbbell className="h-6 w-6" /></span><div><GameLabel tone="cyan">Trainer OS 2.0</GameLabel><h1 className="text-lg font-black uppercase sm:text-2xl">Centro de rendimiento</h1></div></div>
+        <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center bg-cyan-300 text-black"><Dumbbell className="h-6 w-6" /></span><div><GameLabel tone="cyan">Trainer OS 2.0</GameLabel><h1 className="text-lg font-black uppercase sm:text-2xl">Centro de rendimiento</h1>{os.staffName && <p className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">Sesión de {os.staffName}</p>}</div></div>
         <div className="flex gap-2"><button onClick={() => void os.refresh()} disabled={os.checking} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase transition hover:border-cyan-300 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${os.checking ? "animate-spin" : ""}`} /> Actualizar</button><button onClick={() => void os.logout()} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase text-white/45 transition hover:border-red-300 hover:text-red-200"><LogOut className="h-4 w-4" /> Salir</button></div>
       </div>
     </header>

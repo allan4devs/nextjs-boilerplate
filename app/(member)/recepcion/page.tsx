@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowRight,
+  Bolt,
   Camera,
   CheckCircle2,
-  ClipboardList,
-  CreditCard,
+  Crown,
   DoorOpen,
   IdCard,
   LayoutDashboard,
@@ -19,10 +20,11 @@ import {
   ScanFace,
   Search,
   ShieldAlert,
-  SlidersHorizontal,
+  Sun,
   Send,
   UserPlus,
   Users,
+  UsersRound,
   XCircle,
 } from "lucide-react";
 import {
@@ -34,19 +36,13 @@ import {
 } from "../../components/GameOS";
 import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import ReceptionDutiesPanel from "../../components/reception/ReceptionDutiesPanel";
-import ReceptionControlsPanel from "../../components/reception/ReceptionControlsPanel";
+import StaffThemeToggle from "../../components/StaffThemeToggle";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
-import {
-  cedulaCandidates,
-  decodeCedulaBarcode,
-} from "@/app/features/checkin/cedula/decodeCedulaBarcode";
 import { memberLookupToSearchParams } from "@/app/lib/memberLookup";
 import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
-
-const AUTO_LOOKUP_MS = 280;
 
 type RecentCheckin = {
   id: string;
@@ -68,7 +64,7 @@ type ActiveVisit = {
   checkedInAt: string;
 };
 
-type Tab = "home" | "duties" | "controls" | "inside" | "cedula" | "face" | "register" | "invite" | "chat";
+type Tab = "home" | "inside" | "cedula" | "face" | "register" | "invite" | "chat";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -103,6 +99,7 @@ async function capturePhotoDataUrl(video: HTMLVideoElement, maxSide = 480) {
 
 export default function RecepcionPage() {
   const [adminCode, setAdminCode] = useState("");
+  const [staffName, setStaffName] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [unlockError, setUnlockError] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -115,7 +112,6 @@ export default function RecepcionPage() {
   const [checkoutQuery, setCheckoutQuery] = useState("");
   const [checkingOutId, setCheckingOutId] = useState("");
 
-  const [cedula, setCedula] = useState("");
   const [query, setQuery] = useState("");
   const [member, setMember] = useState<MemberHit | null>(null);
   const [searchMatches, setSearchMatches] = useState<MemberHit[]>([]);
@@ -162,14 +158,7 @@ export default function RecepcionPage() {
   });
   const [isScanning, setIsScanning] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
-  const [cedulaCameraMode, setCedulaCameraMode] = useState(false);
-  const [cedulaScanStatus, setCedulaScanStatus] = useState("");
-
-  const cedulaInputRef = useRef<HTMLInputElement | null>(null);
-  const lookupTimer = useRef<number | null>(null);
   const nameLookupTimer = useRef<number | null>(null);
-  const barcodeScanBusyRef = useRef(false);
-  const lastBarcodeRef = useRef("");
 
   const headers = useCallback(
     (json = false): HeadersInit => {
@@ -224,7 +213,7 @@ export default function RecepcionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ surface: "reception", code }),
       });
-      const loginJson = (await loginRes.json()) as { error?: string; role?: string };
+      const loginJson = (await loginRes.json()) as { error?: string; role?: string; staffName?: string | null };
       if (!loginRes.ok) {
         setUnlockError(loginJson.error || "Codigo incorrecto.");
         return;
@@ -241,6 +230,7 @@ export default function RecepcionPage() {
         return;
       }
       setAdminCode(loginJson.role || "reception");
+      setStaffName(loginJson.staffName ?? "");
       setUnlocked(true);
       if (json.status) setStatus(json.status);
       if (json.recent) setRecent(json.recent);
@@ -257,9 +247,10 @@ export default function RecepcionPage() {
       const sessionRes = await fetch("/api/xtreme/staff-session?surface=reception", {
         cache: "no-store",
       });
-      const session = (await sessionRes.json()) as { authenticated?: boolean; role?: string };
+      const session = (await sessionRes.json()) as { authenticated?: boolean; role?: string; staffName?: string | null };
       if (session.authenticated) {
         setAdminCode(session.role || "reception");
+        setStaffName(session.staffName ?? "");
         setIsUnlocking(true);
         try {
           const res = await fetch("/api/xtreme/reception", { cache: "no-store" });
@@ -324,29 +315,17 @@ export default function RecepcionPage() {
   }, [tab, unlocked, startCamera, stopCamera, loadPanel]);
 
   useEffect(() => {
-    if (tab === "cedula") return;
-    setCedulaCameraMode(false);
-    setCedulaScanStatus("");
-  }, [tab]);
-
-  useEffect(() => {
     if (!flash) return;
     const id = window.setTimeout(() => setFlash(null), 4200);
     return () => window.clearTimeout(id);
   }, [flash]);
-
-  useEffect(() => {
-    if (unlocked && tab === "cedula") {
-      cedulaInputRef.current?.focus();
-    }
-  }, [unlocked, tab, flash]);
 
   const lookupMember = useCallback(
     async (opts: { cedula?: string; q?: string; code?: string }) => {
       setIsLooking(true);
       setError("");
       try {
-        // Misma fuente de verdad que Ingreso / Member (cédula primero).
+        // Misma fuente de verdad que Ingreso / Member.
         const params = memberLookupToSearchParams(opts);
         const res = await fetch(`/api/xtreme/checkin?${params}`, {
           cache: "no-store",
@@ -367,7 +346,7 @@ export default function RecepcionPage() {
           }
           setError(
             json.error ||
-              "Socio no encontrado. La cédula es la clave principal; también nombre o código de 8 dígitos.",
+              "No encontramos una persona con ese nombre.",
           );
           return null;
         }
@@ -386,33 +365,15 @@ export default function RecepcionPage() {
     [],
   );
 
-  // Auto-busqueda por cedula al digitar (lector de barras / teclado)
-  useEffect(() => {
-    if (!unlocked || tab !== "cedula") return;
-    const digits = cedula.replace(/\D/g, "");
-    if (digits.length < 6) {
-      if (!digits) {
-        setMember(null);
-        setError("");
-      }
-      return;
-    }
-    if (lookupTimer.current) window.clearTimeout(lookupTimer.current);
-    lookupTimer.current = window.setTimeout(() => {
-      void lookupMember({ cedula: digits });
-    }, AUTO_LOOKUP_MS);
-    return () => {
-      if (lookupTimer.current) window.clearTimeout(lookupTimer.current);
-    };
-  }, [cedula, unlocked, tab, lookupMember]);
-
-  // Búsqueda en vivo por nombre/teléfono: espera brevemente mientras se escribe.
+  // Búsqueda en vivo por nombre: espera brevemente mientras se escribe.
   useEffect(() => {
     if (!unlocked || tab !== "cedula") return;
     const value = query.trim();
     if (nameLookupTimer.current) window.clearTimeout(nameLookupTimer.current);
     if (value.length < 2) {
       setSearchMatches([]);
+      setMember(null);
+      setError("");
       return;
     }
     nameLookupTimer.current = window.setTimeout(() => {
@@ -423,71 +384,7 @@ export default function RecepcionPage() {
     };
   }, [query, unlocked, tab, lookupMember]);
 
-  // Lee la cédula en memoria: nunca guarda ni envía una foto del documento.
-  useEffect(() => {
-    if (!unlocked || tab !== "cedula" || !cedulaCameraMode || !cameraOn) return;
-    let cancelled = false;
-    let timer = 0;
-    lastBarcodeRef.current = "";
-
-    async function scanBarcodeFrame() {
-      const video = videoRef.current;
-      if (cancelled || !video) return;
-
-      if (!barcodeScanBusyRef.current) {
-        barcodeScanBusyRef.current = true;
-        try {
-          const raw = await decodeCedulaBarcode(video);
-          if (raw && raw !== lastBarcodeRef.current) {
-            lastBarcodeRef.current = raw;
-            const candidates = cedulaCandidates(raw);
-            if (!candidates.length) {
-              setCedulaScanStatus(
-                "Código leído, pero no se pudo extraer la cédula. Digítela abajo.",
-              );
-            } else {
-              setCedulaScanStatus("Cédula detectada. Buscando socio...");
-              for (const candidate of candidates) {
-                const found = await lookupMember({ cedula: candidate });
-                if (found) {
-                  setCedula(candidate);
-                  setCedulaScanStatus("Cédula detectada. Confirmá el ingreso.");
-                  setCedulaCameraMode(false);
-                  stopCamera();
-                  return;
-                }
-              }
-              setCedula(candidates[0]);
-              setCedulaScanStatus(
-                "Código leído, pero no encontramos al socio. Revisá el número.",
-              );
-            }
-          }
-        } finally {
-          barcodeScanBusyRef.current = false;
-        }
-      }
-
-      if (!cancelled) timer = window.setTimeout(() => void scanBarcodeFrame(), 350);
-    }
-
-    void scanBarcodeFrame();
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-      barcodeScanBusyRef.current = false;
-    };
-  }, [
-    unlocked,
-    tab,
-    cedulaCameraMode,
-    cameraOn,
-    videoRef,
-    lookupMember,
-    stopCamera,
-  ]);
-
-  async function confirmCheckin(target?: MemberHit, method: "cedula" | "face" | "name" | "code" = "cedula") {
+  async function confirmCheckin(target?: MemberHit, method: "cedula" | "face" | "name" | "code" = "name") {
     const m = target || member;
     if (!m) return;
     setIsCheckingIn(true);
@@ -501,7 +398,7 @@ export default function RecepcionPage() {
         body: JSON.stringify({
           memberName: m.memberName,
           accessCode: m.accessCode,
-          cedula: m.cedula || cedula,
+          cedula: m.cedula,
           method,
           by: "reception",
         }),
@@ -528,12 +425,10 @@ export default function RecepcionPage() {
           : `Listo · ${m.memberName.split(" ")[0]}`,
         subtitle: json.message || "Ingreso registrado en recepcion.",
       });
-      setCedula("");
       setQuery("");
       setMember(null);
       setFaceMatches([]);
       void loadPanel(tab === "face");
-      window.setTimeout(() => cedulaInputRef.current?.focus(), 100);
     } catch {
       setError("Error de conexion.");
       setFlash({ type: "err", title: "Error", subtitle: "No se pudo registrar el ingreso." });
@@ -802,6 +697,7 @@ export default function RecepcionPage() {
     await fetch("/api/xtreme/staff-session?surface=reception", { method: "DELETE" });
     setUnlocked(false);
     setAdminCode("");
+    setStaffName("");
     setMember(null);
     setInside([]);
     setRoster([]);
@@ -857,9 +753,6 @@ export default function RecepcionPage() {
                 {isUnlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar al mostrador"}
               </GameButton>
               <p className="mt-4 flex justify-center gap-4 text-center text-xs font-bold text-white/35">
-                <Link href="/ingreso" className="hover:text-white/70">
-                  Modo ingreso
-                </Link>
                 <Link href="/admin" className="hover:text-white/70">
                   Panel admin
                 </Link>
@@ -895,12 +788,13 @@ export default function RecepcionPage() {
           <div className="min-w-0">
             <GameLabel tone="lime">Reception OS</GameLabel>
             <p className="truncate text-base font-black uppercase tracking-tight sm:text-lg">
-              Recepcion Xtreme
+              {staffName ? `Recepción · ${staffName}` : "Recepción Xtreme"}
             </p>
             <p className="hidden text-[10px] font-bold uppercase tracking-[0.16em] text-white/35 sm:block">Ingresos · personas · atención</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <StaffThemeToggle />
           <OccupancyPill status={status} />
           <GameHudPill
             icon={Users}
@@ -925,7 +819,7 @@ export default function RecepcionPage() {
             onClick={() => void logout()}
             className="inline-flex min-h-11 items-center gap-1.5 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-[#d8ff3e]/50 hover:text-[#d8ff3e]"
           >
-            <LogOut className="h-3.5 w-3.5" /> Modo ingreso
+            <LogOut className="h-3.5 w-3.5" /> Cerrar sesión
           </button>
         </div>
       </header>
@@ -936,10 +830,8 @@ export default function RecepcionPage() {
             {(
               [
                 { id: "home" as const, label: "Mostrador", icon: LayoutDashboard },
-                { id: "duties" as const, label: "Deberes", icon: ClipboardList },
-                { id: "controls" as const, label: "Controles", icon: SlidersHorizontal },
                 { id: "inside" as const, label: "Adentro", icon: Users },
-                { id: "cedula" as const, label: "Cedula", icon: IdCard },
+                { id: "cedula" as const, label: "Buscar", icon: Search },
                 ...(FACE_RECOGNITION_ENABLED
                   ? [{ id: "face" as const, label: "Rostro", icon: ScanFace }]
                   : []),
@@ -983,9 +875,7 @@ export default function RecepcionPage() {
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <ReceptionAction icon={LogOut} eyebrow={`${inside.length} dentro`} title="Registrar salida" description="Buscá por nombre o cédula y marcá la salida con un toque." tone="orange" onClick={() => setTab("inside")} />
-                  <ReceptionAction icon={ClipboardList} eyebrow="Control operativo" title="Deberes y reportes" description="Revisá responsabilidades, pendientes de hoy y reportes del mes." tone="cyan" onClick={() => setTab("duties")} />
-                  <ReceptionAction icon={SlidersHorizontal} eyebrow="VIP · servicios · ventas" title="Paneles de control" description="Registrá adultos mayores, bronceado, recibos de luz y ventas del mostrador." tone="violet" onClick={() => setTab("controls")} />
-                  <ReceptionAction icon={IdCard} eyebrow="Acceso rápido" title="Ingresar socio" description="Escaneá o digitá la cédula y confirmá el ingreso." tone="lime" onClick={() => setTab("cedula")} />
+                  <ReceptionAction icon={Search} eyebrow="Acceso rápido" title="Ingresar socio" description="Buscá por nombre y confirmá el ingreso." tone="lime" onClick={() => setTab("cedula")} />
                   {FACE_RECOGNITION_ENABLED ? (
                     <ReceptionAction icon={ScanFace} eyebrow="Cámara" title="Ingreso por rostro" description="Reconocé socios enrolados o agregá el rostro al perfil." tone="violet" onClick={() => setTab("face")} />
                   ) : (
@@ -1004,8 +894,6 @@ export default function RecepcionPage() {
                 </div>
               </div>
             )}
-            {tab === "duties" && <ReceptionDutiesPanel />}
-            {tab === "controls" && <ReceptionControlsPanel />}
             {tab === "inside" && (
               <InsideRoster
                 visits={inside}
@@ -1103,129 +991,27 @@ export default function RecepcionPage() {
             {tab === "cedula" && (
               <div className="mx-auto max-w-xl">
                 <div className="text-center">
-                  <GameLabel tone="lime">Via mas rapida · toca teclas grandes</GameLabel>
+                  <GameLabel tone="lime">Ingreso rápido · búsqueda directa</GameLabel>
                   <h2 className="mt-2 text-2xl font-black uppercase tracking-tight sm:text-3xl">
-                    Digitá o escaneá la cédula
+                    Buscá por nombre
                   </h2>
                   <p className="mt-2 text-sm font-bold text-white/45">
-                    Use la cámara, el lector de barras o el teclado. Enter confirma el ingreso.
+                    Escribí el nombre o apellido, seleccioná a la persona y confirmá el ingreso.
                   </p>
                 </div>
-
-                <div className="mt-5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (cedulaCameraMode) {
-                        setCedulaCameraMode(false);
-                        setCedulaScanStatus("");
-                        stopCamera();
-                        return;
-                      }
-                      lastBarcodeRef.current = "";
-                      setCedulaScanStatus(
-                        "Muestre el código de barras del reverso dentro del recuadro.",
-                      );
-                      setCedulaCameraMode(true);
-                      void startCamera("environment");
-                    }}
-                    className="flex w-full items-center justify-center gap-2 border-[3px] border-[#d8ff3e]/70 bg-[#d8ff3e]/10 px-4 py-3 text-sm font-black uppercase tracking-wide text-[#d8ff3e] transition hover:bg-[#d8ff3e] hover:text-black"
-                  >
-                    <Camera className="h-5 w-5" />
-                    {cedulaCameraMode ? "Cerrar cámara" : "Escanear cédula con cámara"}
-                  </button>
-
-                  <div
-                    className={
-                      cedulaCameraMode
-                        ? "relative mt-3 aspect-video overflow-hidden border-[3px] border-white/20 bg-black"
-                        : "hidden"
-                    }
-                  >
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="h-full w-full object-cover"
-                      />
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/15">
-                        <div className="h-[34%] w-[84%] border-2 border-[#d8ff3e] shadow-[0_0_0_999px_rgba(0,0,0,.28)]" />
-                      </div>
-                      {!cameraOn && !cameraError && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                          <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" />
-                        </div>
-                      )}
-                      {cameraError && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/85 p-6 text-center text-sm font-bold text-red-300">
-                          {cameraError}
-                        </div>
-                      )}
-                  </div>
-
-                  {cedulaScanStatus && (
-                    <p className="mt-2 text-center text-xs font-bold text-white/55">
-                      {cedulaScanStatus}
-                    </p>
-                  )}
-                  <p className="mt-1 text-center text-[11px] font-bold text-white/35">
-                    La lectura ocurre en este dispositivo; no guardamos fotos de la cédula.
-                  </p>
-                </div>
-
-                <form
-                  className="mt-5"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (member) void confirmCheckin(member, "cedula");
-                    else if (cedula.replace(/\D/g, "").length >= 6) {
-                      void lookupMember({ cedula: cedula.replace(/\D/g, "") }).then((m) => {
-                        if (m) void confirmCheckin(m, "cedula");
-                      });
-                    }
-                  }}
-                >
-                  <div className="relative">
-                    <CreditCard className="pointer-events-none absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-white/35" />
-                    <input
-                      ref={cedulaInputRef}
-                      value={cedula}
-                      onChange={(e) => setCedula(e.target.value)}
-                      inputMode="numeric"
-                      autoComplete="off"
-                      autoFocus
-                      placeholder="1-2345-6789"
-                      className="w-full border-[3px] border-white/20 bg-black/50 py-5 pl-14 pr-14 text-center text-3xl font-black tracking-widest outline-none placeholder:text-white/20 focus:border-[#d8ff3e] sm:text-4xl"
-                    />
-                    {isLooking && (
-                      <Loader2 className="absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 animate-spin text-[#d8ff3e]" />
-                    )}
-                  </div>
-
-                  <MemberPreview
-                    member={member}
-                    error={error}
-                    isCheckingIn={isCheckingIn}
-                    onConfirm={() => void confirmCheckin(member || undefined, "cedula")}
-                  />
-                </form>
-
-                <div className="mt-8 border-t border-white/10 pt-6">
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/35">
-                    Alternativa · nombre o codigo
-                  </p>
-                  <div className="mt-3">
+                <div className="mt-6">
+                  <div>
                     <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                      <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/35" />
                       <input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Escribí el nombre, apellido o teléfono"
+                        placeholder="Nombre o apellido"
                         autoComplete="off"
-                        className="w-full border-[3px] border-white/15 bg-black/40 py-4 pl-11 pr-12 text-base font-black outline-none focus:border-cyan-300/70"
+                        autoFocus
+                        className="w-full border-[3px] border-[#d8ff3e]/50 bg-black/50 py-5 pl-12 pr-12 text-lg font-black outline-none placeholder:text-white/25 focus:border-[#d8ff3e]"
                       />
-                      {isLooking && <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-cyan-300" />}
+                      {isLooking && <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-[#d8ff3e]" />}
                     </div>
                     <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">
                       Los resultados aparecen automáticamente mientras escribís
@@ -1254,6 +1040,12 @@ export default function RecepcionPage() {
                       setError("");
                       setTab("register");
                     }}
+                  />
+                  <MemberPreview
+                    member={member}
+                    error={error}
+                    isCheckingIn={isCheckingIn}
+                    onConfirm={() => void confirmCheckin(member || undefined, "name")}
                   />
                 </div>
               </div>
@@ -1592,6 +1384,23 @@ export default function RecepcionPage() {
         </section>
 
         <aside className="space-y-3 sm:space-y-4">
+          <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
+            <ReceptionDutiesPanel compact />
+          </div>
+          <div className="border-[3px] border-amber-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
+            <GameLabel tone="orange">Controles independientes</GameLabel>
+            <div className="mt-3 grid gap-2">
+              {([
+                { href: "/recepcion/vip", label: "Área VIP", detail: "Clientes y cobros", icon: Crown, color: "text-amber-300" },
+                { href: "/recepcion/adultos-mayores", label: "Adultos mayores", detail: "Clases y asistencia", icon: UsersRound, color: "text-cyan-300" },
+                { href: "/recepcion/bronceado", label: "Bronceado", detail: "Sesiones y paquetes", icon: Sun, color: "text-orange-300" },
+                { href: "/recepcion/pagos-luz", label: "Pagos de luz", detail: "Recibos y pendientes", icon: Bolt, color: "text-yellow-300" },
+              ] as const).map((control) => {
+                const Icon = control.icon;
+                return <Link key={control.href} href={control.href} className="group flex min-h-16 items-center gap-3 border-[3px] border-white/15 bg-black/45 p-3 transition hover:border-amber-300/60"><span className={`grid h-10 w-10 shrink-0 place-items-center bg-white/5 ${control.color}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black uppercase leading-tight">{control.label}</span><span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-white/35">{control.detail}</span></span><ArrowRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-amber-300" /></Link>;
+              })}
+            </div>
+          </div>
           <div className="border-[3px] border-violet-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
             <GameLabel tone="cyan">Atención y personas</GameLabel>
             <div className="mt-3 grid gap-2">

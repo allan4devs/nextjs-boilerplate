@@ -6,6 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 App web de **Xtreme Gym** (Costa Rica): sitio público de marketing + "Member OS" (app de socios estilo videojuego) + panel de recepción + panel admin, todo en un solo proyecto Next.js (App Router) desplegado en Vercel. La UI está en español costarricense (voseo, "pura vida"); mantener ese tono en textos de cara al usuario.
 
+## Reglas vigentes del gimnasio
+
+Estas reglas son fuente de verdad del producto para cambios de staff, zonas, cobros e integraciones. No tratarlas como ejemplos ni datos tentativos. Los nombres describen personas y responsabilidades reales; no usarlos como secretos.
+
+- **Super admins:** Allan, Alejandro y Eileen. Cada persona debe usar su PIN individual y la sesión debe conservar su identidad.
+- **Recepción:** Verónica y Valeska.
+- **Entrenadores de planta:** Kengie cubre la mañana y Josué la tarde. Las interfaces futuras deben poder mostrar quién está de turno y asociar planes/seguimiento con el entrenador responsable, sin asumir que la lista o los horarios serán siempre fijos.
+- **Área VIP:** Alberto administra el VIP. El VIP se maneja por aparte, aunque forma parte de la oferta general de Xtreme. Tratarlo como un servicio/área diferenciada, con administración, acceso, clientes y condiciones propias; no presentarlo como una zona regular incluida automáticamente con cualquier plan. En contenido público puede aparecer junto a las demás instalaciones, pero debe quedar claramente rotulado como VIP. El PIN de Alberto no debe conceder acceso al Admin OS general: requiere una superficie VIP limitada.
+- **Cobros presenciales:** el pase del día es frecuente y se paga por SINPE, efectivo o tarjeta. Registrar método de pago y operador de recepción cuando el sistema modele estas ventas.
+- **Latinsoft:** es la fuente operativa de facturación y alta presencial. Allí se factura por cliente y se registra el rostro usado para entrar al gimnasio. No asumir que Mongo o Member OS sustituyen Latinsoft hasta que exista una integración o migración explícita.
+- **Precios personalizados:** algunos socios pagan un monto distinto según su historial o última factura. No calcular renovaciones únicamente desde el precio público ni sobrescribir una condición vigente sin consultar la última factura de Latinsoft o una copia sincronizada y verificable.
+
+### Dirección para próximos updates
+
+- Modelar el staff como datos (persona, rol, turno, área y estado activo), no como nombres dispersos en componentes.
+- Distinguir al menos `zona regular`, `área VIP` y `servicio adicional` para evitar prometer acceso incorrecto.
+- Mantener separadas la autorización del sistema (roles/códigos/sesiones) y la identidad visible del colaborador.
+- Si se integra Latinsoft, definir primero qué sistema es fuente de verdad para cliente, factura, precio vigente, pago y acceso biométrico; evitar duplicar o inventar facturas.
+
 ## Comandos
 
 ```bash

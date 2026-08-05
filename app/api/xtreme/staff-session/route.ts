@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
   const session = await resolveStaffSession(req, surface, true);
   return NextResponse.json(
     session
-      ? { authenticated: true, surface, role: session.role, expiresAt: session.expiresAt }
+      ? { authenticated: true, surface, role: session.role, staffId: session.staffId, staffName: session.staffName, expiresAt: session.expiresAt }
       : { authenticated: false, surface, role: null },
     { headers: { "Cache-Control": "no-store" } },
   );
@@ -87,8 +87,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const role = authenticateStaffCode(String(body.code ?? ""), surface);
-  if (!role) {
+  const credential = authenticateStaffCode(String(body.code ?? ""), surface);
+  if (!credential) {
     await recordFailedAttempt(db, key);
     return NextResponse.json({ error: "Codigo incorrecto para esta area." }, { status: 401 });
   }
@@ -97,13 +97,17 @@ export async function POST(req: NextRequest) {
   await revokeStaffSession(req, surface);
   const { token, expiresAt } = await createStaffSession(db, {
     surface,
-    role,
+    role: credential.role,
+    staffId: credential.id,
+    staffName: credential.name,
     userAgent: req.headers.get("user-agent") ?? undefined,
   });
   const res = NextResponse.json({
     authenticated: true,
     surface,
-    role,
+    role: credential.role,
+    staffId: credential.id,
+    staffName: credential.name,
     expiresAt,
     ttlSeconds: staffSessionTtlSeconds(surface),
   });
@@ -142,12 +146,16 @@ export async function PUT(req: NextRequest) {
   const { token, expiresAt } = await createStaffSession(db, {
     surface: targetSurface,
     role: sourceSession.role,
+    staffId: sourceSession.staffId,
+    staffName: sourceSession.staffName,
     userAgent: req.headers.get("user-agent") ?? undefined,
   });
   const res = NextResponse.json({
     authenticated: true,
     surface: targetSurface,
     role: sourceSession.role,
+    staffId: sourceSession.staffId,
+    staffName: sourceSession.staffName,
     expiresAt,
   });
   return attachStaffSessionCookie(res, targetSurface, token, expiresAt);

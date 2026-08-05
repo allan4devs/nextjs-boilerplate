@@ -42,6 +42,7 @@ export function useTrainerOs() {
   const [checking, setChecking] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [code, setCode] = useState("");
+  const [staffName, setStaffName] = useState("");
   const [members, setMembers] = useState<TrainerMember[]>([]);
   const [todayClasses, setTodayClasses] = useState<TrainerTodayClass[]>([]);
   const [agendaDate, setAgendaDate] = useState("");
@@ -106,7 +107,10 @@ export function useTrainerOs() {
     void (async () => {
       try {
         const session = await trainerSession();
-        if (session.authenticated) await load(false);
+        if (session.authenticated) {
+          setStaffName(session.staffName ?? "");
+          await load(false);
+        }
         else setAuthenticated(false);
       } catch {
         setAuthenticated(false);
@@ -157,7 +161,8 @@ export function useTrainerOs() {
     setChecking(true);
     setNotice(null);
     try {
-      await loginTrainer(code.trim());
+      const session = await loginTrainer(code.trim());
+      setStaffName(session.staffName ?? "");
       setCode("");
       await load(false);
     } catch (error) {
@@ -171,6 +176,7 @@ export function useTrainerOs() {
     if (dirty && !window.confirm("¿Salir y descartar los cambios del plan?")) return;
     await logoutTrainer();
     setAuthenticated(false);
+    setStaffName("");
     setMembers([]);
     setTodayClasses([]);
     setAgendaDate("");
@@ -333,7 +339,7 @@ export function useTrainerOs() {
   }, [agendaDate]);
 
   return {
-    checking, authenticated, code, setCode, members, todayClasses, agendaDate,
+    checking, authenticated, code, setCode, staffName, members, todayClasses, agendaDate,
     selected, selectedSignal, stats,
     query, setQuery, filter, setFilter, filteredMembers, tab, setTab, draft, coachName,
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,

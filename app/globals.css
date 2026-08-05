@@ -178,6 +178,54 @@ button,
   contain: layout paint;
 }
 
+/* Tema claro exclusivo de Admin OS y Reception OS. El switch aplica la clase al html. */
+html.xg-staff-light,
+html.xg-staff-light body {
+  background: #e9e6dc;
+  color: #11130f;
+}
+
+html.xg-staff-light [class*="bg-[#050505]"],
+html.xg-staff-light [class*="bg-[#070707]"],
+html.xg-staff-light [class*="bg-[#080808]"],
+html.xg-staff-light [class*="bg-[#090909]"],
+html.xg-staff-light [class*="bg-[#0a0a0a]"],
+html.xg-staff-light [class*="bg-[#0b0b0b]"],
+html.xg-staff-light [class*="bg-[#0c0c0c]"],
+html.xg-staff-light [class*="bg-[#0d0d0d]"],
+html.xg-staff-light [class*="bg-black"] {
+  background-color: #f8f6ef !important;
+}
+
+html.xg-staff-light [class*="bg-white/"] {
+  background-color: rgba(20, 22, 17, 0.055) !important;
+}
+
+html.xg-staff-light [class*="text-white"] {
+  color: rgba(17, 19, 15, 0.78) !important;
+}
+
+html.xg-staff-light [class*="border-white"] {
+  border-color: rgba(17, 19, 15, 0.2) !important;
+}
+
+html.xg-staff-light input,
+html.xg-staff-light select,
+html.xg-staff-light textarea {
+  color: #11130f !important;
+}
+
+html.xg-staff-light input::placeholder,
+html.xg-staff-light textarea::placeholder {
+  color: rgba(17, 19, 15, 0.38) !important;
+}
+
+html.xg-staff-light .xg-theme-toggle {
+  border-color: rgba(17, 19, 15, 0.25) !important;
+  color: #11130f !important;
+  background: #fffdf6 !important;
+}
+
 .xg-game-modal-scroll {
   scrollbar-color: rgba(216, 255, 62, 0.72) rgba(255, 255, 255, 0.08);
   scrollbar-width: thin;

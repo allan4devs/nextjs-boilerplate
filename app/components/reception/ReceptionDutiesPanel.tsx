@@ -22,7 +22,7 @@ type Duty = {
   completed: boolean;
 };
 
-export default function ReceptionDutiesPanel() {
+export default function ReceptionDutiesPanel({ compact = false }: { compact?: boolean }) {
   const [duties, setDuties] = useState<Duty[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
@@ -87,7 +87,32 @@ export default function ReceptionDutiesPanel() {
   const monthlyDone = grouped.monthly.filter((duty) => duty.completed).length;
 
   if (loading) {
-    return <div className="grid min-h-72 place-items-center"><Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" /></div>;
+    return <div className={`grid place-items-center ${compact ? "min-h-40" : "min-h-72"}`}><Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" /></div>;
+  }
+
+  if (compact) {
+    const actionable = [...grouped.daily, ...grouped.monthly];
+    const done = actionable.filter((duty) => duty.completed).length;
+    const percent = actionable.length ? Math.round((done / actionable.length) * 100) : 0;
+    return (
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <GameLabel tone="cyan">Deberes del turno</GameLabel>
+            <p className="mt-2 text-2xl font-black uppercase">{done}/{actionable.length} listos</p>
+          </div>
+          <button type="button" onClick={() => void load()} aria-label="Actualizar deberes" className="grid h-10 w-10 place-items-center border-[3px] border-white/15 text-white/45 hover:border-cyan-300 hover:text-cyan-300">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="mt-3 h-2 bg-white/10"><div className="h-full bg-cyan-300 transition-all" style={{ width: `${percent}%` }} /></div>
+        {error && <p className="mt-3 border border-red-400/50 bg-red-500/10 p-2 text-xs font-bold text-red-200">{error}</p>}
+        <div className="mt-4 max-h-[32rem] space-y-4 overflow-y-auto pr-1">
+          <CompactDutyGroup title="Hoy" duties={grouped.daily} savingId={savingId} onToggle={toggle} />
+          <CompactDutyGroup title="Este mes" duties={grouped.monthly} savingId={savingId} onToggle={toggle} />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -132,6 +157,10 @@ export default function ReceptionDutiesPanel() {
       </section>
     </div>
   );
+}
+
+function CompactDutyGroup({ title, duties, savingId, onToggle }: { title: string; duties: Duty[]; savingId: string; onToggle: (duty: Duty) => void }) {
+  return <section><p className="text-[10px] font-black uppercase tracking-[.18em] text-white/35">{title}</p><div className="mt-2 grid gap-2">{duties.map((duty) => <button key={duty.id} type="button" disabled={Boolean(savingId)} onClick={() => onToggle(duty)} className={`flex min-h-14 items-center gap-2 border-[3px] p-2.5 text-left transition disabled:cursor-wait ${duty.completed ? "border-[#d8ff3e]/45 bg-[#d8ff3e]/10" : "border-white/12 bg-black/35 hover:border-white/30"}`}><span className={`grid h-7 w-7 shrink-0 place-items-center border-2 ${duty.completed ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/25 text-transparent"}`}>{savingId === duty.id ? <Loader2 className="h-3.5 w-3.5 animate-spin text-current" /> : <Check className="h-4 w-4" />}</span><span className={`min-w-0 text-xs font-black uppercase leading-4 ${duty.completed ? "text-white/45 line-through" : "text-white"}`}>{duty.title}</span></button>)}{!duties.length && <p className="border border-dashed border-white/15 p-3 text-center text-xs font-bold text-white/30">Sin pendientes</p>}</div></section>;
 }
 
 function DutySection({ title, subtitle, icon: Icon, duties, savingId, onToggle }: { title: string; subtitle: string; icon: typeof CalendarDays; duties: Duty[]; savingId: string; onToggle: (duty: Duty) => void }) {

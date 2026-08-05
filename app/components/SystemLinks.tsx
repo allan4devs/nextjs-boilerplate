@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  DoorOpen,
   Dumbbell,
   LayoutDashboard,
   LayoutGrid,
@@ -36,13 +35,6 @@ export const SYSTEM_LINKS: SystemLinkItem[] = [
     short: "Mostrador",
     icon: Users,
     match: (p) => p === "/recepcion" || p.startsWith("/recepcion/"),
-  },
-  {
-    href: "/ingreso",
-    label: "Ingreso",
-    short: "Puerta",
-    icon: DoorOpen,
-    match: (p) => p === "/ingreso" || p.startsWith("/ingreso/"),
   },
   {
     href: "/entrenador",

@@ -6,6 +6,7 @@ import { Activity, ArrowLeft, Loader2, PackageOpen, ShoppingCart } from "lucide-
 import ReceptionStorefront from "@/app/components/reception/ReceptionStorefront";
 import SalesMonitoringPanel from "@/app/components/reception/SalesMonitoringPanel";
 import { GameLabel } from "@/app/components/GameOS";
+import StaffThemeToggle from "@/app/components/StaffThemeToggle";
 
 type View = "sales" | "inventory" | "monitoring";
 
@@ -64,30 +65,33 @@ export default function ReceptionSalesPage() {
             <GameLabel tone="lime">Sesión de recepción activa</GameLabel>
             <h1 className="mt-2 text-2xl font-black uppercase tracking-tight sm:text-3xl">Inventario y ventas</h1>
           </div>
-          <Link href="/recepcion" className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 text-xs font-black uppercase text-white/65 hover:border-[#d8ff3e]/60 hover:text-[#d8ff3e]">
-            <ArrowLeft className="h-4 w-4" /> Volver a recepción
-          </Link>
+          <div className="flex items-center gap-2">
+            <StaffThemeToggle />
+            <Link href="/recepcion" className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 text-xs font-black uppercase text-white/65 hover:border-[#d8ff3e]/60 hover:text-[#d8ff3e]">
+              <ArrowLeft className="h-4 w-4" /> Volver a recepción
+            </Link>
+          </div>
         </header>
 
-        <nav className="mt-4 grid grid-cols-3 border-[3px] border-white/20 bg-[#0c0c0c]" aria-label="Inventario y ventas">
-          {([
-            { id: "sales" as const, label: "Registrar venta", icon: ShoppingCart },
-            { id: "inventory" as const, label: "Inventario", icon: PackageOpen },
-            { id: "monitoring" as const, label: "Monitoreo", icon: Activity },
-          ]).map((item) => {
-            const Icon = item.icon;
-            const active = view === item.id;
-            return (
-              <button key={item.id} type="button" onClick={() => setView(item.id)} className={`inline-flex min-h-14 items-center justify-center gap-2 px-3 text-xs font-black uppercase sm:text-sm ${active ? "bg-[#d8ff3e] text-black" : "text-white/55 hover:bg-white/5 hover:text-white"}`}>
-                <Icon className="h-5 w-5" /> {item.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <section className="mt-4 border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:p-6">
-          {view === "monitoring" ? <SalesMonitoringPanel /> : <ReceptionStorefront mode={view} />}
-        </section>
+        <div className="mt-4 grid items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="border-[3px] border-white/20 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] lg:sticky lg:top-4">
+            <GameLabel tone="cyan">Herramientas</GameLabel>
+            <nav className="mt-3 grid gap-2" aria-label="Inventario y ventas">
+              {([
+                { id: "sales" as const, label: "Registrar venta", detail: "Cobro y carrito", icon: ShoppingCart },
+                { id: "inventory" as const, label: "Inventario", detail: "Existencias y precios", icon: PackageOpen },
+                { id: "monitoring" as const, label: "Monitoreo", detail: "Ventas y movimientos", icon: Activity },
+              ]).map((item) => {
+                const Icon = item.icon;
+                const active = view === item.id;
+                return <button key={item.id} type="button" onClick={() => setView(item.id)} className={`flex min-h-16 items-center gap-3 border-[3px] p-3 text-left transition ${active ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/15 bg-black/35 text-white hover:border-white/35"}`}><span className={`grid h-9 w-9 shrink-0 place-items-center ${active ? "bg-black/10" : "bg-white/5 text-white/55"}`}><Icon className="h-5 w-5" /></span><span><span className="block text-xs font-black uppercase">{item.label}</span><span className={`mt-0.5 block text-[10px] font-bold ${active ? "text-black/55" : "text-white/35"}`}>{item.detail}</span></span></button>;
+              })}
+            </nav>
+          </aside>
+          <section className="min-w-0 border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:p-6">
+            {view === "monitoring" ? <SalesMonitoringPanel /> : <ReceptionStorefront mode={view} />}
+          </section>
+        </div>
       </div>
     </main>
   );
