@@ -3,6 +3,10 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { businessDate } from "@/lib/xtreme/business-date";
 import { recordEvent } from "@/lib/xtreme/events";
 import {
+  activateDayPassOnCheckin,
+  exhaustDayPassOnCheckout,
+} from "@/lib/xtreme/entitlements";
+import {
   findActiveMemberVisit,
   presentActiveMemberVisit,
 } from "@/lib/xtreme/member-visit";
@@ -118,6 +122,13 @@ export async function PUT(req: NextRequest) {
     if (!member) {
       return NextResponse.json({ error: "No encontramos tu perfil de socio." }, { status: 404 });
     }
+    const currentMembership = membershipStatus(member.membership);
+    if (currentMembership.status === "expired") {
+      return NextResponse.json(
+        { error: "Necesitás un plan activo o un pase disponible para registrar el ingreso." },
+        { status: 402 },
+      );
+    }
 
     const checkin: CheckinDoc = {
       id: `chk-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -134,6 +145,11 @@ export async function PUT(req: NextRequest) {
     };
 
     await db.collection<CheckinDoc>(CHECKINS_COLLECTION).insertOne(checkin);
+    try {
+      await activateDayPassOnCheckin(db, session.memberKey, checkin.date);
+    } catch (error) {
+      console.error("XTREME MEMBER DAY PASS ACTIVATE ERROR", error);
+    }
     await recordEvent(db, {
       type: "checkin_completed",
       memberId: session.memberKey,
@@ -189,6 +205,11 @@ export async function POST(req: NextRequest) {
         { error: "La salida ya había sido registrada." },
         { status: 409 },
       );
+    }
+    try {
+      await exhaustDayPassOnCheckout(db, session.memberKey, openVisit.date);
+    } catch (error) {
+      console.error("XTREME MEMBER DAY PASS EXHAUST ERROR", error);
     }
 
     const durationMinutes = Math.max(

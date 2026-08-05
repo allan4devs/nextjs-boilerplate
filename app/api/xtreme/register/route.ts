@@ -50,6 +50,7 @@ import {
 } from "@/lib/xtreme/session";
 import {
   authAttemptStatus,
+  recordPublicAuthAttempt,
   recordFailedAuthAttempt,
   requestFingerprint,
 } from "@/lib/xtreme/auth-attempts";
@@ -61,6 +62,9 @@ import {
 export const dynamic = "force-dynamic";
 
 const TOKEN_TTL_MIN = 60;
+const REGISTRATION_COOLDOWN_MS = 10 * 60_000;
+const MIN_FORM_FILL_MS = 1_500;
+const MAX_FORM_AGE_MS = 2 * 60 * 60_000;
 
 function maskedEmail(email: string) {
   const [local, domain] = email.split("@");
@@ -89,6 +93,13 @@ async function findMemberByEmail(db: Awaited<ReturnType<typeof getDb>>, email: s
  */
 async function startRegistration(req: NextRequest, body: Record<string, unknown>) {
   const source = body.source === "app" ? "app" : "primer-dia";
+  const formStartedAt = Number(body.formStartedAt);
+  const formAgeMs = Date.now() - formStartedAt;
+  const looksAutomated =
+    String(body.website ?? "").trim().length > 0 ||
+    !Number.isFinite(formStartedAt) ||
+    formAgeMs < MIN_FORM_FILL_MS ||
+    formAgeMs > MAX_FORM_AGE_MS;
   // Acepta email, cedula, o un solo campo "identity" (correo o cédula).
   const identityRaw = String(body.identity ?? "").trim();
   let email = normalizeEmail(body.email);
@@ -112,6 +123,29 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     scope: "public_registration_start",
     subject: rateSubject,
   });
+  if (looksAutomated) {
+    await recordPublicAuthAttempt(db, req, {
+      scope: "public_registration_start",
+      subject: rateSubject,
+      subjectMaxAttempts: 2,
+      ipMaxAttempts: 3,
+    });
+    await recordEvent(db, {
+      type: "registration_attempted",
+      source: "site",
+      properties: {
+        outcome: "blocked",
+        reason: "bot_signal",
+        source,
+        requestFingerprint: requestFingerprint(req),
+      },
+    }).catch(() => {});
+    // Respuesta neutra: no confirma al bot qué señal lo delató.
+    return NextResponse.json({
+      ok: true,
+      message: "Si los datos son válidos, te llegará un correo en unos minutos.",
+    });
+  }
   if (rate.blocked) {
     await recordEvent(db, {
       type: "registration_attempted",
@@ -154,6 +188,22 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
       }
       boundMember = boundMember || byEmail;
     }
+  }
+
+  // Un correo que ya pertenece a una ficha no verificada solo se puede activar
+  // demostrando además la cédula. Evita que bots disparen invitaciones a toda
+  // la base o liguen una ficha importada usando únicamente el correo.
+  if (boundMember && email && documentLength < 5 && boundMember.emailVerified !== true) {
+    await recordPublicAuthAttempt(db, req, {
+      scope: "public_registration_start",
+      subject: rateSubject,
+    });
+    return NextResponse.json({
+      ok: true,
+      message:
+        "Si ya existe una ficha con ese correo, continuá usando tu documento de identidad para verificarla.",
+      alreadyRegistered: true,
+    });
   }
 
   // Cuenta ya activa: por defecto no reenviar (anti-enumeración).
@@ -253,6 +303,23 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
   const expiresAt = new Date(now.getTime() + TOKEN_TTL_MIN * 60_000);
   const pendingCollection = db.collection<PendingRegistrationDoc>(PENDING_REGISTRATIONS_COLLECTION);
   const existingPending = await pendingCollection.findOne({ email });
+  const lastSentMs = existingPending?.lastSentAt
+    ? new Date(existingPending.lastSentAt).getTime()
+    : 0;
+  if (lastSentMs && Date.now() - lastSentMs < REGISTRATION_COOLDOWN_MS) {
+    await recordPublicAuthAttempt(db, req, {
+      scope: "public_registration_start",
+      subject: rateSubject,
+    });
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil((REGISTRATION_COOLDOWN_MS - (Date.now() - lastSentMs)) / 1000),
+    );
+    return NextResponse.json(
+      { error: "Ya enviamos un enlace hace poco. Revisá tu bandeja o esperá unos minutos." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } },
+    );
+  }
   const previousTokenHashes = [
     existingPending?.tokenHash,
     ...(existingPending?.previousTokenHashes ?? []),
@@ -276,6 +343,7 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     confirmedAt: null,
     memberNormalizedName: null,
     source: wantsEmailCorrection ? "email_change" : source,
+    lastSentAt: now,
   };
   const unsetDoc: Record<string, ""> = { paymentId: "" };
 
@@ -328,9 +396,11 @@ async function startRegistration(req: NextRequest, body: Record<string, unknown>
     },
   }).catch(() => {});
 
-  await recordFailedAuthAttempt(db, rate.key, {
+  await recordPublicAuthAttempt(db, req, {
     scope: "public_registration_start",
-    maxAttempts: 4,
+    subject: rateSubject,
+    subjectMaxAttempts: 3,
+    ipMaxAttempts: 6,
     windowMs: 15 * 60_000,
   });
 

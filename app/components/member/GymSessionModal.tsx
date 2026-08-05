@@ -23,15 +23,22 @@ function durationLabel(minutes: number) {
   return `${hours} h${rest ? ` ${rest} min` : ""}`;
 }
 
+function liveDurationLabel(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours ? `${hours}:` : ""}${String(minutes).padStart(hours ? 2 : 1, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 function LiveTime({ checkedInAt, initialMinutes }: { checkedInAt: string; initialMinutes: number }) {
-  const [minutes, setMinutes] = useState(initialMinutes);
+  const [seconds, setSeconds] = useState(initialMinutes * 60);
 
   useEffect(() => {
     const refresh = () => {
-      setMinutes(Math.max(0, Math.floor((Date.now() - new Date(checkedInAt).getTime()) / 60_000)));
+      setSeconds(Math.max(0, Math.floor((Date.now() - new Date(checkedInAt).getTime()) / 1_000)));
     };
     refresh();
-    const timer = window.setInterval(refresh, 30_000);
+    const timer = window.setInterval(refresh, 1_000);
     return () => window.clearInterval(timer);
   }, [checkedInAt]);
 
@@ -40,7 +47,10 @@ function LiveTime({ checkedInAt, initialMinutes }: { checkedInAt: string; initia
       <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#d8ff3e]">
         Tiempo en el gym
       </p>
-      <p className="mt-2 text-5xl font-black tabular-nums text-white">{durationLabel(minutes)}</p>
+      <p className="mt-2 text-5xl font-black tabular-nums text-white">{liveDurationLabel(seconds)}</p>
+      <p className="mt-1 text-[10px] font-black uppercase tracking-[.18em] text-white/35">
+        {seconds >= 3_600 ? "horas : minutos : segundos" : "minutos : segundos"}
+      </p>
       <p className="mt-2 text-xs font-bold text-white/45">Tu ingreso está activo</p>
     </div>
   );
