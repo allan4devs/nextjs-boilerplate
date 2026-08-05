@@ -47,6 +47,18 @@ export default function ReceptionDutiesPanel({ compact = false }: { compact?: bo
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => void load(), 60_000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [load]);
+
   async function toggle(duty: Duty) {
     const completed = !duty.completed;
     setSavingId(duty.id);

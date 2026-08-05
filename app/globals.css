@@ -181,8 +181,8 @@ button,
 /* Tema claro exclusivo de Admin OS y Reception OS. El switch aplica la clase al html. */
 html.xg-staff-light,
 html.xg-staff-light body {
-  background: #e9e6dc;
-  color: #11130f;
+  background: #edf0ea;
+  color: #172019;
 }
 
 html.xg-staff-light [class*="bg-[#050505]"],
@@ -194,36 +194,131 @@ html.xg-staff-light [class*="bg-[#0b0b0b]"],
 html.xg-staff-light [class*="bg-[#0c0c0c]"],
 html.xg-staff-light [class*="bg-[#0d0d0d]"],
 html.xg-staff-light [class*="bg-black"] {
-  background-color: #f8f6ef !important;
+  background-color: #fbfcf8 !important;
 }
 
 html.xg-staff-light [class*="bg-white/"] {
-  background-color: rgba(20, 22, 17, 0.055) !important;
+  background-color: rgba(33, 63, 45, 0.055) !important;
 }
 
 html.xg-staff-light [class*="text-white"] {
-  color: rgba(17, 19, 15, 0.78) !important;
+  color: rgba(23, 32, 25, 0.78) !important;
 }
 
 html.xg-staff-light [class*="border-white"] {
-  border-color: rgba(17, 19, 15, 0.2) !important;
+  border-color: #c7cec5 !important;
+}
+
+html.xg-staff-light [class*="shadow-["] {
+  box-shadow: 3px 3px 0 rgba(44, 63, 49, 0.13) !important;
+}
+
+/* El lima neÃ³n del tema oscuro se convierte en verde institucional en claro. */
+html.xg-staff-light [class~="bg-[#d8ff3e]"] {
+  border-color: #236b43 !important;
+  background-color: #236b43 !important;
+  color: #fff !important;
+}
+
+html.xg-staff-light [class*="bg-[#d8ff3e]/"] {
+  background-color: rgba(35, 107, 67, 0.1) !important;
+}
+
+html.xg-staff-light [class*="border-[#d8ff3e]"] {
+  border-color: #38815a !important;
+}
+
+html.xg-staff-light [class*="text-[#d8ff3e]"],
+html.xg-staff-light [class*="text-[#eaff93]"] {
+  color: #185f39 !important;
+}
+
+html.xg-staff-light [class~="bg-yellow-300"],
+html.xg-staff-light [class~="bg-amber-300"] {
+  background-color: #8a5a12 !important;
+  color: #fff !important;
+}
+
+html.xg-staff-light [class*="text-yellow-"],
+html.xg-staff-light [class*="text-amber-"] {
+  color: #754707 !important;
+}
+
+html.xg-staff-light [class*="border-yellow-"],
+html.xg-staff-light [class*="border-amber-"] {
+  border-color: #a9792d !important;
+}
+
+html.xg-staff-light [class~="bg-cyan-300"] {
+  background-color: #176c72 !important;
+  color: #fff !important;
+}
+
+html.xg-staff-light [class*="text-cyan-"] {
+  color: #0e6268 !important;
+}
+
+html.xg-staff-light [class*="border-cyan-"] {
+  border-color: #3b8589 !important;
+}
+
+html.xg-staff-light [class*="text-orange-"] {
+  color: #9a3f10 !important;
+}
+
+html.xg-staff-light [class*="border-orange-"] {
+  border-color: #c46a39 !important;
+}
+
+html.xg-staff-light [class~="bg-red-500"][class~="text-white"] {
+  color: #fff !important;
 }
 
 html.xg-staff-light input,
 html.xg-staff-light select,
 html.xg-staff-light textarea {
-  color: #11130f !important;
+  border-color: #bfc8bd !important;
+  background-color: #fff !important;
+  color: #172019 !important;
 }
 
 html.xg-staff-light input::placeholder,
 html.xg-staff-light textarea::placeholder {
-  color: rgba(17, 19, 15, 0.38) !important;
+  color: rgba(23, 32, 25, 0.42) !important;
 }
 
 html.xg-staff-light .xg-theme-toggle {
-  border-color: rgba(17, 19, 15, 0.25) !important;
-  color: #11130f !important;
-  background: #fffdf6 !important;
+  border-color: #aeb8ac !important;
+  color: #173b27 !important;
+  background: #fff !important;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .thermal-receipt,
+  .thermal-receipt * {
+    visibility: visible !important;
+  }
+
+  .thermal-receipt {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 74mm !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
 }
 
 .xg-game-modal-scroll {

@@ -7,6 +7,8 @@ import {
   Bolt,
   Camera,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Crown,
   DoorOpen,
   IdCard,
@@ -17,6 +19,7 @@ import {
   Mail,
   MessageCircle,
   Pencil,
+  ReceiptText,
   ScanFace,
   Search,
   ShieldAlert,
@@ -25,6 +28,7 @@ import {
   UserPlus,
   Users,
   UsersRound,
+  X,
   XCircle,
 } from "lucide-react";
 import {
@@ -36,6 +40,7 @@ import {
 } from "../../components/GameOS";
 import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import ReceptionDutiesPanel from "../../components/reception/ReceptionDutiesPanel";
+import ReceptionBillingPanel from "../../components/reception/ReceptionBillingPanel";
 import StaffThemeToggle from "../../components/StaffThemeToggle";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
@@ -64,7 +69,7 @@ type ActiveVisit = {
   checkedInAt: string;
 };
 
-type Tab = "home" | "inside" | "cedula" | "face" | "register" | "invite" | "chat";
+type Tab = "empty" | "inside" | "cedula" | "face" | "register" | "invite" | "chat" | "billing";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -104,7 +109,8 @@ export default function RecepcionPage() {
   const [unlockError, setUnlockError] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  const [tab, setTab] = useState<Tab>("home");
+  const [tab, setTab] = useState<Tab>("cedula");
+  const [dutiesCollapsed, setDutiesCollapsed] = useState(false);
   const [status, setStatus] = useState<GymStatus | null>(null);
   const [recent, setRecent] = useState<RecentCheckin[]>([]);
   const [inside, setInside] = useState<ActiveVisit[]>([]);
@@ -114,6 +120,7 @@ export default function RecepcionPage() {
 
   const [query, setQuery] = useState("");
   const [member, setMember] = useState<MemberHit | null>(null);
+  const [billingMember, setBillingMember] = useState<MemberHit | null>(null);
   const [searchMatches, setSearchMatches] = useState<MemberHit[]>([]);
   const [faceMatches, setFaceMatches] = useState<MemberHit[]>([]);
   const [isLooking, setIsLooking] = useState(false);
@@ -702,7 +709,7 @@ export default function RecepcionPage() {
     setInside([]);
     setRoster([]);
     setRecent([]);
-    setTab("home");
+    setTab("cedula");
   }
 
   if (!unlocked) {
@@ -802,18 +809,6 @@ export default function RecepcionPage() {
             value={status?.checkinsToday ?? recent.length}
             tone="lime"
           />
-          <Link
-            href="/recepcion/ventas"
-            className="inline-flex min-h-11 items-center border-[3px] border-[#d8ff3e]/55 px-3 py-2 text-xs font-black uppercase tracking-wide text-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black"
-          >
-            Inventario y ventas
-          </Link>
-          <Link
-            href="/admin"
-            className="inline-flex min-h-11 items-center border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/60 hover:border-white/40 hover:text-white"
-          >
-            Administración
-          </Link>
           <button
             type="button"
             onClick={() => void logout()}
@@ -824,76 +819,30 @@ export default function RecepcionPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[1fr_320px] lg:p-6">
-        <section className="border-[3px] border-white/20 bg-[#0c0c0c] shadow-[4px_4px_0_rgba(0,0,0,.55)]">
-          <div className="xg-mobile-scroll flex overflow-x-auto border-b-[3px] border-white/15">
-            {(
-              [
-                { id: "home" as const, label: "Mostrador", icon: LayoutDashboard },
-                { id: "inside" as const, label: "Adentro", icon: Users },
-                { id: "cedula" as const, label: "Buscar", icon: Search },
-                ...(FACE_RECOGNITION_ENABLED
-                  ? [{ id: "face" as const, label: "Rostro", icon: ScanFace }]
-                  : []),
-              ] as const
-            ).map((t) => {
-              const Icon = t.icon;
-              const active = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    setTab(t.id);
-                    setError("");
-                    setFaceMatches([]);
-                  }}
-                  className={`relative flex min-h-[56px] min-w-[76px] flex-none flex-col items-center justify-center gap-0.5 border-t-[3px] px-2 py-2 text-[10px] font-black uppercase tracking-wide transition sm:min-w-0 sm:flex-1 sm:flex-row sm:gap-2 sm:text-sm ${
-                    active
-                      ? "border-t-[#d8ff3e] bg-[#d8ff3e] text-black"
-                      : "border-t-transparent text-white/50 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <span className="relative">
-                    <Icon className="h-5 w-5 sm:h-4 sm:w-4" />
-                  </span>
-                  {t.label}
-                </button>
-              );
-            })}
+      <div className="mx-auto grid max-w-[1600px] items-start gap-3 p-3 sm:gap-4 sm:p-4 xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:p-6">
+        <aside className="border-[3px] border-white/20 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] xl:sticky xl:top-24">
+          <GameLabel tone="lime">Personas y accesos</GameLabel>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+            <SidePanelAction active={tab === "cedula"} icon={Search} label="Buscar persona" detail="Nombre y apellido" onClick={() => setTab("cedula")} />
+            <SidePanelAction active={tab === "inside"} icon={LogOut} label="Registrar salida" detail={`${inside.length} dentro`} onClick={() => setTab("inside")} />
+            <SidePanelAction active={tab === "register"} icon={UserPlus} label="Registrar persona" detail="Alta e ingreso" onClick={() => setTab("register")} />
+            <SidePanelAction active={tab === "invite"} icon={Mail} label="Invitar a la app" detail="Enviar por correo" onClick={() => setTab("invite")} />
+            <SidePanelAction active={tab === "chat"} icon={MessageCircle} label="Responder chat" detail={chatUnread > 0 ? `${chatUnread} pendiente${chatUnread === 1 ? "" : "s"}` : "Sin pendientes"} badge={chatUnread} onClick={() => setTab("chat")} />
+            {FACE_RECOGNITION_ENABLED && <SidePanelAction active={tab === "face"} icon={ScanFace} label="Ingreso por rostro" detail="Cámara y enrolamiento" onClick={() => setTab("face")} />}
           </div>
+          <div className="mt-3 grid gap-2 border-t-[3px] border-white/10 pt-3">
+            <Link href="/recepcion/ventas" className="flex min-h-12 items-center justify-between border-[3px] border-[#d8ff3e]/45 px-3 text-xs font-black uppercase text-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black"><span>Ventas e inventario</span><ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/admin" className="flex min-h-12 items-center justify-between border-[3px] border-white/15 px-3 text-xs font-black uppercase text-white/50 hover:border-white/35 hover:text-white"><span>Administración</span><ArrowRight className="h-4 w-4" /></Link>
+          </div>
+        </aside>
 
+        <section className="min-w-0 border-[3px] border-white/20 bg-[#0c0c0c] shadow-[4px_4px_0_rgba(0,0,0,.55)]">
+          <header className="flex min-h-14 items-center justify-between gap-3 border-b-[3px] border-white/15 px-4 py-3">
+            <div><GameLabel tone="cyan">Panel central</GameLabel><p className="mt-1 text-sm font-black uppercase">{{ cedula: "Buscar persona", inside: "Personas adentro", register: "Registrar persona", invite: "Invitar a la app", chat: "Chat de recepción", face: "Ingreso por rostro", billing: "Facturar", empty: "Panel minimizado" }[tab]}</p></div>
+            {tab !== "empty" && <button type="button" onClick={() => setTab("empty")} aria-label="Cerrar panel" className="grid h-10 w-10 place-items-center border-[3px] border-white/15 text-white/45 hover:border-red-300/60 hover:text-red-200"><X className="h-5 w-5" /></button>}
+          </header>
           <div className="p-4 sm:p-6">
-            {tab === "home" && (
-              <div>
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <GameLabel tone="lime">Turno activo · herramientas de recepción</GameLabel>
-                    <h1 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">¿Qué necesita hacer?</h1>
-                    <p className="mt-2 max-w-2xl text-sm font-bold text-white/45">Todo lo del mostrador está acá. Administración, reportes y configuración viven en tu panel separado.</p>
-                  </div>
-                </div>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <ReceptionAction icon={LogOut} eyebrow={`${inside.length} dentro`} title="Registrar salida" description="Buscá por nombre o cédula y marcá la salida con un toque." tone="orange" onClick={() => setTab("inside")} />
-                  <ReceptionAction icon={Search} eyebrow="Acceso rápido" title="Ingresar socio" description="Buscá por nombre y confirmá el ingreso." tone="lime" onClick={() => setTab("cedula")} />
-                  {FACE_RECOGNITION_ENABLED ? (
-                    <ReceptionAction icon={ScanFace} eyebrow="Cámara" title="Ingreso por rostro" description="Reconocé socios enrolados o agregá el rostro al perfil." tone="violet" onClick={() => setTab("face")} />
-                  ) : (
-                    <div className="border-[3px] border-white/10 bg-white/[0.025] p-5 text-white/35 sm:p-6">
-                      <ShieldAlert className="h-7 w-7" />
-                      <p className="mt-5 text-xs font-black uppercase tracking-[0.18em]">Sistema</p>
-                      <p className="mt-1 text-xl font-black uppercase">Rostro desactivado</p>
-                      <p className="mt-2 text-sm font-bold">La cédula sigue siendo el método principal de ingreso.</p>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <ReceptionStat label="Personas adentro" value={status?.currentPeople ?? 0} />
-                  <ReceptionStat label="Ingresos hoy" value={status?.checkinsToday ?? recent.length} />
-                  <ReceptionStat label="Chats pendientes" value={chatUnread} alert={chatUnread > 0} />
-                </div>
-              </div>
-            )}
+            {tab === "empty" && <div className="grid min-h-[28rem] place-items-center text-center"><div><LayoutDashboard className="mx-auto h-12 w-12 text-white/15" /><h2 className="mt-4 text-2xl font-black uppercase">Panel minimizado</h2><p className="mt-2 text-sm font-bold text-white/40">Elegí una herramienta en el sidebar izquierdo.</p><button type="button" onClick={() => setTab("cedula")} className="mt-5 min-h-12 bg-[#d8ff3e] px-5 text-sm font-black uppercase text-black">Buscar persona</button></div></div>}
             {tab === "inside" && (
               <InsideRoster
                 visits={inside}
@@ -904,6 +853,7 @@ export default function RecepcionPage() {
               />
             )}
             {tab === "chat" && <ReceptionChatInbox />}
+            {tab === "billing" && billingMember && <ReceptionBillingPanel member={billingMember} />}
 
             {tab === "invite" && (
               <div className="mx-auto max-w-2xl">
@@ -1039,6 +989,11 @@ export default function RecepcionPage() {
                       setSearchMatches([]);
                       setError("");
                       setTab("register");
+                    }}
+                    onInvoice={(selected) => {
+                      setBillingMember(selected);
+                      setTab("billing");
+                      setError("");
                     }}
                   />
                   <MemberPreview
@@ -1202,8 +1157,8 @@ export default function RecepcionPage() {
             )}
 
             {tab === "register" && (
-              <div className="mx-auto grid max-w-3xl gap-6 lg:grid-cols-2">
-                <form onSubmit={(e) => void registerWalkin(e)} className="space-y-3">
+              <form onSubmit={(e) => void registerWalkin(e)} className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-2">
+                <div className="space-y-3">
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d8ff3e]/80">
                       {editingMemberKey ? "Ficha personal" : "Alta en mostrador"}
@@ -1261,39 +1216,6 @@ export default function RecepcionPage() {
                       placeholder="correo@ejemplo.com"
                     />
                   </Field>
-                  <Field label="Plan">
-                    <select
-                      value={regPlan}
-                      onChange={(e) => setRegPlan(e.target.value)}
-                      className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
-                    >
-                      <option className="text-black">Xtreme Mensual</option>
-                      <option className="text-black">Pase dia</option>
-                      <option className="text-black">Semanal</option>
-                      <option className="text-black">Quincenal</option>
-                      <option className="text-black">Trimestral</option>
-                    </select>
-                  </Field>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Fecha en que pagó">
-                      <input
-                        type="date"
-                        value={regLastPaidAt}
-                        onChange={(e) => setRegLastPaidAt(e.target.value)}
-                        className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
-                      />
-                    </Field>
-                    <Field label="Fecha de vencimiento">
-                      <input
-                        type="date"
-                        value={regNextBillingDate}
-                        onChange={(e) => setRegNextBillingDate(e.target.value)}
-                        className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]"
-                      />
-                    </Field>
-                  </div>
-
                   {!editingMemberKey && <label className="flex items-center gap-2 text-sm font-bold text-white/70">
                     <input
                       type="checkbox"
@@ -1322,9 +1244,30 @@ export default function RecepcionPage() {
                     )}
                     {editingMemberKey ? "Guardar cambios" : regCheckIn ? "Registrar e ingresar" : "Solo registrar"}
                   </button>
-                </form>
+                </div>
 
-                <div>
+                <div className="space-y-4">
+                  <section className="border-[3px] border-[#d8ff3e]/45 bg-[#d8ff3e]/[0.06] p-4">
+                    <GameLabel tone="lime">Membresía</GameLabel>
+                    <h3 className="mt-2 text-xl font-black uppercase">Plan y vigencia</h3>
+                    <div className="mt-4 grid gap-3">
+                      <Field label="Plan">
+                        <select value={regPlan} onChange={(e) => setRegPlan(e.target.value)} className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]">
+                          <option className="text-black">Xtreme Mensual</option>
+                          <option className="text-black">Pase dia</option>
+                          <option className="text-black">Semanal</option>
+                          <option className="text-black">Quincenal</option>
+                          <option className="text-black">Trimestral</option>
+                        </select>
+                      </Field>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Fecha en que pagó"><input type="date" value={regLastPaidAt} onChange={(e) => setRegLastPaidAt(e.target.value)} className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]" /></Field>
+                        <Field label="Fecha de vencimiento"><input type="date" value={regNextBillingDate} onChange={(e) => setRegNextBillingDate(e.target.value)} className="w-full border border-white/15 bg-black/40 px-3.5 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]" /></Field>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
                     Foto / rostro (opcional)
                   </p>
@@ -1377,15 +1320,21 @@ export default function RecepcionPage() {
                     Recomendacion: en el dia a dia la cedula es la via mas rapida y confiable.
                     El rostro sirve cuando el socio ya esta enrolado y no trae documento a mano.
                   </p>
+                  </section>
                 </div>
-              </div>
+              </form>
             )}
           </div>
         </section>
 
         <aside className="space-y-3 sm:space-y-4">
           <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
-            <ReceptionDutiesPanel compact />
+            <div className="flex items-center justify-between gap-3">
+              <GameLabel tone="cyan">Checklist del turno</GameLabel>
+              <button type="button" onClick={() => setDutiesCollapsed((current) => !current)} aria-label={dutiesCollapsed ? "Expandir checklist" : "Minimizar checklist"} className="grid h-9 w-9 place-items-center border-[3px] border-white/15 text-white/45 hover:border-cyan-300 hover:text-cyan-300">{dutiesCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}</button>
+            </div>
+            {!dutiesCollapsed && <div className="mt-3"><ReceptionDutiesPanel compact /></div>}
+            {dutiesCollapsed && <p className="mt-2 text-xs font-bold text-white/35">Minimizado · tocá para abrir</p>}
           </div>
           <div className="border-[3px] border-amber-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
             <GameLabel tone="orange">Controles independientes</GameLabel>
@@ -1401,34 +1350,6 @@ export default function RecepcionPage() {
               })}
             </div>
           </div>
-          <div className="border-[3px] border-violet-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
-            <GameLabel tone="cyan">Atención y personas</GameLabel>
-            <div className="mt-3 grid gap-2">
-              <SidePanelAction
-                active={tab === "register"}
-                icon={UserPlus}
-                label="Registrar persona"
-                detail="Alta e ingreso"
-                onClick={() => setTab("register")}
-              />
-              <SidePanelAction
-                active={tab === "invite"}
-                icon={Mail}
-                label="Invitar a la app"
-                detail="Enviar por correo"
-                onClick={() => setTab("invite")}
-              />
-              <SidePanelAction
-                active={tab === "chat"}
-                icon={MessageCircle}
-                label="Responder chat"
-                detail={chatUnread > 0 ? `${chatUnread} pendiente${chatUnread === 1 ? "" : "s"}` : "Sin pendientes"}
-                badge={chatUnread}
-                onClick={() => setTab("chat")}
-              />
-            </div>
-          </div>
-
           <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
             <GameLabel tone="cyan" className="flex items-center gap-2">
               <Users className="h-3.5 w-3.5" /> Ahora en el gym
@@ -1497,10 +1418,12 @@ function SearchMatchList({
   matches,
   onSelect,
   onEdit,
+  onInvoice,
 }: {
   matches: MemberHit[];
   onSelect: (member: MemberHit) => void;
   onEdit: (member: MemberHit) => void;
+  onInvoice: (member: MemberHit) => void;
 }) {
   if (!matches.length) return null;
   return (
@@ -1528,6 +1451,9 @@ function SearchMatchList({
               </span>
             </span>
             <span className="flex shrink-0 gap-2">
+              <button type="button" onClick={() => onInvoice(candidate)} className="inline-flex min-h-10 items-center gap-1.5 border-[3px] border-orange-300/50 px-3 text-[10px] font-black uppercase text-orange-200 hover:bg-orange-300 hover:text-black">
+                <ReceiptText className="h-3.5 w-3.5" /> Facturar
+              </button>
               <button type="button" onClick={() => onEdit(candidate)} className="inline-flex min-h-10 items-center gap-1.5 border-[3px] border-cyan-300/45 px-3 text-[10px] font-black uppercase text-cyan-200 hover:bg-cyan-300 hover:text-black">
                 <Pencil className="h-3.5 w-3.5" /> Editar datos
               </button>
@@ -1641,42 +1567,6 @@ function InsideRoster({
   );
 }
 
-function ReceptionAction({
-  icon: Icon,
-  eyebrow,
-  title,
-  description,
-  tone,
-  onClick,
-}: {
-  icon: typeof IdCard;
-  eyebrow: string;
-  title: string;
-  description: string;
-  tone: "lime" | "cyan" | "orange" | "violet";
-  onClick: () => void;
-}) {
-  const styles = {
-    lime: "border-[#d8ff3e]/55 hover:bg-[#d8ff3e]/10 text-[#d8ff3e]",
-    cyan: "border-cyan-300/45 hover:bg-cyan-300/10 text-cyan-300",
-    orange: "border-orange-300/45 hover:bg-orange-300/10 text-orange-300",
-    violet: "border-violet-300/45 hover:bg-violet-300/10 text-violet-300",
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={"group min-h-44 border-[3px] bg-black/35 p-5 text-left transition hover:-translate-y-1 hover:shadow-[5px_5px_0_rgba(255,255,255,.08)] sm:p-6 " + styles[tone]}
-    >
-      <Icon className="h-8 w-8" />
-      <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] opacity-65">{eyebrow}</p>
-      <p className="mt-1 text-2xl font-black uppercase tracking-tight text-white">{title}</p>
-      <p className="mt-2 text-sm font-bold leading-6 text-white/45">{description}</p>
-    </button>
-  );
-}
-
 function SidePanelAction({
   active,
   icon: Icon,
@@ -1720,14 +1610,6 @@ function SidePanelAction({
   );
 }
 
-function ReceptionStat({ label, value, alert = false }: { label: string; value: number; alert?: boolean }) {
-  return (
-    <div className={"border border-white/10 bg-white/[0.035] p-4 " + (alert ? "text-orange-300" : "text-white")}>
-      <p className="text-3xl font-black">{value}</p>
-      <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/40">{label}</p>
-    </div>
-  );
-}
 function OccupancyPill({ status }: { status: GymStatus | null }) {
   return (
     <span className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-black/50 px-3 py-2 text-xs font-black uppercase tracking-wide text-cyan-100 shadow-[3px_3px_0_rgba(0,0,0,.4)]">
@@ -1816,7 +1698,23 @@ function MemberPreview({
       <GameLabel tone="lime" className="mb-3">
         Socio encontrado · confirmar
       </GameLabel>
-      <div className="flex items-center gap-4">
+
+      <section className={`border-[3px] p-4 ${expired ? "border-orange-300/60 bg-orange-400/10" : member.membershipStatus === "warning" ? "border-yellow-300/55 bg-yellow-300/[0.07]" : "border-[#d8ff3e]/55 bg-[#d8ff3e]/[0.07]"}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[.18em] text-white/40">Membresía</p>
+            <p className="mt-1 text-2xl font-black uppercase">{member.plan || "Sin plan"}</p>
+          </div>
+          <GameChip tone={expired ? "red" : member.membershipStatus === "warning" ? "orange" : "lime"}>{MEMBERSHIP_STATUS_LABELS[member.membershipStatus]}</GameChip>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+          <div><p className="text-[9px] font-black uppercase tracking-wide text-white/35">Tiempo restante</p><p className={`mt-1 text-lg font-black ${expired ? "text-orange-200" : "text-[#d8ff3e]"}`}>{expired ? "Vencida" : `${Math.max(0, member.daysRemaining)} días`}</p></div>
+          <div><p className="text-[9px] font-black uppercase tracking-wide text-white/35">Próximo vencimiento</p><p className="mt-1 text-sm font-black">{member.nextBillingDate || "Sin fecha registrada"}</p></div>
+        </div>
+        {expired && <p className="mt-3 border-t border-orange-300/25 pt-3 text-sm font-black text-orange-200">Membresía vencida · podés registrar el ingreso y gestionar la renovación.</p>}
+      </section>
+
+      <div className="mt-4 flex items-center gap-4">
         <div className="relative">
           {member.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1833,37 +1731,13 @@ function MemberPreview({
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-black uppercase tracking-tight">{member.memberName}</p>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            <GameChip
-              tone={
-                member.membershipStatus === "expired"
-                  ? "red"
-                  : member.membershipStatus === "warning"
-                    ? "orange"
-                    : "lime"
-              }
-            >
-              {MEMBERSHIP_STATUS_LABELS[member.membershipStatus]}
-            </GameChip>
-            {member.daysRemaining >= 0 && (
-              <GameChip tone="cyan">{member.daysRemaining}d</GameChip>
-            )}
-            <GameChip>{member.plan}</GameChip>
-          </div>
           <p className="mt-1 text-xs font-bold text-white/35">
             {member.cedula ? `Ced. ${member.cedula} · ` : ""}
             {member.accessCode}
           </p>
+          {member.phone && <p className="mt-1 text-xs font-bold text-white/35">{member.phone}</p>}
         </div>
       </div>
-
-      {expired && (
-        <div className="mt-3">
-          <GameCallout tone="orange" icon={ShieldAlert}>
-            Membresía vencida - podés ingresar, cobrá renovación.
-          </GameCallout>
-        </div>
-      )}
 
       {error && (
         <div className="mt-3">

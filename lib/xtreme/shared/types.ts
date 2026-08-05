@@ -270,14 +270,17 @@ export type PaymentDoc = {
   amountCrc: number;
   amountUsd: number;
   currency: string;
-  method: "paypal" | "cash" | "transfer" | "sinpe" | "other";
+  method: "paypal" | "cash" | "transfer" | "sinpe" | "card" | "mixed" | "other";
+  paymentBreakdown?: { cash: number; sinpe: number; card: number };
   status: "completed" | "pending" | "refunded";
   paypalOrderId?: string | null;
   paypalCaptureId?: string | null;
   note: string;
   date: string;
   createdAt: Date;
-  recordedBy: "paypal" | "admin" | "seed";
+  recordedBy: "paypal" | "admin" | "reception" | "seed";
+  recordedByStaffId?: string | null;
+  recordedByStaffName?: string | null;
 };
 
 export type CheckinDoc = {
