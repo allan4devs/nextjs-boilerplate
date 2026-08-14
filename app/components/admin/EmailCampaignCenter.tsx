@@ -10,6 +10,12 @@ import {
 } from "./email/audiences";
 import { templateFor } from "./email/templates";
 import { EMAIL_RE, parseSpreadsheet } from "./email/importSheet";
+import {
+  useCoveragePanel,
+  useEmailFeedback,
+  useRecipientsPanel,
+  useTrackingPanel,
+} from "./email/hooks";
 import type {
   AudienceId,
   CampaignProcessSummary,
@@ -26,21 +32,37 @@ export default function EmailCampaignCenter() {
   const [importConsent, setImportConsent] = useState(false);
   const [campaignConsent, setCampaignConsent] = useState(false);
   const [testEmail, setTestEmail] = useState("");
-  const [busy, setBusy] = useState("");
-  const [notice, setNotice] = useState("");
-  const [error, setError] = useState("");
-  const [recipients, setRecipients] = useState<RecipientPreview[]>([]);
-  const [recipientsBusy, setRecipientsBusy] = useState(false);
-  const [recipientSearch, setRecipientSearch] = useState("");
-  const [coverage, setCoverage] = useState<MemberCoverage[] | null>(null);
-  const [coverageBusy, setCoverageBusy] = useState(false);
-  const [coverageSearch, setCoverageSearch] = useState("");
-  const [coverageFilter, setCoverageFilter] = useState<"all" | "sendable" | "missing" | "quarantined">("all");
-  const [trackingCampaignId, setTrackingCampaignId] = useState("");
-  const [trackingFilter, setTrackingFilter] = useState("all");
-  const [tracking, setTracking] = useState<CampaignTrackingPayload | null>(null);
-  const [trackingBusy, setTrackingBusy] = useState(false);
-  const [trackingSearch, setTrackingSearch] = useState("");
+  const { busy, setBusy, notice, setNotice, error, setError } = useEmailFeedback();
+  const {
+    recipients,
+    setRecipients,
+    recipientsBusy,
+    setRecipientsBusy,
+    recipientSearch,
+    setRecipientSearch,
+  } = useRecipientsPanel();
+  const {
+    coverage,
+    setCoverage,
+    coverageBusy,
+    setCoverageBusy,
+    coverageSearch,
+    setCoverageSearch,
+    coverageFilter,
+    setCoverageFilter,
+  } = useCoveragePanel();
+  const {
+    trackingCampaignId,
+    setTrackingCampaignId,
+    trackingFilter,
+    setTrackingFilter,
+    tracking,
+    setTracking,
+    trackingBusy,
+    setTrackingBusy,
+    trackingSearch,
+    setTrackingSearch,
+  } = useTrackingPanel();
   const [form, setForm] = useState(() => {
     const seed = templateFor("claim_profile");
     return {
@@ -100,7 +122,7 @@ export default function EmailCampaignCenter() {
     } finally {
       setBusy("");
     }
-  }, []);
+  }, [setBusy, setError]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -279,7 +301,7 @@ export default function EmailCampaignCenter() {
         if (!controller.signal.aborted) setRecipientsBusy(false);
       });
     return () => controller.abort();
-  }, [form.audience]);
+  }, [form.audience, setError, setRecipientSearch, setRecipients, setRecipientsBusy]);
 
   async function importContacts() {
     if (!validCount) return setError("Pegá al menos un correo válido.");

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Dumbbell,
   Loader2,
@@ -14,6 +14,7 @@ import {
   FACE_HOLD_MS,
   FACE_POLL_MS,
 } from "@/app/features/checkin/constants";
+import { KioskProvider, useKiosk } from "./context/KioskProvider";
 import { isFaceInCircle } from "@/app/features/checkin/face/faceInCircle";
 import {
   readRecentProfiles,
@@ -21,7 +22,7 @@ import {
   type RecentProfile,
 } from "@/app/features/checkin/storage/recentProfiles";
 import { FaceCard, GymCollage, ProfileCard, SearchCard } from "./ui";
-import type { FaceGuideStatus, Mode } from "./types";
+import type { Mode } from "./types";
 import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
 import {
@@ -43,7 +44,19 @@ type IngresoKioskProps = {
   onStaffRequest?: () => void;
 };
 
-export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
+export default function IngresoKiosk(props: IngresoKioskProps) {
+  return (
+    <KioskProvider>
+      <KioskScreen {...props} />
+    </KioskProvider>
+  );
+}
+
+/**
+ * La pantalla del kiosco. El guiado facial y el veredicto de ingreso llegan
+ * del contexto; el modo, el buscador y la ficha son estado de la pantalla.
+ */
+function KioskScreen({ onStaffRequest }: IngresoKioskProps) {
   const [recent, setRecent] = useState<RecentProfile[]>([]);
   const [profile, setProfile] = useState<MemberHit | null>(null);
   const [status, setStatus] = useState<GymStatus | null>(null);
@@ -54,16 +67,23 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [kioskPin, setKioskPin] = useState("");
   const [error, setError] = useState("");
-  const [flash, setFlash] = useState<{
-    type: "ok" | "warn" | "err";
-    title: string;
-    subtitle: string;
-  } | null>(null);
 
-  // Face recognition
-  const scanLockRef = useRef(false);
-  const cooldownUntilRef = useRef(0);
-  const faceSeenSinceRef = useRef<number | null>(null);
+  // Reconocimiento facial y veredicto: ambos vienen del provider del kiosco.
+  const { flash, setFlash, face } = useKiosk();
+  const {
+    isScanning,
+    setIsScanning,
+    faceMatches,
+    setFaceMatches,
+    faceGuide,
+    setFaceGuide,
+    holdProgress,
+    setHoldProgress,
+    scanLockRef,
+    cooldownUntilRef,
+    faceSeenSinceRef,
+  } = face;
+  const [checkinMethod, setCheckinMethod] = useState<"name" | "face" | "code">("name");
   const {
     videoRef,
     cameraOn,
@@ -77,11 +97,6 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
     permissionErrorMessage:
       "No se pudo abrir la camara. Permita el acceso o use busqueda por nombre.",
   });
-  const [isScanning, setIsScanning] = useState(false);
-  const [faceMatches, setFaceMatches] = useState<MemberHit[]>([]);
-  const [checkinMethod, setCheckinMethod] = useState<"name" | "face" | "code">("name");
-  const [faceGuide, setFaceGuide] = useState<FaceGuideStatus>("waiting");
-  const [holdProgress, setHoldProgress] = useState(0);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -142,7 +157,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
     if (!flash) return;
     const id = window.setTimeout(() => setFlash(null), 4500);
     return () => window.clearTimeout(id);
-  }, [flash]);
+  }, [flash, setFlash]);
 
   // Camera lifecycle by mode
   useEffect(() => {
@@ -155,7 +170,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
     return () => {
       if (mode !== "face") stopCamera();
     };
-  }, [mode, startCamera, stopCamera]);
+  }, [mode, startCamera, stopCamera, setFaceMatches]);
 
   async function selectProfile(name: string) {
     setError("");
@@ -227,7 +242,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
     faceSeenSinceRef.current = null;
     setHoldProgress(0);
     setFaceGuide("cooldown");
-  }, []);
+  }, [cooldownUntilRef, faceSeenSinceRef, setFaceGuide, setHoldProgress]);
 
   const confirmCheckin = useCallback(
     async (target?: MemberHit, method: "name" | "face" | "code" = checkinMethod) => {
@@ -296,7 +311,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
         setIsCheckingIn(false);
       }
     },
-    [armCooldown, checkinMethod, kioskPin, profile],
+    [armCooldown, checkinMethod, kioskPin, profile, setFaceMatches, setFlash],
   );
 
   const scanFace = useCallback(async () => {
@@ -343,7 +358,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
       setIsScanning(false);
       scanLockRef.current = false;
     }
-  }, [armCooldown, cameraOn, fetchMember, reportCameraError, videoRef]);
+  }, [armCooldown, cameraOn, fetchMember, reportCameraError, videoRef, scanLockRef, setFaceGuide, setFaceMatches, setIsScanning]);
 
   // Loop: detecta rostro en el círculo y dispara el escaneo solo
   useEffect(() => {
@@ -416,7 +431,7 @@ export default function IngresoKiosk({ onStaffRequest }: IngresoKioskProps) {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [mode, cameraOn, isScanning, isCheckingIn, scanFace, videoRef]);
+  }, [mode, cameraOn, isScanning, isCheckingIn, scanFace, videoRef, cooldownUntilRef, faceSeenSinceRef, scanLockRef, setFaceGuide, setHoldProgress]);
 
   return (
     <main className="min-h-screen bg-white text-[#0b0b0b] lg:grid lg:grid-cols-2">

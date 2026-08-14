@@ -10,15 +10,12 @@ import {
   ChevronUp,
   Crown,
   DoorOpen,
-  IdCard,
   LayoutDashboard,
   Loader2,
   Lock,
   LogOut,
   Mail,
   MessageCircle,
-  Pencil,
-  ReceiptText,
   ScanFace,
   Search,
   ShieldAlert,
@@ -41,69 +38,65 @@ import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import ReceptionDutiesPanel from "../../components/reception/ReceptionDutiesPanel";
 import ReceptionBillingPanel from "../../components/reception/ReceptionBillingPanel";
 import FaceRecognitionPanel from "../../components/reception/FaceRecognitionPanel";
-import { Avatar, MemberPreview } from "../../components/reception/MemberCards";
+import { MemberPreview } from "../../components/reception/MemberCards";
 import StaffThemeToggle from "../../components/StaffThemeToggle";
-import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
+import {
+  Field,
+  InsideRoster,
+  OccupancyPill,
+  SearchMatchList,
+  SidePanelAction,
+} from "../../components/reception/ui";
+import { capturePhotoDataUrl, formatTime } from "../../components/reception/helpers";
+import {
+  ReceptionProvider,
+  useReception,
+} from "../../components/reception/context/ReceptionProvider";
+import { useWalkinForm } from "../../components/reception/hooks/useWalkinForm";
+import type {
+  ActiveVisit,
+  RecentCheckin,
+  ReceptionTab,
+} from "../../components/reception/types";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
 import { memberLookupToSearchParams } from "@/app/lib/memberLookup";
 import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
 import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
 
-type RecentCheckin = {
-  id: string;
-  memberName: string;
-  accessCode: string;
-  method: string;
-  membershipStatus: string;
-  checkedInAt: string;
-  by: string;
-};
-
-type ActiveVisit = {
-  id: string;
-  memberName: string;
-  normalizedName: string;
-  cedula?: string;
-  photoUrl?: string;
-  membershipStatus: string;
-  checkedInAt: string;
-};
-
-type Tab = "empty" | "inside" | "cedula" | "face" | "register" | "invite" | "chat" | "billing";
-
-function formatTime(value: string | Date) {
-  try {
-    return new Date(value).toLocaleTimeString("es-CR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "-";
-  }
-}
-
-async function capturePhotoDataUrl(video: HTMLVideoElement, maxSide = 480) {
-  const w = video.videoWidth;
-  const h = video.videoHeight;
-  if (!w || !h) return "";
-  const scale = Math.min(1, maxSide / Math.max(w, h));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(w * scale);
-  canvas.height = Math.round(h * scale);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return "";
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.82);
-}
 
 export default function RecepcionPage() {
-  const [adminCode, setAdminCode] = useState("");
-  const [staffName, setStaffName] = useState("");
-  const [unlocked, setUnlocked] = useState(false);
-  const [unlockError, setUnlockError] = useState("");
-  const [isUnlocking, setIsUnlocking] = useState(false);
+  return (
+    <ReceptionProvider>
+      <ReceptionConsole />
+    </ReceptionProvider>
+  );
+}
 
-  const [tab, setTab] = useState<Tab>("cedula");
+/**
+ * El panel del mostrador. La sesión de staff y los avisos llegan del
+ * contexto; acá vive el estado efímero de la pantalla.
+ */
+function ReceptionConsole() {
+  const {
+    session: {
+      adminCode,
+      setAdminCode,
+      staffName,
+      setStaffName,
+      unlocked,
+      setUnlocked,
+      unlockError,
+      setUnlockError,
+      isUnlocking,
+      setIsUnlocking,
+      signIn,
+      acceptSession,
+      signOut,
+    },
+    feedback: { error, setError, flash, setFlash },
+  } = useReception();
+
+  const [tab, setTab] = useState<ReceptionTab>("cedula");
   const [dutiesCollapsed, setDutiesCollapsed] = useState(false);
   const [status, setStatus] = useState<GymStatus | null>(null);
   const [recent, setRecent] = useState<RecentCheckin[]>([]);
@@ -118,24 +111,31 @@ export default function RecepcionPage() {
   const [searchMatches, setSearchMatches] = useState<MemberHit[]>([]);
   const [isLooking, setIsLooking] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
-  const [error, setError] = useState("");
-  const [flash, setFlash] = useState<{
-    type: "ok" | "warn" | "err";
-    title: string;
-    subtitle: string;
-  } | null>(null);
 
   // Registro
-  const [regName, setRegName] = useState("");
-  const [regCedula, setRegCedula] = useState("");
-  const [regPhone, setRegPhone] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regPlan, setRegPlan] = useState("Xtreme Mensual");
-  const [regLastPaidAt, setRegLastPaidAt] = useState("");
-  const [regNextBillingDate, setRegNextBillingDate] = useState("");
-  const [regPhoto, setRegPhoto] = useState("");
-  const [regCheckIn, setRegCheckIn] = useState(true);
-  const [editingMemberKey, setEditingMemberKey] = useState("");
+  const {
+    regName,
+    setRegName,
+    regCedula,
+    setRegCedula,
+    regPhone,
+    setRegPhone,
+    regEmail,
+    setRegEmail,
+    regPlan,
+    setRegPlan,
+    regLastPaidAt,
+    setRegLastPaidAt,
+    regNextBillingDate,
+    setRegNextBillingDate,
+    regPhoto,
+    setRegPhoto,
+    regCheckIn,
+    setRegCheckIn,
+    editingMemberKey,
+    setEditingMemberKey,
+    resetWalkin,
+  } = useWalkinForm();
   const [isRegistering, setIsRegistering] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteResult, setInviteResult] = useState("");
@@ -195,26 +195,19 @@ export default function RecepcionPage() {
         /* poll soft-fail */
       }
     },
-    [unlocked],
+    [unlocked, setAdminCode, setUnlocked],
   );
 
   async function unlock(e?: React.FormEvent) {
     e?.preventDefault();
     const code = adminCode.trim();
     if (!code) return;
-    setIsUnlocking(true);
-    setUnlockError("");
+    const session = await signIn();
+    if (!session.ok) {
+      setUnlockError(session.error);
+      return;
+    }
     try {
-      const loginRes = await fetch("/api/xtreme/staff-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ surface: "reception", code }),
-      });
-      const loginJson = (await loginRes.json()) as { error?: string; role?: string; staffName?: string | null };
-      if (!loginRes.ok) {
-        setUnlockError(loginJson.error || "Codigo incorrecto.");
-        return;
-      }
       const res = await fetch("/api/xtreme/reception", { cache: "no-store" });
       const json = (await res.json()) as {
         status?: GymStatus;
@@ -226,16 +219,12 @@ export default function RecepcionPage() {
         setUnlockError(json.error || "Codigo incorrecto.");
         return;
       }
-      setAdminCode(loginJson.role || "reception");
-      setStaffName(loginJson.staffName ?? "");
-      setUnlocked(true);
+      acceptSession(session.role, session.staffName);
       if (json.status) setStatus(json.status);
       if (json.recent) setRecent(json.recent);
       if (json.inside) setInside(json.inside);
     } catch {
       setUnlockError("Error de conexion.");
-    } finally {
-      setIsUnlocking(false);
     }
   }
 
@@ -269,6 +258,9 @@ export default function RecepcionPage() {
         }
       }
     })();
+    // Solo al montar: retomar la sesión abierta una vez. Los setters del hook
+    // son estables, así que no hacen falta en las dependencias.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -311,7 +303,7 @@ export default function RecepcionPage() {
     if (!flash) return;
     const id = window.setTimeout(() => setFlash(null), 4200);
     return () => window.clearTimeout(id);
-  }, [flash]);
+  }, [flash, setFlash]);
 
   const lookupMember = useCallback(
     async (opts: { cedula?: string; q?: string; code?: string }) => {
@@ -355,7 +347,7 @@ export default function RecepcionPage() {
         setIsLooking(false);
       }
     },
-    [],
+    [setError],
   );
 
   // Búsqueda en vivo por nombre: espera brevemente mientras se escribe.
@@ -375,7 +367,7 @@ export default function RecepcionPage() {
     return () => {
       if (nameLookupTimer.current) window.clearTimeout(nameLookupTimer.current);
     };
-  }, [query, unlocked, tab, lookupMember]);
+  }, [query, unlocked, tab, lookupMember, setError]);
 
   async function confirmCheckin(target?: MemberHit, method: "cedula" | "face" | "name" | "code" = "name") {
     const m = target || member;
@@ -531,14 +523,7 @@ export default function RecepcionPage() {
         title: json.created ? "Socio nuevo" : "Actualizado",
         subtitle: json.message || regName,
       });
-      setRegName("");
-      setRegCedula("");
-      setRegPhone("");
-      setRegEmail("");
-      setRegLastPaidAt("");
-      setRegNextBillingDate("");
-      setRegPhoto("");
-      setEditingMemberKey("");
+      resetWalkin();
       setMember(null);
       void loadPanel(true);
       setTab("cedula");
@@ -583,10 +568,7 @@ export default function RecepcionPage() {
 
   async function logout() {
     stopCamera();
-    await fetch("/api/xtreme/staff-session?surface=reception", { method: "DELETE" });
-    setUnlocked(false);
-    setAdminCode("");
-    setStaffName("");
+    await signOut();
     setMember(null);
     setInside([]);
     setRoster([]);
@@ -917,7 +899,7 @@ export default function RecepcionPage() {
                         : "Sin correo mágico. Ideal para walk-in. Opcional: foto + rostro en el acto."}
                     </p>
                     {editingMemberKey && (
-                      <button type="button" onClick={() => { setEditingMemberKey(""); setRegName(""); setRegCedula(""); setRegPhone(""); setRegEmail(""); setRegPhoto(""); setRegPlan("Xtreme Mensual"); setRegLastPaidAt(""); setRegNextBillingDate(""); setRegCheckIn(true); }} className="mt-3 text-[10px] font-black uppercase tracking-wide text-white/45 underline hover:text-white">
+                      <button type="button" onClick={resetWalkin} className="mt-3 text-[10px] font-black uppercase tracking-wide text-white/45 underline hover:text-white">
                         Cancelar edición
                       </button>
                     )}
@@ -1155,237 +1137,5 @@ export default function RecepcionPage() {
       </div>
 
     </main>
-  );
-}
-
-function SearchMatchList({
-  matches,
-  onSelect,
-  onEdit,
-  onInvoice,
-}: {
-  matches: MemberHit[];
-  onSelect: (member: MemberHit) => void;
-  onEdit: (member: MemberHit) => void;
-  onInvoice: (member: MemberHit) => void;
-}) {
-  if (!matches.length) return null;
-  return (
-    <div className="mt-3 border-[3px] border-cyan-300/35 bg-cyan-300/[0.04] p-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">
-        {matches.length} personas encontradas · seleccioná una
-      </p>
-      <div className="mt-3 grid max-h-[28rem] gap-2 overflow-y-auto pr-1">
-        {matches.map((candidate) => (
-          <article
-            key={candidate.normalizedName}
-            className="flex min-w-0 flex-wrap items-center gap-4 border-[3px] border-white/15 bg-black/50 p-4"
-          >
-            <div className="scale-110"><Avatar name={candidate.memberName} photoUrl={candidate.photoUrl} /></div>
-            <span className="min-w-0 flex-1">
-              <span className="block text-base font-black uppercase leading-tight text-white sm:text-lg">
-                {candidate.memberName}
-              </span>
-              <span className="mt-2 flex flex-wrap gap-1.5">
-                {candidate.plan && <span className="bg-white/10 px-2 py-1 text-[10px] font-black uppercase text-white/55">{candidate.plan}</span>}
-                <span className={`px-2 py-1 text-[10px] font-black uppercase ${candidate.membershipStatus === "expired" ? "bg-orange-400/15 text-orange-200" : "bg-[#d8ff3e]/15 text-[#d8ff3e]"}`}>
-                  {MEMBERSHIP_STATUS_LABELS[candidate.membershipStatus] ?? candidate.membershipStatus}
-                </span>
-                {candidate.cedula && <span className="bg-white/5 px-2 py-1 text-[10px] font-bold text-white/35">Céd. {candidate.cedula}</span>}
-              </span>
-            </span>
-            <span className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => onInvoice(candidate)} className="inline-flex min-h-10 items-center gap-1.5 border-[3px] border-orange-300/50 px-3 text-[10px] font-black uppercase text-orange-200 hover:bg-orange-300 hover:text-black">
-                <ReceiptText className="h-3.5 w-3.5" /> Facturar
-              </button>
-              <button type="button" onClick={() => onEdit(candidate)} className="inline-flex min-h-10 items-center gap-1.5 border-[3px] border-cyan-300/45 px-3 text-[10px] font-black uppercase text-cyan-200 hover:bg-cyan-300 hover:text-black">
-                <Pencil className="h-3.5 w-3.5" /> Editar datos
-              </button>
-              <button type="button" onClick={() => onSelect(candidate)} className="min-h-10 border-[3px] border-[#d8ff3e]/45 px-3 text-[10px] font-black uppercase text-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black">
-                Seleccionar
-              </button>
-            </span>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function InsideRoster({
-  visits,
-  query,
-  onQueryChange,
-  checkingOutId,
-  onCheckout,
-}: {
-  visits: ActiveVisit[];
-  query: string;
-  onQueryChange: (value: string) => void;
-  checkingOutId: string;
-  onCheckout: (visit: ActiveVisit) => void;
-}) {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const normalizedQuery = query.trim().toLocaleLowerCase("es");
-  const queryDigits = query.replace(/\D/g, "");
-  const filtered = visits.filter((visit) => {
-    if (!normalizedQuery) return true;
-    const nameMatch = visit.memberName.toLocaleLowerCase("es").includes(normalizedQuery);
-    const cedulaMatch = Boolean(
-      queryDigits && String(visit.cedula || "").replace(/\D/g, "").includes(queryDigits),
-    );
-    return nameMatch || cedulaMatch;
-  });
-
-  return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <GameLabel tone="lime">Control de salida</GameLabel>
-          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight">
-            Personas dentro · {visits.length}
-          </h2>
-          <p className="mt-2 text-sm font-bold text-white/45">
-            Buscá por nombre o cédula y marcá la salida desde la lista.
-          </p>
-        </div>
-      </div>
-
-      <label className="relative mt-5 block">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/35" />
-        <input
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          inputMode="search"
-          autoComplete="off"
-          placeholder="Nombre o número de cédula"
-          className="min-h-14 w-full border-[3px] border-white/20 bg-black/50 pl-12 pr-4 text-base font-black text-white outline-none placeholder:text-white/25 focus:border-[#d8ff3e]"
-        />
-      </label>
-
-      <ul className="mt-4 grid gap-3 md:grid-cols-2">
-        {filtered.map((visit) => {
-          const minutes = Math.max(
-            0,
-            Math.round((now - new Date(visit.checkedInAt).getTime()) / 60_000),
-          );
-          const busy = checkingOutId === visit.id;
-          return (
-            <li
-              key={visit.id}
-              className="flex min-w-0 flex-col border-[3px] border-white/15 bg-black/45 p-4"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <Avatar name={visit.memberName} photoUrl={visit.photoUrl} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-black uppercase">{visit.memberName}</p>
-                  <p className="mt-0.5 text-xs font-bold text-white/40">
-                    {visit.cedula ? `Céd. ${visit.cedula} · ` : ""}
-                    Entrada {formatTime(visit.checkedInAt)} · {minutes} min
-                  </p>
-                </div>
-                <GameChip tone={visit.membershipStatus === "expired" ? "orange" : "lime"}>
-                  Dentro
-                </GameChip>
-              </div>
-              <button
-                type="button"
-                disabled={Boolean(checkingOutId)}
-                onClick={() => onCheckout(visit)}
-                className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-orange-300 bg-orange-300/10 px-4 text-sm font-black uppercase text-orange-200 transition hover:bg-orange-300 hover:text-black disabled:cursor-wait disabled:opacity-45"
-              >
-                {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
-                Marcar salida
-              </button>
-            </li>
-          );
-        })}
-        {!filtered.length && (
-          <li className="border-[3px] border-dashed border-white/15 px-4 py-10 text-center text-sm font-bold text-white/35 md:col-span-2">
-            {visits.length
-              ? "No hay una persona dentro que coincida con la búsqueda."
-              : "No hay personas registradas dentro del gimnasio."}
-          </li>
-        )}
-      </ul>
-    </div>
-  );
-}
-
-function SidePanelAction({
-  active,
-  icon: Icon,
-  label,
-  detail,
-  badge = 0,
-  onClick,
-}: {
-  active: boolean;
-  icon: typeof IdCard;
-  label: string;
-  detail: string;
-  badge?: number;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group relative flex min-h-16 w-full items-center gap-3 border-[3px] p-3 text-left transition ${
-        active
-          ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
-          : "border-white/15 bg-black/45 text-white hover:border-violet-300/60"
-      }`}
-    >
-      <span className={`grid h-10 w-10 shrink-0 place-items-center ${active ? "bg-black/15" : "bg-violet-300/10 text-violet-200"}`}>
-        <Icon className="h-5 w-5" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-black uppercase leading-tight">{label}</span>
-        <span className={`mt-0.5 block text-[10px] font-bold uppercase tracking-wide ${active ? "text-black/55" : badge ? "text-orange-300" : "text-white/35"}`}>
-          {detail}
-        </span>
-      </span>
-      {badge > 0 && (
-        <span className={`grid h-7 min-w-7 place-items-center px-1 text-xs font-black ${active ? "bg-black text-[#d8ff3e]" : "bg-red-500 text-white"}`}>
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
-    </button>
-  );
-}
-
-function OccupancyPill({ status }: { status: GymStatus | null }) {
-  return (
-    <span className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-black/50 px-3 py-2 text-xs font-black uppercase tracking-wide text-cyan-100 shadow-[3px_3px_0_rgba(0,0,0,.4)]">
-      <span className="h-2.5 w-2.5 bg-[#d8ff3e] shadow-[0_0_8px_rgba(216,255,62,.8)]" />
-      {status?.currentPeople ?? 0}/{status?.capacity ?? 85} · {status?.occupancyPct ?? 0}%
-    </span>
-  );
-}
-
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">
-        {label}
-        {required ? " *" : ""}
-      </span>
-      <div className="mt-1.5">{children}</div>
-    </label>
   );
 }

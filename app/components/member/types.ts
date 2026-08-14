@@ -50,3 +50,6 @@ export type {
   ReservationsResponse,
 } from "./api";
 export type { OsModal } from "./ui";
+
+/** Cómo se está registrando el entreno rápido: un toque, por tiempo, o el plan del coach. */
+export type QuickWorkoutMode = "tap" | "time" | "plan";

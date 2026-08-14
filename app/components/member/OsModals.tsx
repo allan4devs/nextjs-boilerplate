@@ -6,7 +6,6 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import ExtremeGymCheckout from "@/app/ExtremeGymCheckout";
 import Link from "next/link";
 import {
   Award,
@@ -14,27 +13,22 @@ import {
   Check,
   ClipboardList,
   CreditCard,
-  Dumbbell,
   ExternalLink,
   Flame,
   Loader2,
   Lock,
-  Play,
   Plus,
   Snowflake,
   Star,
   Target,
   Timer,
-  Users,
   Zap,
 } from "lucide-react";
 import {
   GameButton,
   GameCallout,
-  GameChip,
   GameLabel,
   GameModal,
-  GamePanel,
   GameStat,
 } from "../GameOS";
 import { BadgeGallery, StreakRing, XpBar } from "../gamification";
@@ -43,186 +37,20 @@ import {
   WEEKLY_GOAL_MAX,
   WEEKLY_GOAL_MIN,
 } from "@/lib/xtreme/gamification";
-import { findMachineGuide, FREE_WORKOUT } from "./constants";
-import { youtubeThumb, youtubeVideoId } from "./catalog/machines";
-import { isOneDayPlanLabel, membershipPlanDays, membershipRemainingPct } from "./helpers/membership";
-import { dayLabel, todayIso } from "./utils";
+import {
+  FREE_ACTIVITY_OPTIONS,
+  FREE_WORKOUT,
+  TIME_PRESETS,
+} from "./constants";
+import { membershipPlanDays, membershipRemainingPct } from "./helpers/membership";
+import { dayLabel, dayOfMonth, quickCoachLine, todayIso } from "./utils";
+import { CheckoutModal } from "./modals/CheckoutModal";
+import { MachineGuideModal } from "./modals/MachineGuideModal";
+import { MembershipModal } from "./modals/MembershipModal";
+import { OccupancyModal } from "./modals/OccupancyModal";
+import type { QuickWorkoutMode } from "./types";
 import type { MemberOs } from "./useMemberOs";
 import GymSessionModal from "./GymSessionModal";
-
-const FREE_ACTIVITY_OPTIONS = [
-  { id: "pesas", label: "Pesas", emoji: "🏋️" },
-  { id: "maquinas", label: "Máquinas", emoji: "⚙️" },
-  { id: "cardio", label: "Cardio", emoji: "🏃" },
-  { id: "funcional", label: "Funcional", emoji: "🔥" },
-  { id: "pierna", label: "Pierna", emoji: "🦵" },
-  { id: "pecho", label: "Pecho / espalda", emoji: "💪" },
-  { id: "core", label: "Core", emoji: "🎯" },
-  { id: "movilidad", label: "Movilidad", emoji: "🧘" },
-] as const;
-
-const TIME_PRESETS = [
-  { min: 20, label: "Rápido", hint: "20 min" },
-  { min: 30, label: "Clásico", hint: "30 min" },
-  { min: 45, label: "Bueno", hint: "45 min" },
-  { min: 60, label: "Fuerte", hint: "1 h" },
-  { min: 90, label: "Bestia", hint: "1.5 h" },
-] as const;
-
-type QuickWorkoutMode = "tap" | "time" | "plan";
-
-function quickCoachLine(args: {
-  trainedToday: boolean;
-  streak: number;
-  minutes: number;
-  mode: QuickWorkoutMode;
-  activities: string[];
-}) {
-  if (args.trainedToday) return "Hoy ya sumaste. Mañana se repite la magia.";
-  if (args.mode === "tap") {
-    if (args.streak >= 5) return `Racha de ${args.streak}. Un toque y la cuidás.`;
-    if (args.streak > 0) return "Sin vueltas: tocá y queda marcado.";
-    return "Primera de la racha puede ser un solo toque.";
-  }
-  if (args.mode === "plan") return "Seguí lo que te armó el coach. Sin inventar.";
-  if (args.minutes <= 20) return "Cortito pero cuenta. Mejor 20 min que cero.";
-  if (args.minutes >= 60) return "Sesión larga: ese cuerpo se va a enterar.";
-  if (args.activities.length >= 2) return `${args.activities.length} cosas en la lista. Se ve serio.`;
-  if (args.activities.length === 1) return `${args.activities[0]} · ${args.minutes} min. Listo para guardar.`;
-  return "Elegí minutos (y opcional qué hiciste). Un toque y listo.";
-}
-
-/** "2026-07-11" → 11 (sin pasar por Date: evita corrimientos de zona horaria). */
-function dayOfMonth(date: string) {
-  return Number(date.slice(8, 10));
-}
-
-function MachineGuideBody({
-  machine,
-}: {
-  machine: NonNullable<ReturnType<typeof findMachineGuide>>;
-}) {
-  const gallery = machine.images?.length
-    ? machine.images
-    : machine.image
-      ? [machine.image]
-      : [];
-  const [activePhoto, setActivePhoto] = useState(gallery[0] ?? machine.image);
-  const thumb = youtubeThumb(machine.videoUrl);
-  const ytId = youtubeVideoId(machine.videoUrl);
-
-  return (
-    <div className="space-y-4">
-      <div className={`h-3 border-2 border-black/20 bg-gradient-to-r ${machine.accent}`} />
-
-      {activePhoto && (
-        <div className="overflow-hidden border-[3px] border-white/15 bg-black">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={activePhoto}
-            alt={machine.name}
-            className="h-40 w-full object-cover sm:h-48"
-          />
-          {gallery.length > 1 && (
-            <div className="flex gap-1.5 overflow-x-auto border-t-2 border-white/10 bg-black/60 p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {gallery.map((src) => (
-                <button
-                  key={src}
-                  type="button"
-                  onClick={() => setActivePhoto(src)}
-                  className={`relative h-14 w-20 shrink-0 overflow-hidden border-2 transition ${
-                    activePhoto === src
-                      ? "border-[#d8ff3e]"
-                      : "border-white/20 opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        {machine.muscles.map((m) => (
-          <GameChip key={m} tone="lime">
-            {m}
-          </GameChip>
-        ))}
-      </div>
-
-      {machine.videoUrl && (
-        <a
-          href={machine.videoUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group relative flex min-h-[88px] overflow-hidden border-[3px] border-[#d8ff3e]/45 bg-black transition hover:border-[#d8ff3e]"
-        >
-          {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumb}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-50 transition group-hover:opacity-65 group-hover:scale-105"
-            />
-          ) : (
-            <div className={`absolute inset-0 bg-gradient-to-r ${machine.accent} opacity-30`} />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/40" />
-          <div className="relative flex w-full items-center gap-3 p-3 sm:p-3.5">
-            <span className="grid h-12 w-12 shrink-0 place-items-center border-2 border-black/40 bg-[#d8ff3e] text-black shadow-[3px_3px_0_rgba(0,0,0,.4)]">
-              <Play className="h-6 w-6 fill-current" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">
-                Video de técnica
-              </p>
-              <p className="truncate text-sm font-black uppercase text-white">
-                {machine.videoLabel ?? `Cómo usar ${machine.name}`}
-              </p>
-              <p className="mt-0.5 text-[11px] font-bold text-white/45">
-                {ytId ? "YouTube · se abre en pestaña nueva" : "Se abre en pestaña nueva"}
-              </p>
-            </div>
-            <ExternalLink className="h-4 w-4 shrink-0 text-white/40 group-hover:text-[#d8ff3e]" />
-          </div>
-        </a>
-      )}
-
-      <GamePanel title="Ajuste inicial" tone="cyan" compact>
-        <p className="text-sm font-bold leading-6 text-white/70">{machine.setup}</p>
-      </GamePanel>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <GamePanel title="Tips" tone="lime" compact>
-          <ul className="space-y-2 text-sm font-bold text-white/65">
-            {machine.tips.map((tip) => (
-              <li key={tip} className="flex gap-2">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#d8ff3e]" />
-                <span>{tip}</span>
-              </li>
-            ))}
-          </ul>
-        </GamePanel>
-        <GamePanel title="Evite" tone="orange" compact>
-          <ul className="space-y-2 text-sm font-bold text-white/65">
-            {machine.mistakes.map((mistake) => (
-              <li key={mistake} className="flex gap-2">
-                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
-                <span>{mistake}</span>
-              </li>
-            ))}
-          </ul>
-        </GamePanel>
-      </div>
-      <GameCallout tone="orange" icon={Timer}>
-        <span className="font-black uppercase">Starter · </span>
-        {machine.starter}
-      </GameCallout>
-    </div>
-  );
-}
 
 export default function OsModals({ os }: { os: MemberOs }) {
   const {
@@ -256,8 +84,6 @@ export default function OsModals({ os }: { os: MemberOs }) {
   const [freeActivities, setFreeActivities] = useState<string[]>([]);
   const [customActivity, setCustomActivity] = useState("");
   const [selectedPlanItemId, setSelectedPlanItemId] = useState("");
-  const selectedMachine =
-    osModal?.kind === "machine" ? findMachineGuide(osModal.machineId) : null;
   const today = todayIso();
   const weekRemaining = Math.max(0, weeklyGoal - weekDoneCount);
   const nextStreakMilestone =
@@ -362,28 +188,10 @@ export default function OsModals({ os }: { os: MemberOs }) {
 
   return (
     <>
-      <GameModal
-        open={osModal?.kind === "machine"}
+      <MachineGuideModal
+        machineId={osModal?.kind === "machine" ? osModal.machineId : null}
         onClose={closeOsModal}
-        title={selectedMachine?.name ?? "Máquina"}
-        subtitle={
-          selectedMachine
-            ? `${selectedMachine.zone} · ${selectedMachine.level}`
-            : undefined
-        }
-        icon={Dumbbell}
-        tone="lime"
-        size="lg"
-        footer={
-          <GameButton full onClick={closeOsModal}>
-            Entendido
-          </GameButton>
-        }
-      >
-        {selectedMachine && (
-          <MachineGuideBody key={selectedMachine.id} machine={selectedMachine} />
-        )}
-      </GameModal>
+      />
 
       <GameModal
         open={osModal?.kind === "streak"}
@@ -706,97 +514,27 @@ export default function OsModals({ os }: { os: MemberOs }) {
         )}
       </GameModal>
 
-      <GameModal
-        open={osModal?.kind === "checkout"}
+      <CheckoutModal
+        planId={osModal?.kind === "checkout" ? osModal.planId : null}
         onClose={closeOsModal}
-        title="Activar acceso"
-        subtitle="Pago en línea · sin salir del Member OS"
-        icon={CreditCard}
-        tone="lime"
-        size="full"
-      >
-        {osModal?.kind === "checkout" && (
-          <ExtremeGymCheckout
-            key={osModal.planId}
-            initialOption={osModal.planId}
-            compact
-            memberCheckout
-            memberCustomer={{
-              name: currentMember.memberName,
-              phone: currentMember.phone,
-              email: currentMember.email,
-            }}
-            onSuccess={handleCheckoutSuccess}
-          />
-        )}
-      </GameModal>
+        member={currentMember}
+        onSuccess={handleCheckoutSuccess}
+      />
 
-      <GameModal
+      <MembershipModal
         open={osModal?.kind === "membership"}
         onClose={closeOsModal}
-        title={currentMember.membership.plan}
-        subtitle="Membresía"
-        icon={CreditCard}
-        tone="lime"
-        size="lg"
-      >
-        <div className="grid gap-3 sm:grid-cols-3">
-          <GameStat label="Estado" value={currentMember.membership.status} tone="lime" />
-          <GameStat
-            label="Días"
-            value={membershipDaysRemaining}
-            hint={isOneDayPlanLabel(currentMember.membership.plan) ? "disponible" : membershipDaysRemaining > membershipTotalDays ? "acumulados" : `de ${membershipTotalDays}`}
-            tone="orange"
-          />
-          <GameStat
-            label={isOneDayPlanLabel(currentMember.membership.plan) ? "Acceso" : "Activo hasta"}
-            value={isOneDayPlanLabel(currentMember.membership.plan) ? "1 día disponible" : currentMember.membership.nextBillingDate}
-            tone="cyan"
-          />
-          <div className="mt-4 border-[3px] border-white/15 bg-black/30 p-4 sm:col-span-3">
-            <div className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.14em]">
-              <span className="text-white/55">Tiempo restante del plan</span>
-              <span className="text-[#d8ff3e]">
-                {isOneDayPlanLabel(currentMember.membership.plan)
-                  ? "1 día disponible"
-                  : membershipDaysRemaining > membershipTotalDays
-                    ? `${membershipDaysRemaining} días acumulados`
-                    : `${membershipDaysRemaining}/${membershipTotalDays} días`}
-              </span>
-            </div>
-            <div className="mt-3 h-4 border-[3px] border-white/15 bg-black/50">
-              <div
-                className="h-full bg-gradient-to-r from-[#d8ff3e] to-cyan-300"
-                style={{ width: `${membershipProgress}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </GameModal>
+        member={currentMember}
+        daysRemaining={membershipDaysRemaining}
+        totalDays={membershipTotalDays}
+        progress={membershipProgress}
+      />
 
-      <GameModal
+      <OccupancyModal
         open={osModal?.kind === "occupancy"}
         onClose={closeOsModal}
-        title={gymStatus?.level ?? "Cargando"}
-        subtitle="Ocupación del gym"
-        icon={Users}
-        tone="cyan"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div className="h-4 border-[3px] border-white/15 bg-black/45">
-            <div
-              className="h-full bg-cyan-300 transition-all"
-              style={{ width: `${gymStatus?.occupancyPct ?? 0}%` }}
-            />
-          </div>
-          <p className="text-sm font-bold text-white/60">
-            {gymStatus
-              ? `${gymStatus.currentPeople}/${gymStatus.capacity} personas · reservas hoy: ${gymStatus.reservationsToday}`
-              : "Leyendo el gym en vivo."}
-          </p>
-        </div>
-      </GameModal>
+        gymStatus={gymStatus}
+      />
 
       <GameModal
         open={osModal?.kind === "badges"}
