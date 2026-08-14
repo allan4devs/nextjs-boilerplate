@@ -5,7 +5,8 @@
 .vscode
 cv
 flyers
-scripts
+scripts/*
+!scripts/sync-face-models.mjs
 
 # Documentación y residuos locales.
 *.md
