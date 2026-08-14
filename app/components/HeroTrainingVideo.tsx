@@ -19,7 +19,8 @@ export default function HeroTrainingVideo({
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (reducedMotion.matches) {
       videoRef.current?.pause();
-      setPaused(true);
+      const frame = window.requestAnimationFrame(() => setPaused(true));
+      return () => window.cancelAnimationFrame(frame);
     }
   }, []);
 

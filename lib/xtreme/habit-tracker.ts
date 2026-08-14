@@ -1,8 +1,18 @@
+/**
+ * Bitácora de hábitos por hora. Cada socio tiene un documento por día con 24
+ * casillas; la casilla guarda qué estuvo haciendo esa hora (o `null` si no la
+ * registró). El vocabulario de categorías y el validador viven acá para que el
+ * route handler y la base no puedan discrepar sobre qué es un valor válido.
+ */
 import type { Db } from "mongodb";
+import { HABIT_LOGS_COLLECTION } from "@/lib/xtreme/shared/config";
 
-export const HABIT_LOGS_COLLECTION = "xtreme_gym_habit_logs";
+/** Única fuente de verdad del vocabulario: el tipo se deriva de la lista. */
+export const HABIT_CATEGORIES = ["sleep", "water", "food", "exercise", "focus"] as const;
 
-export type HabitCategory = "sleep" | "water" | "food" | "exercise" | "focus";
+export type HabitCategory = (typeof HABIT_CATEGORIES)[number];
+
+export const HABIT_HOURS_PER_DAY = 24;
 
 export type HabitLogDoc = {
   memberKey: string;
@@ -11,10 +21,24 @@ export type HabitLogDoc = {
   updatedAt: Date;
 };
 
-const HOURS_PER_DAY = 24;
+const CATEGORY_LOOKUP: ReadonlySet<string> = new Set(HABIT_CATEGORIES);
+
+/** `null` es válido: es cómo se borra una hora ya marcada. */
+export function isHabitCategory(value: unknown): value is HabitCategory | null {
+  return value === null || (typeof value === "string" && CATEGORY_LOOKUP.has(value));
+}
+
+export function isHabitHour(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value < HABIT_HOURS_PER_DAY
+  );
+}
 
 function emptyHours(): Array<HabitCategory | null> {
-  return Array.from({ length: HOURS_PER_DAY }, () => null);
+  return Array.from({ length: HABIT_HOURS_PER_DAY }, () => null);
 }
 
 export async function getOrCreateHabitLog(
@@ -22,7 +46,6 @@ export async function getOrCreateHabitLog(
   memberKey: string,
   date: string,
 ): Promise<HabitLogDoc> {
-  const now = new Date();
   const doc = await db.collection<HabitLogDoc>(HABIT_LOGS_COLLECTION).findOneAndUpdate(
     { memberKey, date },
     {
@@ -30,7 +53,7 @@ export async function getOrCreateHabitLog(
         memberKey,
         date,
         hours: emptyHours(),
-        updatedAt: now,
+        updatedAt: new Date(),
       },
     },
     { upsert: true, returnDocument: "after" },
@@ -40,6 +63,12 @@ export async function getOrCreateHabitLog(
   return doc;
 }
 
+/**
+ * Marca una sola hora. Se escribe con pipeline de agregación y no leyendo el
+ * arreglo para reescribirlo: dos pestañas marcando horas distintas del mismo
+ * día no se pisan entre sí, y el documento se normaliza a 24 casillas aunque
+ * venga viejo o incompleto.
+ */
 export async function setHabitHour(
   db: Db,
   memberKey: string,
@@ -47,11 +76,10 @@ export async function setHabitHour(
   hour: number,
   category: HabitCategory | null,
 ): Promise<HabitLogDoc> {
-  if (!Number.isInteger(hour) || hour < 0 || hour >= HOURS_PER_DAY) {
-    throw new RangeError("La hora debe estar entre 0 y 23.");
+  if (!isHabitHour(hour)) {
+    throw new RangeError(`La hora debe estar entre 0 y ${HABIT_HOURS_PER_DAY - 1}.`);
   }
 
-  const now = new Date();
   const doc = await db.collection<HabitLogDoc>(HABIT_LOGS_COLLECTION).findOneAndUpdate(
     { memberKey, date },
     [
@@ -68,7 +96,7 @@ export async function setHabitHour(
               },
               in: {
                 $map: {
-                  input: { $range: [0, HOURS_PER_DAY] },
+                  input: { $range: [0, HABIT_HOURS_PER_DAY] },
                   as: "currentHour",
                   in: {
                     $cond: [
@@ -86,7 +114,7 @@ export async function setHabitHour(
               },
             },
           },
-          updatedAt: now,
+          updatedAt: new Date(),
         },
       },
     ],

@@ -6,7 +6,7 @@
  * al tocar para reservar / check-in sin saturar la pantalla.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CalendarClock,
   Check,
@@ -25,7 +25,6 @@ import { classCheckInWindow } from "@/lib/xtreme/class-schedule";
 import { GameButton, GameCallout, GameLabel } from "../../GameOS";
 import { GOALS, ROUTINES, TRAININGS } from "../constants";
 import { isOneDayPlanLabel, membershipAllowsClassBooking } from "../helpers/membership";
-import { todayIso } from "../utils";
 import type { MemberOs } from "../useMemberOs";
 import type { Training } from "../domain/training";
 import PanelHub, { type HubPanel } from "../PanelHub";
@@ -299,7 +298,13 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
     trainedToday,
   } = os;
 
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeWorkoutId = currentMember.activePlanWorkout?.id ?? null;
+  const [previousWorkoutId, setPreviousWorkoutId] = useState(activeWorkoutId);
+  const [activeId, setActiveId] = useState<string | null>(activeWorkoutId ? "plan" : null);
+  if (previousWorkoutId !== activeWorkoutId) {
+    setPreviousWorkoutId(activeWorkoutId);
+    if (activeWorkoutId) setActiveId("plan");
+  }
   const [openTrainingId, setOpenTrainingId] = useState<string | null>(null);
   const [selectedClassDay, setSelectedClassDay] = useState<"today" | "tomorrow">("today");
 
@@ -309,11 +314,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
 
   const doneCount = TRAININGS.filter((t) => completedToday.has(t.id)).length;
   const hasPlan = Boolean(currentMember.trainingPlan);
-  const activeWorkout = Boolean(currentMember.activePlanWorkout);
-
-  useEffect(() => {
-    if (activeWorkout) setActiveId("plan");
-  }, [activeWorkout]);
+  const activeWorkout = Boolean(activeWorkoutId);
 
   const membership = currentMember.membership;
   const isOneDayPass = isOneDayPlanLabel(membership.plan) && membership.daysRemaining >= 0 && membership.status !== "expired";

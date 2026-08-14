@@ -154,7 +154,7 @@ export default function ExtremeGymCheckout({
 
   const selected = useMemo(
     () => CHECKOUT_OPTIONS.find((option) => option.id === selectedId) ?? CHECKOUT_OPTIONS[0],
-    [selectedId],
+    [CHECKOUT_OPTIONS, selectedId],
   );
 
   const formReady = memberCheckout
@@ -169,7 +169,8 @@ export default function ExtremeGymCheckout({
 
   useEffect(() => {
     if (!isValidOptionId(planFromUrl, CHECKOUT_OPTIONS)) return;
-    setSelectedId(planFromUrl!);
+    const timer = window.setTimeout(() => setSelectedId(planFromUrl!), 0);
+    return () => window.clearTimeout(timer);
   }, [CHECKOUT_OPTIONS, planFromUrl]);
 
   useEffect(() => {
@@ -178,11 +179,14 @@ export default function ExtremeGymCheckout({
       const raw = window.sessionStorage.getItem(CHECKOUT_FORM_KEY);
       if (!raw) return;
       const saved = JSON.parse(raw) as Partial<FormState>;
-      setForm({
-        name: saved.name?.trim() ?? "",
-        phone: saved.phone?.trim() ?? "",
-        email: saved.email?.trim() ?? "",
-      });
+      const timer = window.setTimeout(() => {
+        setForm({
+          name: saved.name?.trim() ?? "",
+          phone: saved.phone?.trim() ?? "",
+          email: saved.email?.trim() ?? "",
+        });
+      }, 0);
+      return () => window.clearTimeout(timer);
     } catch {
       // ignore corrupt cache
     }

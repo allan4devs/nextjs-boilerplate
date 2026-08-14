@@ -233,7 +233,7 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({
             member: null,
             exists: false,
-            lookup: (isEmailInput ? "email" : "cedula") as any,
+            lookup: isEmailInput ? "email" : "cedula",
             cedula: cedulaParam || digits,
             hasPinSet: false,
             leaderboard: [],
@@ -280,7 +280,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         member: null,
         exists: false,
-        lookup: (isEmailInput ? "email" : digits.length >= 6 ? "cedula" : "name") as any,
+        lookup: isEmailInput ? "email" : digits.length >= 6 ? "cedula" : "name",
         cedula: cedulaParam || digits || undefined,
         hasPinSet: false,
         leaderboard: [],

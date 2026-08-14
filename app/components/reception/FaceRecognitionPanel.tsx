@@ -21,7 +21,10 @@ import {
 import { GameCallout, GameChip, GameLabel } from "../GameOS";
 import { Avatar, MemberPreview } from "./MemberCards";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
-import { useFaceRecognizer } from "@/app/features/checkin/face/useFaceRecognizer";
+import {
+  useFaceRecognizer,
+  type EngineStatus,
+} from "@/app/features/checkin/face/useFaceRecognizer";
 import {
   FACE_AUTO_SIMILARITY,
   FACE_ENROLL_SAMPLES,
@@ -39,7 +42,21 @@ type Props = {
   onRosterChanged: () => void;
 };
 
-const percent = (value: number) => `${Math.round(value * 100)}%`;
+/** Búsqueda de enrolamiento: dos letras ya acotan, y seis opciones caben sin scroll. */
+const ENROLL_QUERY_MIN_LENGTH = 2;
+const ENROLL_SUGGESTIONS_LIMIT = 6;
+/** Tope de la grilla de enrolados: es un vistazo, no el padrón completo. */
+const ENROLLED_PREVIEW_LIMIT = 48;
+
+const percentValue = (value: number) => Math.round(value * 100);
+const percent = (value: number) => `${percentValue(value)}%`;
+const firstName = (name: string) => name.split(" ")[0];
+
+/**
+ * Una sola regla de "esta coincidencia es sólida": el color del chip, el de la
+ * barra y el auto-ingreso del hook tienen que contar la misma historia.
+ */
+const isConfident = (similarity: number) => similarity >= FACE_AUTO_SIMILARITY;
 
 export default function FaceRecognitionPanel({
   roster,
@@ -103,10 +120,10 @@ export default function FaceRecognitionPanel({
 
   const enrollMatches = useMemo(() => {
     const query = enrollQuery.trim().toLocaleLowerCase("es");
-    if (query.length < 2) return [];
+    if (query.length < ENROLL_QUERY_MIN_LENGTH) return [];
     return roster
       .filter((hit) => hit.memberName.toLocaleLowerCase("es").includes(query))
-      .slice(0, 6);
+      .slice(0, ENROLL_SUGGESTIONS_LIMIT);
   }, [enrollQuery, roster]);
 
   async function runEnroll() {
@@ -151,7 +168,8 @@ export default function FaceRecognitionPanel({
             <EngineBadge status={engineStatus} scanning={scanning} />
             {best && (
               <span className="border-[3px] border-black/30 bg-[#d8ff3e] px-2.5 py-1.5 text-[11px] font-black uppercase text-black">
-                {percent(best.similarity)} · {best.member?.memberName.split(" ")[0] ?? "?"}
+                {percent(best.similarity)} ·{" "}
+                {best.member ? firstName(best.member.memberName) : "?"}
               </span>
             )}
           </div>
@@ -304,7 +322,7 @@ export default function FaceRecognitionPanel({
           eyebrow="Identificado por rostro"
           badge={
             best && member?.normalizedName === best.normalizedName ? (
-              <GameChip tone={best.similarity >= FACE_AUTO_SIMILARITY ? "lime" : "orange"}>
+              <GameChip tone={isConfident(best.similarity) ? "lime" : "orange"}>
                 {percent(best.similarity)} de coincidencia
               </GameChip>
             ) : undefined
@@ -342,8 +360,8 @@ export default function FaceRecognitionPanel({
                         </span>
                         <span className="mt-1 block h-1.5 w-full bg-white/10">
                           <span
-                            className={`block h-full ${candidate.similarity >= FACE_AUTO_SIMILARITY ? "bg-[#d8ff3e]" : "bg-orange-300"}`}
-                            style={{ width: `${Math.round(candidate.similarity * 100)}%` }}
+                            className={`block h-full ${isConfident(candidate.similarity) ? "bg-[#d8ff3e]" : "bg-orange-300"}`}
+                            style={{ width: `${percentValue(candidate.similarity)}%` }}
                           />
                         </span>
                       </span>
@@ -363,7 +381,7 @@ export default function FaceRecognitionPanel({
             Rostros enrolados ({enrolled.length})
           </p>
           <div className="mt-2 grid max-h-72 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-3">
-            {enrolled.slice(0, 48).map((hit) => (
+            {enrolled.slice(0, ENROLLED_PREVIEW_LIMIT).map((hit) => (
               <div
                 key={hit.normalizedName}
                 className="group relative border-[3px] border-white/10 p-1.5 text-center"
@@ -373,9 +391,9 @@ export default function FaceRecognitionPanel({
                   onClick={() => onSelectMember(hit)}
                   className="block w-full"
                 >
-                  <Avatar name={hit.memberName} photoUrl={hit.photoUrl} large />
+                  <Avatar name={hit.memberName} photoUrl={hit.photoUrl} size="lg" />
                   <span className="mt-1 block truncate text-[10px] font-black uppercase text-white/60">
-                    {hit.memberName.split(" ")[0]}
+                    {firstName(hit.memberName)}
                   </span>
                 </button>
                 <button
@@ -400,7 +418,7 @@ export default function FaceRecognitionPanel({
   );
 }
 
-function EngineBadge({ status, scanning }: { status: string; scanning: boolean }) {
+function EngineBadge({ status, scanning }: { status: EngineStatus; scanning: boolean }) {
   if (status === "loading") {
     return (
       <span className="inline-flex items-center gap-1.5 border-[3px] border-white/20 bg-black/80 px-2.5 py-1.5 text-[11px] font-black uppercase text-white/70">

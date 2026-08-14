@@ -403,6 +403,12 @@ function OccupancyBody({ model, actions }: Props) {
 
 function MemberHomeDashboardComponent({ model, actions }: Props) {
   const [detail, setDetail] = useState<DetailId | null>(null);
+  const hasActiveVisit = Boolean(model.activeVisit);
+  const [previousHasActiveVisit, setPreviousHasActiveVisit] = useState(hasActiveVisit);
+  if (previousHasActiveVisit !== hasActiveVisit) {
+    setPreviousHasActiveVisit(hasActiveVisit);
+    if (!hasActiveVisit && detail === "visit") setDetail(null);
+  }
 
   const relevantClasses = model.classes.filter(
     (classItem) => classItem.isMine || (classItem.isToday && !classItem.hasStarted),
@@ -610,11 +616,6 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
   const topReason = priorities[0]?.reason ?? "Elegí una acción y seguí sin scroll.";
   const tracked = useRef("");
 
-  // Si se cierra la visita (checkout), no dejar el modal de "Estoy dentro" abierto.
-  useEffect(() => {
-    if (!model.activeVisit && detail === "visit") setDetail(null);
-  }, [model.activeVisit, detail]);
-
   useEffect(() => {
     const top = priorities[0];
     if (!top) return;
@@ -792,7 +793,7 @@ function MemberHomeDashboardComponent({ model, actions }: Props) {
 
       {/* Detail as closable modal - main screen stays put */}
       <GameModal
-        open={detail !== null && (detail !== "visit" || Boolean(model.activeVisit))}
+        open={detail !== null}
         onClose={() => setDetail(null)}
         title={detail ? modalTitle[detail] : ""}
         subtitle={detail ? modalSubtitle[detail] : undefined}

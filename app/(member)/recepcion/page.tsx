@@ -1225,6 +1225,13 @@ function InsideRoster({
   checkingOutId: string;
   onCheckout: (visit: ActiveVisit) => void;
 }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const normalizedQuery = query.trim().toLocaleLowerCase("es");
   const queryDigits = query.replace(/\D/g, "");
   const filtered = visits.filter((visit) => {
@@ -1266,7 +1273,7 @@ function InsideRoster({
         {filtered.map((visit) => {
           const minutes = Math.max(
             0,
-            Math.round((Date.now() - new Date(visit.checkedInAt).getTime()) / 60_000),
+            Math.round((now - new Date(visit.checkedInAt).getTime()) / 60_000),
           );
           const busy = checkingOutId === visit.id;
           return (

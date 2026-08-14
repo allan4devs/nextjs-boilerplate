@@ -6,7 +6,7 @@
  * Al tocar un cuadro se abre un modal / sheet cerrable; el fondo se mantiene.
  */
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight, X } from "lucide-react";
 import { trackAction } from "@/app/lib/analytics/session-client";
@@ -101,13 +101,13 @@ export default function PanelHub({
   activeId,
   onActiveChange,
 }: PanelHubProps) {
+  const [previousDefaultPanelId, setPreviousDefaultPanelId] = useState(defaultPanelId);
   const [internalId, setInternalId] = useState<string | null>(defaultPanelId);
-  const selectedId = activeId !== undefined ? activeId : internalId;
-
-  useEffect(() => {
-    if (activeId !== undefined) return;
+  if (previousDefaultPanelId !== defaultPanelId) {
+    setPreviousDefaultPanelId(defaultPanelId);
     setInternalId(defaultPanelId);
-  }, [activeId, defaultPanelId]);
+  }
+  const selectedId = activeId !== undefined ? activeId : internalId;
 
   const setSelected = (id: string | null) => {
     if (activeId === undefined) setInternalId(id);

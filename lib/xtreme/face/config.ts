@@ -60,6 +60,10 @@ export const FACE_AUTO_MARGIN = envNumber(
 export const FACE_MIN_DETECTION_SCORE = 0.55;
 /** Proporción mínima del ancho del cuadro que debe ocupar la cara. */
 export const FACE_MIN_COVERAGE = 0.16;
+/** Proporción máxima: más que esto y la cara ya sale recortada por el borde. */
+export const FACE_MAX_COVERAGE = 0.9;
+/** Encuadre a partir del cual la cobertura deja de sumar calidad. */
+export const FACE_IDEAL_COVERAGE = 0.34;
 /** Rotación máxima aceptada, en radianes (~34°). */
 export const FACE_MAX_ANGLE = 0.6;
 /** antispoof: 1 = rostro real, 0 = foto/pantalla. */
@@ -73,6 +77,18 @@ export const FACE_MIN_ENROLL_QUALITY = 0.55;
 export const FACE_ENROLL_SAMPLES = 3;
 /** Tope de plantillas por socio; al pasarse se descarta la más vieja. */
 export const FACE_TEMPLATES_PER_MEMBER = 5;
+
+/** Candidatos que se muestran o devuelven por escaneo. */
+export const FACE_MATCH_LIMIT = 5;
+/**
+ * Intentos por muestra al enrolar. Con la persona acomodándose frente a la
+ * cámara, doce frames por muestra alcanzan; más que eso es una sesión trabada.
+ */
+export const FACE_ENROLL_ATTEMPTS_PER_SAMPLE = 12;
+/** Espera tras un frame descartado durante el enrolamiento. */
+export const FACE_ENROLL_RETRY_MS = 260;
+/** Pausa entre muestras: sin ella se guardan tres capturas casi idénticas. */
+export const FACE_ENROLL_POSE_PAUSE_MS = 900;
 
 /** Cadencia del escaneo continuo en recepción. */
 export const FACE_SCAN_INTERVAL_MS = 550;

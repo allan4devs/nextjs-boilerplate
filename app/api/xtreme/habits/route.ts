@@ -1,33 +1,50 @@
+/**
+ * Bitácora de hábitos del socio.
+ *
+ * GET  ?date=YYYY-MM-DD → las 24 horas de ese día (hoy si no se indica).
+ * POST { hour, category } → marca una hora del día de hoy.
+ *
+ * Solo con sesión de socio, y siempre sobre su propia bitácora: el memberKey
+ * sale de la sesión, nunca del cuerpo del request.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { businessDate } from "@/lib/xtreme/business-date";
 import {
   getOrCreateHabitLog,
+  isHabitCategory,
+  isHabitHour,
   setHabitHour,
-  type HabitCategory,
+  HABIT_HOURS_PER_DAY,
   type HabitLogDoc,
 } from "@/lib/xtreme/habit-tracker";
 import { isSession, requireMemberSession } from "@/lib/xtreme/session";
 
 export const dynamic = "force-dynamic";
 
-const HABIT_CATEGORIES = new Set<HabitCategory>([
-  "sleep",
-  "water",
-  "food",
-  "exercise",
-  "focus",
-]);
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
+/** Fecha pedida, o `null` si no es un día real del calendario. */
 function requestedDate(req: NextRequest): string | null {
   const raw = req.nextUrl.searchParams.get("date")?.trim();
   if (!raw) return businessDate();
-  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
+
+  const parts = ISO_DATE.exec(raw);
+  if (!parts) return null;
+  // `2026-02-31` pasa el regex pero no existe: el round-trip por Date lo delata.
+  const [, year, month, day] = parts;
+  const parsed = new Date(`${raw}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const sameDay =
+    parsed.getUTCFullYear() === Number(year) &&
+    parsed.getUTCMonth() + 1 === Number(month) &&
+    parsed.getUTCDate() === Number(day);
+  return sameDay ? raw : null;
 }
 
+/** Forma única de la bitácora hacia el cliente; GET y POST devuelven lo mismo. */
 function publicHabitLog(doc: HabitLogDoc) {
   return {
-    memberKey: doc.memberKey,
     date: doc.date,
     hours: doc.hours,
     updatedAt: doc.updatedAt,
@@ -36,8 +53,8 @@ function publicHabitLog(doc: HabitLogDoc) {
 
 export async function GET(req: NextRequest) {
   try {
-    const sessionOrResponse = await requireMemberSession(req);
-    if (!isSession(sessionOrResponse)) return sessionOrResponse;
+    const session = await requireMemberSession(req);
+    if (!isSession(session)) return session;
 
     const date = requestedDate(req);
     if (!date) {
@@ -45,9 +62,9 @@ export async function GET(req: NextRequest) {
     }
 
     const db = await getDb();
-    const doc = await getOrCreateHabitLog(db, sessionOrResponse.memberKey, date);
-
-    return NextResponse.json({ date: doc.date, hours: doc.hours });
+    return NextResponse.json(
+      publicHabitLog(await getOrCreateHabitLog(db, session.memberKey, date)),
+    );
   } catch (err) {
     console.error("XTREME HABITS GET", err);
     return NextResponse.json({ error: "No se pudieron cargar los hábitos." }, { status: 500 });
@@ -56,28 +73,25 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const sessionOrResponse = await requireMemberSession(req);
-    if (!isSession(sessionOrResponse)) return sessionOrResponse;
+    const session = await requireMemberSession(req);
+    if (!isSession(session)) return session;
 
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
-    const hour = body?.hour;
-    const category = body?.category;
+    const { hour, category } = body ?? {};
 
-    if (typeof hour !== "number" || !Number.isInteger(hour) || hour < 0 || hour > 23) {
-      return NextResponse.json({ error: "La hora debe estar entre 0 y 23." }, { status: 400 });
+    if (!isHabitHour(hour)) {
+      return NextResponse.json(
+        { error: `La hora debe estar entre 0 y ${HABIT_HOURS_PER_DAY - 1}.` },
+        { status: 400 },
+      );
     }
-    if (category !== null && !HABIT_CATEGORIES.has(category as HabitCategory)) {
+    if (!isHabitCategory(category)) {
       return NextResponse.json({ error: "Categoría de hábito inválida." }, { status: 400 });
     }
 
     const db = await getDb();
-    const doc = await setHabitHour(
-      db,
-      sessionOrResponse.memberKey,
-      businessDate(),
-      hour,
-      category as HabitCategory | null,
-    );
+    // Solo se marca el día en curso: el pasado se consulta, no se reescribe.
+    const doc = await setHabitHour(db, session.memberKey, businessDate(), hour, category);
 
     return NextResponse.json(publicHabitLog(doc));
   } catch (err) {

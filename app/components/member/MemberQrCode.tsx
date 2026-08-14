@@ -14,18 +14,12 @@ export default function MemberQrCode({
   label?: string;
 }) {
   const payload = useMemo(() => value.replace(/\s/g, "").trim(), [value]);
-  const [svg, setSvg] = useState("");
-  const [error, setError] = useState("");
+  const [result, setResult] = useState({ payload: "", svg: "", error: "" });
 
   useEffect(() => {
-    if (!payload) {
-      setSvg("");
-      setError("");
-      return;
-    }
+    if (!payload) return;
 
     let cancelled = false;
-    setError("");
 
     void QRCode.toString(payload, {
       type: "svg",
@@ -38,12 +32,11 @@ export default function MemberQrCode({
       },
     })
       .then((next) => {
-        if (!cancelled) setSvg(next);
+        if (!cancelled) setResult({ payload, svg: next, error: "" });
       })
       .catch(() => {
         if (!cancelled) {
-          setSvg("");
-          setError("No se pudo generar el QR.");
+          setResult({ payload, svg: "", error: "No se pudo generar el QR." });
         }
       });
 
@@ -51,6 +44,9 @@ export default function MemberQrCode({
       cancelled = true;
     };
   }, [payload, size]);
+
+  const svg = result.payload === payload ? result.svg : "";
+  const error = result.payload === payload ? result.error : "";
 
   if (!payload) {
     return (

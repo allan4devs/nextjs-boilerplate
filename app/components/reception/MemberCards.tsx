@@ -6,9 +6,50 @@
  * la misma ficha antes de confirmar sin importar cómo la encontró recepción.
  */
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { GameButton, GameCallout, GameChip, GameLabel } from "../GameOS";
+import { GameButton, GameCallout, GameChip, GameLabel, type GameChipProps } from "../GameOS";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
-import type { MemberHit } from "@/lib/xtreme/checkin/contracts";
+import type { MemberHit, MembershipStatus } from "@/lib/xtreme/checkin/contracts";
+
+/**
+ * Cómo se ve cada estado de membresía, en un solo lugar. Al ser un Record del
+ * tipo, agregar un estado nuevo no compila hasta decidir de qué color va: antes
+ * la regla vivía repartida en tres ternarios anidados que podían discrepar.
+ */
+const STATUS_STYLES: Record<
+  MembershipStatus,
+  { panel: string; chip: GameChipProps["tone"]; remaining: string }
+> = {
+  active: {
+    panel: "border-[#d8ff3e]/55 bg-[#d8ff3e]/[0.07]",
+    chip: "lime",
+    remaining: "text-[#d8ff3e]",
+  },
+  warning: {
+    panel: "border-yellow-300/55 bg-yellow-300/[0.07]",
+    chip: "orange",
+    remaining: "text-[#d8ff3e]",
+  },
+  expired: {
+    panel: "border-orange-300/60 bg-orange-400/10",
+    chip: "red",
+    remaining: "text-orange-200",
+  },
+};
+
+const AVATAR_SIZES = {
+  md: "h-10 w-10 text-xs",
+  lg: "h-14 w-14 text-xs",
+  xl: "h-16 w-16 text-xl",
+} as const;
+
+/** `tinted` para listas, `solid` para la ficha que recepción confirma. */
+const AVATAR_TONES = {
+  tinted: { photo: "", initials: "bg-[#d8ff3e]/15 font-black text-[#d8ff3e]" },
+  solid: {
+    photo: "border-[3px] border-[#d8ff3e]/50",
+    initials: "border-[3px] border-black/30 bg-[#d8ff3e] font-black text-black",
+  },
+} as const;
 
 export function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -19,29 +60,43 @@ export function initials(name: string) {
 export function Avatar({
   name,
   photoUrl,
-  large,
+  size = "md",
+  tone = "tinted",
 }: {
   name: string;
   photoUrl?: string;
-  large?: boolean;
+  size?: keyof typeof AVATAR_SIZES;
+  tone?: keyof typeof AVATAR_TONES;
 }) {
-  const size = large ? "h-14 w-14" : "h-10 w-10";
+  const box = `${AVATAR_SIZES[size]} shrink-0`;
+  const styles = AVATAR_TONES[tone];
+
   if (photoUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={photoUrl}
-        alt={name}
-        className={`${size} shrink-0 object-cover ${large ? "" : "rounded-none"}`}
-      />
+      <img src={photoUrl} alt={name} className={`${box} ${styles.photo} object-cover`} />
     );
   }
   return (
-    <span
-      className={`grid ${size} shrink-0 place-items-center bg-[#d8ff3e]/15 text-xs font-black text-[#d8ff3e]`}
-    >
-      {initials(name)}
-    </span>
+    <span className={`grid ${box} place-items-center ${styles.initials}`}>{initials(name)}</span>
+  );
+}
+
+/** Par etiqueta + dato de la franja de membresía. */
+function MembershipStat({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName: string;
+}) {
+  return (
+    <div>
+      <p className="text-[9px] font-black uppercase tracking-wide text-white/35">{label}</p>
+      <p className={`mt-1 font-black ${valueClassName}`}>{value}</p>
+    </div>
   );
 }
 
@@ -73,6 +128,7 @@ export function MemberPreview({
     );
   }
 
+  const status = STATUS_STYLES[member.membershipStatus];
   const expired = member.membershipStatus === "expired";
 
   return (
@@ -82,38 +138,52 @@ export function MemberPreview({
         {badge}
       </div>
 
-      <section className={`border-[3px] p-4 ${expired ? "border-orange-300/60 bg-orange-400/10" : member.membershipStatus === "warning" ? "border-yellow-300/55 bg-yellow-300/[0.07]" : "border-[#d8ff3e]/55 bg-[#d8ff3e]/[0.07]"}`}>
+      <section className={`border-[3px] p-4 ${status.panel}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[.18em] text-white/40">Membresía</p>
+            <p className="text-[10px] font-black uppercase tracking-[.18em] text-white/40">
+              Membresía
+            </p>
             <p className="mt-1 text-2xl font-black uppercase">{member.plan || "Sin plan"}</p>
           </div>
-          <GameChip tone={expired ? "red" : member.membershipStatus === "warning" ? "orange" : "lime"}>{MEMBERSHIP_STATUS_LABELS[member.membershipStatus]}</GameChip>
+          <GameChip tone={status.chip}>
+            {MEMBERSHIP_STATUS_LABELS[member.membershipStatus]}
+          </GameChip>
         </div>
+
         <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
-          <div><p className="text-[9px] font-black uppercase tracking-wide text-white/35">Tiempo restante</p><p className={`mt-1 text-lg font-black ${expired ? "text-orange-200" : "text-[#d8ff3e]"}`}>{expired ? "Vencida" : `${Math.max(0, member.daysRemaining)} días`}</p></div>
-          <div><p className="text-[9px] font-black uppercase tracking-wide text-white/35">Próximo vencimiento</p><p className="mt-1 text-sm font-black">{member.nextBillingDate || "Sin fecha registrada"}</p></div>
+          <MembershipStat
+            label="Tiempo restante"
+            value={expired ? "Vencida" : `${Math.max(0, member.daysRemaining)} días`}
+            valueClassName={`text-lg ${status.remaining}`}
+          />
+          <MembershipStat
+            label="Próximo vencimiento"
+            value={member.nextBillingDate || "Sin fecha registrada"}
+            valueClassName="text-sm"
+          />
         </div>
-        {expired && <p className="mt-3 border-t border-orange-300/25 pt-3 text-sm font-black text-orange-200">Membresía vencida · podés registrar el ingreso y gestionar la renovación.</p>}
+
+        {expired && (
+          <p className="mt-3 border-t border-orange-300/25 pt-3 text-sm font-black text-orange-200">
+            Membresía vencida · podés registrar el ingreso y gestionar la renovación.
+          </p>
+        )}
       </section>
 
       <div className="mt-4 flex items-center gap-4">
         <div className="relative">
-          {member.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={member.photoUrl}
-              alt={member.memberName}
-              className="h-16 w-16 border-[3px] border-[#d8ff3e]/50 object-cover"
-            />
-          ) : (
-            <span className="grid h-16 w-16 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-xl font-black text-black">
-              {initials(member.memberName)}
-            </span>
-          )}
+          <Avatar
+            name={member.memberName}
+            photoUrl={member.photoUrl}
+            size="xl"
+            tone="solid"
+          />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-black uppercase tracking-tight">{member.memberName}</p>
+          <p className="truncate text-lg font-black uppercase tracking-tight">
+            {member.memberName}
+          </p>
           <p className="mt-1 text-xs font-bold text-white/35">
             {member.cedula ? `Ced. ${member.cedula} · ` : ""}
             {member.accessCode}
@@ -130,7 +200,12 @@ export function MemberPreview({
         </div>
       )}
 
-      <GameButton full className="mt-4 !min-h-14 !text-base" disabled={isCheckingIn} onClick={onConfirm}>
+      <GameButton
+        full
+        className="mt-4 !min-h-14 !text-base"
+        disabled={isCheckingIn}
+        onClick={onConfirm}
+      >
         {isCheckingIn ? (
           <Loader2 className="h-5 w-5 animate-spin" />
         ) : (

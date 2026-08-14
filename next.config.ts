@@ -6,6 +6,14 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
+  // `@vladmandic/human` expone un build Node que requiere `tfjs-node` y su
+  // exportación condicional gana durante el bundle SSR de Client Components.
+  // Esta app solo usa Human en el navegador, así que fijamos su build ESM web.
+  turbopack: {
+    resolveAlias: {
+      "@vladmandic/human": "./node_modules/@vladmandic/human/dist/human.esm.js",
+    },
+  },
   experimental: {
     // Vercel restaura .next/cache entre builds; Turbopack reutiliza el grafo
     // compilado y reduce de forma importante los builds consecutivos.

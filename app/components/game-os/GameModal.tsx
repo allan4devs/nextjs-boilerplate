@@ -37,16 +37,20 @@ export function GameModal({
 
   /* Abrir */
   useEffect(() => {
+    let frame = 0;
+    let visibleFrame = 0;
     if (open) {
-      setRendered(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setVisible(true));
+      frame = requestAnimationFrame(() => {
+        setRendered(true);
+        visibleFrame = requestAnimationFrame(() => setVisible(true));
       });
     } else {
-      setVisible(false);
+      frame = requestAnimationFrame(() => setVisible(false));
       closeTimerRef.current = setTimeout(() => setRendered(false), 260);
     }
     return () => {
+      cancelAnimationFrame(frame);
+      cancelAnimationFrame(visibleFrame);
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     };
   }, [open]);

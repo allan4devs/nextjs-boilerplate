@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Dumbbell, Loader2, LogIn, LogOut, Timer, X } from "lucide-react";
+import { Check, Loader2, LogIn, LogOut, Timer, X } from "lucide-react";
 import { GameButton, GameModal } from "../GameOS";
 import { FREE_WORKOUT } from "./constants";
 import type { MemberOs } from "./useMemberOs";
@@ -57,8 +57,12 @@ function LiveTime({ checkedInAt, initialMinutes }: { checkedInAt: string; initia
 }
 
 export default function GymSessionModal({ os }: { os: MemberOs }) {
+  if (os.osModal?.kind !== "gym-session") return null;
+  return <OpenGymSessionModal os={os} />;
+}
+
+function OpenGymSessionModal({ os }: { os: MemberOs }) {
   const {
-    osModal,
     closeOsModal,
     activeVisit,
     registerCheckin,
@@ -71,19 +75,9 @@ export default function GymSessionModal({ os }: { os: MemberOs }) {
     unlocked,
   } = os;
 
-  const open = osModal?.kind === "gym-session";
   const [wantsWorkout, setWantsWorkout] = useState(false);
   const [workoutType, setWorkoutType] = useState<(typeof WORKOUT_TYPES)[number] | "">("");
   const [finishedMinutes, setFinishedMinutes] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setWantsWorkout(false);
-    setWorkoutType("");
-    setFinishedMinutes(null);
-  }, [open]);
-
-  if (!open) return null;
 
   const saveAndCheckout = async () => {
     if (!unlocked || !activeVisit) return;

@@ -4,6 +4,7 @@
  * plantillas) y los route handlers (que comparan del lado del servidor). Una
  * sola implementación evita que ambos lados discrepen sobre quién es quién.
  */
+import { FACE_MATCH_LIMIT } from "./config";
 
 export type FaceDescriptor = number[];
 
@@ -124,29 +125,56 @@ export function decodeDescriptor(encoded: string, dim?: number): FaceDescriptor 
   return normalizeDescriptor(vector);
 }
 
+/** Plantilla ya decodificada, lista para comparar sin volver a parsear base64. */
+export type PreparedFaceTemplate = {
+  normalizedName: string;
+  memberName: string;
+  vector: FaceDescriptor;
+};
+
+/**
+ * Decodifica el paquete una sola vez. Recepción escanea ~2 veces por segundo
+ * contra el padrón entero: decodificar en cada frame es el trabajo repetido más
+ * caro del mostrador, y el resultado es siempre el mismo hasta que cambia el
+ * paquete. Las plantillas ilegibles se descartan acá y no en el bucle.
+ */
+export function prepareFaceTemplates(
+  templates: readonly FaceTemplateEntry[],
+): PreparedFaceTemplate[] {
+  return templates.flatMap((template) => {
+    const vector = decodeDescriptor(template.encoded, template.dim);
+    if (!vector) return [];
+    return [
+      {
+        normalizedName: template.normalizedName,
+        memberName: template.memberName || template.normalizedName,
+        vector,
+      },
+    ];
+  });
+}
+
 /**
  * Rankea socios contra un descriptor. Cada socio puede tener varias plantillas
  * (ángulos y días distintos): vale la mejor de las suyas, no el promedio, para
  * que una muestra vieja o mala no hunda un reconocimiento correcto.
  */
-export function rankFaceMatches(
-  templates: readonly FaceTemplateEntry[],
+export function rankPreparedFaceMatches(
+  prepared: readonly PreparedFaceTemplate[],
   descriptor: FaceDescriptor,
   options: { minSimilarity: number; limit?: number },
 ): FaceMatch[] {
   const best = new Map<string, FaceMatch>();
 
-  for (const template of templates) {
-    if (template.dim !== descriptor.length) continue;
-    const candidate = decodeDescriptor(template.encoded, template.dim);
-    if (!candidate) continue;
+  for (const template of prepared) {
+    if (template.vector.length !== descriptor.length) continue;
 
-    const similarity = cosineSimilarity(descriptor, candidate);
+    const similarity = cosineSimilarity(descriptor, template.vector);
     const current = best.get(template.normalizedName);
     if (!current) {
       best.set(template.normalizedName, {
         normalizedName: template.normalizedName,
-        memberName: template.memberName || template.normalizedName,
+        memberName: template.memberName,
         similarity,
         samples: 1,
       });
@@ -159,7 +187,19 @@ export function rankFaceMatches(
   return [...best.values()]
     .filter((match) => match.similarity >= options.minSimilarity)
     .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, options.limit ?? 5);
+    .slice(0, options.limit ?? FACE_MATCH_LIMIT);
+}
+
+/**
+ * Atajo para quien compara una sola vez (el servidor, que decodifica y olvida).
+ * El bucle de recepción usa `prepareFaceTemplates` + `rankPreparedFaceMatches`.
+ */
+export function rankFaceMatches(
+  templates: readonly FaceTemplateEntry[],
+  descriptor: FaceDescriptor,
+  options: { minSimilarity: number; limit?: number },
+): FaceMatch[] {
+  return rankPreparedFaceMatches(prepareFaceTemplates(templates), descriptor, options);
 }
 
 /** Diferencia entre el mejor candidato y el siguiente: mide qué tan sola quedó la primera opción. */

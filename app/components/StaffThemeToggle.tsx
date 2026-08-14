@@ -17,9 +17,10 @@ export default function StaffThemeToggle() {
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     const initial: Theme = saved === "light" ? "light" : "dark";
-    setTheme(initial);
     applyTheme(initial);
+    const frame = window.requestAnimationFrame(() => setTheme(initial));
     return () => {
+      window.cancelAnimationFrame(frame);
       document.documentElement.classList.remove("xg-staff-light");
       document.documentElement.style.colorScheme = "dark";
     };

@@ -4,7 +4,7 @@
  * se borran por separado y no deberían viajar en cada consulta de perfil.
  */
 import type { Db } from "mongodb";
-import { FACE_TEMPLATES_COLLECTION } from "@/lib/xtreme/shared";
+import { FACE_TEMPLATES_COLLECTION } from "@/lib/xtreme/shared/config";
 import { FACE_ENGINE_ID, FACE_TEMPLATES_PER_MEMBER } from "./config";
 import {
   encodeDescriptor,
@@ -96,21 +96,20 @@ export async function saveFaceTemplate(
   });
 
   // Tope por socio: se conservan las más recientes, que reflejan cómo se ve hoy.
-  const stale = await collection
+  // Se traen los ids en una sola consulta y de ahí salen tanto las sobrantes
+  // como el conteo final, en vez de recorrer la colección dos veces.
+  const existing = await collection
     .find({ normalizedName: input.normalizedName, engine: FACE_ENGINE_ID })
     .sort({ capturedAt: -1 })
-    .skip(FACE_TEMPLATES_PER_MEMBER)
     .project<{ id: string }>({ _id: 0, id: 1 })
     .toArray();
+
+  const stale = existing.slice(FACE_TEMPLATES_PER_MEMBER);
   if (stale.length) {
     await collection.deleteMany({ id: { $in: stale.map((doc) => doc.id) } });
   }
 
-  const samples = await collection.countDocuments({
-    normalizedName: input.normalizedName,
-    engine: FACE_ENGINE_ID,
-  });
-  return { samples };
+  return { samples: Math.min(existing.length, FACE_TEMPLATES_PER_MEMBER) };
 }
 
 export async function removeFaceTemplates(db: Db, normalizedName: string): Promise<number> {
@@ -129,12 +128,19 @@ export async function countFaceTemplates(
     .countDocuments({ normalizedName, engine: FACE_ENGINE_ID });
 }
 
+/** Socios con rostro y muestras totales, en una sola pasada por la colección. */
 export async function faceEnrollmentSummary(
   db: Db,
 ): Promise<{ members: number; samples: number }> {
-  const collection = db.collection<FaceTemplateDoc>(FACE_TEMPLATES_COLLECTION);
-  const samples = await collection.countDocuments({ engine: FACE_ENGINE_ID });
-  const members = (await collection.distinct("normalizedName", { engine: FACE_ENGINE_ID }))
-    .length;
-  return { members, samples };
+  const [summary] = await db
+    .collection<FaceTemplateDoc>(FACE_TEMPLATES_COLLECTION)
+    .aggregate<{ members: number; samples: number }>([
+      { $match: { engine: FACE_ENGINE_ID } },
+      { $group: { _id: "$normalizedName", samples: { $sum: 1 } } },
+      { $group: { _id: null, members: { $sum: 1 }, samples: { $sum: "$samples" } } },
+      { $project: { _id: 0, members: 1, samples: 1 } },
+    ])
+    .toArray();
+
+  return summary ?? { members: 0, samples: 0 };
 }

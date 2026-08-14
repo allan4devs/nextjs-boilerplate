@@ -66,19 +66,12 @@ export function TrainerTodayClasses({ os }: { os: TrainerOs }) {
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (os.todayClasses.some((classItem) => classItem.id === selectedClassId)) return;
-    const liveOrNext =
-      os.todayClasses.find(
-        (classItem) =>
-          classItem.status === "scheduled" &&
-          new Date(classItem.endAt).getTime() > Date.now(),
-      ) ?? os.todayClasses[0];
-    setSelectedClassId(liveOrNext?.id ?? "");
-  }, [os.todayClasses, selectedClassId]);
-
   const selected =
     os.todayClasses.find((classItem) => classItem.id === selectedClassId) ??
+    os.todayClasses.find(
+      (classItem) =>
+        classItem.status === "scheduled" && new Date(classItem.endAt).getTime() > now,
+    ) ??
     os.todayClasses[0] ??
     null;
   const totalAttendees = useMemo(

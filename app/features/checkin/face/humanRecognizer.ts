@@ -10,7 +10,9 @@
  */
 import type { Human } from "@vladmandic/human";
 import {
+  FACE_IDEAL_COVERAGE,
   FACE_MAX_ANGLE,
+  FACE_MAX_COVERAGE,
   FACE_MIN_COVERAGE,
   FACE_MIN_DETECTION_SCORE,
   FACE_MIN_LIVE_SCORE,
@@ -103,7 +105,7 @@ function scoreQuality(input: {
   realScore: number;
   liveScore: number;
 }) {
-  const coverageScore = Math.min(1, input.coverage / 0.34);
+  const coverageScore = Math.min(1, input.coverage / FACE_IDEAL_COVERAGE);
   const value =
     0.4 * input.detectionScore +
     0.3 * coverageScore +
@@ -119,11 +121,14 @@ function scoreQuality(input: {
  */
 export async function scanFaceFrame(video: HTMLVideoElement): Promise<FaceScan> {
   if (busy) return { kind: "none" };
-  const human = engine ?? (await loadFaceEngine());
-  if (!video.videoWidth || !video.videoHeight) return { kind: "none" };
-
+  // La bandera se toma antes de cualquier await: entre el chequeo y el primer
+  // punto de suspensión no puede colarse otra llamada (el bucle de escaneo y el
+  // de enrolamiento se pisan justo ahí, al arrancar una captura).
   busy = true;
   try {
+    const human = engine ?? (await loadFaceEngine());
+    if (!video.videoWidth || !video.videoHeight) return { kind: "none" };
+
     const result = await human.detect(video);
     const face = result.face?.[0];
     if (!face) return { kind: "none" };
@@ -141,7 +146,7 @@ export async function scanFaceFrame(video: HTMLVideoElement): Promise<FaceScan> 
 
     if (detectionScore < FACE_MIN_DETECTION_SCORE) return reject("Rostro poco claro · mejorá la luz");
     if (coverage < FACE_MIN_COVERAGE) return reject("Acercate un poco más a la cámara");
-    if (coverage > 0.9) return reject("Alejate un poco de la cámara");
+    if (coverage > FACE_MAX_COVERAGE) return reject("Alejate un poco de la cámara");
     if (
       angle &&
       (Math.abs(angle.yaw) > FACE_MAX_ANGLE || Math.abs(angle.pitch) > FACE_MAX_ANGLE)

@@ -40,15 +40,37 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
   } = os;
   const plan = currentMember.trainingPlan;
   const active = currentMember.activePlanWorkout;
-  const [draft, setDraft] = useState<WorkoutExerciseDetail[]>([]);
+  const activeDraftKey = active ? `${active.id}:${JSON.stringify(active.exercises)}` : "";
+  const activeExercises = active?.exercises ?? [];
+  const [draftState, setDraftState] = useState<{
+    sourceKey: string;
+    value: WorkoutExerciseDetail[];
+  }>(() => ({ sourceKey: activeDraftKey, value: activeExercises }));
+  const draft = draftState.sourceKey === activeDraftKey ? draftState.value : activeExercises;
+  const setDraft = (
+    update:
+      | WorkoutExerciseDetail[]
+      | ((current: WorkoutExerciseDetail[]) => WorkoutExerciseDetail[]),
+  ) => {
+    setDraftState((current) => {
+      const currentValue = current.sourceKey === activeDraftKey ? current.value : activeExercises;
+      return {
+        sourceKey: activeDraftKey,
+        value: typeof update === "function" ? update(currentValue) : update,
+      };
+    });
+  };
   const [selectedMachine, setSelectedMachine] = useState(MACHINE_GUIDE[0]?.id ?? "");
-  const [now, setNow] = useState(Date.now());
-  const [exerciseTimer, setExerciseTimer] = useState<{ index: number; startedAt: number } | null>(null);
-
-  useEffect(() => {
-    setDraft(active?.exercises ?? []);
-    setExerciseTimer(null);
-  }, [active?.id, active?.exercises]);
+  const [now, setNow] = useState(() => Date.now());
+  const activeId = active?.id ?? null;
+  const [timerState, setTimerState] = useState<{
+    activeId: string | null;
+    value: { index: number; startedAt: number } | null;
+  }>(() => ({ activeId, value: null }));
+  const exerciseTimer = timerState.activeId === activeId ? timerState.value : null;
+  const setExerciseTimer = (value: { index: number; startedAt: number } | null) => {
+    setTimerState({ activeId, value });
+  };
 
   useEffect(() => {
     if (!active) return;
@@ -95,7 +117,7 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
 
   function stopExerciseTimer(entries = draft) {
     if (!exerciseTimer) return entries;
-    const elapsed = Math.max(1, Math.round((Date.now() - exerciseTimer.startedAt) / 1000));
+    const elapsed = Math.max(1, Math.round((now - exerciseTimer.startedAt) / 1000));
     const next = entries.map((entry, index) =>
       index === exerciseTimer.index ? { ...entry, seconds: entry.seconds + elapsed } : entry,
     );

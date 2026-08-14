@@ -109,35 +109,35 @@ export default function PwaRuntime() {
 
   // Decidir si mostrar el banner solo en /app y /recepcion.
   useEffect(() => {
-    if (!onOsSurface) {
-      setShowInstall(false);
-      return;
-    }
+    const timer = window.setTimeout(() => {
+      if (!onOsSurface) {
+        setShowInstall(false);
+        return;
+      }
 
-    const standalone = window.matchMedia("(display-mode: standalone)").matches;
-    if (standalone || localStorage.getItem(dismissKeyFor(pathname)) === "1") {
-      setShowInstall(false);
-      return;
-    }
+      const standalone = window.matchMedia("(display-mode: standalone)").matches;
+      if (standalone || localStorage.getItem(dismissKeyFor(pathname)) === "1") {
+        setShowInstall(false);
+        return;
+      }
 
-    const visitsKey = visitsKeyFor(pathname);
-    const sessionKey = sessionKeyFor(pathname);
-    const visitedThisSession = sessionStorage.getItem(sessionKey) === "1";
-    const visits = Number(localStorage.getItem(visitsKey) || "0") + (visitedThisSession ? 0 : 1);
-    localStorage.setItem(visitsKey, String(visits));
-    sessionStorage.setItem(sessionKey, "1");
+      const visitsKey = visitsKeyFor(pathname);
+      const sessionKey = sessionKeyFor(pathname);
+      const visitedThisSession = sessionStorage.getItem(sessionKey) === "1";
+      const visits = Number(localStorage.getItem(visitsKey) || "0") + (visitedThisSession ? 0 : 1);
+      localStorage.setItem(visitsKey, String(visits));
+      sessionStorage.setItem(sessionKey, "1");
 
-    if (visits < 2) {
-      setShowInstall(false);
-      return;
-    }
+      if (visits < 2) {
+        setShowInstall(false);
+        return;
+      }
 
-    // Android: solo si ya hay prompt; iOS: instrucciones manuales.
-    if (isIos || promptRef.current || installPrompt) {
-      setShowInstall(true);
-    } else {
-      setShowInstall(false);
-    }
+      // Android: solo si ya hay prompt; iOS: instrucciones manuales.
+      setShowInstall(Boolean(isIos || promptRef.current || installPrompt));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [onOsSurface, pathname, isIos, installPrompt]);
 
   if (!onOsSurface || !showInstall) return null;
