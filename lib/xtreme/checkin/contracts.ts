@@ -43,6 +43,12 @@ export type MemberHit = {
   photoUrl?: string;
   hasPin?: boolean;
   hasFace?: boolean;
+  /** Plantilla del reconocedor real (no solo foto o dHash heredado). */
+  faceEnrolled?: boolean;
+  /** Sistema anterior: distancia Hamming del dHash (más bajo = más parecido). */
   faceDistance?: number;
+  /** Reconocedor real: similitud coseno 0..1 (más alto = más parecido). */
+  faceSimilarity?: number;
+  faceSamples?: number;
   levelName?: string;
 };

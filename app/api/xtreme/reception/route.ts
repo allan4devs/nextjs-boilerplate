@@ -6,7 +6,11 @@ import { recordEvent } from "@/lib/xtreme/events";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { createRegistrationToken, hashRegistrationToken } from "@/lib/xtreme/registration-token";
 import { recordOpsAlert } from "@/lib/xtreme/ops-alerts";
-import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
+import {
+  FACE_HASH_CANDIDATES_LIMIT,
+  FACE_HASH_MAX_DISTANCE,
+  FACE_RECOGNITION_ENABLED,
+} from "@/lib/xtreme/face/config";
 import {
   inviteBaseUrlFromRequest,
   inviteExistingMemberToApp,
@@ -43,10 +47,6 @@ import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { resolveMember } from "@/lib/xtreme/members/resolve-member";
 
 export const dynamic = "force-dynamic";
-
-/** Threshold de Hamming para dHash de 64 bits (hex 16 chars). Más bajo = más estricto. */
-const FACE_MATCH_MAX_DISTANCE = 12;
-const FACE_CANDIDATES_LIMIT = 5;
 
 function unauthorized() {
   return NextResponse.json({ error: "No autorizado." }, { status: 401 });
@@ -162,9 +162,9 @@ export async function GET(req: NextRequest) {
           doc,
           distance: hammingHexDistance(faceHash, String(doc.faceHash || "")),
         }))
-        .filter((row) => row.distance <= FACE_MATCH_MAX_DISTANCE)
+        .filter((row) => row.distance <= FACE_HASH_MAX_DISTANCE)
         .sort((a, b) => a.distance - b.distance)
-        .slice(0, FACE_CANDIDATES_LIMIT);
+        .slice(0, FACE_HASH_CANDIDATES_LIMIT);
 
       return NextResponse.json({
         role,

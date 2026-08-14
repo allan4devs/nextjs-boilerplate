@@ -99,7 +99,9 @@ export function toAdminMember(doc: MemberDoc) {
     coach: doc.coach ?? "",
     notes: doc.notes ?? "",
     photoUrl: doc.photoUrl ?? "",
-    hasFace: Boolean(doc.faceHash || doc.photoUrl),
+    hasFace: Boolean(doc.faceHash || doc.photoUrl || doc.faceEnrolledAt),
+    /** Tiene plantilla del reconocedor real, no solo foto o dHash viejo. */
+    faceEnrolled: Boolean(doc.faceEnrolledAt),
     accessCode: formatAccessCode(memberAccessCode(key)),
     streak: view.streak || computeStreak(workouts),
     weeksStreak: view.weeksStreak,

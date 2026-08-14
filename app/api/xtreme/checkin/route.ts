@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { activateDayPassOnCheckin } from "@/lib/xtreme/entitlements";
-import { FACE_RECOGNITION_ENABLED } from "@/lib/xtreme/face/config";
+import {
+  FACE_HASH_CANDIDATES_LIMIT,
+  FACE_HASH_MAX_DISTANCE,
+  FACE_RECOGNITION_ENABLED,
+} from "@/lib/xtreme/face/config";
 import {
   CHECKINS_COLLECTION,
   MEMBERS_COLLECTION,
@@ -29,10 +33,6 @@ import {
 } from "@/lib/xtreme/members/resolve-member";
 
 export const dynamic = "force-dynamic";
-
-/** Threshold Hamming dHash 64-bit (hex 16). Más bajo = más estricto. */
-const FACE_MATCH_MAX_DISTANCE = 12;
-const FACE_CANDIDATES_LIMIT = 5;
 
 function isValidFaceHash(value: string) {
   return /^[0-9a-f]{16}$/i.test(value);
@@ -120,9 +120,9 @@ export async function GET(req: NextRequest) {
           doc,
           distance: hammingHexDistance(faceHash, String(doc.faceHash || "")),
         }))
-        .filter((row) => row.distance <= FACE_MATCH_MAX_DISTANCE)
+        .filter((row) => row.distance <= FACE_HASH_MAX_DISTANCE)
         .sort((a, b) => a.distance - b.distance)
-        .slice(0, FACE_CANDIDATES_LIMIT);
+        .slice(0, FACE_HASH_CANDIDATES_LIMIT);
 
       const matches = await Promise.all(
         ranked.map((row) => withKioskFlag(db, row.doc, { faceDistance: row.distance }, staff)),

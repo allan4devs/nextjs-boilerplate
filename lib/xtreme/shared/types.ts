@@ -127,7 +127,11 @@ export type MemberDoc = {
   coach?: string;
   notes?: string;
   photoUrl?: string;
+  /** Sistema anterior: dHash perceptual. Se conserva como fallback de los enrolados viejos. */
   faceHash?: string;
+  /** Reconocedor real: las plantillas viven en FACE_TEMPLATES_COLLECTION. */
+  faceEnrolledAt?: Date;
+  faceEngine?: string;
   workouts?: WorkoutEntry[];
   membership?: Membership;
   bodyMetrics?: BodyMetric[];

@@ -85,6 +85,9 @@ async function ensureIndexes(db: Db) {
     db.collection("xtreme_gym_job_runs").createIndex({ job: 1, startedAt: -1 }),
     db.collection("xtreme_gym_push_subscriptions").createIndex({ endpoint: 1 }, { unique: true }),
     db.collection("xtreme_gym_push_subscriptions").createIndex({ memberKey: 1 }),
+    db
+      .collection("xtreme_gym_habit_logs")
+      .createIndex({ memberKey: 1, date: 1 }, { unique: true }),
     db.collection("xtreme_gym_referrals").createIndex({ referred: 1 }, { unique: true }),
     db.collection("xtreme_gym_referrals").createIndex({ referrer: 1, createdAt: -1 }),
     db.collection("xtreme_gym_buddy_requests").createIndex({ from: 1, to: 1 }, { unique: true }),

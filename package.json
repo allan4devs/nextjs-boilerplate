@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/sync-face-models.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/sync-face-models.mjs",
     "build": "next build",
+    "face:models": "node scripts/sync-face-models.mjs",
     "start": "next start",
     "lint": "eslint",
     "import:estado": "powershell -ExecutionPolicy Bypass -File scripts/sync-estado-members.ps1",
@@ -13,6 +16,7 @@
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
+    "@vladmandic/human": "^3.3.6",
     "@zxing/library": "^0.23.0",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.23.0",

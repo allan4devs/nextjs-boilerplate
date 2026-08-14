@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Bolt,
-  Camera,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -41,9 +40,10 @@ import {
 import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import ReceptionDutiesPanel from "../../components/reception/ReceptionDutiesPanel";
 import ReceptionBillingPanel from "../../components/reception/ReceptionBillingPanel";
+import FaceRecognitionPanel from "../../components/reception/FaceRecognitionPanel";
+import { Avatar, MemberPreview } from "../../components/reception/MemberCards";
 import StaffThemeToggle from "../../components/StaffThemeToggle";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
-import { computeFaceHash } from "@/app/features/checkin/face/computeFaceHash";
 import { useUserCamera } from "@/app/features/checkin/hooks/useUserCamera";
 import { memberLookupToSearchParams } from "@/app/lib/memberLookup";
 import type { GymStatus, MemberHit } from "@/lib/xtreme/checkin/contracts";
@@ -70,12 +70,6 @@ type ActiveVisit = {
 };
 
 type Tab = "empty" | "inside" | "cedula" | "face" | "register" | "invite" | "chat" | "billing";
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "?";
-  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
-}
 
 function formatTime(value: string | Date) {
   try {
@@ -122,7 +116,6 @@ export default function RecepcionPage() {
   const [member, setMember] = useState<MemberHit | null>(null);
   const [billingMember, setBillingMember] = useState<MemberHit | null>(null);
   const [searchMatches, setSearchMatches] = useState<MemberHit[]>([]);
-  const [faceMatches, setFaceMatches] = useState<MemberHit[]>([]);
   const [isLooking, setIsLooking] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [error, setError] = useState("");
@@ -141,7 +134,6 @@ export default function RecepcionPage() {
   const [regLastPaidAt, setRegLastPaidAt] = useState("");
   const [regNextBillingDate, setRegNextBillingDate] = useState("");
   const [regPhoto, setRegPhoto] = useState("");
-  const [regFaceHash, setRegFaceHash] = useState("");
   const [regCheckIn, setRegCheckIn] = useState(true);
   const [editingMemberKey, setEditingMemberKey] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
@@ -150,12 +142,12 @@ export default function RecepcionPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
 
-  // Camara
+  // Cámara del alta en mostrador. El ingreso por rostro maneja la suya dentro
+  // de FaceRecognitionPanel, que la enciende y apaga con su propio ciclo de vida.
   const {
     videoRef,
     cameraOn,
     cameraError,
-    reportCameraError,
     startCamera,
     stopCamera,
   } = useUserCamera({
@@ -163,8 +155,6 @@ export default function RecepcionPage() {
     idealHeight: 720,
     permissionErrorMessage: "No se pudo abrir la cámara. Revisá permisos del navegador.",
   });
-  const [isScanning, setIsScanning] = useState(false);
-  const [isEnrolling, setIsEnrolling] = useState(false);
   const nameLookupTimer = useRef<number | null>(null);
 
   const headers = useCallback(
@@ -311,15 +301,11 @@ export default function RecepcionPage() {
     };
   }, [unlocked, tab]);
 
+  // Fuera del alta en mostrador la cámara de la página se apaga: el panel de
+  // rostro abre la suya y dos streams simultáneos traban la webcam.
   useEffect(() => {
-    if (tab === "face" && unlocked) {
-      void startCamera("user");
-      void loadPanel(true);
-    } else {
-      stopCamera();
-    }
-    return () => stopCamera();
-  }, [tab, unlocked, startCamera, stopCamera, loadPanel]);
+    if (tab !== "register") stopCamera();
+  }, [tab, stopCamera]);
 
   useEffect(() => {
     if (!flash) return;
@@ -434,7 +420,6 @@ export default function RecepcionPage() {
       });
       setQuery("");
       setMember(null);
-      setFaceMatches([]);
       void loadPanel(tab === "face");
     } catch {
       setError("Error de conexion.");
@@ -486,106 +471,6 @@ export default function RecepcionPage() {
     }
   }
 
-  async function scanFace() {
-    const video = videoRef.current;
-    if (!video || !cameraOn) {
-      reportCameraError("Active la camara primero.");
-      return;
-    }
-    setIsScanning(true);
-    setError("");
-    setFaceMatches([]);
-    try {
-      const faceHash = await computeFaceHash(video);
-      if (!faceHash) {
-        setError("No se pudo leer el rostro. Centra la cara y reintenta.");
-        return;
-      }
-      const res = await fetch(`/api/xtreme/reception?faceHash=${faceHash}`, {
-        cache: "no-store",
-        headers: headers(),
-      });
-      const json = (await res.json()) as {
-        matches?: MemberHit[];
-        bestMatch?: MemberHit | null;
-        status?: GymStatus;
-        recent?: RecentCheckin[];
-        error?: string;
-      };
-      if (!res.ok) {
-        setError(json.error || "No se pudo buscar rostro.");
-        return;
-      }
-      if (json.status) setStatus(json.status);
-      if (json.recent) setRecent(json.recent);
-      const matches = json.matches || [];
-      setFaceMatches(matches);
-      if (json.bestMatch) {
-        setMember(json.bestMatch);
-        // Auto-ingreso si el match es muy claro (distancia baja)
-        if ((json.bestMatch.faceDistance ?? 99) <= 6 && matches.length === 1) {
-          await confirmCheckin(json.bestMatch, "face");
-          return;
-        }
-      } else {
-        setMember(null);
-        setError("Sin coincidencias. Use cedula o registre al socio.");
-      }
-    } catch {
-      setError("Error al escanear rostro.");
-    } finally {
-      setIsScanning(false);
-    }
-  }
-
-  async function enrollCurrentFace() {
-    if (!member) {
-      setError("Buscá al socio primero (cédula) para enrolar el rostro.");
-      return;
-    }
-    const video = videoRef.current;
-    if (!video || !cameraOn) {
-      reportCameraError("Active la camara primero.");
-      return;
-    }
-    setIsEnrolling(true);
-    setError("");
-    try {
-      const faceHash = await computeFaceHash(video);
-      const photoUrl = await capturePhotoDataUrl(video);
-      if (!faceHash) {
-        setError("No se pudo capturar el rostro.");
-        return;
-      }
-      const res = await fetch("/api/xtreme/reception", {
-        method: "POST",
-        headers: headers(true),
-        body: JSON.stringify({
-          action: "enroll_face",
-          memberName: member.memberName,
-          faceHash,
-          photoUrl,
-        }),
-      });
-      const json = (await res.json()) as { ok?: boolean; member?: MemberHit; error?: string };
-      if (!res.ok) {
-        setError(json.error || "No se pudo enrolar.");
-        return;
-      }
-      if (json.member) setMember(json.member);
-      setFlash({
-        type: "ok",
-        title: "Rostro guardado",
-        subtitle: `${member.memberName} ya puede ingresar por cara.`,
-      });
-      void loadPanel(true);
-    } catch {
-      setError("Error de conexion al enrolar.");
-    } finally {
-      setIsEnrolling(false);
-    }
-  }
-
   async function captureForRegister() {
     const video = videoRef.current;
     if (!video) {
@@ -597,10 +482,9 @@ export default function RecepcionPage() {
     await new Promise((r) => setTimeout(r, 200));
     const v = videoRef.current;
     if (!v) return;
-    // La foto sigue siendo util por si sola; el hash solo se calcula si la feature esta activa.
-    const faceHash = FACE_RECOGNITION_ENABLED ? await computeFaceHash(v) : "";
+    // Solo la foto de la ficha. El rostro para ingresar se enrola en el tab de
+    // reconocimiento facial, que usa el reconocedor real y guarda varias muestras.
     const photoUrl = await capturePhotoDataUrl(v);
-    setRegFaceHash(faceHash);
     setRegPhoto(photoUrl);
   }
 
@@ -623,7 +507,6 @@ export default function RecepcionPage() {
           lastPaidAt: regLastPaidAt || undefined,
           nextBillingDate: regNextBillingDate || undefined,
           photoUrl: regPhoto || undefined,
-          faceHash: regFaceHash || undefined,
           checkInNow: editingMemberKey ? false : regCheckIn,
         }),
       });
@@ -655,7 +538,6 @@ export default function RecepcionPage() {
       setRegLastPaidAt("");
       setRegNextBillingDate("");
       setRegPhoto("");
-      setRegFaceHash("");
       setEditingMemberKey("");
       setMember(null);
       void loadPanel(true);
@@ -984,7 +866,6 @@ export default function RecepcionPage() {
                       setRegLastPaidAt(selected.lastPaidAt ?? "");
                       setRegNextBillingDate(selected.nextBillingDate ?? "");
                       setRegPhoto(selected.photoUrl ?? "");
-                      setRegFaceHash("");
                       setRegCheckIn(false);
                       setSearchMatches([]);
                       setError("");
@@ -1006,154 +887,18 @@ export default function RecepcionPage() {
               </div>
             )}
 
-            {tab === "face" && (
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div>
-                  <div className="text-center lg:text-left">
-                    <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d8ff3e]/80">
-                      Reconocimiento facial
-                    </p>
-                    <h2 className="mt-1 text-2xl font-black uppercase tracking-tight">
-                      Apunte la camara al socio
-                    </h2>
-                    <p className="mt-2 text-sm font-bold text-white/45">
-                      Match automatico si el rostro esta enrolado. Si no, use cedula (mas rapido) o enrole la cara.
-                    </p>
-                  </div>
-
-                  <div className="relative mt-4 aspect-[4/3] overflow-hidden border border-white/15 bg-black">
-                    <video
-                      ref={videoRef}
-                      playsInline
-                      muted
-                      className="h-full w-full scale-x-[-1] object-cover"
-                    />
-                    {!cameraOn && (
-                      <div className="absolute inset-0 grid place-items-center bg-black/70 p-6 text-center">
-                        <div>
-                          <Camera className="mx-auto h-10 w-10 text-white/40" />
-                          <p className="mt-3 text-sm font-bold text-white/50">
-                            {cameraError || "Camara apagada"}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => void startCamera()}
-                            className="mt-4 bg-[#d8ff3e] px-4 py-2 text-xs font-black uppercase text-black"
-                          >
-                            Activar camara
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    <div className="pointer-events-none absolute inset-8 rounded-full border-2 border-[#d8ff3e]/40" />
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void scanFace()}
-                      disabled={isScanning || !cameraOn}
-                      className="inline-flex items-center justify-center gap-2 bg-[#d8ff3e] py-3.5 text-sm font-black uppercase text-black disabled:opacity-50"
-                    >
-                      {isScanning ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <ScanFace className="h-4 w-4" />
-                      )}
-                      Escanear
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void enrollCurrentFace()}
-                      disabled={isEnrolling || !cameraOn || !member}
-                      className="inline-flex items-center justify-center gap-2 border border-white/15 py-3.5 text-sm font-black uppercase text-white/80 hover:border-white/30 disabled:opacity-40"
-                    >
-                      {isEnrolling ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Camera className="h-4 w-4" />
-                      )}
-                      Enrolar
-                    </button>
-                  </div>
-                  {error && tab === "face" && (
-                    <p className="mt-3 flex items-center gap-2 text-sm font-bold text-red-400">
-                      <XCircle className="h-4 w-4 shrink-0" /> {error}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <MemberPreview
-                    member={member}
-                    error=""
-                    isCheckingIn={isCheckingIn}
-                    onConfirm={() => void confirmCheckin(member || undefined, "face")}
-                  />
-
-                  {faceMatches.length > 1 && (
-                    <div className="mt-4">
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
-                        Candidatos
-                      </p>
-                      <div className="mt-2 space-y-2">
-                        {faceMatches.map((m) => (
-                          <button
-                            key={m.normalizedName}
-                            type="button"
-                            onClick={() => setMember(m)}
-                            className={`flex w-full items-center gap-3 border px-3 py-2 text-left transition ${
-                              member?.normalizedName === m.normalizedName
-                                ? "border-[#d8ff3e]/60 bg-[#d8ff3e]/10"
-                                : "border-white/10 hover:border-white/25"
-                            }`}
-                          >
-                            <Avatar name={m.memberName} photoUrl={m.photoUrl} />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-black uppercase">{m.memberName}</p>
-                              <p className="text-xs font-bold text-white/40">
-                                Dist. {m.faceDistance ?? "-"} · {MEMBERSHIP_STATUS_LABELS[m.membershipStatus]}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-6">
-                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
-                      Galeria con foto ({roster.filter((m) => m.photoUrl || m.hasFace).length})
-                    </p>
-                    <div className="mt-2 grid max-h-72 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
-                      {roster
-                        .filter((m) => m.photoUrl || m.hasFace)
-                        .slice(0, 48)
-                        .map((m) => (
-                          <button
-                            key={m.normalizedName}
-                            type="button"
-                            onClick={() => {
-                              setMember(m);
-                              setError("");
-                            }}
-                            className="border border-white/10 p-1.5 text-center transition hover:border-[#d8ff3e]/50"
-                          >
-                            <Avatar name={m.memberName} photoUrl={m.photoUrl} large />
-                            <p className="mt-1 truncate text-[10px] font-black uppercase text-white/60">
-                              {m.memberName.split(" ")[0]}
-                            </p>
-                          </button>
-                        ))}
-                      {!roster.filter((m) => m.photoUrl || m.hasFace).length && (
-                        <p className="col-span-full py-6 text-center text-sm font-bold text-white/35">
-                          Nadie con foto enrolada aun. Use Enrolar o Registro.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {tab === "face" && FACE_RECOGNITION_ENABLED && (
+              <FaceRecognitionPanel
+                roster={roster}
+                member={member}
+                isCheckingIn={isCheckingIn}
+                onSelectMember={(selected) => {
+                  setMember(selected);
+                  setError("");
+                }}
+                onCheckin={(selected, method) => confirmCheckin(selected, method)}
+                onRosterChanged={() => void loadPanel(true)}
+              />
             )}
 
             {tab === "register" && (
@@ -1296,7 +1041,6 @@ export default function RecepcionPage() {
                       type="button"
                       onClick={() => {
                         setRegPhoto("");
-                        setRegFaceHash("");
                         void startCamera();
                       }}
                       className="border border-white/15 py-2.5 text-xs font-black uppercase text-white/70 hover:border-white/30"
@@ -1311,14 +1055,14 @@ export default function RecepcionPage() {
                       Capturar
                     </button>
                   </div>
-                  {regFaceHash && (
+                  {regPhoto && (
                     <p className="mt-2 text-xs font-bold text-[#d8ff3e]/80">
-                      Rostro listo para match futuro
+                      Foto lista para la ficha del socio
                     </p>
                   )}
                   <p className="mt-4 text-xs font-bold leading-relaxed text-white/35">
-                    Recomendacion: en el dia a dia la cedula es la via mas rapida y confiable.
-                    El rostro sirve cuando el socio ya esta enrolado y no trae documento a mano.
+                    Esta foto es solo para la ficha. Para que la persona pueda entrar por
+                    cara, enrolá el rostro desde “Ingreso por rostro”.
                   </p>
                   </section>
                 </div>
@@ -1619,35 +1363,6 @@ function OccupancyPill({ status }: { status: GymStatus | null }) {
   );
 }
 
-function Avatar({
-  name,
-  photoUrl,
-  large,
-}: {
-  name: string;
-  photoUrl?: string;
-  large?: boolean;
-}) {
-  const size = large ? "h-14 w-14" : "h-10 w-10";
-  if (photoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={photoUrl}
-        alt={name}
-        className={`${size} shrink-0 object-cover ${large ? "" : "rounded-none"}`}
-      />
-    );
-  }
-  return (
-    <span
-      className={`grid ${size} shrink-0 place-items-center bg-[#d8ff3e]/15 text-xs font-black text-[#d8ff3e]`}
-    >
-      {initials(name)}
-    </span>
-  );
-}
-
 function Field({
   label,
   required,
@@ -1665,96 +1380,5 @@ function Field({
       </span>
       <div className="mt-1.5">{children}</div>
     </label>
-  );
-}
-
-function MemberPreview({
-  member,
-  error,
-  isCheckingIn,
-  onConfirm,
-}: {
-  member: MemberHit | null;
-  error: string;
-  isCheckingIn: boolean;
-  onConfirm: () => void;
-}) {
-  if (!member && !error) return null;
-
-  if (!member) {
-    return (
-      <div className="mt-4">
-        <GameCallout tone="red" icon={XCircle}>
-          {error}
-        </GameCallout>
-      </div>
-    );
-  }
-
-  const expired = member.membershipStatus === "expired";
-
-  return (
-    <div className="mt-5 border-[3px] border-[#d8ff3e]/55 bg-black/50 p-4 shadow-[4px_4px_0_rgba(216,255,62,0.2)]">
-      <GameLabel tone="lime" className="mb-3">
-        Socio encontrado · confirmar
-      </GameLabel>
-
-      <section className={`border-[3px] p-4 ${expired ? "border-orange-300/60 bg-orange-400/10" : member.membershipStatus === "warning" ? "border-yellow-300/55 bg-yellow-300/[0.07]" : "border-[#d8ff3e]/55 bg-[#d8ff3e]/[0.07]"}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[.18em] text-white/40">Membresía</p>
-            <p className="mt-1 text-2xl font-black uppercase">{member.plan || "Sin plan"}</p>
-          </div>
-          <GameChip tone={expired ? "red" : member.membershipStatus === "warning" ? "orange" : "lime"}>{MEMBERSHIP_STATUS_LABELS[member.membershipStatus]}</GameChip>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
-          <div><p className="text-[9px] font-black uppercase tracking-wide text-white/35">Tiempo restante</p><p className={`mt-1 text-lg font-black ${expired ? "text-orange-200" : "text-[#d8ff3e]"}`}>{expired ? "Vencida" : `${Math.max(0, member.daysRemaining)} días`}</p></div>
-          <div><p className="text-[9px] font-black uppercase tracking-wide text-white/35">Próximo vencimiento</p><p className="mt-1 text-sm font-black">{member.nextBillingDate || "Sin fecha registrada"}</p></div>
-        </div>
-        {expired && <p className="mt-3 border-t border-orange-300/25 pt-3 text-sm font-black text-orange-200">Membresía vencida · podés registrar el ingreso y gestionar la renovación.</p>}
-      </section>
-
-      <div className="mt-4 flex items-center gap-4">
-        <div className="relative">
-          {member.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={member.photoUrl}
-              alt={member.memberName}
-              className="h-16 w-16 border-[3px] border-[#d8ff3e]/50 object-cover"
-            />
-          ) : (
-            <span className="grid h-16 w-16 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-xl font-black text-black">
-              {initials(member.memberName)}
-            </span>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-black uppercase tracking-tight">{member.memberName}</p>
-          <p className="mt-1 text-xs font-bold text-white/35">
-            {member.cedula ? `Ced. ${member.cedula} · ` : ""}
-            {member.accessCode}
-          </p>
-          {member.phone && <p className="mt-1 text-xs font-bold text-white/35">{member.phone}</p>}
-        </div>
-      </div>
-
-      {error && (
-        <div className="mt-3">
-          <GameCallout tone="red" icon={XCircle}>
-            {error}
-          </GameCallout>
-        </div>
-      )}
-
-      <GameButton full className="mt-4 !min-h-14 !text-base" disabled={isCheckingIn} onClick={onConfirm}>
-        {isCheckingIn ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : (
-          <CheckCircle2 className="h-5 w-5" />
-        )}
-        Confirmar ingreso
-      </GameButton>
-    </div>
   );
 }
