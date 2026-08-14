@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, Check, Download, Loader2, Minus, PackageOpen, Plus, Save, Search, Smartphone, Split, ShoppingCart, Trash2, X } from "lucide-react";
 import { GameChip, GameLabel } from "../GameOS";
@@ -213,7 +214,18 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
             <article key={product.id} className="overflow-hidden border-[3px] border-white/15 bg-black/45">
               <div className="flex min-h-36 gap-4 p-3">
                 <div className="grid h-32 w-24 shrink-0 place-items-center overflow-hidden bg-white/[0.06]">
-                  {product.image ? <img src={product.image} alt={product.name} className="h-full w-full object-cover" /> : <PackageOpen className="h-9 w-9 text-white/20" />}
+                  {product.image ? (
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      width={96}
+                      height={128}
+                      sizes="96px"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <PackageOpen className="h-9 w-9 text-white/20" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1 py-1">
                   <GameChip tone={product.quantity <= 2 ? "orange" : "cyan"}>{CATEGORY_LABEL[product.category]}</GameChip>

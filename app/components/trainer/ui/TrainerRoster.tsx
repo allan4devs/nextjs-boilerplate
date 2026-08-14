@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ChevronRight, Search, UserRound } from "lucide-react";
 import { TRAINER_FILTERS } from "../constants";
 import type { TrainerOs } from "../hooks/useTrainerOs";
@@ -22,7 +23,7 @@ export function TrainerRoster({ os }: { os: TrainerOs }) {
           const signal = memberSignal(member);
           const active = os.selected?.normalizedName === member.normalizedName;
           return <button key={member.normalizedName} onClick={() => os.chooseMember(member.normalizedName)} className={`group flex w-full items-center gap-3 border-b border-white/10 p-3 text-left transition ${active ? "bg-cyan-300 text-black" : "hover:bg-white/[.045]"}`}>
-            <span className={`grid h-11 w-11 shrink-0 place-items-center overflow-hidden border-2 ${active ? "border-black/20 bg-black/10" : "border-white/10 bg-black/35"}`}>{member.photoUrl ? <img src={member.photoUrl} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-5 w-5" />}</span>
+            <span className={`grid h-11 w-11 shrink-0 place-items-center overflow-hidden border-2 ${active ? "border-black/20 bg-black/10" : "border-white/10 bg-black/35"}`}>{member.photoUrl ? <Image unoptimized src={member.photoUrl} alt="" width={44} height={44} sizes="44px" className="h-full w-full object-cover" /> : <UserRound className="h-5 w-5" />}</span>
             <span className="min-w-0 flex-1"><strong className="block truncate text-sm font-black uppercase">{member.memberName}</strong><span className={`mt-1 inline-block px-1.5 py-0.5 text-[8px] font-black uppercase ${active ? "bg-black/15" : signalClass[signal.tone]}`}>{signal.label}</span><small className="mt-1 block truncate font-bold opacity-50">{member.trainingPlan?.title || member.goal || "Sin objetivo"}</small></span>
             <ChevronRight className="h-4 w-4 shrink-0 opacity-40 transition group-hover:translate-x-0.5" />
           </button>;

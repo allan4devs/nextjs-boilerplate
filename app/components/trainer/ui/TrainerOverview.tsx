@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AlertTriangle, CalendarDays, Check, Clock3, Dumbbell, Gauge, Ruler, Target, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { Activity, AlertTriangle, CalendarDays, Check, Clock3, Dumbbell, Gauge, Ruler, Target, Zap } from "lucide-react";
 import { GameLabel } from "@/app/components/GameOS";
 import type { TrainerOs } from "../hooks/useTrainerOs";
 import { daysSince } from "../utils";
@@ -46,4 +46,3 @@ function Insight({ icon: Icon, label, value, hint, tone }: { icon: typeof Activi
 }
 
 function Signal({ icon: Icon, text }: { icon: typeof Activity; text: string }) { return <div className="flex items-start gap-2 border-l-2 border-orange-300/40 bg-black/25 p-2.5"><Icon className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" /><p className="text-sm font-bold text-white/55">{text}</p></div>; }
-

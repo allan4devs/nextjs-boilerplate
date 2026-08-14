@@ -276,28 +276,38 @@ try {
     writeResult = { matched: result.matchedCount, modified: result.modifiedCount };
   }
 
+  const reportChanges = changed.map((change) => {
+    const item = { ...change };
+    delete item._id;
+    delete item.key;
+    delete item.set;
+    delete item.before;
+    delete item.after;
+    return {
+      ...item,
+      before: {
+        plan: change.before.plan,
+        expiresOn: change.before.expiresOn,
+        rate: change.before.rate,
+        sourceStatus: change.before.sourceStatus,
+        excelPlan: change.before.excelPlan,
+      },
+      after: {
+        plan: change.after.plan,
+        expiresOn: change.after.expiresOn,
+        rate: change.after.rate,
+        sourceStatus: change.after.sourceStatus,
+        excelPlan: change.after.excelPlan,
+      },
+      cedulaChanged: change.before.cedula !== change.after.cedula,
+    };
+  });
+
   const report = {
     generatedAt: now.toISOString(),
     summary,
     writeResult,
-    changes: changed.map(({ _id, key, set, before, after, ...item }) => ({
-      ...item,
-      before: {
-        plan: before.plan,
-        expiresOn: before.expiresOn,
-        rate: before.rate,
-        sourceStatus: before.sourceStatus,
-        excelPlan: before.excelPlan,
-      },
-      after: {
-        plan: after.plan,
-        expiresOn: after.expiresOn,
-        rate: after.rate,
-        sourceStatus: after.sourceStatus,
-        excelPlan: after.excelPlan,
-      },
-      cedulaChanged: before.cedula !== after.cedula,
-    })),
+    changes: reportChanges,
     unmatchedExcel,
     ambiguousMongo,
     invalidExcel,

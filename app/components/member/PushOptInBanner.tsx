@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Bell, Flame, Loader2, Sparkles, X } from "lucide-react";
+import { Bell, Loader2, Sparkles, X } from "lucide-react";
 import {
   enablePushOnThisDevice,
   getPushCapability,

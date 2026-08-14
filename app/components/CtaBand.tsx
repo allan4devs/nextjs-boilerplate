@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CreditCard, Zap } from "lucide-react";
+import { CreditCard, Zap } from "lucide-react";
 
 export default function CtaBand({
   eyebrow = "Primer paso",

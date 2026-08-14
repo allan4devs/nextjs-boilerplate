@@ -1,11 +1,9 @@
+// Las iniciales las calcula el helper compartido: el mismo socio tiene que
+// verse igual en la app, en recepción y en el kiosco.
+export { initialsOf } from "@/app/lib/memberName";
+
 export function normalizeName(value: string) {
   return value.trim().replace(/\s+/g, " ");
-}
-
-export function initialsOf(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "?";
-  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
 export function onlyDigits(value: string) {

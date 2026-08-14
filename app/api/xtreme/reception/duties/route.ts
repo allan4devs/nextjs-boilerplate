@@ -83,11 +83,12 @@ export async function GET(req: NextRequest) {
     const duties = await db
       .collection<DutyDoc>(RECEPTION_DUTIES_COLLECTION)
       .find({ active: { $ne: false } })
+      .project<DutyDoc>({ _id: 0 })
       .sort({ kind: 1, order: 1 })
       .toArray();
 
     return NextResponse.json({
-      duties: duties.map(({ _id, completedPeriods = [], ...duty }) => ({
+      duties: duties.map(({ completedPeriods = [], ...duty }) => ({
         ...duty,
         completed:
           duty.kind !== "responsibility" &&

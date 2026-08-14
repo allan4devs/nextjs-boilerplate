@@ -34,6 +34,11 @@ const SAFE_NAME_SCORE = 0.72;
 const UNIQUE_OWNER_SCORE = 0.62;
 
 const clean = (value) => String(value ?? "").normalize("NFKC").trim().replace(/\s+/g, " ");
+const withoutMongoId = (item) => {
+  const copy = { ...item };
+  delete copy._id;
+  return copy;
+};
 const fold = (value) =>
   clean(value)
     .normalize("NFD")
@@ -1583,12 +1588,12 @@ try {
       },
     },
     writeResult,
-    recoveries: recoveries.map(({ _id, ...item }) => item),
+    recoveries: recoveries.map(withoutMongoId),
     formatRepairs: formatRepairs.slice(0, 300),
-    cedulaOnlyFixes: cedulaOnlyFixes.map(({ _id, ...item }) => item),
-    cedulaConflictResolutions: cedulaConflictResolutions.map(({ _id, ...item }) => item),
-    quarantineRealigns: quarantineRealigns.map(({ _id, ...item }) => item),
-    unsafeExistingAssignments: unsafeExistingAssignments.map(({ _id, ...item }) => item),
+    cedulaOnlyFixes: cedulaOnlyFixes.map(withoutMongoId),
+    cedulaConflictResolutions: cedulaConflictResolutions.map(withoutMongoId),
+    quarantineRealigns: quarantineRealigns.map(withoutMongoId),
+    unsafeExistingAssignments: unsafeExistingAssignments.map(withoutMongoId),
     identityMismatches,
     sharedConflicts,
     invalidRows: invalidRows.slice(0, 200),

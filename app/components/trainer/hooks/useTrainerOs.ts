@@ -146,6 +146,9 @@ export function useTrainerOs() {
 
   useEffect(() => {
     if (selected) resetWorkspace(selected);
+    // selectedKey define intencionalmente el límite del borrador. Un refresh de
+    // members no debe descartar cambios locales del entrenador.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetWorkspace, selectedKey]); // selectedKey is the deliberate workspace boundary.
 
   useEffect(() => {
@@ -343,7 +346,7 @@ export function useTrainerOs() {
     selected, selectedSignal, stats,
     query, setQuery, filter, setFilter, filteredMembers, tab, setTab, draft, coachName,
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
-    saving, dirty, validationError, login, logout, refresh: load, chooseMember, updateDraft,
+    saving, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,
     updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise,
     deleteExercise, applyTemplate, resetDraft, save,
     changeAgendaDate, toggleClass, expelAttendee,

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock3, MessageCircle, ShieldCheck, Sparkles, Sun } from "lucide-react";
 import CtaBand from "../../components/CtaBand";
 import PageHero from "../../components/PageHero";

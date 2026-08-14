@@ -26,7 +26,6 @@ import {
   Target,
   Timer,
   Users,
-  X,
   Zap,
 } from "lucide-react";
 import {
@@ -269,6 +268,8 @@ export default function OsModals({ os }: { os: MemberOs }) {
   const membershipDaysRemaining = Math.max(0, currentMember.membership.daysRemaining);
   const membershipProgress = membershipRemainingPct(membershipDaysRemaining, membershipTotalDays);
   const pendingPlanItems = currentMember.trainingPlan?.items.filter((item) => !item.done) ?? [];
+  const firstPendingPlanItemId = pendingPlanItems[0]?.id ?? "";
+  const activePlanWorkoutId = currentMember.activePlanWorkout?.id ?? "";
   const selectedPlanItem = pendingPlanItems.find((item) => item.id === selectedPlanItemId) ?? pendingPlanItems[0];
   const quickWorkoutOpen = osModal?.kind === "quick-train" || osModal?.kind === "training";
   const hasPlanOption = Boolean(currentMember.activePlanWorkout || pendingPlanItems.length);
@@ -283,12 +284,12 @@ export default function OsModals({ os }: { os: MemberOs }) {
   useEffect(() => {
     if (!quickWorkoutOpen) return;
     // Por defecto: marcar tiempo (lo más usado). Plan solo si hay sesión en curso.
-    setQuickMode(currentMember.activePlanWorkout ? "plan" : "time");
+    setQuickMode(activePlanWorkoutId ? "plan" : "time");
     setFreeMinutes(45);
     setFreeActivities([]);
     setCustomActivity("");
-    setSelectedPlanItemId(pendingPlanItems[0]?.id ?? "");
-  }, [currentMember.activePlanWorkout, currentMember.trainingPlan, quickWorkoutOpen]);
+    setSelectedPlanItemId(firstPendingPlanItemId);
+  }, [activePlanWorkoutId, firstPendingPlanItemId, quickWorkoutOpen]);
 
   function addCustomActivity() {
     const value = customActivity.trim().slice(0, 80);

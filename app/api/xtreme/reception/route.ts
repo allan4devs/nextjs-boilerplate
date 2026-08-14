@@ -28,7 +28,6 @@ import {
   type PendingRegistrationDoc,
   cedulaDigits,
   computeOccupancy,
-  findMemberByCedula,
   formatAccessCode,
   hammingHexDistance,
   isValidEmail,

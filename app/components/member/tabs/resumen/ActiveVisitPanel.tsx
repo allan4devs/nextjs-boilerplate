@@ -20,14 +20,16 @@ function durationLabel(totalSeconds: number) {
   return `${hours ? `${hours} h ` : ""}${minutes} min ${seconds} s`;
 }
 
+function elapsedSecondsSince(checkedInAtMs: number) {
+  return Math.max(0, Math.floor((Date.now() - checkedInAtMs) / 1_000));
+}
+
 export default function ActiveVisitPanel({ visit, onCheckout }: Props) {
   const checkedInAtMs = new Date(visit.checkedInAt).getTime();
-  const elapsedSeconds = () =>
-    Math.max(0, Math.floor((Date.now() - checkedInAtMs) / 1_000));
-  const [liveSeconds, setLiveSeconds] = useState(elapsedSeconds);
+  const [liveSeconds, setLiveSeconds] = useState(() => elapsedSecondsSince(checkedInAtMs));
 
   useEffect(() => {
-    const refresh = () => setLiveSeconds(elapsedSeconds());
+    const refresh = () => setLiveSeconds(elapsedSecondsSince(checkedInAtMs));
     refresh();
     const id = window.setInterval(refresh, 1_000);
     return () => clearInterval(id);

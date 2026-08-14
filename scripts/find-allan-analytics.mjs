@@ -77,8 +77,6 @@ const keys = [
   ),
 ];
 const names = members.map((m) => m.memberName).filter(Boolean);
-const emails = members.map((m) => String(m.email || "").toLowerCase()).filter(Boolean);
-
 const sessionQuery = {
   $or: [
     ...(keys.length ? [{ memberId: { $in: keys } }] : []),
@@ -149,30 +147,6 @@ console.log(
     2,
   ),
 );
-
-// Heavy anon sessions on admin/member paths without member (likely you testing)
-const heavyAnon = await db
-  .collection("xtreme_gym_session_logs")
-  .find({
-    memberId: { $in: [null, ""] },
-    $or: [{ memberId: { $exists: false } }],
-    lastSeenAt: { $gte: new Date(Date.now() - 30 * 864e5) },
-    pageViews: { $gte: 5 },
-  })
-  .project({
-    id: 1,
-    anonymousId: 1,
-    source: 1,
-    entryPath: 1,
-    exitPath: 1,
-    pageViews: 1,
-    durationMs: 1,
-    lastSeenAt: 1,
-    paths: 1,
-  })
-  .sort({ pageViews: -1 })
-  .limit(25)
-  .toArray();
 
 // Mongo query fix: memberId missing or null
 const heavyAnon2 = await db

@@ -4,9 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
   Banknote,
   CalendarCheck,
   CheckCircle2,
@@ -33,12 +30,11 @@ import {
   TrendingUp,
   Trophy,
   UserPlus,
-  UserRound,
   Users,
   X,
   Zap,
 } from "lucide-react";
-import { BarTrendChart, CHART_CYAN, CHART_LIME, LineTrendChart } from "../../components/charts";
+import { BarTrendChart, CHART_CYAN, CHART_LIME } from "../../components/charts";
 import {
   GameButton,
   GameCallout,
@@ -49,662 +45,74 @@ import {
 } from "../../components/GameOS";
 import EmailCampaignCenter from "../../components/admin/EmailCampaignCenter";
 import StaffThemeToggle from "../../components/StaffThemeToggle";
-
-type PlanItem = {
-  id: string;
-  day: string;
-  focus: string;
-  exercises: string;
-  targetMinutes: number;
-  done: boolean;
-  doneDate: string | null;
-};
-
-type TrainingPlan = {
-  title: string;
-  objective: string;
-  coachNote: string;
-  startDate: string;
-  endDate: string;
-  weeklySessions: number;
-  items: PlanItem[];
-  doneItems: number;
-  totalItems: number;
-  progressPct: number;
-  updatedAt: string | null;
-};
-
-type AdminMember = {
-  memberName: string;
-  normalizedName: string;
-  goal: string;
-  favoriteTraining: string;
-  phone: string;
-  email: string;
-  emailVerified?: boolean;
-  /** Confirmó/corrigió datos de ficha (profileClaim o correo verificado). */
-  profileClaimed?: boolean;
-  profileClaimedAt?: string | null;
-  hasEmailRecovery?: boolean;
-  /** Tiene PIN en la app. */
-  hasPin?: boolean;
-  /** Recibió al menos un correo de campaña (magic link) con status sent. */
-  campaignInviteSent?: boolean;
-  cedula?: string;
-  coach: string;
-  notes: string;
-  photoUrl: string;
-  accessCode: string;
-  streak: number;
-  totalWorkouts: number;
-  totalMinutes: number;
-  lastWorkoutDate: string | null;
-  plan: string;
-  membershipStatus: "active" | "warning" | "expired";
-  daysRemaining: number;
-  nextBillingDate: string;
-  startedAt: string;
-  latestWeight: number | null;
-  latestWaist: number | null;
-  trainingPlan: TrainingPlan | null;
-  seeded: boolean;
-  // Rich info for personal trainer detailed view
-  bodyMetrics?: Array<{
-    id?: string;
-    date: string;
-    weightKg: number;
-    waistCm: number;
-    note?: string;
-  }>;
-  recentWorkouts?: Array<{
-    id?: string;
-    completedDate: string;
-    trainingName: string;
-    minutes: number;
-    intensity?: string;
-  }>;
-};
-
-type MemberSortKey =
-  | "member"
-  | "contact"
-  | "streak"
-  | "coach"
-  | "membership"
-  | "code"
-  | "plan";
-type SortDirection = "asc" | "desc";
-
-type CheckinRow = {
-  id: string;
-  memberName: string;
-  accessCode: string;
-  method: string;
-  membershipStatus: string;
-  checkedInAt: string;
-  by: string;
-  note: string;
-};
-
-type PaymentRow = {
-  id: string;
-  customerName: string;
-  memberName: string;
-  optionLabel: string;
-  category: string;
-  amountCrc: number;
-  amountUsd: number;
-  method: string;
-  status: string;
-  date: string;
-  note: string;
-  paypalCaptureId: string | null;
-  recordedBy: string;
-};
-
-type Revenue = {
-  today: { count: number; crc: number; usd: number };
-  week: { count: number; crc: number; usd: number };
-  month: { count: number; crc: number; usd: number };
-  all: { count: number; crc: number; usd: number };
-  daily: { date: string; crc: number; count: number }[];
-  byOption: { optionId: string; label: string; count: number; crc: number }[];
-  byMethod: { method: string; count: number; crc: number }[];
-  recent: PaymentRow[];
-};
-
-type AdminData = {
-  role: "admin" | "super";
-  members: AdminMember[];
-  totals: {
-    memberCount: number;
-    seededCount: number;
-    activeToday: number;
-    totalWorkouts: number;
-    totalMinutes: number;
-    avgStreak: number;
-    withPlan: number;
-    expiringSoon: number;
-    expired: number;
-    activeMemberships: number;
-  };
-  today: {
-    date: string;
-    capacity: number;
-    currentPeople: number;
-    occupancyPct: number;
-    level: string;
-    checkinsToday: number;
-    uniqueCheckins: number;
-    reservationsToday: number;
-    classes: { trainingId: string; trainingName: string; capacity: number; reserved: number }[];
-  };
-  checkins: CheckinRow[];
-  checkinSeries: { date: string; checkins: number; unique: number }[];
-  /** Solo super: sesiones de staff abiertas (admin/recepción/ingreso/trainer). */
-  staffSecurity?: {
-    total: number;
-    bySurface: {
-      reception: number;
-      ingreso: number;
-      trainer: number;
-      admin: number;
-    };
-  };
-  /** Socios con el Member OS abierto / sesión PIN reciente. */
-  onlineMembers?: {
-    count: number;
-    windowMinutes: number;
-    members: Array<{
-      memberKey: string;
-      memberName: string;
-      lastSeenAt: string;
-      via: "session" | "usage" | "both";
-      source?: string;
-      path?: string;
-    }>;
-  };
-  revenue?: Revenue;
-  growth?: {
-    windowDays: number;
-    fromDate: string;
-    toDate: string;
-    dayPasses: number;
-    plansSold: number;
-    checkoutsStarted: number;
-    paymentsCompleted: number;
-    firstCheckins: number;
-    membershipsStarted: number;
-    renewalsCompleted: number;
-    referralsRedeemed: number;
-    referralsRewarded: number;
-    appOpens: number;
-    appOpenMembers: number;
-    accountFunnel: {
-      lookups: number;
-      loginSuccess: number;
-      loginFailed: number;
-      loginBlocked: number;
-      registrationsStarted: number;
-      registrationsCompleted: number;
-      registrationFailed: number;
-      freeFirstDays: number;
-      pinsCreated: number;
-    };
-    reservations: { attempted: number; completed: number; failed: number; cancelled: number };
-    monthly: { checkoutsStarted: number; paymentsCompleted: number };
-    recentAccessAttempts: Array<{
-      stage: string;
-      outcome: string;
-      memberId?: string;
-      identityHint?: string;
-      requestFingerprint?: string;
-      occurredAt: string;
-    }>;
-    appOpenSeries: Array<{ date: string; opens: number; unique: number }>;
-    dayPassToVisit: { dayPasses: number; visited: number; ratePct: number };
-    dayPassToPlan: {
-      dayPasses: number;
-      converted1d: number;
-      converted3d: number;
-      converted7d: number;
-      rate7dPct: number;
-    };
-    d7Retention: { newMembers: number; returned: number; ratePct: number };
-    recentEvents: Array<{
-      type: string;
-      memberId?: string;
-      occurredAt: string;
-      properties: Record<string, string | number | boolean | null>;
-    }>;
-  } | null;
-  usage?: {
-    windowDays: number;
-    fromDate: string;
-    toDate: string;
-    sessions: number;
-    memberSessions: number;
-    anonSessions: number;
-    excludedInternalSessions?: number;
-    uniqueMembers: number;
-    avgDurationMs: number;
-    medianDurationMs: number;
-    totalPageViews: number;
-    totalClicks: number;
-    totalActions: number;
-    topPages: Array<{ path: string; views: number; sessions: number }>;
-    topTabs: Array<{ tab: string; views: number }>;
-    topActions: Array<{ action: string; count: number }>;
-    bySource: Array<{ source: string; sessions: number }>;
-    recentSessions: Array<{
-      id: string;
-      source: string;
-      memberName?: string;
-      memberId?: string;
-      startedAt: string;
-      lastSeenAt: string;
-      durationMs: number;
-      pageViews: number;
-      clicks: number;
-      actions: number;
-      entryPath?: string;
-      exitPath?: string;
-      topPaths: Array<{ path: string; count: number }>;
-      topTabs: Array<{ tab: string; count: number }>;
-      topActions: Array<{ action: string; count: number }>;
-      timeline: Array<{
-        at: string;
-        type: string;
-        path?: string;
-        tab?: string;
-        action?: string;
-        label?: string;
-        meta?: Record<string, string | number | boolean | null>;
-      }>;
-    }>;
-  } | null;
-  system?: {
-    lifecycle: { status: string; startedAt: Date; finishedAt?: Date; summary?: unknown } | null;
-    lifecycleStale?: boolean;
-    checkedAt: string;
-  } | null;
-  opsAlerts?: Array<{
-    fingerprint: string;
-    kind: string;
-    severity: "warning" | "critical";
-    title: string;
-    detail: string;
-    count: number;
-    createdAt: string;
-    lastSeenAt: string;
-    context?: Record<string, string | number | boolean | null>;
-  }>;
-};
-
-type PlanDraft = {
-  title: string;
-  objective: string;
-  coachNote: string;
-  startDate: string;
-  endDate: string;
-  weeklySessions: number;
-  items: PlanItem[];
-};
-
-type MemberDraft = {
-  displayName: string;
-  goal: string;
-  favoriteTraining: string;
-  phone: string;
-  email: string;
-  cedula: string;
-  coach: string;
-  notes: string;
-  plan: string;
-  nextBillingDate: string;
-  startedAt: string;
-};
-
-type QuickPlanOptionId = "week" | "fortnight" | "month" | "quarter";
-
-const QUICK_PLAN_OPTIONS: Array<{
-  id: QuickPlanOptionId;
-  label: string;
-  days: number;
-  detail: string;
-}> = [
-  { id: "week", label: "Semanal", days: 7, detail: "Acceso completo por 7 dias" },
-  { id: "fortnight", label: "Quincenal", days: 15, detail: "Acceso completo por 15 dias" },
-  { id: "month", label: "Mensual", days: 30, detail: "Acceso completo por 30 dias" },
-  { id: "quarter", label: "Trimestral", days: 90, detail: "Acceso completo por 90 dias" },
-];
-
-type Tab = "resumen" | "socios" | "accesos" | "ingresos" | "gamificacion" | "correos" | "bitacora";
-
-type GamiBadge = {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  tier: string;
-  source: "catalog" | "manual";
-  active: boolean;
-  secret: boolean;
-};
-
-type GamiMember = {
-  memberName: string;
-  normalizedName: string;
-  streak: number;
-  weeksStreak: number;
-  weeklyGoal: number;
-  freezesBanked: number;
-  freezesBonus: number;
-  xp: number;
-  xpBonus: number;
-  levelName: string;
-  levelIndex: number;
-  earnedBadgeCount: number;
-  earnedBadges: { badgeId: string; earnedAt: string; seen: boolean }[];
-  totalWorkouts: number;
-  lastWorkoutDate: string | null;
-};
-
-type GamiData = {
-  badges: GamiBadge[];
-  analytics: {
-    memberCount: number;
-    weeklyActiveMembers: number;
-    avgStreak: number;
-    totalBadgesEarned: number;
-    streakDistribution: Record<string, number>;
-    badgeEarnCounts: { badgeId: string; name: string; tier: string; count: number }[];
-  };
-  members: GamiMember[];
-  audit: {
-    id: string;
-    at: string;
-    actorRole: string;
-    action: string;
-    targetType: string;
-    targetId: string;
-    summary: string;
-  }[];
-};
-
-const STATUS_STYLES: Record<AdminMember["membershipStatus"], string> = {
-  active: "border-lime-300/40 bg-lime-300/10 text-lime-200",
-  warning: "border-orange-300/40 bg-orange-300/10 text-orange-200",
-  expired: "border-red-400/40 bg-red-500/10 text-red-200",
-};
-
-const STATUS_LABEL: Record<AdminMember["membershipStatus"], string> = {
-  active: "Activa",
-  warning: "Por vencer",
-  expired: "Vencida",
-};
-
-/** Membresía (plan vigente / por vencer / vencida). */
-type MembershipFilter = "all" | "active" | "warning" | "expired";
-/** Registro en la app (correo verificado). */
-type RegistrationFilter = "all" | "registered" | "not_registered" | "no_email";
-/** Auditarón / confirmaron datos de la ficha (profileClaim o registro). */
-type ProfileFilter = "all" | "audited" | "pending";
-/** Se les mandó invitación/magic link de campaña. */
-type InviteFilter = "all" | "sent" | "not_sent";
-
-const MEMBERSHIP_FILTERS: { id: MembershipFilter; label: string }[] = [
-  { id: "all", label: "Todas" },
-  { id: "active", label: STATUS_LABEL.active },
-  { id: "warning", label: STATUS_LABEL.warning },
-  { id: "expired", label: STATUS_LABEL.expired },
-];
-
-const REGISTRATION_FILTERS: { id: RegistrationFilter; label: string }[] = [
-  { id: "all", label: "Todos" },
-  { id: "registered", label: "Registrados" },
-  { id: "not_registered", label: "Sin registrar" },
-  { id: "no_email", label: "Sin correo" },
-];
-
-const PROFILE_FILTERS: { id: ProfileFilter; label: string }[] = [
-  { id: "all", label: "Todas" },
-  { id: "audited", label: "Ficha OK" },
-  { id: "pending", label: "Sin auditar" },
-];
-
-const INVITE_FILTERS: { id: InviteFilter; label: string }[] = [
-  { id: "all", label: "Todos" },
-  { id: "sent", label: "Correo enviado" },
-  { id: "not_sent", label: "Sin invitar" },
-];
-
-function FilterChipRow<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-  counts,
-  activeTone = "lime",
-}: {
-  label: string;
-  options: { id: T; label: string }[];
-  value: T;
-  onChange: (id: T) => void;
-  counts?: Partial<Record<T, number>>;
-  activeTone?: "lime" | "cyan" | "orange" | "violet";
-}) {
-  const activeClass =
-    activeTone === "cyan"
-      ? "border-cyan-300 bg-cyan-300 text-black"
-      : activeTone === "orange"
-        ? "border-orange-300 bg-orange-300 text-black"
-        : activeTone === "violet"
-          ? "border-violet-300 bg-violet-300 text-black"
-          : "border-lime-300 bg-lime-300 text-black";
-  return (
-    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-      <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-white/40 sm:w-24">
-        {label}
-      </span>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((opt) => {
-          const count = counts?.[opt.id];
-          const countSuffix =
-            opt.id !== ("all" as T) && count != null ? ` (${count})` : "";
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onChange(opt.id)}
-              className={`border px-2.5 py-1.5 text-[10px] font-black uppercase ${
-                value === opt.id ? activeClass : "border-white/15 text-white/60"
-              }`}
-            >
-              {opt.label}
-              {countSuffix}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function money(crc: number) {
-  return `CRC ${crc.toLocaleString("es-CR")}`;
-}
-
-function makeItem(): PlanItem {
-  return {
-    id: `plan-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    day: "",
-    focus: "",
-    exercises: "",
-    targetMinutes: 45,
-    done: false,
-    doneDate: null,
-  };
-}
-
-function draftFromMember(member: AdminMember): PlanDraft {
-  const plan = member.trainingPlan;
-  if (!plan) {
-    return {
-      title: `Plan de ${member.memberName.split(" ")[0]}`,
-      objective: member.goal || "",
-      coachNote: "",
-      startDate: new Date().toISOString().slice(0, 10),
-      endDate: "",
-      weeklySessions: 3,
-      items: [makeItem(), makeItem(), makeItem()],
-    };
-  }
-  return {
-    title: plan.title,
-    objective: plan.objective,
-    coachNote: plan.coachNote,
-    startDate: plan.startDate,
-    endDate: plan.endDate,
-    weeklySessions: plan.weeklySessions,
-    items: plan.items.length ? plan.items.map((i) => ({ ...i })) : [makeItem()],
-  };
-}
-
-function memberDraftFrom(member: AdminMember): MemberDraft {
-  return {
-    displayName: member.memberName,
-    goal: member.goal,
-    favoriteTraining: member.favoriteTraining,
-    phone: member.phone,
-    email: member.email,
-    cedula: member.cedula ?? "",
-    coach: member.coach,
-    notes: member.notes,
-    plan: member.plan === "-" ? "Xtreme Mensual" : member.plan,
-    nextBillingDate: member.nextBillingDate,
-    startedAt: member.startedAt || new Date().toISOString().slice(0, 10),
-  };
-}
-
-function Kpi({
-  icon: Icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: typeof Flame;
-  label: string;
-  value: string;
-  accent: string;
-}) {
-  return (
-    <div className="border-[3px] border-white/20 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:p-4">
-      <div
-        className={`mb-2 grid h-10 w-10 place-items-center border-2 border-black/30 bg-gradient-to-br ${accent} text-black`}
-      >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="truncate text-2xl font-black leading-none text-white sm:text-3xl">{value}</div>
-      <div className="mt-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`min-h-11 border-[3px] px-3 py-2 text-xs font-black uppercase tracking-wide transition sm:px-4 ${
-        active
-          ? "border-[#d8ff3e] bg-[#d8ff3e] text-black shadow-[3px_3px_0_rgba(216,255,62,0.35)]"
-          : "border-white/20 bg-black/30 text-white/70 hover:border-[#d8ff3e]/50 hover:text-[#eaff93]"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-const ADMIN_TABS = [
-  { id: "resumen" as const, label: "Resumen", icon: Activity },
-  { id: "socios" as const, label: "Socios", icon: Users },
-  { id: "accesos" as const, label: "Accesos", icon: DoorOpen },
-  { id: "bitacora" as const, label: "Bitácora", icon: ClipboardList },
-  { id: "gamificacion" as const, label: "Game", icon: Trophy },
-  { id: "correos" as const, label: "Correos", icon: Mail, superOnly: true },
-  { id: "ingresos" as const, label: "Ingresos", icon: Banknote, superOnly: true },
-];
-
-function formatDurationMs(ms: number) {
-  if (!ms || ms < 0) return "0s";
-  const totalSec = Math.round(ms / 1000);
-  if (totalSec < 60) return `${totalSec}s`;
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  if (min < 60) return sec ? `${min}m ${sec}s` : `${min}m`;
-  const h = Math.floor(min / 60);
-  const rem = min % 60;
-  return rem ? `${h}h ${rem}m` : `${h}h`;
-}
-
-function SortableMemberHeader({
-  label,
-  sortKey,
-  activeKey,
-  direction,
-  onSort,
-  className = "px-3 py-3",
-}: {
-  label: string;
-  sortKey: MemberSortKey;
-  activeKey: MemberSortKey;
-  direction: SortDirection;
-  onSort: (key: MemberSortKey) => void;
-  className?: string;
-}) {
-  const active = sortKey === activeKey;
-  const SortIcon = active ? (direction === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
-
-  return (
-    <th
-      className={className}
-      aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"}
-    >
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1.5 whitespace-nowrap transition hover:text-white ${
-          active ? "text-lime-200" : "text-white/40"
-        }`}
-      >
-        {label}
-        <SortIcon className="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-    </th>
-  );
-}
+import {
+  ADMIN_TABS,
+  INVITE_FILTERS,
+  MEMBERSHIP_FILTERS,
+  PROFILE_FILTERS,
+  REGISTRATION_FILTERS,
+  STATUS_LABEL,
+  STATUS_STYLES,
+} from "../../components/admin/constants";
+import {
+  draftFromMember,
+  formatDurationMs,
+  memberDraftFrom,
+  memberPageWindow,
+  money,
+} from "../../components/admin/helpers";
+import {
+  FilterChipRow,
+  Kpi,
+  SortableMemberHeader,
+  TabButton,
+} from "../../components/admin/ui";
+import {
+  InviteMemberModal,
+  MemberModal,
+  PlanModal,
+  QuickPlanModal,
+  UserDetailModal,
+} from "../../components/admin/modals";
+import { AdminProvider, useAdmin } from "../../components/admin/context/AdminProvider";
+import type {
+  AdminData,
+  AdminMember,
+  InviteFilter,
+  MemberDraft,
+  MemberSortKey,
+  MembershipFilter,
+  PlanDraft,
+  PlanItem,
+  ProfileFilter,
+  QuickPlanOptionId,
+  RegistrationFilter,
+  SortDirection,
+  AdminTabId as Tab,
+} from "../../components/admin/types";
 
 export default function XtremeAdminPage() {
-  const [code, setCode] = useState("");
-  const [staffName, setStaffName] = useState("");
-  const [codeInput, setCodeInput] = useState("");
-  const [data, setData] = useState<AdminData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  return (
+    <AdminProvider>
+      <AdminConsole />
+    </AdminProvider>
+  );
+}
+
+/**
+ * La pantalla del Admin OS. La sesión, los datos y el feedback llegan del
+ * contexto; acá solo vive el estado efímero de la interfaz (filtros, orden,
+ * paginación, borradores y qué modal está abierto).
+ */
+function AdminConsole() {
+  const {
+    auth: { role: code, staffName, codeInput, setCodeInput, setRole },
+    data: { data, setData, gami, isLoading, load, loadGami },
+    feedback: { busy, setBusy, error, setError, message, setMessage },
+    login,
+    logout,
+  } = useAdmin();
+
   const [tab, setTab] = useState<Tab>("resumen");
   const [query, setQuery] = useState("");
   const [membershipFilter, setMembershipFilter] = useState<MembershipFilter>("all");
@@ -744,7 +152,6 @@ export default function XtremeAdminPage() {
   });
   const [paymentMemberQuery, setPaymentMemberQuery] = useState("");
   const [selectedPaymentMember, setSelectedPaymentMember] = useState<AdminMember | null>(null);
-  const [gami, setGami] = useState<GamiData | null>(null);
   const [gamiMemberQ, setGamiMemberQ] = useState("");
   const [selectedGamiMember, setSelectedGamiMember] = useState("");
   const [grantBadgeId, setGrantBadgeId] = useState("");
@@ -756,75 +163,14 @@ export default function XtremeAdminPage() {
   });
   const [adjustForm, setAdjustForm] = useState({ xpBonus: "0", freezesBonus: "0", weeklyGoal: "4" });
 
-  const load = useCallback(async (_sessionMarker: string) => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/xtreme/admin?scope=core", { cache: "no-store" });
-      if (response.status === 401) {
-        setError("Codigo incorrecto.");
-        setCode("");
-        setData(null);
-        return;
-      }
-      const json = (await response.json()) as AdminData & { error?: string };
-      if (!response.ok) throw new Error(json.error ?? "No se pudo cargar.");
-      setData(json);
-      setCode(json.role);
-      if (json.role !== "super") {
-        setTab((current) => (current === "ingresos" || current === "correos" ? "resumen" : current));
-      }
-
-      // El panel ya puede usarse con el núcleo operativo. Revenue, growth,
-      // bitácora y salud llegan después sin mantener bloqueada la pantalla.
-      void fetch("/api/xtreme/admin", { cache: "no-store" })
-        .then(async (fullResponse) => {
-          const fullJson = (await fullResponse.json()) as AdminData & { error?: string };
-          if (fullResponse.ok) setData(fullJson);
-        })
-        .catch(() => {
-          // El core permanece funcional aunque falle una métrica secundaria.
-        });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error de conexion.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
+  // Un admin sin permiso de super no puede quedarse parado en un tab que ya no
+  // le corresponde. La regla vive acá, junto al estado del tab, y no dentro del
+  // fetch: quién carga los datos no tiene por qué saber qué se está mirando.
   useEffect(() => {
-    void (async () => {
-      const response = await fetch("/api/xtreme/staff-session?surface=admin", { cache: "no-store" });
-      const session = (await response.json()) as { authenticated?: boolean; staffName?: string | null };
-      if (session.authenticated) {
-        setStaffName(session.staffName ?? "");
-        await load("session");
-      }
-    })();
-  }, [load]);
-
-  async function login() {
-    const accessCode = codeInput.trim();
-    if (!accessCode) return;
-    setIsLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/xtreme/staff-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ surface: "admin", code: accessCode }),
-      });
-      const json = (await response.json()) as { error?: string; staffName?: string | null };
-      if (!response.ok) throw new Error(json.error || "Codigo incorrecto.");
-      setStaffName(json.staffName ?? "");
-      setCodeInput("");
-      await load("session");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo iniciar sesion.");
-    } finally {
-      setIsLoading(false);
+    if (data && data.role !== "super") {
+      setTab((current) => (current === "ingresos" || current === "correos" ? "resumen" : current));
     }
-  }
+  }, [data]);
 
   async function resolveOperationalAlert(fingerprint: string) {
     setBusy(`ops:${fingerprint}`);
@@ -850,21 +196,8 @@ export default function XtremeAdminPage() {
     }
   }
 
-  const loadGami = useCallback(async (_sessionMarker: string) => {
-    try {
-      const response = await fetch("/api/xtreme/admin/gamification", {
-        cache: "no-store",
-      });
-      const json = (await response.json()) as GamiData & { error?: string };
-      if (!response.ok) throw new Error(json.error ?? "No se pudo cargar gamificacion.");
-      setGami(json);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando gamificacion.");
-    }
-  }, []);
-
   useEffect(() => {
-    if (code && tab === "gamificacion") void loadGami(code);
+    if (code && tab === "gamificacion") void loadGami();
   }, [code, tab, loadGami]);
 
   async function gamiAction(body: Record<string, unknown>, okMessage: string) {
@@ -881,7 +214,7 @@ export default function XtremeAdminPage() {
       const json = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(json.error ?? "No se pudo procesar.");
       setMessage(okMessage);
-      await loadGami(code);
+      await loadGami();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de gamificacion.");
     } finally {
@@ -1032,28 +365,14 @@ export default function XtremeAdminPage() {
     if (memberPage > memberTotalPages) setMemberPage(memberTotalPages);
   }, [memberPage, memberTotalPages]);
 
-  function toggleMemberSort(key: MemberSortKey) {
+  // Estable entre renders: es lo que hace que los <SortableMemberHeader/>
+  // memoizados se salteen el re-render cuando cambia cualquier otra cosa.
+  const toggleMemberSort = useCallback((key: MemberSortKey) => {
     setMemberSort((current) => ({
       key,
       direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
     }));
-  }
-
-  function memberPageWindow(current: number, total: number): number[] {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages = new Set<number>([1, total, current, current - 1, current + 1]);
-    if (current <= 3) {
-      pages.add(2);
-      pages.add(3);
-      pages.add(4);
-    }
-    if (current >= total - 2) {
-      pages.add(total - 1);
-      pages.add(total - 2);
-      pages.add(total - 3);
-    }
-    return [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
-  }
+  }, []);
 
   const paymentMemberMatches = useMemo(() => {
     if (!data || selectedPaymentMember) return [];
@@ -1093,7 +412,7 @@ export default function XtremeAdminPage() {
       setMessage(
         `Listo: ${json.insertedMembers} socios, ${json.insertedPayments ?? 0} pagos demo. PIN: ${json.pin}.`,
       );
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al generar el seed.");
     } finally {
@@ -1115,7 +434,7 @@ export default function XtremeAdminPage() {
       const json = (await response.json()) as { ok?: boolean; error?: string };
       if (!response.ok) throw new Error(json.error ?? "No se pudo eliminar.");
       setMessage(`Eliminado: ${memberName}.`);
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al eliminar.");
     } finally {
@@ -1137,7 +456,7 @@ export default function XtremeAdminPage() {
       const json = (await response.json()) as { ok?: boolean; message?: string; duplicate?: boolean; error?: string };
       if (!response.ok) throw new Error(json.error ?? "No se pudo registrar ingreso.");
       setMessage(json.duplicate ? `${memberName}: ya tenia ingreso reciente.` : `Ingreso OK: ${memberName}.`);
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de ingreso.");
     } finally {
@@ -1249,7 +568,7 @@ export default function XtremeAdminPage() {
         `Invitación enviada a ${json.sentTo}. El enlace vence en ${json.expiresHours ?? 24} h.`,
       );
       setInviteMember(null);
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al invitar.");
     } finally {
@@ -1305,7 +624,7 @@ export default function XtremeAdminPage() {
         `${json.plan} activado para ${quickPlanMember.memberName} hasta ${json.endsOn}${extendLabel}.${emailStatus}`,
       );
       setQuickPlanMember(null);
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al otorgar el plan.");
     } finally {
@@ -1350,7 +669,7 @@ export default function XtremeAdminPage() {
       setMessage(`Plan guardado para ${planMember.memberName}.`);
       setPlanMember(null);
       setPlanDraft(null);
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar el plan.");
     } finally {
@@ -1378,7 +697,7 @@ export default function XtremeAdminPage() {
       setMessage(`Perfil actualizado: ${memberDraft.displayName || editMember.memberName}.`);
       setEditMember(null);
       setMemberDraft(null);
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar perfil.");
     } finally {
@@ -1414,7 +733,7 @@ export default function XtremeAdminPage() {
       if (!response.ok) throw new Error(json.error ?? "No se pudo guardar la metrica.");
       setMessage(`Metrica registrada para ${detailMember.memberName}.`);
       // Refresh and update detail
-      await load(code);
+      await load();
       // Re-open with fresh data (the list will have updated member)
       // We close detail after save for simplicity, user can re-open
       closeDetail();
@@ -1447,7 +766,7 @@ export default function XtremeAdminPage() {
         body: JSON.stringify({ memberName, itemId: item.id, done: nextDone }),
       });
       if (!response.ok) throw new Error();
-      await load(code);
+      await load();
     } catch {
       setPlanDraft((draft) =>
         draft
@@ -1490,7 +809,7 @@ export default function XtremeAdminPage() {
       setPaymentForm((f) => ({ ...f, amountCrc: "", note: "" }));
       setSelectedPaymentMember(null);
       setPaymentMemberQuery("");
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrar pago.");
     } finally {
@@ -1509,7 +828,7 @@ export default function XtremeAdminPage() {
       });
       if (!response.ok) throw new Error("No se pudo eliminar.");
       setMessage("Pago eliminado.");
-      await load(code);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al eliminar pago.");
     } finally {
@@ -1543,7 +862,7 @@ export default function XtremeAdminPage() {
       if (json.mustRelogin) {
         setMessage(`Se cerraron ${json.revoked ?? 0} sesión(es). Volvé a entrar.`);
         await fetch("/api/xtreme/staff-session?surface=admin", { method: "DELETE" });
-        setCode("");
+        setRole("");
         setCodeInput("");
         setData(null);
         return;
@@ -1556,20 +875,13 @@ export default function XtremeAdminPage() {
           current ? { ...current, staffSecurity: json.staffSecurity } : current,
         );
       } else {
-        await load(code);
+        await load();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al revocar sesiones.");
     } finally {
       setBusy("");
     }
-  }
-
-  async function logout() {
-    await fetch("/api/xtreme/staff-session?surface=admin", { method: "DELETE" });
-    setCode("");
-    setStaffName("");
-    setData(null);
   }
 
   if (!code) {
@@ -1674,7 +986,7 @@ export default function XtremeAdminPage() {
             </Link>
             <button
               type="button"
-              onClick={() => void load(code)}
+              onClick={() => void load()}
               disabled={isLoading || Boolean(busy)}
               className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/80 disabled:opacity-50 sm:text-sm"
             >
@@ -1789,7 +1101,7 @@ export default function XtremeAdminPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => void load(code)}
+                      onClick={() => void load()}
                       disabled={isLoading || Boolean(busy)}
                       className="inline-flex min-h-10 items-center gap-2 border border-lime-300/40 px-3 text-[10px] font-black uppercase text-lime-200 disabled:opacity-40"
                     >
@@ -3380,7 +2692,7 @@ export default function XtremeAdminPage() {
                         <h2 className="text-lg font-black uppercase">Catalogo de badges</h2>
                         <button
                           type="button"
-                          onClick={() => code && void loadGami(code)}
+                          onClick={() => code && void loadGami()}
                           className="inline-flex items-center gap-2 border border-white/15 px-3 py-2 text-xs font-black uppercase text-white/70"
                         >
                           <RefreshCw className="h-3.5 w-3.5" /> Refrescar
@@ -3791,750 +3103,9 @@ export default function XtremeAdminPage() {
             closeDetail();
             setTimeout(() => openInvite(detailMember), 50);
           }}
-          onRefresh={() => code && void load(code)}
+          onRefresh={() => code && void load()}
         />
       )}
     </main>
-  );
-}
-
-function InviteMemberModal({
-  member,
-  email,
-  saving,
-  onEmailChange,
-  onClose,
-  onConfirm,
-}: {
-  member: AdminMember;
-  email: string;
-  saving: boolean;
-  onEmailChange: (value: string) => void;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  const inputClass =
-    "min-h-11 w-full border-[3px] border-white/20 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]";
-
-  return (
-    <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/85 px-3 py-6 backdrop-blur-sm">
-      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
-      <section className="relative w-full max-w-lg border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-4 text-white shadow-[7px_7px_0_rgba(216,255,62,.2)] sm:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <GameLabel tone="lime">Solo super admin</GameLabel>
-            <h2 className="mt-2 text-2xl font-black uppercase">Invitar a la app</h2>
-            <p className="mt-1 text-sm font-bold text-white/50">{member.memberName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-10 w-10 place-items-center border-[2px] border-white/15 text-white/55 hover:border-white/40 hover:text-white"
-            aria-label="Cerrar"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mt-5 space-y-3">
-          <GameCallout tone="lime">
-            Se guarda el correo en la ficha (sin verificar) y se manda un enlace de 24 h. Al
-            confirmarlo, el correo queda verificado y unido a este socio - no crea ficha nueva.
-          </GameCallout>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Correo</span>
-            <input
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              value={email}
-              onChange={(e) => onEmailChange(e.target.value)}
-              placeholder="persona@correo.com"
-              className={inputClass}
-            />
-          </label>
-          {member.emailVerified ? (
-            <p className="text-xs font-bold text-orange-300">
-              Este socio ya tiene correo verificado. No hace falta invitarlo.
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="min-h-12 flex-1 border-[3px] border-white/15 px-4 text-xs font-black uppercase text-white/60 disabled:opacity-40"
-          >
-            Cancelar
-          </button>
-          <GameButton
-            onClick={onConfirm}
-            disabled={saving || !email.trim() || Boolean(member.emailVerified)}
-            className="flex-1"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-            Enviar invitación
-          </GameButton>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function QuickPlanModal({
-  member,
-  option,
-  saving,
-  onOptionChange,
-  onClose,
-  onConfirm,
-}: {
-  member: AdminMember;
-  option: QuickPlanOptionId;
-  saving: boolean;
-  onOptionChange: (option: QuickPlanOptionId) => void;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  const selected = QUICK_PLAN_OPTIONS.find((item) => item.id === option) ?? QUICK_PLAN_OPTIONS[2];
-  return (
-    <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/85 px-3 py-6 backdrop-blur-sm">
-      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
-      <section className="relative w-full max-w-lg border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-4 text-white shadow-[7px_7px_0_rgba(216,255,62,.2)] sm:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <GameLabel tone="lime">Solo super admin</GameLabel>
-            <h2 className="mt-2 text-2xl font-black uppercase">Dar acceso rapido</h2>
-            <p className="mt-1 text-sm font-bold text-white/50">{member.memberName}</p>
-          </div>
-          <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center border-[2px] border-white/15 text-white/55 hover:border-white/40 hover:text-white" aria-label="Cerrar">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          {QUICK_PLAN_OPTIONS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onOptionChange(item.id)}
-              className={`min-h-24 border-[3px] p-3 text-left transition ${option === item.id ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/15 bg-black/30 text-white hover:border-[#d8ff3e]/45"}`}
-            >
-              <span className="block text-lg font-black uppercase">{item.label}</span>
-              <span className={`mt-1 block text-xs font-bold ${option === item.id ? "text-black/55" : "text-white/40"}`}>{item.detail}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 space-y-2">
-          <GameCallout tone="lime">
-            Si la membresía sigue activa, los {selected.days} días se suman al vencimiento actual. Si está vencida, empiezan hoy.
-          </GameCallout>
-          <GameCallout tone="orange">
-            {member.emailVerified
-              ? member.email
-                ? "Tiene correo verificado: le avisamos por correo. Si aún no tiene PIN, el mail le indica cómo crearlo en la app."
-                : "Sin correo en la ficha: el plan se activa igual, pero no se envía correo."
-              : member.email
-                ? "Aún no completó registro: le mandamos enlace para confirmar correo, datos y crear PIN. Su plan no se borra al registrarse."
-                : "Sin correo en la ficha: el plan se activa, pero tenés que invitarlo después con un correo para que cree el PIN."}
-          </GameCallout>
-        </div>
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onClose} disabled={saving} className="min-h-12 flex-1 border-[3px] border-white/15 px-4 text-xs font-black uppercase text-white/60 disabled:opacity-40">
-            Cancelar
-          </button>
-          <GameButton onClick={onConfirm} disabled={saving} className="flex-1">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-            Activar {selected.label}
-          </GameButton>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function PlanModal({
-  member,
-  draft,
-  saving,
-  onClose,
-  onChange,
-  onSave,
-  onToggleItem,
-}: {
-  member: AdminMember;
-  draft: PlanDraft;
-  saving: boolean;
-  onClose: () => void;
-  onChange: (draft: PlanDraft) => void;
-  onSave: () => void;
-  onToggleItem: (item: PlanItem) => void;
-}) {
-  const doneItems = draft.items.filter((i) => i.done).length;
-  const progressPct = draft.items.length ? Math.round((doneItems / draft.items.length) * 100) : 0;
-  const inputClass =
-    "min-h-11 w-full border-[3px] border-white/20 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none transition placeholder:text-white/30 focus:border-[#d8ff3e]";
-
-  function setItem(id: string, patch: Partial<PlanItem>) {
-    onChange({ ...draft, items: draft.items.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
-  }
-
-  return (
-    <div className="xg-game-modal fixed inset-0 z-50 grid place-items-end overflow-y-auto bg-black/80 sm:place-items-center sm:px-4 sm:py-8">
-      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
-      <div className="xg-game-modal-panel relative w-full max-w-3xl border-[3px] border-[#d8ff3e] bg-[#0c0c0c] text-white shadow-[6px_6px_0_rgba(216,255,62,0.2)]">
-        <div className="flex items-center justify-between gap-3 border-b-[3px] border-black/25 bg-[#d8ff3e] px-4 py-3 text-black sm:px-6 sm:py-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black/30 bg-black/15">
-              <ClipboardList className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="truncate text-base font-black uppercase leading-tight sm:text-lg">Plan personalizado</h2>
-              <p className="truncate text-[11px] font-bold uppercase tracking-wide text-black/65">{member.memberName}</p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center border-2 border-black/30 bg-black/10">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5">
-          <div className="border-[3px] border-white/15 bg-black/40 p-3 sm:p-4">
-            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wide text-white/55 sm:text-xs">
-              <span>Avance</span>
-              <span className="border-2 border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-2 py-0.5 text-[#eaff93]">
-                {doneItems}/{draft.items.length} · {progressPct}%
-              </span>
-            </div>
-            <div className="mt-3 h-3 w-full border-[3px] border-white/15 bg-black/45">
-              <div className="h-full bg-[#d8ff3e]" style={{ width: `${progressPct}%` }} />
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block sm:col-span-2">
-              <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Titulo</span>
-              <input value={draft.title} onChange={(e) => onChange({ ...draft, title: e.target.value })} className={inputClass} />
-            </label>
-            <label className="block sm:col-span-2">
-              <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Objetivo</span>
-              <input value={draft.objective} onChange={(e) => onChange({ ...draft, objective: e.target.value })} className={inputClass} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Inicio</span>
-              <input type="date" value={draft.startDate} onChange={(e) => onChange({ ...draft, startDate: e.target.value })} className={inputClass} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Fin</span>
-              <input type="date" value={draft.endDate} onChange={(e) => onChange({ ...draft, endDate: e.target.value })} className={inputClass} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Sesiones / sem</span>
-              <input type="number" min={0} max={14} value={draft.weeklySessions} onChange={(e) => onChange({ ...draft, weeklySessions: Number(e.target.value) })} className={inputClass} />
-            </label>
-            <label className="block sm:col-span-2">
-              <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Nota coach</span>
-              <textarea value={draft.coachNote} onChange={(e) => onChange({ ...draft, coachNote: e.target.value })} rows={2} className={`${inputClass} resize-none`} />
-            </label>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase text-white/70">Sesiones</h3>
-              <button type="button" onClick={() => onChange({ ...draft, items: [...draft.items, makeItem()] })} className="inline-flex items-center gap-1.5 border border-white/15 px-3 py-1.5 text-xs font-black uppercase">
-                <Plus className="h-3.5 w-3.5" /> Agregar
-              </button>
-            </div>
-            {draft.items.map((item, index) => (
-              <div key={item.id} className={`border p-3 ${item.done ? "border-lime-300/40 bg-lime-300/[0.06]" : "border-white/10 bg-black/25"}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => onToggleItem(item)} className={`grid h-7 w-7 place-items-center border ${item.done ? "border-lime-300 bg-lime-300 text-black" : "border-white/20 text-white/40"}`}>
-                      <CheckCircle2 className="h-4 w-4" />
-                    </button>
-                    <span className="text-xs font-black uppercase text-white/45">Sesion {index + 1}</span>
-                  </div>
-                  <button type="button" onClick={() => onChange({ ...draft, items: draft.items.filter((i) => i.id !== item.id) })} className="grid h-7 w-7 place-items-center border border-white/10 text-white/40">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_120px]">
-                  <input value={item.day} onChange={(e) => setItem(item.id, { day: e.target.value })} placeholder="Dia" className={inputClass} />
-                  <input value={item.focus} onChange={(e) => setItem(item.id, { focus: e.target.value })} placeholder="Enfoque" className={inputClass} />
-                  <input type="number" value={item.targetMinutes} onChange={(e) => setItem(item.id, { targetMinutes: Number(e.target.value) })} className={inputClass} />
-                </div>
-                <textarea value={item.exercises} onChange={(e) => setItem(item.id, { exercises: e.target.value })} rows={2} placeholder="Ejercicios..." className={`${inputClass} mt-2 resize-none`} />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 border-t-[3px] border-white/15 bg-black/40 px-3 py-3 sm:flex-row sm:justify-end sm:px-6 sm:py-4">
-          <GameButton variant="ghost" full className="sm:w-auto" onClick={onClose}>
-            Cancelar
-          </GameButton>
-          <GameButton full className="sm:w-auto" disabled={saving} onClick={onSave}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
-            Guardar plan
-          </GameButton>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MemberModal({
-  member,
-  draft,
-  saving,
-  onClose,
-  onChange,
-  onSave,
-}: {
-  member: AdminMember;
-  draft: MemberDraft;
-  saving: boolean;
-  onClose: () => void;
-  onChange: (draft: MemberDraft) => void;
-  onSave: () => void;
-}) {
-  const inputClass =
-    "min-h-11 w-full border-[3px] border-white/20 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]";
-
-  return (
-    <div className="xg-game-modal fixed inset-0 z-50 grid place-items-end overflow-y-auto bg-black/80 sm:place-items-center sm:px-4 sm:py-8">
-      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
-      <div className="xg-game-modal-panel relative w-full max-w-xl border-[3px] border-[#d8ff3e] bg-[#0c0c0c] text-white shadow-[6px_6px_0_rgba(216,255,62,0.2)]">
-        <div className="flex items-center justify-between border-b-[3px] border-black/25 bg-[#d8ff3e] px-4 py-3 text-black sm:px-6 sm:py-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black/30 bg-black/15">
-              <UserRound className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="truncate text-base font-black uppercase sm:text-lg">Perfil personalizado</h2>
-              <p className="truncate text-[11px] font-bold uppercase text-black/65">{member.accessCode}</p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center border-2 border-black/30 bg-black/10">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="grid max-h-[70vh] gap-3 overflow-y-auto px-3 py-4 sm:grid-cols-2 sm:px-6 sm:py-5">
-          <label className="block sm:col-span-2">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Nombre</span>
-            <input value={draft.displayName} onChange={(e) => onChange({ ...draft, displayName: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Telefono</span>
-            <input value={draft.phone} onChange={(e) => onChange({ ...draft, phone: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Email</span>
-            <input value={draft.email} onChange={(e) => onChange({ ...draft, email: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">
-              Cedula (lector / app)
-            </span>
-            <input
-              value={draft.cedula}
-              onChange={(e) => onChange({ ...draft, cedula: e.target.value.replace(/[^\d-]/g, "").slice(0, 20) })}
-              inputMode="numeric"
-              placeholder="1-2345-6789"
-              className={`${inputClass} text-center font-black tracking-widest`}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Objetivo</span>
-            <input value={draft.goal} onChange={(e) => onChange({ ...draft, goal: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Coach</span>
-            <input value={draft.coach} onChange={(e) => onChange({ ...draft, coach: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Favorito</span>
-            <input value={draft.favoriteTraining} onChange={(e) => onChange({ ...draft, favoriteTraining: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Plan membresia</span>
-            <input value={draft.plan} onChange={(e) => onChange({ ...draft, plan: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Inicio</span>
-            <input type="date" value={draft.startedAt} onChange={(e) => onChange({ ...draft, startedAt: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Proximo cobro</span>
-            <input type="date" value={draft.nextBillingDate} onChange={(e) => onChange({ ...draft, nextBillingDate: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1 block text-[11px] font-black uppercase text-white/45">Notas internas</span>
-            <textarea value={draft.notes} onChange={(e) => onChange({ ...draft, notes: e.target.value })} rows={3} placeholder="Lesiones, preferencias, horario..." className={`${inputClass} resize-none`} />
-          </label>
-          <div className="grid grid-cols-3 gap-2 sm:col-span-2">
-            <div className="border-[3px] border-white/15 bg-black/30 p-3 text-center">
-              <Timer className="mx-auto h-4 w-4 text-white/40" />
-              <p className="mt-1 text-lg font-black">{member.totalMinutes}</p>
-              <p className="text-[10px] font-black uppercase text-white/40">Minutos</p>
-            </div>
-            <div className="border-[3px] border-orange-300/40 bg-black/30 p-3 text-center">
-              <Flame className="mx-auto h-4 w-4 text-orange-300" />
-              <p className="mt-1 text-lg font-black">{member.streak}</p>
-              <p className="text-[10px] font-black uppercase text-white/40">Racha</p>
-            </div>
-            <div className="border-[3px] border-[#d8ff3e]/40 bg-black/30 p-3 text-center">
-              <Activity className="mx-auto h-4 w-4 text-[#d8ff3e]" />
-              <p className="mt-1 text-lg font-black">{member.latestWeight ? `${member.latestWeight}` : "-"}</p>
-              <p className="text-[10px] font-black uppercase text-white/40">Peso kg</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 border-t-[3px] border-white/15 bg-black/40 px-3 py-3 sm:flex-row sm:justify-end sm:px-6 sm:py-4">
-          <GameButton variant="ghost" full className="sm:w-auto" onClick={onClose}>
-            Cancelar
-          </GameButton>
-          <GameButton full className="sm:w-auto" disabled={saving} onClick={onSave}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}
-            Guardar perfil
-          </GameButton>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function UserDetailModal({
-  member,
-  isSuper,
-  savingMetric,
-  newMetric,
-  onClose,
-  onChangeMetric,
-  onAddMetric,
-  onOpenPlan,
-  onOpenEdit,
-  onOpenInvite,
-  onRefresh,
-}: {
-  member: AdminMember;
-  isSuper?: boolean;
-  savingMetric: boolean;
-  newMetric: { date: string; weightKg: string; waistCm: string; note: string };
-  onClose: () => void;
-  onChangeMetric: (m: { date: string; weightKg: string; waistCm: string; note: string }) => void;
-  onAddMetric: () => void;
-  onOpenPlan: () => void;
-  onOpenEdit: () => void;
-  onOpenInvite?: () => void;
-  onRefresh: () => void;
-}) {
-  const metrics = member.bodyMetrics ?? [];
-  const workouts = member.recentWorkouts ?? [];
-  const hasPlan = !!member.trainingPlan;
-
-  const inputClass =
-    "min-h-11 w-full border-[3px] border-white/20 bg-black/40 px-3 py-2 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]";
-
-  return (
-    <div className="xg-game-modal fixed inset-0 z-[60] grid place-items-end overflow-y-auto bg-black/85 sm:place-items-center sm:px-4 sm:py-6">
-      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
-      <div className="xg-game-modal-panel relative w-full max-w-5xl border-[3px] border-[#d8ff3e] bg-[#0c0c0c] text-white shadow-[6px_6px_0_rgba(216,255,62,0.2)]">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-black/25 bg-[#d8ff3e] px-3 py-3 text-black sm:px-6 sm:py-4">
-          <div className="flex items-center gap-4">
-            {member.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={member.photoUrl}
-                alt={member.memberName}
-                className="h-12 w-12 border-2 border-black/30 object-cover"
-              />
-            ) : (
-              <div className="grid h-12 w-12 place-items-center border-2 border-black/30 bg-black/15 text-black">
-                <UserRound className="h-6 w-6" />
-              </div>
-            )}
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-lg font-black uppercase tracking-tight sm:text-2xl">
-                  {member.memberName}
-                </h2>
-                <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
-                  {STATUS_LABEL[member.membershipStatus]}
-                </span>
-                <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
-                  {member.emailVerified ? "Registrado" : member.email ? "Sin registrar" : "Sin correo"}
-                </span>
-                <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
-                  {member.profileClaimed || member.emailVerified ? "Ficha OK" : "Sin auditar"}
-                </span>
-                <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
-                  {member.campaignInviteSent ? "Correo enviado" : "Sin invitar"}
-                </span>
-                {member.hasPin ? (
-                  <span className="inline-block border-2 border-black/30 bg-black/10 px-2 py-0.5 text-[10px] font-black uppercase">
-                    PIN
-                  </span>
-                ) : null}
-                {member.seeded && (
-                  <span className="border-2 border-black/25 px-1.5 py-0.5 text-[9px] font-black uppercase text-black/55">
-                    demo
-                  </span>
-                )}
-              </div>
-              <div className="mt-0.5 text-xs font-mono font-bold tracking-[2px] text-black/65">
-                {member.accessCode}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenPlan}
-              className="inline-flex min-h-11 items-center gap-2 border-2 border-black/30 bg-black/15 px-3 py-2 text-xs font-black uppercase sm:text-sm"
-            >
-              <ClipboardList className="h-4 w-4" />
-              <span className="hidden sm:inline">{hasPlan ? "Editar plan" : "Generar plan"}</span>
-              <span className="sm:hidden">Plan</span>
-            </button>
-            <button
-              type="button"
-              onClick={onOpenEdit}
-              className="inline-flex min-h-11 items-center gap-2 border-2 border-black/30 bg-black/15 px-3 py-2 text-xs font-black uppercase sm:text-sm"
-            >
-              <Pencil className="h-4 w-4" /> Perfil
-            </button>
-            {isSuper && !member.emailVerified && onOpenInvite ? (
-              <button
-                type="button"
-                onClick={onOpenInvite}
-                className="inline-flex min-h-11 items-center gap-2 border-2 border-black/30 bg-black/15 px-3 py-2 text-xs font-black uppercase sm:text-sm"
-              >
-                <UserPlus className="h-4 w-4" /> Invitar
-              </button>
-            ) : null}
-            <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center border-2 border-black/30 bg-black/10">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid max-h-[75vh] gap-3 overflow-y-auto p-3 sm:gap-6 sm:p-6 lg:grid-cols-5">
-          {/* LEFT: Key info + contact + stats */}
-          <div className="space-y-3 sm:space-y-5 lg:col-span-2">
-            <div className="border-[3px] border-white/15 bg-black/30 p-3 sm:p-5">
-              <div className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Informacion del socio</div>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-white/50">Telefono</span><span className="font-semibold">{member.phone || "-"}</span></div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-white/50 shrink-0">Email</span>
-                  <span className="font-semibold truncate max-w-[200px] text-right">
-                    {member.email || "-"}
-                    {member.email ? (
-                      <span className={`ml-2 text-[10px] font-black uppercase ${member.emailVerified ? "text-lime-300" : "text-orange-300"}`}>
-                        {member.emailVerified ? "OK" : "sin verificar"}
-                      </span>
-                    ) : null}
-                  </span>
-                </div>
-                <div className="flex justify-between"><span className="text-white/50">Coach asignado</span><span className="font-semibold">{member.coach || "-"}</span></div>
-                <div className="flex justify-between"><span className="text-white/50">Objetivo</span><span className="font-semibold">{member.goal || "-"}</span></div>
-                <div className="flex justify-between"><span className="text-white/50">Entrenamiento favorito</span><span className="font-semibold">{member.favoriteTraining || "-"}</span></div>
-              </div>
-              {member.notes && (
-                <div className="mt-4 border-t border-white/10 pt-3 text-xs">
-                  <div className="font-black uppercase text-white/45 mb-1">Notas</div>
-                  <p className="text-white/80 leading-snug">{member.notes}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Membership */}
-            <div className="border border-white/10 bg-white/[0.02] p-5">
-              <div className="text-[11px] font-black uppercase tracking-[0.14em] text-white/45 mb-3">Membresia</div>
-              <div className="grid grid-cols-2 gap-y-2 text-sm">
-                <div className="text-white/50">Plan</div><div className="font-bold">{member.plan}</div>
-                <div className="text-white/50">Estado</div><div><span className={`inline-block px-2 py-px text-xs font-black border ${STATUS_STYLES[member.membershipStatus]}`}>{STATUS_LABEL[member.membershipStatus]}</span></div>
-                <div className="text-white/50">Dias restantes</div><div className="font-bold">{member.daysRemaining} dias</div>
-                <div className="text-white/50">Proximo cobro</div><div className="font-bold">{member.nextBillingDate}</div>
-                <div className="text-white/50">Inicio</div><div className="font-bold">{member.startedAt || "-"}</div>
-              </div>
-            </div>
-
-            {/* Big stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="border border-white/10 bg-white/[0.02] p-4 text-center">
-                <Flame className="mx-auto mb-1 h-5 w-5 text-orange-300" />
-                <div className="text-3xl font-black">{member.streak}</div>
-                <div className="text-[10px] uppercase tracking-widest text-white/40">Racha actual</div>
-              </div>
-              <div className="border border-white/10 bg-white/[0.02] p-4 text-center">
-                <Activity className="mx-auto mb-1 h-5 w-5 text-lime-300" />
-                <div className="text-3xl font-black">{member.totalWorkouts}</div>
-                <div className="text-[10px] uppercase tracking-widest text-white/40">Entrenamientos</div>
-              </div>
-              <div className="border border-white/10 bg-white/[0.02] p-4 text-center">
-                <Timer className="mx-auto mb-1 h-5 w-5 text-sky-300" />
-                <div className="text-3xl font-black">{member.totalMinutes}</div>
-                <div className="text-[10px] uppercase tracking-widest text-white/40">Minutos totales</div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: Progress + Plan + History */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Training Plan summary + action */}
-            <div className="border border-lime-300/30 bg-lime-300/[0.03] p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5 text-lime-300" />
-                  <div className="text-sm font-black uppercase tracking-wide text-lime-200">Plan de trabajo</div>
-                </div>
-                <button
-                  onClick={onOpenPlan}
-                  className="text-xs font-black uppercase border border-lime-300/60 px-3 py-1.5 hover:bg-lime-300 hover:text-black transition"
-                >
-                  {hasPlan ? "EDITAR PLAN" : "CREAR PLAN AHORA"}
-                </button>
-              </div>
-
-              {hasPlan && member.trainingPlan ? (
-                <div>
-                  <div className="font-black text-lg">{member.trainingPlan.title}</div>
-                  <div className="text-sm text-white/60">{member.trainingPlan.objective}</div>
-
-                  <div className="mt-3 flex items-center gap-3 text-xs">
-                    <div>Progreso: <span className="font-black text-lime-300">{member.trainingPlan.doneItems}/{member.trainingPlan.totalItems}</span> ({member.trainingPlan.progressPct}%)</div>
-                    <div className="flex-1 h-1.5 bg-white/10"><div className="h-1.5 bg-lime-300" style={{width: `${member.trainingPlan.progressPct}%`}} /></div>
-                  </div>
-
-                  <div className="mt-3 grid gap-2 text-sm">
-                    {member.trainingPlan.items.slice(0, 4).map((it, idx) => (
-                      <div key={idx} className={`flex justify-between border px-3 py-1.5 text-xs ${it.done ? "border-lime-300/40 bg-lime-300/5" : "border-white/10"}`}>
-                        <span className="font-bold">{it.day || `Sesión ${idx + 1}`} - {it.focus}</span>
-                        <span className="text-white/50">{it.targetMinutes}min {it.done ? "✓" : ""}</span>
-                      </div>
-                    ))}
-                    {member.trainingPlan.items.length > 4 && (
-                      <div className="text-[10px] text-white/40">+ {member.trainingPlan.items.length - 4} sesiones más...</div>
-                    )}
-                  </div>
-
-                  {member.trainingPlan.coachNote && (
-                    <div className="mt-3 text-xs italic text-white/70 border-l-2 border-lime-300/40 pl-3">&quot;{member.trainingPlan.coachNote}&quot;</div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-sm text-white/60 py-2">
-                  Este usuario aun no tiene un plan de trabajo personalizado. Haz click en <span className="font-black text-lime-300">&quot;Generar plan de trabajo&quot;</span> para crear uno.
-                </div>
-              )}
-            </div>
-
-            {/* Body metrics tracking - key for personal trainer */}
-            <div className="border border-white/10 bg-white/[0.015] p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="text-sm font-black uppercase tracking-wide">Seguimiento corporal</div>
-                  <div className="text-[11px] text-white/45">Registra peso y cintura para ver el progreso real</div>
-                </div>
-                <button onClick={onRefresh} className="text-xs border px-2 py-1 border-white/15 hover:border-lime-300/70">Actualizar</button>
-              </div>
-
-              {/* Add new measurement form */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
-                <input type="date" value={newMetric.date} onChange={(e) => onChangeMetric({ ...newMetric, date: e.target.value })} className={inputClass} />
-                <input type="number" step="0.1" placeholder="Peso kg" value={newMetric.weightKg} onChange={(e) => onChangeMetric({ ...newMetric, weightKg: e.target.value })} className={inputClass} />
-                <input type="number" placeholder="Cintura cm" value={newMetric.waistCm} onChange={(e) => onChangeMetric({ ...newMetric, waistCm: e.target.value })} className={inputClass} />
-                <input placeholder="Nota (opcional)" value={newMetric.note} onChange={(e) => onChangeMetric({ ...newMetric, note: e.target.value })} className={`${inputClass} sm:col-span-1`} />
-                <button
-                  type="button"
-                  onClick={onAddMetric}
-                  disabled={savingMetric}
-                  className="sm:col-span-1 inline-flex items-center justify-center gap-2 border border-lime-300/70 bg-lime-300/10 px-3 text-sm font-black uppercase text-lime-200 hover:bg-lime-300 hover:text-black disabled:opacity-50"
-                >
-                  {savingMetric ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Guardar
-                </button>
-              </div>
-
-              {metrics.length >= 2 && (
-                <div className="mb-4 border border-white/10 bg-black/25 p-3">
-                  <div className="text-xs font-black uppercase text-white/40 mb-1">Peso (kg)</div>
-                  <LineTrendChart
-                    data={metrics.map((m) => ({ date: m.date, value: m.weightKg }))}
-                    unit="kg"
-                    color={CHART_LIME}
-                    height={140}
-                  />
-                </div>
-              )}
-
-              {/* History table */}
-              <div>
-                <div className="text-xs font-black uppercase text-white/40 mb-2">Historial de medidas ({metrics.length})</div>
-                {metrics.length > 0 ? (
-                  <div className="overflow-x-auto text-sm border border-white/10">
-                    <table className="w-full min-w-[520px]">
-                      <thead>
-                        <tr className="border-b border-white/10 text-left text-[10px] uppercase text-white/40">
-                          <th className="px-3 py-2">Fecha</th>
-                          <th className="px-3 py-2">Peso (kg)</th>
-                          <th className="px-3 py-2">Cintura (cm)</th>
-                          <th className="px-3 py-2">Nota</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...metrics].reverse().slice(0, 8).map((m, i) => (
-                          <tr key={i} className="border-b border-white/[0.06] last:border-0">
-                            <td className="px-3 py-2 font-mono text-xs">{m.date}</td>
-                            <td className="px-3 py-2 font-bold">{m.weightKg}</td>
-                            <td className="px-3 py-2 font-bold">{m.waistCm}</td>
-                            <td className="px-3 py-2 text-xs text-white/60 truncate max-w-[200px]">{m.note || "-"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-xs text-white/40 py-3 border border-dashed border-white/10 text-center">Sin medidas registradas aun. Agrega la primera arriba.</div>
-                )}
-                {metrics.length > 8 && <div className="text-[10px] text-white/40 mt-1">Mostrando ultimas 8 de {metrics.length}</div>}
-              </div>
-            </div>
-
-            {/* Recent workouts */}
-            <div className="border border-white/10 bg-white/[0.015] p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Trophy className="h-4 w-4 text-orange-300" />
-                <div className="text-sm font-black uppercase tracking-wide">Historial reciente de entrenamientos</div>
-              </div>
-              {workouts.length > 0 ? (
-                <div className="space-y-1.5 text-sm">
-                  {workouts.map((w, idx) => (
-                    <div key={idx} className="flex justify-between border border-white/10 bg-black/30 px-3 py-2">
-                      <div>
-                        <span className="font-bold">{w.completedDate}</span> · {w.trainingName}
-                      </div>
-                      <div className="font-mono text-xs text-white/60">{w.minutes} min {w.intensity ? `· ${w.intensity}` : ""}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-white/40">Aun no hay registros de entrenamientos en el historial.</div>
-              )}
-              <div className="mt-2 text-[10px] text-white/40">Totales: {member.totalWorkouts} entrenos / {member.totalMinutes} minutos</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t border-white/10 px-6 py-4 flex items-center justify-between text-xs text-white/50">
-          <div>
-            Haz click en el nombre del usuario en la tabla de socios para abrir esta vista detallada.
-          </div>
-          <button onClick={onClose} className="border border-white/15 px-4 py-1.5 font-black uppercase">Cerrar</button>
-        </div>
-      </div>
-    </div>
   );
 }

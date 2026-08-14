@@ -180,7 +180,6 @@ export async function recordFailedAuthAttempt(
   db: Db,
   _legacyKey: string, // mantenemos firma para no romper callers existentes
   args: { scope: string; maxAttempts?: number; windowMs?: number },
-  _req?: NextRequest,
 ) {
   // Los callers existentes pasan el key legacy; ignoramos y usamos el subject del key.
   // Para la nueva API interna usamos directamente los ejes.

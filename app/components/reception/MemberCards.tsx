@@ -8,6 +8,7 @@
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { GameButton, GameCallout, GameChip, GameLabel, type GameChipProps } from "../GameOS";
 import { MEMBERSHIP_STATUS_LABELS } from "@/app/features/checkin/constants";
+import { initialsOf } from "@/app/lib/memberName";
 import type { MemberHit, MembershipStatus } from "@/lib/xtreme/checkin/contracts";
 
 /**
@@ -51,11 +52,8 @@ const AVATAR_TONES = {
   },
 } as const;
 
-export function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "?";
-  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
-}
+/** Alias histórico: el cálculo vive en el helper compartido de nombres. */
+export const initials = initialsOf;
 
 export function Avatar({
   name,

@@ -31,7 +31,6 @@ export default function PinModal({
   const [step, setStep] = useState<"enter" | "new" | "confirm">("enter");
   const [firstPin, setFirstPin] = useState("");
   const [currentPin, setCurrentPin] = useState("");
-  const [recoveryContact, setRecoveryContact] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpSentTo, setOtpSentTo] = useState("");
   const [otpSending, setOtpSending] = useState(false);
@@ -65,7 +64,6 @@ export default function PinModal({
         body: JSON.stringify({
           memberName,
           action: "requestOtp",
-          recoveryContact: recoveryContact.trim() || undefined,
         }),
       });
       const data = (await response.json()) as {
@@ -81,7 +79,7 @@ export default function PinModal({
     } finally {
       setOtpSending(false);
     }
-  }, [memberName, onDone, recoveryContact]);
+  }, [memberName, onDone]);
 
   const completePin = useCallback(
     async (pin: string) => {
@@ -139,7 +137,6 @@ export default function PinModal({
             pin,
             action,
             currentPin,
-            recoveryContact,
             otp: otpCode.replace(/\D/g, "").slice(0, 6),
           }),
         });
@@ -190,7 +187,7 @@ export default function PinModal({
         setIsLoading(false);
       }
     },
-    [currentPin, firstPin, memberName, mode, onDone, onSuccess, otpCode, recoveryContact, resetPinFlow, step],
+    [currentPin, firstPin, memberName, mode, onDone, onSuccess, otpCode, resetPinFlow, step],
   );
 
   const pressDigit = useCallback(

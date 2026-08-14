@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
@@ -234,7 +235,15 @@ export function TrainerTodayClasses({ os }: { os: TrainerOs }) {
                       >
                         <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden border-2 border-white/10 bg-white/[.04]">
                           {attendee.photoUrl ? (
-                            <img src={attendee.photoUrl} alt="" className="h-full w-full object-cover" />
+                            <Image
+                              unoptimized
+                              src={attendee.photoUrl}
+                              alt=""
+                              width={44}
+                              height={44}
+                              sizes="44px"
+                              className="h-full w-full object-cover"
+                            />
                           ) : (
                             <UserRound className="h-5 w-5 text-white/35" />
                           )}

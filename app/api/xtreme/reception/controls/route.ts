@@ -38,8 +38,12 @@ export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const records = await db.collection<ControlDoc>(RECEPTION_CONTROLS_COLLECTION)
-      .find({ kind }).sort({ date: -1, createdAt: -1 }).limit(250).toArray();
-    return NextResponse.json({ records: records.map(({ _id, ...record }) => record) });
+      .find({ kind })
+      .project<ControlDoc>({ _id: 0 })
+      .sort({ date: -1, createdAt: -1 })
+      .limit(250)
+      .toArray();
+    return NextResponse.json({ records });
   } catch (error) {
     console.error("XTREME RECEPTION CONTROLS GET", error);
     return NextResponse.json({ error: "No se pudo cargar el control." }, { status: 500 });

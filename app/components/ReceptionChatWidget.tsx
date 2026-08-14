@@ -181,7 +181,7 @@ export default function ReceptionChatWidget({ memberContext = null }: Props) {
     } catch {
       /* soft fail */
     }
-  }, [mergeMessages, memberContext, open]);
+  }, [mergeMessages, open]);
 
   useEffect(() => {
     if (!hydrated || hidden || !sessionIdRef.current) return;
