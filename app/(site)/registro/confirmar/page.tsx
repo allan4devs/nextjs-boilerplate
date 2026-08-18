@@ -13,6 +13,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { CEDULA_KEY, STORAGE_KEY } from "@/app/components/member/storage/keys";
+import CtaLink from "@/app/components/CtaLink";
+import { checkoutHref, planPriceAnchor } from "@/app/lib/cta";
 
 type SavedProfile = {
   memberName: string;
@@ -694,6 +696,29 @@ function ConfirmInner() {
             <p className="mt-4 text-xs font-semibold text-white/40">
               También te mandamos un correo de bienvenida con estos datos.
             </p>
+
+            {/* Quien ya pagó no necesita plan; al resto la cuenta les queda sin acceso comprado. */}
+            {!state.paidRegistration && (
+              <div className="mt-6 border-t border-white/10 pt-5 text-left">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                  {state.freeFirstDay !== false && !state.invitedRegistration
+                    ? "Después de tu día gratis"
+                    : "Tu plan de entrenamiento"}
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-white/60">
+                  {planPriceAnchor("es")}. Pagás en línea y el acceso queda activo al confirmar el
+                  cobro.
+                </p>
+                <CtaLink
+                  href={checkoutHref("month")}
+                  cta="registro-confirmado"
+                  plan="month"
+                  className="mt-4 inline-flex min-h-11 items-center gap-2 border border-[#d8ff3e]/45 px-4 text-xs font-black uppercase tracking-[0.12em] text-[#d8ff3e] transition hover:bg-[#d8ff3e] hover:text-black"
+                >
+                  Ver planes y precios
+                </CtaLink>
+              </div>
+            )}
           </div>
         )}
       </div>

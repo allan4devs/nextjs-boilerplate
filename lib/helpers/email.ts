@@ -1,3 +1,4 @@
+import nodemailer, { type Transporter } from "nodemailer";
 import { absoluteAppUrl, absoluteRequestUrl } from "@/lib/constants/app-url";
 import { BUSINESS } from "@/lib/constants/business";
 import { getDb } from "@/lib/helpers/mongodb";
@@ -23,7 +24,7 @@ export type SendEmailResult = {
     | "network";
   /** HTTP status del proveedor (útil para reintentos 429). */
   status?: number;
-  /** ID de Resend cuando el envío se creó con éxito. */
+  /** ID del envío cuando salió OK (id de Resend o Message-ID de SMTP). */
   id?: string;
 };
 
@@ -64,7 +65,7 @@ export type SendBatchEmailsResult = {
   code?: SendEmailResult["code"];
 };
 
-type ResendPayload = {
+type PreparedEmail = {
   from: string;
   to: string[];
   subject: string;
@@ -75,14 +76,34 @@ type ResendPayload = {
   tags?: { name: string; value: string }[];
 };
 
+/**
+ * Proveedor de envío activo. El sender por defecto es el propio (SMTP/Nodemailer);
+ * `EMAIL_PROVIDER=resend` deja usar la API de Resend como fallback opcional.
+ * Acepta `smtp`/`nodemailer`/`node` como sinónimos del sender propio.
+ */
+export type EmailProvider = "smtp" | "resend";
+
+export function emailProvider(): EmailProvider {
+  const raw = process.env.EMAIL_PROVIDER?.trim().toLowerCase();
+  if (raw === "resend") return "resend";
+  return "smtp";
+}
+
 /** Diagnóstico seguro: informa nombres de variables, nunca sus valores. */
 export function emailConfigurationError() {
   const issues: string[] = [];
   if (process.env.EMAIL_SENDING_ENABLED?.trim().toLowerCase() !== "true") {
     issues.push("EMAIL_SENDING_ENABLED no está en true");
   }
-  if (!process.env.RESEND_API_KEY?.trim()) issues.push("falta RESEND_API_KEY");
   if (!process.env.SMTP_FROM?.trim()) issues.push("falta SMTP_FROM");
+  if (emailProvider() === "resend") {
+    if (!process.env.RESEND_API_KEY?.trim()) issues.push("falta RESEND_API_KEY");
+  } else {
+    // Sender propio vía Nodemailer/SMTP.
+    if (!process.env.SMTP_HOST?.trim()) issues.push("falta SMTP_HOST");
+    if (!process.env.SMTP_USER?.trim()) issues.push("falta SMTP_USER");
+    if (!process.env.SMTP_PASSWORD?.trim()) issues.push("falta SMTP_PASSWORD");
+  }
   return issues.length
     ? `Configuración de correo incompleta en el servidor: ${issues.join(", ")}. Corregí las variables del entorno Production y volvé a desplegar.`
     : null;
@@ -159,10 +180,10 @@ function sanitizeResendTags(tags: SendEmailArgs["tags"]): { name: string; value:
  * Prepara el payload Resend (preferencias, suppressions, validación).
  * No llama a la red excepto lectura de Mongo para suppressions.
  */
-async function prepareResendPayload(
+async function preparePayload(
   args: SendEmailArgs,
   from: string,
-): Promise<{ ok: true; payload: ResendPayload } | { ok: false; result: SendEmailResult }> {
+): Promise<{ ok: true; payload: PreparedEmail } | { ok: false; result: SendEmailResult }> {
   const to = normalizeRecipients(args.to);
   if (!to.length) {
     return {
@@ -232,42 +253,125 @@ async function prepareResendPayload(
   };
 }
 
-/**
- * Envia un correo via Resend usando SMTP_FROM como remitente.
- * Nunca lanza: las rutas no deben fallar porque el correo falle.
- */
-export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.SMTP_FROM?.trim();
-  const configurationError = emailConfigurationError();
+/* ----------------------------- Transporte SMTP ---------------------------- */
 
-  if (configurationError || !apiKey || !from) {
-    console.error("EMAIL SEND SKIPPED", configurationError);
+/**
+ * Transporter Nodemailer cacheado en `globalThis` (igual que el cliente de Mongo):
+ * en serverless evita reabrir el pool SMTP en cada invocación. Se recrea solo si
+ * cambia la configuración (host/puerto/usuario).
+ */
+type SmtpCache = { transporter?: Transporter; signature?: string };
+const smtpGlobal = globalThis as typeof globalThis & { __xtremeSmtp?: SmtpCache };
+
+function getSmtpTransport(): Transporter {
+  const host = process.env.SMTP_HOST?.trim() || "";
+  const port = Number(process.env.SMTP_PORT?.trim() || "587");
+  // 465 usa TLS implícito; 587/2525 usan STARTTLS. Se puede forzar con SMTP_SECURE.
+  const secureRaw = process.env.SMTP_SECURE?.trim().toLowerCase();
+  const secure = secureRaw ? secureRaw === "true" : port === 465;
+  const user = process.env.SMTP_USER?.trim() || "";
+  const pass = process.env.SMTP_PASSWORD?.trim() || "";
+
+  const signature = `${host}:${port}:${secure}:${user}`;
+  const cache = (smtpGlobal.__xtremeSmtp ||= {});
+  if (cache.transporter && cache.signature === signature) return cache.transporter;
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: user || pass ? { user, pass } : undefined,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
+  });
+  cache.transporter = transporter;
+  cache.signature = signature;
+  return transporter;
+}
+
+/** Traduce errores de Nodemailer a los códigos de `SendEmailResult` sin filtrar datos. */
+function smtpErrorResult(err: unknown): SendEmailResult {
+  const e = err as { code?: string; responseCode?: number; message?: string } | undefined;
+  const responseCode = typeof e?.responseCode === "number" ? e.responseCode : undefined;
+  const netCodes = new Set(["ECONNECTION", "ETIMEDOUT", "ESOCKET", "EDNS", "ECONNREFUSED"]);
+  const isNetwork = (e?.code && netCodes.has(e.code)) || false;
+  const isAuth = e?.code === "EAUTH";
+  const isRateLimit = responseCode === 421 || responseCode === 450 || responseCode === 451 || responseCode === 452;
+
+  let message: string;
+  if (isAuth) {
+    message = "El servidor SMTP rechazó las credenciales (revisá SMTP_USER / SMTP_PASSWORD).";
+  } else if (isRateLimit) {
+    message = "El servidor SMTP limitó el envío temporalmente. Reintentamos en el próximo lote.";
+  } else if (isNetwork) {
+    message = `No se pudo conectar con el servidor SMTP (${e?.code}). Revisá SMTP_HOST / SMTP_PORT y la red del deployment.`;
+  } else {
+    const safe = (e?.message || "error SMTP desconocido")
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[correo]")
+      .trim()
+      .slice(0, 180);
+    message = responseCode ? `SMTP ${responseCode}: ${safe}` : `Envío SMTP rechazado: ${safe}`;
+  }
+
+  return {
+    ok: false,
+    ...(responseCode ? { status: responseCode } : {}),
+    code: isNetwork ? "network" : isRateLimit ? "rate_limit" : "provider_rejected",
+    error: message,
+  };
+}
+
+/** Envío individual por Nodemailer/SMTP (sender propio). Nunca lanza. */
+async function sendViaSmtp(payload: PreparedEmail): Promise<SendEmailResult> {
+  try {
+    const transporter = getSmtpTransport();
+    const info = await transporter.sendMail({
+      from: payload.from,
+      to: payload.to,
+      ...(payload.cc?.length ? { cc: payload.cc } : {}),
+      subject: payload.subject,
+      html: payload.html,
+      ...(payload.text ? { text: payload.text } : {}),
+      ...(payload.headers ? { headers: payload.headers } : {}),
+    });
+    return { ok: true, id: info.messageId };
+  } catch (err) {
+    console.error("EMAIL SEND FAILED (smtp)", err);
+    return smtpErrorResult(err);
+  }
+}
+
+/* ---------------------------- Transporte Resend --------------------------- */
+
+/** Envío individual por la API de Resend (fallback opcional). Nunca lanza. */
+async function sendViaResend(
+  payload: PreparedEmail,
+  idempotencyKey?: string,
+): Promise<SendEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
     return {
       ok: false,
       skipped: true,
       code: "configuration",
-      error: configurationError || "Configuración de correo incompleta.",
+      error: "Falta RESEND_API_KEY para usar el proveedor Resend.",
     };
   }
-
   try {
-    const prepared = await prepareResendPayload(args, from);
-    if (!prepared.ok) return prepared.result;
-
     const response = await fetch(RESEND_ENDPOINT, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        ...(args.idempotencyKey ? { "Idempotency-Key": args.idempotencyKey.slice(0, 256) } : {}),
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey.slice(0, 256) } : {}),
       },
-      body: JSON.stringify(prepared.payload),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      console.error("EMAIL SEND FAILED", response.status, detail.slice(0, 300));
+      console.error("EMAIL SEND FAILED (resend)", response.status, detail.slice(0, 300));
       return {
         ok: false,
         status: response.status,
@@ -286,7 +390,7 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
 
     return { ok: true, id };
   } catch (err) {
-    console.error("EMAIL SEND ERROR", err);
+    console.error("EMAIL SEND ERROR (resend)", err);
     const detail = err instanceof Error ? err.message.trim().slice(0, 160) : "error de red desconocido";
     return {
       ok: false,
@@ -294,6 +398,33 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
       error: `No se pudo conectar con Resend: ${detail}. Revisá la red del deployment e intentá de nuevo.`,
     };
   }
+}
+
+/**
+ * Envia un correo con el proveedor activo (`EMAIL_PROVIDER`): sender propio
+ * (Nodemailer/SMTP) por defecto, o Resend como fallback. Usa `SMTP_FROM` como
+ * remitente. Nunca lanza: las rutas no deben fallar porque el correo falle.
+ */
+export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
+  const from = process.env.SMTP_FROM?.trim();
+  const configurationError = emailConfigurationError();
+
+  if (configurationError || !from) {
+    console.error("EMAIL SEND SKIPPED", configurationError);
+    return {
+      ok: false,
+      skipped: true,
+      code: "configuration",
+      error: configurationError || "Configuración de correo incompleta.",
+    };
+  }
+
+  const prepared = await preparePayload(args, from);
+  if (!prepared.ok) return prepared.result;
+
+  return emailProvider() === "resend"
+    ? sendViaResend(prepared.payload, args.idempotencyKey)
+    : sendViaSmtp(prepared.payload);
 }
 
 /**
@@ -322,7 +453,7 @@ export async function sendBatchEmails(
   const from = process.env.SMTP_FROM?.trim();
   const configurationError = emailConfigurationError();
 
-  if (configurationError || !apiKey || !from) {
+  if (configurationError || !from) {
     console.error("EMAIL BATCH SKIPPED", configurationError);
     const error = configurationError || "Configuración de correo incompleta.";
     for (const row of results) {
@@ -342,17 +473,42 @@ export async function sendBatchEmails(
     };
   }
 
-  type Ready = { index: number; payload: ResendPayload };
+  type Ready = { index: number; payload: PreparedEmail };
   const ready: Ready[] = [];
 
   try {
     for (let i = 0; i < items.length; i += 1) {
-      const prepared = await prepareResendPayload(items[i], from);
+      const prepared = await preparePayload(items[i], from);
       if (!prepared.ok) {
         results[i] = { index: i, ref: items[i].ref, ...prepared.result };
         continue;
       }
       ready.push({ index: i, payload: prepared.payload });
+    }
+
+    // Sender propio (Nodemailer/SMTP): no hay API de lote, se envía uno por uno
+    // reutilizando el pool de conexiones del transporter. Un fallo por rate limit
+    // (4xx temporal) corta el resto del lote, igual que el batch de Resend.
+    if (emailProvider() === "smtp") {
+      for (const row of ready) {
+        const result = await sendViaSmtp(row.payload);
+        results[row.index] = { index: row.index, ref: items[row.index].ref, ...result };
+        if (result.code === "rate_limit") break;
+      }
+      const sent = results.filter((r) => r.ok).length;
+      const skipped = results.filter((r) => r.skipped).length;
+      const failed = results.length - sent - skipped;
+      const firstFail = results.find((r) => !r.ok && !r.skipped);
+      return {
+        ok: failed === 0,
+        results,
+        sent,
+        failed,
+        skipped,
+        ...(firstFail
+          ? { error: firstFail.error, status: firstFail.status, code: firstFail.code }
+          : {}),
+      };
     }
 
     // Chunks de hasta 100 (límite Resend).
@@ -414,7 +570,7 @@ export async function sendBatchEmails(
   } catch (err) {
     console.error("EMAIL BATCH ERROR", err);
     const detail = err instanceof Error ? err.message.trim().slice(0, 160) : "error de red desconocido";
-    const error = `No se pudo conectar con Resend: ${detail}. Revisá la red del deployment e intentá de nuevo.`;
+    const error = `No se pudo completar el envío de correo: ${detail}. Revisá la red del deployment e intentá de nuevo.`;
     for (const row of ready) {
       if (!results[row.index].ok && !results[row.index].error) {
         results[row.index] = {

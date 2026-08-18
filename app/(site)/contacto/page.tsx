@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BUSINESS, SCHEDULE, telLink, waLink } from "../../lib/site";
 import { gymJsonLd, pageMetadata } from "../../lib/seo";
+import CtaBand from "../../components/CtaBand";
 import JsonLd from "../../components/JsonLd";
 import { Clock, CreditCard, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 
@@ -107,6 +108,7 @@ const SOCIAL_LINKS = [
 
 export default function ContactoPage() {
   return (
+    <>
     <section className="px-5 py-10 sm:px-8 lg:py-14">
       <JsonLd data={gymJsonLd()} />
       <div className="mx-auto max-w-7xl">
@@ -232,5 +234,11 @@ export default function ContactoPage() {
         </div>
       </div>
     </section>
+    <CtaBand
+      eyebrow="Sin pasar por recepción"
+      title="Ya sabés dónde estamos. Activá tu plan desde acá."
+      support="Podés inscribirte y pagar en línea antes de venir: llegás con el acceso listo y solo confirmás tus datos en recepción."
+    />
+    </>
   );
 }

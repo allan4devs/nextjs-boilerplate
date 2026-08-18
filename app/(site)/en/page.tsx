@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowRight, MapPin } from "lucide-react";
 import CinematicLandingFX from "../../components/CinematicLandingFX";
 import CtaBand from "../../components/CtaBand";
+import CtaLink from "../../components/CtaLink";
 import HeroTrainingVideo from "../../components/HeroTrainingVideo";
 import JsonLd from "../../components/JsonLd";
 import LandingTrack from "../../components/LandingTrack";
@@ -186,10 +187,9 @@ export default function EnglishLandingPage() {
           <div className="cinema-services-grid mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {content.services.map((service) => {
               const Icon = service.icon;
-              const body = <><Image src={service.image} alt="" fill sizes="(max-width: 768px) 100vw, 25vw" className="cinema-service-photo pointer-events-none object-cover" /><div className="cinema-service-shade pointer-events-none absolute inset-0" /><div className="cinema-service-light pointer-events-none absolute inset-0" /><div className="cinema-service-sweep pointer-events-none absolute inset-y-0 -left-1/2 w-1/3" /><span className="cinema-service-ghost pointer-events-none absolute -right-2 top-8 font-black leading-none">{service.number}</span><div className="relative z-10 flex items-start justify-between"><span className="cinema-service-index inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[.22em]"><span className="h-px w-6 bg-current" />{service.number}</span><span className="cinema-service-icon grid h-11 w-11 place-items-center rounded-full border border-white/20"><Icon className="h-5 w-5" /></span></div><div className="relative z-10 mt-auto min-w-0 pt-24"><h3 className="cinema-service-title font-black uppercase text-balance">{service.title}</h3><p className="cinema-service-copy mt-4 text-sm font-medium leading-6">{service.text}</p><p className="cinema-service-meta mt-6 flex items-center justify-between gap-3 border-t pt-4 text-[10px] font-black uppercase leading-4 tracking-[.14em]"><span className="min-w-0">{service.meta}</span>{"href" in service && service.href ? <ArrowRight className="h-4 w-4 shrink-0" /> : null}</p></div></>;
-              return "href" in service && service.href
-                ? <Link key={service.number} href={service.href} data-cinema-card className="cinema-service-card group relative isolate flex overflow-hidden bg-[#090909] p-6 text-white">{body}</Link>
-                : <article key={service.number} data-cinema-card className="cinema-service-card group relative isolate flex overflow-hidden bg-[#090909] p-6 text-white">{body}</article>;
+              const external = service.href.startsWith("http");
+              const body = <><Image src={service.image} alt="" fill sizes="(max-width: 768px) 100vw, 25vw" className="cinema-service-photo pointer-events-none object-cover" /><div className="cinema-service-shade pointer-events-none absolute inset-0" /><div className="cinema-service-light pointer-events-none absolute inset-0" /><div className="cinema-service-sweep pointer-events-none absolute inset-y-0 -left-1/2 w-1/3" /><span className="cinema-service-ghost pointer-events-none absolute -right-2 top-8 font-black leading-none">{service.number}</span><div className="relative z-10 flex items-start justify-between"><span className="cinema-service-index inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[.22em]"><span className="h-px w-6 bg-current" />{service.number}</span><span className="cinema-service-icon grid h-11 w-11 place-items-center rounded-full border border-white/20"><Icon className="h-5 w-5" /></span></div><div className="relative z-10 mt-auto min-w-0 pt-16"><h3 className="cinema-service-title font-black uppercase text-balance">{service.title}</h3><p className="cinema-service-copy mt-4 text-sm font-medium leading-6">{service.text}</p><p className="cinema-service-meta mt-6 border-t pt-4 text-[10px] font-black uppercase leading-4 tracking-[.14em]">{service.meta}</p><span className="mt-4 inline-flex min-h-11 items-center gap-2 border border-[#f6c400]/55 bg-[#f6c400]/12 px-3 text-[10px] font-black uppercase leading-4 tracking-[.14em] text-[#f6c400] transition group-hover:bg-[#f6c400] group-hover:text-black">{service.cta}<ArrowRight className="h-3.5 w-3.5 shrink-0" /></span></div></>;
+              return <CtaLink key={service.number} href={service.href} cta={`service-${service.number} ${service.title}`} external={external} card className="cinema-service-card group relative isolate flex overflow-hidden bg-[#090909] p-6 text-white">{body}</CtaLink>;
             })}
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function EnglishLandingPage() {
         </div>
       </section>
 
-      <CtaBand eyebrow="Start today" title={content.finalCta} cta={content.finalCtaLabel} href="/en/prices#inscripcion" />
+      <CtaBand locale="en" eyebrow="Start today" title={content.finalCta} cta={content.finalCtaLabel} href="/en/prices#inscripcion" />
     </>
   );
 }

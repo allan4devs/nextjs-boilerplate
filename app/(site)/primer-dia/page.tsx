@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, CheckCircle2, Clock3, MapPin, ShieldCheck } from "lucide-react";
+import CtaBand from "../../components/CtaBand";
 import FreeDayRegisterForm from "../../components/FreeDayRegisterForm";
 import LandingTrack from "../../components/LandingTrack";
 import { BUSINESS, SCHEDULE } from "../../lib/site";
@@ -112,13 +113,14 @@ export default function PrimerDiaPage() {
         <div className="mx-auto max-w-xl">
           <FreeDayRegisterForm source="primer-dia" />
         </div>
-        <p className="mx-auto mt-8 max-w-xl text-center text-sm font-bold text-white/45">
-          ¿Ya veniste y querés un plan?{" "}
-          <Link href="/precios#inscripcion" className="text-[#f6c400] hover:underline">
-            Conocer los planes
-          </Link>
-        </p>
       </section>
+      <CtaBand
+        eyebrow="Después de tu día gratis"
+        title="¿Ya veniste? Activá tu plan y seguí sin cortar el ritmo."
+        support="El primer día no pide tarjeta. Cuando decidás seguir, elegís el plan y pagás en línea acá mismo: el acceso queda activo al confirmar el cobro."
+        secondaryCta="Repasar el primer día"
+        secondaryHref="#registro"
+      />
     </>
   );
 }

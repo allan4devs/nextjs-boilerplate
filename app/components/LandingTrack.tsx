@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { getAnonymousId } from "../lib/analytics/session-client";
 
 /** Fire-and-forget funnel events from marketing pages. */
 export default function LandingTrack({
@@ -13,18 +14,8 @@ export default function LandingTrack({
   cta?: string;
 }) {
   useEffect(() => {
-    let anon = "";
-    try {
-      anon =
-        window.sessionStorage.getItem("xtreme-anon-id") ||
-        (() => {
-          const id = `anon-${Math.random().toString(36).slice(2, 12)}`;
-          window.sessionStorage.setItem("xtreme-anon-id", id);
-          return id;
-        })();
-    } catch {
-      anon = `anon-${Date.now()}`;
-    }
+    // Misma identidad anónima que usan los clics de CTA y la sesión de uso.
+    const anon = getAnonymousId();
     void fetch("/api/xtreme/events/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

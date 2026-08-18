@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, CreditCard, MapPin, MessageCircle, Star } from "lucide-react";
 import { BUSINESS, NAV_LINKS, waLink } from "../lib/site";
+import { checkoutHref, planPriceAnchor } from "../lib/cta";
+import CtaLink from "./CtaLink";
 
 /** Rutas de app / operación: sin footer de marketing ni CTA sticky. */
 function isOsSurface(pathname: string) {
@@ -45,13 +47,15 @@ export default function SiteFooter() {
                 : `${BUSINESS.location}. Equipo completo, acompañamiento de instructores, medición corporal, parqueo y espacios que hacen más simple sostener el hábito.`}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link
-                href={english ? "/en/prices" : "/precios#inscripcion"}
+              <CtaLink
+                href={checkoutHref("month", english ? "en" : "es")}
+                cta="footer-inscribirme"
+                plan="month"
                 className="inline-flex items-center gap-2 bg-[#f6c400] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-white"
               >
                 <CreditCard className="h-4 w-4" />
                 {english ? "Join now" : "Inscribirme"}
-              </Link>
+              </CtaLink>
               <a
                 href={waLink("Hola Xtreme Gym, quiero información para entrenar.")}
                 className="inline-flex items-center gap-2 border border-white/15 px-5 py-3 text-sm font-black uppercase text-white transition hover:border-white/35"
@@ -123,13 +127,22 @@ export default function SiteFooter() {
 
       {showMobileCta && (
         <div className="xg-mobile-cta fixed z-40 md:hidden">
-          <Link
-            href={english ? "/en/prices" : "/precios#inscripcion"}
-            className="inline-flex min-h-14 w-full items-center justify-center gap-2 border-[2px] border-[#f6c400] bg-[#f6c400] px-5 text-xs font-black uppercase text-black shadow-[4px_4px_0_rgba(0,0,0,.55)] transition active:translate-y-px active:shadow-[2px_2px_0_rgba(0,0,0,.55)]"
+          <CtaLink
+            href={checkoutHref("month", english ? "en" : "es")}
+            cta="sticky-movil-inscribirme"
+            plan="month"
+            className="flex min-h-14 w-full items-center justify-between gap-2 border-[2px] border-[#f6c400] bg-[#f6c400] px-4 py-2 text-left text-black shadow-[4px_4px_0_rgba(0,0,0,.55)] transition active:translate-y-px active:shadow-[2px_2px_0_rgba(0,0,0,.55)]"
           >
-            {english ? "See plans" : "Ver planes"}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+            <span className="min-w-0 leading-tight">
+              <span className="block text-xs font-black uppercase">
+                {english ? "Join and pay" : "Inscribirme y pagar"}
+              </span>
+              <span className="mt-0.5 block truncate text-[9px] font-black uppercase tracking-[0.1em] text-black/60">
+                {planPriceAnchor(english ? "en" : "es")}
+              </span>
+            </span>
+            <ArrowRight className="h-4 w-4 shrink-0" />
+          </CtaLink>
         </div>
       )}
     </>

@@ -6,6 +6,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock3,
+  CreditCard,
   MessageCircle,
   ShieldCheck,
   UserRoundCheck,
@@ -317,7 +318,7 @@ export default function ZonasPage() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden border-b border-white/10 bg-[#f6c400] px-5 py-20 text-black sm:px-8 lg:py-28">
+      <section id="semipersonalizado" className="relative scroll-mt-24 overflow-hidden border-b border-white/10 bg-[#f6c400] px-5 py-20 text-black sm:px-8 lg:py-28">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[.85fr_1.15fr] lg:items-start">
           <div data-cinema-reveal>
             <p className="text-[10px] font-black uppercase tracking-[.24em] text-black/55">Entrenamiento semipersonalizado</p>
@@ -329,12 +330,23 @@ export default function ZonasPage() {
               acceso ilimitado al gimnasio.
             </p>
             <p className="mt-7 text-5xl font-black">₡45.000 <span className="text-sm uppercase tracking-[.12em] text-black/50">al mes</span></p>
-            <a
-              href={waLink("Hola Xtreme Gym, quiero consultar disponibilidad para las clases grupales de ₡45.000.")}
-              className="mt-8 inline-flex min-h-13 items-center gap-3 bg-black px-5 text-xs font-black uppercase tracking-[.1em] text-white transition hover:bg-white hover:text-black"
-            >
-              Consultar cupo <MessageCircle className="h-5 w-5" />
-            </a>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/precios#inscripcion"
+                className="inline-flex min-h-13 items-center gap-3 bg-black px-5 text-xs font-black uppercase tracking-[.1em] text-white transition hover:bg-white hover:text-black"
+              >
+                Inscribirme y pagar <CreditCard className="h-5 w-5" />
+              </Link>
+              <a
+                href={waLink("Hola Xtreme Gym, quiero consultar disponibilidad para las clases grupales de ₡45.000.")}
+                className="inline-flex min-h-13 items-center gap-3 border-[3px] border-black px-5 text-xs font-black uppercase tracking-[.1em] text-black transition hover:bg-black hover:text-white"
+              >
+                Consultar cupo <MessageCircle className="h-5 w-5" />
+              </a>
+            </div>
+            <p className="mt-4 text-xs font-black uppercase tracking-[.12em] text-black/55">
+              El grupo reducido se coordina con recepción · los planes regulares se pagan en línea.
+            </p>
           </div>
 
           <div data-cinema-reveal className="grid gap-px border-[3px] border-black bg-black sm:grid-cols-2">
@@ -377,7 +389,11 @@ export default function ZonasPage() {
         </div>
       </section>
 
-      <CtaBand eyebrow="Empezá hoy" title="El primer día corre por nuestra cuenta." cta="Reservar mi primer día" />
+      <CtaBand
+        eyebrow="Empezá hoy"
+        title="Reservá tu lugar en las zonas. El primer día corre por nuestra cuenta."
+        secondaryCta="Reservar mi primer día"
+      />
     </>
   );
 }

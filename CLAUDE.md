@@ -76,7 +76,7 @@ Flujo de sesión del socio: cédula (lector de barras USB tipo teclado o digitad
 - `lib/xtreme/gamification.ts` - reglas de XP, niveles, rachas, badges, protectores de racha; las constantes (`STREAK_MILESTONES`, `WEEKLY_GOAL_MIN/MAX`) se importan también en el cliente.
 - `lib/xtreme/session.ts` - sesiones de servidor con cookie HttpOnly (token opaco, solo el hash va a Mongo).
 - `lib/xtreme/lifecycle.ts` + `app/api/xtreme/jobs/lifecycle/route.ts` - job diario de correos/push (cron de Vercel en `vercel.json`, autenticado con `CRON_SECRET` como Bearer). Usa llaves de entrega en Mongo para no duplicar envíos en reintentos.
-- `lib/helpers/email.ts` (Resend), `lib/helpers/push.ts` (web-push/VAPID), `lib/helpers/paypal.ts` + `lib/constants/paypal.ts` (checkout de planes).
+- `lib/helpers/email.ts` (correo saliente). Envío tras el flag `EMAIL_PROVIDER`: `smtp` = sender propio con **Nodemailer** (por defecto y el de Producción), `resend` = fallback por la API de Resend. `EMAIL_SENDING_ENABLED=true` es el interruptor maestro. Config y DNS en [`docs/EMAIL_SETUP.md`](docs/EMAIL_SETUP.md). `lib/helpers/push.ts` (web-push/VAPID), `lib/helpers/paypal.ts` + `lib/constants/paypal.ts` (checkout de planes).
 
 ### Convenciones
 
@@ -87,4 +87,4 @@ Flujo de sesión del socio: cédula (lector de barras USB tipo teclado o digitad
 
 ### Variables de entorno
 
-`MONGODB_URI`/`MONGODB_DB`, `XTREME_RECEPTION_CODE` (recepción e ingreso), `XTREME_TRAINER_CODE` (Trainer OS), `XTREME_ADMIN_CODE`/`XTREME_SUPER_ADMIN_CODE` (roles del admin), `CRON_SECRET`, `RESEND_API_KEY`, `SMTP_FROM`, `NEXT_PUBLIC_APP_URL`, VAPID (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`), PayPal (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE`, y variantes `_SANDBOX`).
+`MONGODB_URI`/`MONGODB_DB`, `XTREME_RECEPTION_CODE` (recepción e ingreso), `XTREME_TRAINER_CODE` (Trainer OS), `XTREME_ADMIN_CODE`/`XTREME_SUPER_ADMIN_CODE` (roles del admin), `CRON_SECRET`, correo (`EMAIL_SENDING_ENABLED`, `EMAIL_PROVIDER`, `SMTP_FROM`, y para el sender propio `SMTP_HOST`/`SMTP_PORT`/`SMTP_SECURE`/`SMTP_USER`/`SMTP_PASSWORD`; `RESEND_API_KEY` solo con `EMAIL_PROVIDER=resend`), `NEXT_PUBLIC_APP_URL`, VAPID (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`), PayPal (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE`, y variantes `_SANDBOX`).

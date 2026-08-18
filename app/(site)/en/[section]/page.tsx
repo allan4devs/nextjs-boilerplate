@@ -79,7 +79,7 @@ function TrainingPage() {
     <>
       <PageHero eyebrow="Training areas" title="A place for every" highlight="training goal." text="Train strength, functional fitness, cardio and lower body with dedicated equipment and a clear purpose." image="/xtreme/piso-pesas-panoramica.webp" imageAlt="Strength training area" />
       <section className="px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-2">{TRAINING_AREAS.map(({ icon: Icon, ...area }) => <article key={area.title} className="border border-white/10 bg-white/[0.04] p-6"><Icon className="h-8 w-8 text-[#f6c400]" /><p className="mt-6 text-xs font-black uppercase tracking-[.18em] text-white/40">{area.label}</p><h2 className="mt-2 text-3xl font-black uppercase">{area.title}</h2><p className="mt-3 font-semibold leading-7 text-white/58">{area.text}</p></article>)}</div></section>
-      <CtaBand eyebrow="Start training" title="Choose your plan and make today count." cta="Join now" href="/en/prices#inscripcion" />
+      <CtaBand locale="en" eyebrow="Start training" title="Choose your plan and make today count." href="/en/prices#inscripcion" />
     </>
   );
 }
@@ -155,12 +155,10 @@ function PricesPage() {
         <ExtremeGymCheckout locale="en" />
       </Suspense>
       <CtaBand
+        locale="en"
         eyebrow="Find your plan"
         title="Try your first day free or join today with instant online checkout."
-        cta="View plans and pay"
         href="#inscripcion"
-        secondaryCta="First day free"
-        secondaryHref="/en/first-day"
       />
     </>
   );
@@ -198,7 +196,7 @@ function BenefitsPage() {
           <GymBenefitsGrid locale="en" />
         </div>
       </section>
-      <CtaBand eyebrow="Your next step" title="Choose a plan and make the most of everything Xtreme offers." cta="Join now" href="/en/prices#inscripcion" />
+      <CtaBand locale="en" eyebrow="Your next step" title="Choose a plan and make the most of everything Xtreme offers." href="/en/prices#inscripcion" />
     </>
   );
 }

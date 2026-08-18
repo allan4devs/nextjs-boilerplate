@@ -25,6 +25,10 @@ const TANNERS = [
 
 const WHATSAPP = waLink("Hola Xtreme Gym, quiero consultar disponibilidad para la cámara de bronceado.");
 
+/** Reserva con el paquete ya identificado: recepción confirma cupo y cobra en sitio. */
+const packageLink = (sessions: string, price: string) =>
+  waLink(`Hola Xtreme Gym, quiero reservar la cámara de bronceado: ${sessions} (${price}).`);
+
 export default function BronceadoPage() {
   return (
     <>
@@ -36,12 +40,17 @@ export default function BronceadoPage() {
         image="/xtreme/recepcion-sala-espera.webp"
         imageAlt="Área de atención para la cámara de bronceado de Xtreme Gym"
       >
-        <a href={WHATSAPP} className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white">
-          Consultar disponibilidad <MessageCircle className="h-4 w-4" />
-        </a>
+        <div className="flex flex-wrap gap-3">
+          <a href="#paquetes" className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white">
+            Ver paquetes y reservar <ArrowRight className="h-4 w-4" />
+          </a>
+          <a href={WHATSAPP} className="inline-flex min-h-12 items-center gap-2 border border-white/25 px-5 font-black uppercase text-white transition hover:border-[#f6c400] hover:text-[#f6c400]">
+            Consultar disponibilidad <MessageCircle className="h-4 w-4" />
+          </a>
+        </div>
       </PageHero>
 
-      <section className="bg-[#ece9df] px-5 py-20 text-black sm:px-8 lg:py-28">
+      <section id="paquetes" className="scroll-mt-24 bg-[#ece9df] px-5 py-20 text-black sm:px-8 lg:py-28">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-7 border-b border-black/15 pb-8 lg:grid-cols-[1fr_.7fr] lg:items-end">
             <div>
@@ -53,11 +62,19 @@ export default function BronceadoPage() {
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {SESSION_PACKAGES.map((item) => (
-              <article key={item.sessions} className={`min-h-56 border p-6 ${"featured" in item ? "border-black bg-[#f6c400]" : "border-black/15 bg-white/55"}`}>
+              <article key={item.sessions} className={`flex min-h-56 flex-col border p-6 ${"featured" in item ? "border-black bg-[#f6c400]" : "border-black/15 bg-white/55"}`}>
                 <Sun className="h-6 w-6" />
                 <p className="mt-10 text-xs font-black uppercase tracking-[.18em] text-black/50">{item.sessions}</p>
                 <p className="mt-2 text-4xl font-black tracking-tight">{item.price}</p>
-                <p className="mt-4 border-t border-black/15 pt-4 text-sm font-bold text-black/60">{item.note}</p>
+                <p className="mt-4 flex-1 border-t border-black/15 pt-4 text-sm font-bold text-black/60">{item.note}</p>
+                <a
+                  href={packageLink(item.sessions, item.price)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-black bg-black px-4 text-center text-xs font-black uppercase leading-4 tracking-[.1em] text-white transition hover:bg-transparent hover:text-black"
+                >
+                  Reservar {item.sessions} <ArrowRight className="h-4 w-4 shrink-0" />
+                </a>
               </article>
             ))}
           </div>
@@ -100,7 +117,11 @@ export default function BronceadoPage() {
         </div>
       </section>
 
-      <CtaBand eyebrow="Consultá antes de venir" title="Escribinos y coordiná tu próxima sesión de bronceado." />
+      <CtaBand
+        eyebrow="Además del bronceado"
+        title="Sumá el gym a tu rutina y pagá tu plan en línea."
+        support="Las sesiones de bronceado se reservan con recepción. Tu plan de entrenamiento sí se paga acá mismo y queda activo al confirmar el cobro."
+      />
     </>
   );
 }

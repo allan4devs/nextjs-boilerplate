@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, CheckCircle2, CreditCard, Loader2, Mail, RefreshCw } from "lucide-react";
+import CtaLink from "./CtaLink";
+import { checkoutHref, planPriceAnchor } from "../lib/cta";
 
 type IdentityMode = "email" | "cedula";
 
@@ -293,6 +295,26 @@ function FreeDayRegisterFormInner({
             >
               Usar otro correo o cédula
             </button>
+
+            {/* Upsell suave: el día gratis sigue siendo el protagonista. */}
+            <div className="mt-7 border-t border-white/10 pt-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                Después de tu día gratis
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-white/60">
+                {planPriceAnchor("es")}. Podés pagar en línea cuando querás y el acceso queda
+                activo al confirmar el cobro.
+              </p>
+              <CtaLink
+                href={checkoutHref("month")}
+                cta="primer-dia-registro-exitoso"
+                plan="month"
+                className="mt-4 inline-flex min-h-11 items-center gap-2 border border-[#d8ff3e]/45 px-4 text-xs font-black uppercase tracking-[0.12em] text-[#d8ff3e] transition hover:bg-[#d8ff3e] hover:text-black"
+              >
+                Ver planes y precios
+                <ArrowRight className="h-4 w-4 shrink-0" />
+              </CtaLink>
+            </div>
 
             {error && (
               <p className="mt-3 text-sm font-bold text-red-300" role="alert">
