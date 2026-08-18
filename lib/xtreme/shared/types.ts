@@ -202,8 +202,59 @@ export type MemberDoc = {
     }>;
     emailAssignment?: Record<string, unknown>;
   };
+  /**
+   * Ficha extendida que administra el super admin desde el Admin OS. Vive
+   * aparte de los campos que el socio edita en la app para que una edición del
+   * socio nunca pise lo que registró la administración.
+   */
+  adminProfile?: AdminMemberProfile;
+  /**
+   * Precio pactado con el socio. Regla del gym: hay socios con montos distintos
+   * al precio público según su historial o su última factura de Latinsoft.
+   */
+  customPricing?: CustomPricing;
   createdAt?: Date;
   updatedAt?: Date;
+};
+
+/** Sexo/identidad tal como la registra recepción; libre para no encasillar. */
+export type AdminMemberProfile = {
+  birthDate?: string;
+  gender?: string;
+  address?: string;
+  occupation?: string;
+  /** Cómo llegó al gym (referido, redes, pasó por el local...). */
+  acquisitionSource?: string;
+  /** Horario habitual: mañana / tarde / noche / mixto. */
+  preferredSchedule?: string;
+  emergencyContact?: {
+    name?: string;
+    phone?: string;
+    relation?: string;
+  };
+  /** Lesiones, condiciones, medicación relevante para entrenar. */
+  medicalNotes?: string;
+  /** Etiquetas libres para segmentar (ej. "adulto mayor", "rehabilitación"). */
+  tags?: string[];
+  /** El VIP se administra aparte: marcarlo no otorga acceso a zonas regulares. */
+  vipAccess?: boolean;
+  vipNote?: string;
+  /** Identificador del cliente en Latinsoft (fuente operativa de facturación). */
+  latinsoftId?: string;
+  updatedAt?: Date;
+  updatedBy?: string | null;
+};
+
+export type CustomPricing = {
+  /** Monto pactado en colones. 0 / ausente = usa el precio público. */
+  amountCrc?: number;
+  /** Plan al que aplica el monto (mensual, quincenal...). */
+  planLabel?: string;
+  reason?: string;
+  /** Factura o referencia de Latinsoft que respalda el monto. */
+  latinsoftInvoice?: string;
+  setAt?: Date;
+  setBy?: string | null;
 };
 
 export type OtpDoc = {
@@ -240,11 +291,26 @@ export type AuditDoc = {
   id: string;
   at: Date;
   actorRole: StaffRole;
+  /** Identidad del colaborador que ejecutó la acción (Allan, Eileen, Verónica...). */
+  actorId?: string | null;
+  actorName?: string | null;
   action: string;
   targetType: "member" | "badge" | "payment" | "system";
   targetId: string;
   summary: string;
   meta?: Record<string, unknown>;
+  /**
+   * Campos que cambiaron, con valor anterior y nuevo. Es lo que convierte la
+   * bitácora en un historial de cambios auditable y no solo en un log de texto.
+   */
+  changes?: AuditChange[];
+};
+
+export type AuditChange = {
+  field: string;
+  label?: string;
+  before: string | number | boolean | null;
+  after: string | number | boolean | null;
 };
 
 export type BadgeDoc = {

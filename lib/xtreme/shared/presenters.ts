@@ -130,6 +130,7 @@ export function toAdminMember(doc: MemberDoc) {
     latestWaist: metrics.at(-1)?.waistCm ?? null,
     seeded: Boolean(doc.seeded),
     createdAt: doc.createdAt ?? null,
+    updatedAt: doc.updatedAt ?? null,
     bodyMetrics: metrics.slice(-10),
     recentWorkouts,
   };

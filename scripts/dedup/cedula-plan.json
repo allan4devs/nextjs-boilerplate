@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-08-18T04:26:08.815Z",
+  "groups": [],
+  "excludedInvalidCedulaGroups": [
+    {
+      "cedula": "0",
+      "names": [
+        "NOEMY CASTRO COBRAR EN ESTA",
+        "VALESKA QUIRÓS GONZÁLEZ",
+        "KEVIN VARGAS BARQUERO"
+      ]
+    },
+    {
+      "cedula": "00000000",
+      "names": [
+        "CLIENTE SESIÓN DIARIA",
+        "JOSE LUIS RODRIGUEZ HERRERA"
+      ]
+    },
+    {
+      "cedula": "117000605418",
+      "names": [
+        "JAMES FERNANDEZ LOPEZ",
+        "JAMES HERNANDEZ LOPEZ"
+      ]
+    },
+    {
+      "cedula": "15582511",
+      "names": [
+        "MARYELI MIRANDA",
+        "MICHELLE POVEDA ARTOLA"
+      ]
+    }
+  ],
+  "garbageDocs": []
+}

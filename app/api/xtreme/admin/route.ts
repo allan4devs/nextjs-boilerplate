@@ -290,6 +290,7 @@ export async function GET(req: NextRequest) {
       checkins: checkinDocs.map((c) => ({
         id: c.id,
         memberName: c.memberName,
+        normalizedName: c.normalizedName,
         accessCode: c.accessCode,
         method: c.method,
         membershipStatus: c.membershipStatus,
@@ -958,6 +959,62 @@ export async function POST(req: NextRequest) {
         );
       }
       return NextResponse.json({ ok: true, sentTo: member.email });
+    }
+
+    // Recordatorio de pago desde la auditoría (tab Pagos): usa el mejor correo
+    // en ficha aunque no esté verificado. Son clientes reales importados de
+    // Latinsoft, no contactos fríos. Si no hay correo usable, el cliente cae a
+    // WhatsApp con el teléfono. No pasa por el sistema de campañas.
+    if (action === "paymentReminder") {
+      const memberName = normalizeName(body.memberName);
+      if (!memberName) {
+        return NextResponse.json({ error: "Nombre requerido." }, { status: 400 });
+      }
+
+      const db = await getDb();
+      const member = await db
+        .collection<MemberDoc>(MEMBERS_COLLECTION)
+        .findOne({ normalizedName: normalizeKey(memberName) });
+      if (!member) {
+        return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+      }
+
+      const email = String(member.email ?? "").trim().toLowerCase();
+      const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!validEmail) {
+        // 422: sin correo utilizable. El cliente lo interpreta para ofrecer WhatsApp.
+        return NextResponse.json(
+          { error: "El socio no tiene correo en la ficha. Usá WhatsApp.", noEmail: true },
+          { status: 422 },
+        );
+      }
+
+      const ms = membershipStatus(member.membership);
+      const result = await sendMembershipReminderEmail({
+        to: email,
+        memberName: member.memberName || memberName,
+        plan: ms.plan,
+        nextBillingDate: ms.nextBillingDate,
+        daysRemaining: ms.daysRemaining,
+      });
+      if (!result.ok) {
+        return NextResponse.json(
+          {
+            error: result.error || "No se pudo enviar el correo.",
+            emailErrorCode: result.code || "unknown",
+          },
+          { status: 502 },
+        );
+      }
+      await writeAudit(db, {
+        actorRole: role,
+        action: "member.payment_reminder",
+        targetType: "member",
+        targetId: member.normalizedName || normalizeKey(memberName),
+        summary: `Recordatorio de pago enviado a ${member.memberName || memberName} (${email})`,
+        meta: { channel: "email", verified: member.emailVerified === true, daysRemaining: ms.daysRemaining },
+      });
+      return NextResponse.json({ ok: true, sentTo: email, verified: member.emailVerified === true });
     }
 
     // Recordatorio masivo a membresias por vencer / vencidas (Resend Batch API).

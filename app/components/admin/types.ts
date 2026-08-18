@@ -60,12 +60,16 @@ export type AdminMember = {
   plan: string;
   membershipStatus: MembershipStatus;
   daysRemaining: number;
+  /** Fecha del último pago; si el import de Latinsoft no la trajo, cae a `startedAt`. */
+  lastPaidAt: string;
   nextBillingDate: string;
   startedAt: string;
   latestWeight: number | null;
   latestWaist: number | null;
   trainingPlan: TrainingPlan | null;
   seeded: boolean;
+  /** Cuándo se tocó la ficha por última vez (ej. import de Latinsoft, cobro, edición). */
+  updatedAt?: string | null;
   // Rich info for personal trainer detailed view
   bodyMetrics?: Array<{
     id?: string;
@@ -99,6 +103,8 @@ export type MemberSort = { key: MemberSortKey; direction: SortDirection };
 export type CheckinRow = {
   id: string;
   memberName: string;
+  /** Llave del socio para cruzar el ingreso con su ficha viva en `members`. */
+  normalizedName: string;
   accessCode: string;
   method: string;
   membershipStatus: string;
@@ -336,6 +342,7 @@ export type AdminTabId =
   | "resumen"
   | "socios"
   | "accesos"
+  | "pagos"
   | "ingresos"
   | "gamificacion"
   | "correos"

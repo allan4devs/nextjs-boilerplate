@@ -11,6 +11,49 @@ export function money(crc: number) {
   return `CRC ${crc.toLocaleString("es-CR")}`;
 }
 
+export function isValidEmail(email?: string | null): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email ?? "").trim().toLowerCase());
+}
+
+/** Número apto para wa.me: dígitos con código de país (Costa Rica = 506). */
+export function waNumber(phone?: string | null): string {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 8) return `506${digits}`; // número local CR
+  return digits; // ya trae código de país
+}
+
+/** Enlace wa.me con mensaje ya redactado. Abre el borrador; el staff confirma el envío. */
+export function waLink(phone: string | null | undefined, text: string): string {
+  const num = waNumber(phone);
+  return num ? `https://wa.me/${num}?text=${encodeURIComponent(text)}` : "";
+}
+
+export function titleFirstName(name: string): string {
+  const first = name.trim().split(/\s+/)[0] || "";
+  return first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : "";
+}
+
+/** Recordatorio de membresía en voseo CR, reutilizable por correo y WhatsApp. */
+export function membershipReminderText(m: {
+  memberName: string;
+  plan: string;
+  nextBillingDate: string;
+  daysRemaining: number;
+}): string {
+  const first = titleFirstName(m.memberName);
+  const hi = first ? `¡Hola ${first}!` : "¡Hola!";
+  const venc =
+    m.daysRemaining < 0
+      ? m.nextBillingDate
+        ? `venció el ${m.nextBillingDate}`
+        : "está vencido"
+      : m.nextBillingDate
+        ? `vence el ${m.nextBillingDate} (${m.daysRemaining} día${m.daysRemaining === 1 ? "" : "s"})`
+        : "está por vencer";
+  return `${hi} 💪 Te saludamos de Xtreme Gym. Tu plan ${m.plan} ${venc}. ¿Lo renovamos? ¡Te esperamos, pura vida! 🔥`;
+}
+
 /** Fecha de hoy en formato `YYYY-MM-DD`, que es como viajan las fechas del admin. */
 export function todayIso() {
   return new Date().toISOString().slice(0, 10);

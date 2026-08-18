@@ -9,6 +9,7 @@ import {
   ClipboardList,
   DoorOpen,
   Mail,
+  ReceiptText,
   Trophy,
   Users,
   type LucideIcon,
@@ -78,20 +79,26 @@ export const QUICK_PLAN_OPTIONS: Array<{
 export type AdminTabDefinition = {
   id: AdminTabId;
   label: string;
+  href: string;
   icon: LucideIcon;
   /** Solo visible para super admin (Allan, Alejandro, Eileen). */
   superOnly?: boolean;
 };
 
 export const ADMIN_TABS: AdminTabDefinition[] = [
-  { id: "resumen", label: "Resumen", icon: Activity },
-  { id: "socios", label: "Socios", icon: Users },
-  { id: "accesos", label: "Accesos", icon: DoorOpen },
-  { id: "bitacora", label: "Bitácora", icon: ClipboardList },
-  { id: "gamificacion", label: "Game", icon: Trophy },
-  { id: "correos", label: "Correos", icon: Mail, superOnly: true },
-  { id: "ingresos", label: "Ingresos", icon: Banknote, superOnly: true },
+  { id: "resumen", label: "Resumen", href: "/admin", icon: Activity },
+  { id: "socios", label: "Socios", href: "/admin/socios", icon: Users },
+  { id: "accesos", label: "Accesos", href: "/admin/accesos", icon: DoorOpen },
+  { id: "bitacora", label: "Bitácora", href: "/admin/bitacora", icon: ClipboardList },
+  { id: "gamificacion", label: "Game", href: "/admin/gamificacion", icon: Trophy },
+  { id: "pagos", label: "Pagos", href: "/admin/pagos", icon: ReceiptText, superOnly: true },
+  { id: "correos", label: "Correos", href: "/admin/correos", icon: Mail, superOnly: true },
+  { id: "ingresos", label: "Ingresos", href: "/admin/ingresos", icon: Banknote, superOnly: true },
 ];
+
+export function adminHref(tab: AdminTabId): string {
+  return ADMIN_TABS.find((item) => item.id === tab)?.href ?? "/admin";
+}
 
 /** Páginas visibles en el paginador antes de colapsar con elipsis. */
 export const MEMBER_PAGE_WINDOW = 7;

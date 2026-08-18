@@ -50,6 +50,7 @@ import { ResumenTab } from "../../components/admin/tabs/ResumenTab";
 import { BitacoraTab } from "../../components/admin/tabs/BitacoraTab";
 import { AccesosTab } from "../../components/admin/tabs/AccesosTab";
 import { IngresosTab } from "../../components/admin/tabs/IngresosTab";
+import { PagosTab } from "../../components/admin/tabs/PagosTab";
 import { GamificacionTab } from "../../components/admin/tabs/GamificacionTab";
 import { usePaymentDraft } from "../../components/admin/hooks/usePaymentDraft";
 import { useGamificationForms } from "../../components/admin/hooks/useGamificationForms";
@@ -120,7 +121,9 @@ function AdminConsole() {
   // fetch: quién carga los datos no tiene por qué saber qué se está mirando.
   useEffect(() => {
     if (data && data.role !== "super") {
-      setTab((current) => (current === "ingresos" || current === "correos" ? "resumen" : current));
+      setTab((current) =>
+        current === "ingresos" || current === "correos" || current === "pagos" ? "resumen" : current,
+      );
     }
   }, [data]);
 
@@ -263,6 +266,27 @@ function AdminConsole() {
       setMessage(`Recordatorio enviado a ${json.sentTo}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al enviar recordatorio.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function sendPaymentReminder(member: AdminMember) {
+    if (!code) return;
+    setBusy(`remind-${member.normalizedName}`);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/xtreme/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "paymentReminder", memberName: member.memberName }),
+      });
+      const json = (await response.json()) as { ok?: boolean; sentTo?: string; noEmail?: boolean; error?: string };
+      if (!response.ok) throw new Error(json.error ?? "No se pudo enviar el recordatorio.");
+      setMessage(`Recordatorio de pago enviado a ${json.sentTo}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al enviar el recordatorio.");
     } finally {
       setBusy("");
     }
@@ -881,6 +905,10 @@ function AdminConsole() {
 
             {tab === "accesos" && (
               <AccesosTab data={data} />
+            )}
+
+            {tab === "pagos" && isSuper && (
+              <PagosTab members={data.members} today={data.today.date} busy={busy} onRemindEmail={sendPaymentReminder} />
             )}
 
             {tab === "ingresos" && isSuper && data.revenue && (
