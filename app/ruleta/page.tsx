@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import RuletaClient from "./RuletaClient";
+import RuletaApp from "./RuletaApp";
 
 export const metadata: Metadata = {
   title: "¿Qué comemos hoy en San Carlos?",
   description:
-    "Tres ruletas con restaurantes de San Carlos para decidir qué comer hoy.",
+    "Armá tu platillo ideal por ingredientes y descubrí qué restaurante de San Carlos lo tiene. Incluye una ruleta opcional para decidir al azar.",
   robots: {
     index: false,
     follow: false,
@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function RuletaPage() {
-  return <RuletaClient />;
+  return <RuletaApp />;
 }

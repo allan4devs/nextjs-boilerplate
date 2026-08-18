@@ -1,19 +1,19 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Heart, MapPin, RotateCcw, Sparkles, Utensils } from "lucide-react";
+import { ArrowLeft, ChevronRight, Heart, MapPin, RotateCcw, Shuffle, Sparkles, Utensils, X } from "lucide-react";
 import { CATALOG_TOTALS, FOOD_CATEGORIES } from "./foodData";
 import styles from "./ruleta.module.css";
 
-const SPIN_DURATION = 4200;
-const WHEEL_COLORS = ["#ff6b6b", "#ffb84d", "#ffd166", "#60d394", "#4cc9b0", "#56a8e8", "#8b7cf6", "#d85bb4"];
+const WHEEL_COLORS = ["#ff6b6b", "#ffd166", "#60d394", "#56a8e8", "#9b78f6", "#f27aa4"];
+const WHEEL_DURATION = 3200;
 
-type Step = 0 | 1 | 2;
+type Step = 0 | 1 | 2 | 3;
 
-type WheelOption = {
+type Choice = {
   label: string;
-  wheelLabel: string;
-  detail?: string;
+  subtitle: string;
   emoji: string;
   color: string;
 };
@@ -24,8 +24,25 @@ type ConfettiPiece = {
   delay: number;
   duration: number;
   color: string;
-  rotation: number;
 };
+
+const STEP_COPY = [
+  {
+    kicker: "Empecemos por lo importante",
+    title: "¿Qué se te antoja?",
+    subtitle: "Elegí el tipo de comida que les provoca hoy.",
+  },
+  {
+    kicker: "Ya tenemos el antojo",
+    title: "¿De cuál restaurante?",
+    subtitle: "Todos quedan en San Carlos. Tocá el que más les llame.",
+  },
+  {
+    kicker: "Una última decisión",
+    title: "¿Qué van a pedir?",
+    subtitle: "Elegí el plato y queda resuelta la comida de hoy.",
+  },
+] as const;
 
 function polarPoint(angle: number, radius = 190) {
   const radians = (angle * Math.PI) / 180;
@@ -40,9 +57,8 @@ function segmentPath(index: number, count: number) {
   const centerAngle = -90 + index * segmentAngle;
   const start = polarPoint(centerAngle - segmentAngle / 2);
   const end = polarPoint(centerAngle + segmentAngle / 2);
-  const largeArc = segmentAngle > 180 ? 1 : 0;
 
-  return `M 200 200 L ${start.x} ${start.y} A 190 190 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+  return `M 200 200 L ${start.x} ${start.y} A 190 190 0 0 1 ${end.x} ${end.y} Z`;
 }
 
 function secureRandomIndex(length: number) {
@@ -57,45 +73,40 @@ function makeConfetti(): ConfettiPiece[] {
   return Array.from({ length: 48 }, (_, id) => ({
     id,
     left: Math.random() * 100,
-    delay: Math.random() * 0.7,
-    duration: 2.2 + Math.random() * 1.5,
+    delay: Math.random() * 0.55,
+    duration: 2.2 + Math.random() * 1.4,
     color: colors[id % colors.length],
-    rotation: Math.random() * 180,
   }));
 }
 
-function shorten(label: string, maxLength: number) {
-  return label.length <= maxLength ? label : `${label.slice(0, maxLength - 1)}…`;
+function shorten(label: string, limit = 19) {
+  return label.length <= limit ? label : `${label.slice(0, limit - 1)}…`;
 }
 
-const STEP_COPY = [
-  { eyebrow: "Primera ruleta", title: "¿Qué se te antoja?", button: "Girar categoría", next: "Elegir restaurante" },
-  { eyebrow: "Segunda ruleta", title: "¿Dónde comemos?", button: "Girar restaurante", next: "Elegir el plato" },
-  { eyebrow: "Última ruleta", title: "¿Qué pedimos?", button: "Girar plato", next: "" },
-] as const;
-
-export default function RuletaClient() {
+export default function RuletaClient({ onExit }: { onExit?: () => void }) {
   const [step, setStep] = useState<Step>(0);
   const [categoryIndex, setCategoryIndex] = useState<number | null>(null);
   const [restaurantIndex, setRestaurantIndex] = useState<number | null>(null);
   const [dishIndex, setDishIndex] = useState<number | null>(null);
-  const [rotation, setRotation] = useState(0);
-  const [transitionDuration, setTransitionDuration] = useState(SPIN_DURATION);
-  const [spinning, setSpinning] = useState(false);
-  const [hasResult, setHasResult] = useState(false);
-  const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
+  const [wheelOpen, setWheelOpen] = useState(false);
+  const [wheelRotation, setWheelRotation] = useState(0);
+  const [wheelDuration, setWheelDuration] = useState(WHEEL_DURATION);
+  const [wheelSpinning, setWheelSpinning] = useState(false);
+  const [wheelWinner, setWheelWinner] = useState<number | null>(null);
   const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const category = categoryIndex === null ? null : FOOD_CATEGORIES[categoryIndex];
   const restaurant = category && restaurantIndex !== null ? category.restaurants[restaurantIndex] : null;
   const dish = restaurant && dishIndex !== null ? restaurant.dishes[dishIndex] : null;
 
-  const options = useMemo<WheelOption[]>(() => {
+  const choices = useMemo<Choice[]>(() => {
     if (step === 0) {
       return FOOD_CATEGORIES.map((item) => ({
         label: item.label,
-        wheelLabel: item.wheelLabel,
+        subtitle: `${item.restaurants.length} restaurantes`,
         emoji: item.emoji,
         color: item.color,
       }));
@@ -104,17 +115,16 @@ export default function RuletaClient() {
     if (step === 1 && category) {
       return category.restaurants.map((item, index) => ({
         label: item.name,
-        wheelLabel: item.name,
-        detail: item.location,
+        subtitle: item.location,
         emoji: category.emoji,
         color: WHEEL_COLORS[index % WHEEL_COLORS.length],
       }));
     }
 
-    if (step === 2 && restaurant && category) {
+    if (step === 2 && category && restaurant) {
       return restaurant.dishes.map((item, index) => ({
-        label: item,
-        wheelLabel: item,
+        label: item.name,
+        subtitle: restaurant.name,
         emoji: category.emoji,
         color: WHEEL_COLORS[(index + 1) % WHEEL_COLORS.length],
       }));
@@ -125,103 +135,138 @@ export default function RuletaClient() {
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+      if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
     };
   }, []);
 
-  function spin() {
-    if (spinning || options.length === 0) return;
+  useEffect(() => {
+    if (!wheelOpen) return;
 
-    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 80 : SPIN_DURATION;
-    const selectedIndex = secureRandomIndex(options.length);
-    const segmentAngle = 360 / options.length;
-    const currentPosition = ((rotation % 360) + 360) % 360;
-    const targetPosition = (360 - selectedIndex * segmentAngle) % 360;
-    const alignment = (targetPosition - currentPosition + 360) % 360;
-    const nextRotation = rotation + 6 * 360 + alignment;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-    setSpinning(true);
-    setHasResult(false);
-    setWinnerIndex(null);
-    setConfetti([]);
-    setTransitionDuration(duration);
-    setRotation(nextRotation);
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !wheelSpinning) setWheelOpen(false);
+    }
 
-    timerRef.current = setTimeout(() => {
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [wheelOpen, wheelSpinning]);
+
+  function choose(index: number) {
+    if (transitioning || step === 3) return;
+
+    setTransitioning(true);
+    const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 210;
+
+    transitionTimerRef.current = setTimeout(() => {
       if (step === 0) {
-        setCategoryIndex(selectedIndex);
+        setCategoryIndex(index);
         setRestaurantIndex(null);
         setDishIndex(null);
       } else if (step === 1) {
-        setRestaurantIndex(selectedIndex);
+        setRestaurantIndex(index);
         setDishIndex(null);
       } else {
-        setDishIndex(selectedIndex);
+        setDishIndex(index);
         setConfetti(makeConfetti());
       }
 
-      setWinnerIndex(selectedIndex);
-      setHasResult(true);
-      setSpinning(false);
-    }, duration);
-  }
-
-  function goNext() {
-    if (!hasResult || step === 2) return;
-    setStep((step + 1) as Step);
-    setRotation(0);
-    setWinnerIndex(null);
-    setHasResult(false);
+      setStep((step + 1) as Step);
+      setTransitioning(false);
+    }, delay);
   }
 
   function goBack() {
-    if (spinning || step === 0) return;
+    if (transitioning || wheelSpinning || step === 0) return;
 
+    setConfetti([]);
     if (step === 1) {
       setCategoryIndex(null);
       setRestaurantIndex(null);
       setDishIndex(null);
       setStep(0);
-    } else {
+    } else if (step === 2) {
       setRestaurantIndex(null);
       setDishIndex(null);
       setStep(1);
+    } else {
+      setDishIndex(null);
+      setStep(2);
     }
-
-    setRotation(0);
-    setWinnerIndex(null);
-    setHasResult(false);
-    setConfetti([]);
   }
 
   function restart() {
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
     setStep(0);
     setCategoryIndex(null);
     setRestaurantIndex(null);
     setDishIndex(null);
-    setRotation(0);
-    setWinnerIndex(null);
-    setHasResult(false);
-    setSpinning(false);
+    setTransitioning(false);
+    setWheelOpen(false);
+    setWheelSpinning(false);
+    setWheelWinner(null);
+    setWheelRotation(0);
     setConfetti([]);
   }
 
-  const winner = winnerIndex === null ? null : options[winnerIndex];
-  const isFinal = step === 2 && hasResult && dish !== null;
-  const labelLimit = options.length >= 12 ? 11 : options.length >= 5 ? 15 : 20;
-  const textSize = options.length >= 12 ? 7.5 : options.length >= 5 ? 11 : 14;
-  const emojiSize = options.length >= 12 ? 14 : options.length >= 5 ? 24 : 30;
+  function openWheel() {
+    if (choices.length < 2) return;
+    setWheelOpen(true);
+    setWheelWinner(null);
+    setWheelRotation(0);
+  }
+
+  function closeWheel() {
+    if (!wheelSpinning) setWheelOpen(false);
+  }
+
+  function spinWheel() {
+    if (wheelSpinning || choices.length < 2) return;
+
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 80 : WHEEL_DURATION;
+    const selectedIndex = secureRandomIndex(choices.length);
+    const segmentAngle = 360 / choices.length;
+    const currentPosition = ((wheelRotation % 360) + 360) % 360;
+    const targetPosition = (360 - selectedIndex * segmentAngle) % 360;
+    const alignment = (targetPosition - currentPosition + 360) % 360;
+
+    setWheelWinner(null);
+    setWheelDuration(duration);
+    setWheelSpinning(true);
+    setWheelRotation(wheelRotation + 6 * 360 + alignment);
+
+    wheelTimerRef.current = setTimeout(() => {
+      setWheelWinner(selectedIndex);
+      setWheelSpinning(false);
+    }, duration);
+  }
+
+  function acceptWheelResult() {
+    if (wheelWinner === null) return;
+    const selectedIndex = wheelWinner;
+    setWheelOpen(false);
+    setWheelWinner(null);
+    choose(selectedIndex);
+  }
+
+  const activeStep = step < 3 ? (step as 0 | 1 | 2) : null;
+  const activeCopy = activeStep === null ? null : STEP_COPY[activeStep];
+  const completedLabels = [category?.label, restaurant?.name, dish?.name];
+  const finalChoice = step === 3 && category && restaurant && dish;
 
   return (
-    <main className="relative isolate min-h-[100dvh] w-full flex-1 overflow-x-hidden bg-[#fff8f3] px-4 py-7 text-[#38252d] sm:px-6 lg:py-10">
+    <main className="relative isolate min-h-[100dvh] w-full flex-1 overflow-x-hidden bg-[#fff8f3] text-[#38252d]">
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -left-24 -top-20 h-80 w-80 rounded-full bg-[#ffb3c6]/40 blur-3xl" />
-        <div className="absolute -bottom-24 -right-16 h-96 w-96 rounded-full bg-[#ffd6a5]/55 blur-3xl" />
-        <div className="absolute right-[9%] top-[8%] text-4xl text-[#ff8fab]/40">♡</div>
-        <div className="absolute bottom-[10%] left-[7%] rotate-12 text-6xl text-[#ff8fab]/25">♡</div>
-        <div className="absolute left-[13%] top-[22%] text-2xl text-[#f4a261]/45">✦</div>
-        <div className="absolute bottom-[25%] right-[11%] text-3xl text-[#f4a261]/35">✦</div>
+        <div className="absolute -left-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-[#ffb3c6]/35 blur-3xl" />
+        <div className="absolute -bottom-36 -right-28 h-[34rem] w-[34rem] rounded-full bg-[#ffd6a5]/50 blur-3xl" />
+        <div className="absolute left-[8%] top-[22%] text-4xl text-[#f4a261]/30">✦</div>
+        <div className="absolute right-[8%] top-[12%] text-5xl text-[#ff8fab]/30">♡</div>
       </div>
 
       {confetti.length > 0 && (
@@ -235,231 +280,278 @@ export default function RuletaClient() {
                 backgroundColor: piece.color,
                 animationDelay: `${piece.delay}s`,
                 animationDuration: `${piece.duration}s`,
-                rotate: `${piece.rotation}deg`,
               }}
             />
           ))}
         </div>
       )}
 
-      <section className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-8 lg:min-h-[calc(100dvh-5rem)] lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
-        <div className="mx-auto w-full max-w-xl text-center lg:mx-0 lg:text-left">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#ff8fab]/30 bg-white/75 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#d94d73] shadow-sm backdrop-blur">
-            <Heart className="h-4 w-4 fill-current" aria-hidden="true" />
-            Solo San Carlos · {CATALOG_TOTALS.dishes} posibilidades
+      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
+        <button type="button" onClick={restart} className="group flex items-center gap-3 text-left" aria-label="Volver al inicio">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#3d2630] text-xl text-white shadow-[0_5px_0_#24151b] transition group-hover:-translate-y-0.5">♥</span>
+          <span>
+            <strong className="block text-sm font-black tracking-tight text-[#3d2630]">¿Qué comemos?</strong>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#b0798b]">Edición San Carlos</span>
+          </span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-2 rounded-full border border-[#7c4358]/10 bg-white/70 px-4 py-2 text-xs font-bold text-[#896b76] shadow-sm backdrop-blur sm:flex">
+            <MapPin className="h-3.5 w-3.5 text-[#ed4c78]" aria-hidden="true" />
+            {CATALOG_TOTALS.restaurants} lugares · {CATALOG_TOTALS.dishes} platos
           </div>
+          {onExit && (
+            <button
+              type="button"
+              onClick={onExit}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[#7c4358]/10 bg-white/70 px-4 text-xs font-black text-[#d94d73] shadow-sm backdrop-blur transition hover:bg-white"
+            >
+              Armar mi platillo
+            </button>
+          )}
+        </div>
+      </header>
 
-          <h1 className="text-balance text-4xl font-black leading-[0.95] tracking-[-0.055em] text-[#3d2630] sm:text-6xl lg:text-7xl">
-            Hoy en San Carlos
-            <span className="block bg-gradient-to-r from-[#ed4c78] to-[#f08a5d] bg-clip-text text-transparent">
-              ¿qué vamos a comer?
-            </span>
-          </h1>
+      <section className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-4 pb-10 pt-3 sm:px-6 lg:px-8 lg:pb-14">
+        <div className="mb-8 flex items-center gap-3 sm:mb-10">
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={step === 0}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#7c4358]/10 bg-white/65 px-4 text-sm font-black text-[#765c66] shadow-sm transition hover:bg-white disabled:pointer-events-none disabled:invisible"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Atrás
+          </button>
 
-          <p className="mx-auto mt-5 max-w-lg text-pretty text-base leading-7 text-[#765c66] sm:text-lg lg:mx-0">
-            Primero el antojo, luego uno de nuestros restaurantes sancarleños y al final el plato. Sin viajes largos, sin pensarlo de más.
-          </p>
-
-          <div className="mx-auto mt-6 grid max-w-md grid-cols-3 gap-2 lg:mx-0">
-            {[
-              [CATALOG_TOTALS.categories, "categorías"],
-              [CATALOG_TOTALS.restaurants, "restaurantes"],
-              [CATALOG_TOTALS.dishes, "platos"],
-            ].map(([value, label]) => (
-              <div key={label} className="rounded-2xl border border-[#7c4358]/10 bg-white/70 px-2 py-3 text-center shadow-sm backdrop-blur">
-                <strong className="block text-xl font-black text-[#3d2630] sm:text-2xl">{value}</strong>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9a7180] sm:text-xs">{label}</span>
-              </div>
+          <div className="flex flex-1 items-center gap-2" aria-label={step < 3 ? `Paso ${step + 1} de 3` : "Selección completa"}>
+            {[0, 1, 2].map((index) => (
+              <span
+                key={index}
+                className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${index <= step ? "bg-[#ed4c78]" : "bg-[#decbd1]"}`}
+              />
             ))}
           </div>
 
-          <div className="mx-auto mt-5 flex max-w-lg items-center justify-center gap-2 lg:mx-0 lg:justify-start" aria-label={`Paso ${step + 1} de 3`}>
-            {STEP_COPY.map((item, index) => {
-              const completed = index < step || (index === step && hasResult);
-              const active = index === step;
-
-              return (
-                <div key={item.eyebrow} className="flex flex-1 items-center gap-2 last:flex-none">
-                  <div
-                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 text-xs font-black transition ${
-                      active
-                        ? "border-[#3d2630] bg-[#3d2630] text-white shadow-md"
-                        : completed
-                          ? "border-[#ed4c78] bg-[#ed4c78] text-white"
-                          : "border-[#d9c5cc] bg-white/60 text-[#a88894]"
-                    }`}
-                    title={item.title}
-                  >
-                    {completed ? "✓" : index + 1}
-                  </div>
-                  {index < 2 && <span className={`h-0.5 flex-1 ${index < step ? "bg-[#ed4c78]" : "bg-[#ddcbd1]"}`} />}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 min-h-12 text-sm font-semibold text-[#8c6976]">
-            {category && (
-              <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-white/75 px-3 py-1.5 shadow-sm">
-                {category.emoji} {category.label}
-              </span>
-            )}
-            {restaurant && (
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/75 px-3 py-1.5 shadow-sm">
-                <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> {restaurant.name}
-              </span>
-            )}
-          </div>
+          <span className="min-w-16 text-right text-xs font-black uppercase tracking-[0.16em] text-[#a47c89]">
+            {step < 3 ? `0${step + 1} / 03` : "Listo"}
+          </span>
         </div>
 
-        <div className="mx-auto flex w-full max-w-2xl flex-col items-center rounded-[2rem] border border-white/80 bg-white/45 px-3 py-5 shadow-[0_24px_80px_rgba(115,55,76,0.12)] backdrop-blur-sm sm:px-6 sm:py-7">
-          <div className="mb-3 flex w-full max-w-[31rem] items-center justify-between px-2">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={step === 0 || spinning}
-              className="inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-bold text-[#84616e] transition hover:bg-white disabled:invisible"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver
-            </button>
-            <div className="text-right">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d94d73]">{STEP_COPY[step].eyebrow}</p>
-              <h2 className="text-lg font-black tracking-tight text-[#3d2630] sm:text-xl">{STEP_COPY[step].title}</h2>
-            </div>
-          </div>
-
-          <div className="relative w-full max-w-[31rem] px-4">
-            <div className="absolute left-1/2 top-[-5px] z-30 -translate-x-1/2 drop-shadow-[0_5px_4px_rgba(73,36,48,0.22)]" aria-hidden="true">
-              <div className={styles.pointer} />
-            </div>
-
-            <div className="relative aspect-square rounded-full bg-white p-2.5 shadow-[0_22px_65px_rgba(115,55,76,0.2)] ring-1 ring-[#7c4358]/10 sm:p-3">
-              <div
-                className="relative h-full w-full rounded-full will-change-transform"
-                style={{
-                  transform: `rotate(${rotation}deg)`,
-                  transition: spinning
-                    ? `transform ${transitionDuration}ms cubic-bezier(0.12, 0.78, 0.14, 1)`
-                    : "none",
-                }}
-              >
-                <svg viewBox="0 0 400 400" className="h-full w-full overflow-visible" role="img" aria-label={`Ruleta de ${STEP_COPY[step].title.toLowerCase()}`}>
-                  <circle cx="200" cy="200" r="194" fill="#4b2f3a" />
-                  {options.map((option, index) => {
-                    const centerAngle = -90 + index * (360 / options.length);
-                    const labelPoint = polarPoint(centerAngle, options.length >= 12 ? 142 : 125);
-
-                    return (
-                      <g key={`${step}-${option.label}`}>
-                        <path d={segmentPath(index, options.length)} fill={option.color} stroke="#fff8f3" strokeWidth={options.length >= 12 ? 1.5 : 3} />
-                        <g transform={`translate(${labelPoint.x} ${labelPoint.y}) rotate(${centerAngle + 90})`}>
-                          <text y={options.length >= 12 ? "-3" : "-10"} textAnchor="middle" fontSize={emojiSize} aria-hidden="true">
-                            {option.emoji}
-                          </text>
-                          <text
-                            y={options.length >= 12 ? "11" : "19"}
-                            textAnchor="middle"
-                            fill="#332229"
-                            fontSize={textSize}
-                            fontWeight="850"
-                            letterSpacing="0.1"
-                          >
-                            {shorten(option.wheelLabel, labelLimit).toUpperCase()}
-                          </text>
-                        </g>
-                      </g>
-                    );
-                  })}
-                  <circle cx="200" cy="200" r="45" fill="#fff8f3" stroke="#4b2f3a" strokeWidth="7" />
-                  <circle cx="200" cy="200" r="32" fill="#ffffff" />
-                  <text x="200" y="211" textAnchor="middle" fontSize="31" aria-hidden="true">♥</text>
-                </svg>
-              </div>
-
-              <div className="pointer-events-none absolute inset-3 rounded-full bg-[linear-gradient(130deg,rgba(255,255,255,0.34),transparent_30%,transparent_68%,rgba(66,31,43,0.08))]" aria-hidden="true" />
-            </div>
-          </div>
-
-          <div className="mt-5 min-h-[8.25rem] w-full max-w-lg text-center">
-            {hasResult && winner ? (
-              <div className={styles.result} aria-live="polite">
-                <p className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#d94d73] sm:text-xs">
-                  <Sparkles className="h-4 w-4" aria-hidden="true" />
-                  {isFinal ? "La decisión final" : "El destino eligió"}
-                  <Sparkles className="h-4 w-4" aria-hidden="true" />
-                </p>
-                <p className="mt-1 text-2xl font-black tracking-tight text-[#3d2630] sm:text-3xl">
-                  {winner.emoji} {winner.label}
-                </p>
-                {winner.detail && (
-                  <p className="mt-1 flex items-center justify-center gap-1 text-sm font-semibold text-[#896b76]">
-                    <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> {winner.detail}
-                  </p>
-                )}
-                {isFinal && category && restaurant && dish && (
-                  <p className="mx-auto mt-2 max-w-md text-sm text-[#896b76]">
-                    Hoy toca <strong>{dish}</strong> en <strong>{restaurant.name}</strong>, {restaurant.location}. 💕
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="pt-2" aria-live="polite">
-                <p className="text-sm font-semibold text-[#9b7885]">
-                  {spinning ? "El destino está eligiendo…" : `${options.length} opciones en esta ruleta`}
-                </p>
-                {!spinning && options.length > 0 && (
-                  <div className="mx-auto mt-3 flex max-h-16 max-w-lg flex-wrap justify-center gap-1.5 overflow-y-auto px-1">
-                    {options.map((option) => (
-                      <span key={option.label} className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold text-[#8c6976] shadow-sm">
-                        {option.emoji} {option.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+        {completedLabels.some(Boolean) && (
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            {completedLabels.map((label, index) =>
+              label ? (
+                <span key={`${index}-${label}`} className="inline-flex items-center gap-1.5 rounded-full border border-white bg-white/70 px-3 py-1.5 text-xs font-bold text-[#765c66] shadow-sm">
+                  {index === 0 ? category?.emoji : index === 1 ? <MapPin className="h-3 w-3" aria-hidden="true" /> : <Utensils className="h-3 w-3" aria-hidden="true" />}
+                  {label}
+                </span>
+              ) : null,
             )}
           </div>
+        )}
 
-          {!hasResult ? (
-            <button
-              type="button"
-              onClick={spin}
-              disabled={spinning}
-              className="group -mt-3 inline-flex min-h-14 min-w-60 items-center justify-center gap-3 rounded-full bg-[#3d2630] px-8 py-4 text-base font-black text-white shadow-[0_8px_0_#24151b,0_18px_35px_rgba(72,34,48,0.2)] transition hover:-translate-y-1 hover:bg-[#513340] hover:shadow-[0_11px_0_#24151b,0_22px_40px_rgba(72,34,48,0.24)] active:translate-y-1 active:shadow-[0_3px_0_#24151b] disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0 sm:text-lg"
-            >
-              <RotateCcw className={`h-5 w-5 ${spinning ? "animate-spin" : "transition-transform group-hover:-rotate-45"}`} aria-hidden="true" />
-              {spinning ? "Girando…" : STEP_COPY[step].button}
-            </button>
-          ) : (
-            <div className="-mt-3 flex flex-col items-center gap-3 sm:flex-row">
-              {step < 2 ? (
+        {activeCopy ? (
+          <div className={`${styles.stage} ${transitioning ? styles.stageOut : styles.stageIn}`}>
+            <div className="mb-7 max-w-4xl sm:mb-9">
+              <p className="mb-2 text-xs font-black uppercase tracking-[0.22em] text-[#d94d73]">{activeCopy.kicker}</p>
+              <h1 className="text-balance text-4xl font-black leading-[0.94] tracking-[-0.055em] text-[#3d2630] sm:text-6xl lg:text-7xl">
+                {activeCopy.title}
+              </h1>
+              <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-[#846b75] sm:text-lg">{activeCopy.subtitle}</p>
+            </div>
+
+            <div className={`grid gap-4 ${choices.length === 2 ? "lg:grid-cols-2" : "md:grid-cols-2 lg:grid-cols-3"}`}>
+              {choices.map((choice, index) => (
                 <button
+                  key={choice.label}
                   type="button"
-                  onClick={goNext}
-                  className="inline-flex min-h-14 min-w-56 items-center justify-center gap-2 rounded-full bg-[#ed4c78] px-7 py-4 font-black text-white shadow-[0_7px_0_#b72d54] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_2px_0_#b72d54]"
+                  onClick={() => choose(index)}
+                  disabled={transitioning}
+                  className={`${styles.choiceButton} group relative isolate min-h-48 overflow-hidden rounded-[2rem] border-2 border-white/70 p-6 text-left shadow-[0_18px_45px_rgba(75,35,50,0.12)] transition focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-[#ed4c78] sm:min-h-60 sm:p-8`}
+                  style={{
+                    "--choice-color": choice.color,
+                    animationDelay: `${index * 70}ms`,
+                  } as CSSProperties}
                 >
-                  <Utensils className="h-5 w-5" aria-hidden="true" /> {STEP_COPY[step].next}
+                  <span className="absolute right-6 top-5 font-mono text-xs font-black tracking-[0.18em] text-[#3d2630]/45">0{index + 1}</span>
+                  <span className="mb-8 block text-6xl transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 sm:text-7xl" aria-hidden="true">
+                    {choice.emoji}
+                  </span>
+                  <span className="relative z-10 block max-w-[85%] text-2xl font-black leading-[0.96] tracking-[-0.04em] text-[#352028] sm:text-3xl lg:text-4xl">
+                    {choice.label}
+                  </span>
+                  <span className="relative z-10 mt-3 flex items-center gap-1.5 text-sm font-bold text-[#3d2630]/60">
+                    {step === 1 && <MapPin className="h-3.5 w-3.5" aria-hidden="true" />}
+                    {choice.subtitle}
+                  </span>
+                  <span className="absolute bottom-6 right-6 grid h-12 w-12 place-items-center rounded-full bg-[#3d2630] text-white shadow-[0_5px_0_rgba(36,21,27,0.45)] transition duration-300 group-hover:translate-x-1 group-hover:bg-[#ed4c78] sm:h-14 sm:w-14">
+                    <ChevronRight className="h-6 w-6" aria-hidden="true" />
+                  </span>
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={restart}
-                  className="inline-flex min-h-14 min-w-56 items-center justify-center gap-2 rounded-full bg-[#ed4c78] px-7 py-4 font-black text-white shadow-[0_7px_0_#b72d54] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_2px_0_#b72d54]"
-                >
-                  <Heart className="h-5 w-5 fill-current" aria-hidden="true" /> Nueva decisión
-                </button>
-              )}
-              <button type="button" onClick={spin} className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-sm font-black text-[#765c66] transition hover:bg-white/80">
-                <RotateCcw className="h-4 w-4" aria-hidden="true" /> Repetir esta ruleta
+              ))}
+            </div>
+
+            <div className="mt-7 flex flex-col items-center justify-between gap-4 rounded-[1.5rem] border border-dashed border-[#cfaeba] bg-white/45 px-5 py-4 sm:flex-row">
+              <div className="text-center sm:text-left">
+                <p className="text-sm font-black text-[#4d303b]">¿Se quedaron pegados?</p>
+                <p className="text-xs font-medium text-[#967580]">La ruleta puede escoger una opción de este nivel.</p>
+              </div>
+              <button
+                type="button"
+                onClick={openWheel}
+                className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-[#d94d73] shadow-[0_5px_18px_rgba(75,35,50,0.1)] ring-1 ring-[#ed4c78]/15 transition hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <Shuffle className="h-4 w-4" aria-hidden="true" /> Jugar la ruleta
               </button>
             </div>
-          )}
+          </div>
+        ) : finalChoice ? (
+          <div className={`${styles.stage} ${styles.stageIn} mx-auto w-full max-w-5xl`}>
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-[#3d2630] px-6 py-10 text-center text-white shadow-[0_30px_90px_rgba(61,38,48,0.28)] sm:px-12 sm:py-14 lg:px-16">
+              <div className="pointer-events-none absolute inset-0 opacity-25" aria-hidden="true">
+                <div className="absolute -left-16 -top-20 h-64 w-64 rounded-full bg-[#ff8fab] blur-3xl" />
+                <div className="absolute -bottom-20 -right-16 h-72 w-72 rounded-full bg-[#ffd166] blur-3xl" />
+              </div>
 
-          <button type="button" onClick={restart} className="mt-5 text-xs font-bold text-[#aa8491] underline-offset-4 hover:text-[#d94d73] hover:underline">
-            Empezar desde cero
-          </button>
-        </div>
+              <div className="relative z-10">
+                <span className="mx-auto grid h-20 w-20 place-items-center rounded-[1.75rem] bg-white text-5xl shadow-[0_8px_0_rgba(0,0,0,0.2)] sm:h-24 sm:w-24 sm:text-6xl">
+                  {category.emoji}
+                </span>
+                <p className="mt-8 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.24em] text-[#ffb3c6]">
+                  <Sparkles className="h-4 w-4" aria-hidden="true" /> La elección de hoy <Sparkles className="h-4 w-4" aria-hidden="true" />
+                </p>
+                <h1 className="mx-auto mt-3 max-w-4xl text-balance text-4xl font-black leading-[0.92] tracking-[-0.055em] sm:text-6xl lg:text-7xl">
+                  {dish.name}
+                </h1>
+                <div className="mx-auto mt-7 max-w-2xl rounded-[1.5rem] border border-white/15 bg-white/10 px-5 py-5 backdrop-blur">
+                  <p className="text-2xl font-black text-white sm:text-3xl">{restaurant.name}</p>
+                  <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-white/65">
+                    <MapPin className="h-4 w-4" aria-hidden="true" /> {restaurant.location}
+                  </p>
+                </div>
+                <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-white/70">Decisión tomada. Ahora sólo falta pedir y disfrutar juntos. 💕</p>
+
+                <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={restart}
+                    className="inline-flex min-h-14 min-w-56 items-center justify-center gap-2 rounded-full bg-[#ff7096] px-7 py-4 font-black text-white shadow-[0_7px_0_#a62f53] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_2px_0_#a62f53]"
+                  >
+                    <Heart className="h-5 w-5 fill-current" aria-hidden="true" /> Elegir otra comida
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="inline-flex min-h-12 items-center gap-2 rounded-full px-5 py-3 text-sm font-black text-white/75 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <RotateCcw className="h-4 w-4" aria-hidden="true" /> Cambiar sólo el plato
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
+
+      {wheelOpen && activeCopy && (
+        <div className="fixed inset-0 z-40 grid place-items-center overflow-y-auto bg-[#28181f]/75 p-4 backdrop-blur-md" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeWheel()}>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wheel-title"
+            className={`${styles.modalIn} relative my-auto w-full max-w-xl rounded-[2rem] border border-white/70 bg-[#fff8f3] p-5 shadow-[0_32px_100px_rgba(0,0,0,0.35)] sm:p-7`}
+          >
+            <button
+              type="button"
+              onClick={closeWheel}
+              disabled={wheelSpinning}
+              className="absolute right-4 top-4 z-20 grid h-11 w-11 place-items-center rounded-full bg-white text-[#765c66] shadow-sm transition hover:bg-[#ffe8ee] disabled:cursor-wait disabled:opacity-40"
+              aria-label="Cerrar ruleta"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+
+            <div className="mb-5 pr-12">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#d94d73]">Juego complementario</p>
+              <h2 id="wheel-title" className="mt-1 text-3xl font-black tracking-[-0.04em] text-[#3d2630]">Que decida la ruleta</h2>
+              <p className="mt-1 text-sm font-medium text-[#896b76]">Está eligiendo entre las {choices.length} opciones visibles.</p>
+            </div>
+
+            <div className="relative mx-auto w-full max-w-[22rem] px-3">
+              <div className="absolute left-1/2 top-[-4px] z-20 -translate-x-1/2 drop-shadow-[0_5px_4px_rgba(73,36,48,0.22)]" aria-hidden="true">
+                <div className={styles.pointer} />
+              </div>
+              <div className="aspect-square rounded-full bg-white p-2.5 shadow-[0_18px_50px_rgba(115,55,76,0.22)]">
+                <div
+                  className="h-full w-full will-change-transform"
+                  style={{
+                    transform: `rotate(${wheelRotation}deg)`,
+                    transition: wheelSpinning ? `transform ${wheelDuration}ms cubic-bezier(0.12,0.78,0.14,1)` : "none",
+                  }}
+                >
+                  <svg viewBox="0 0 400 400" className="h-full w-full" role="img" aria-label="Ruleta de las opciones visibles">
+                    <circle cx="200" cy="200" r="194" fill="#4b2f3a" />
+                    {choices.map((choice, index) => {
+                      const centerAngle = -90 + index * (360 / choices.length);
+                      const labelPoint = polarPoint(centerAngle, 124);
+
+                      return (
+                        <g key={choice.label}>
+                          <path d={segmentPath(index, choices.length)} fill={choice.color} stroke="#fff8f3" strokeWidth="4" />
+                          <g transform={`translate(${labelPoint.x} ${labelPoint.y}) rotate(${centerAngle + 90})`}>
+                            <text y="-11" textAnchor="middle" fontSize="29" aria-hidden="true">{choice.emoji}</text>
+                            <text y="20" textAnchor="middle" fill="#332229" fontSize="13" fontWeight="850">
+                              {shorten(choice.label).toUpperCase()}
+                            </text>
+                          </g>
+                        </g>
+                      );
+                    })}
+                    <circle cx="200" cy="200" r="43" fill="#fff8f3" stroke="#4b2f3a" strokeWidth="7" />
+                    <text x="200" y="211" textAnchor="middle" fontSize="31" aria-hidden="true">♥</text>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 min-h-24 text-center" aria-live="polite">
+              {wheelWinner !== null ? (
+                <div className={styles.result}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d94d73]">La ruleta eligió</p>
+                  <p className="mt-1 text-2xl font-black text-[#3d2630]">{choices[wheelWinner].emoji} {choices[wheelWinner].label}</p>
+                </div>
+              ) : (
+                <p className="pt-4 text-sm font-semibold text-[#896b76]">{wheelSpinning ? "Buscando una señal del destino…" : "Un giro y se acaba la indecisión."}</p>
+              )}
+            </div>
+
+            {wheelWinner === null ? (
+              <button
+                type="button"
+                onClick={spinWheel}
+                disabled={wheelSpinning}
+                className="mx-auto flex min-h-14 min-w-56 items-center justify-center gap-2 rounded-full bg-[#3d2630] px-7 py-4 font-black text-white shadow-[0_7px_0_#24151b] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_2px_0_#24151b] disabled:cursor-wait disabled:opacity-70"
+              >
+                <RotateCcw className={`h-5 w-5 ${wheelSpinning ? "animate-spin" : ""}`} aria-hidden="true" />
+                {wheelSpinning ? "Girando…" : "Girar ruleta"}
+              </button>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={acceptWheelResult}
+                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-[#ed4c78] px-7 py-4 font-black text-white shadow-[0_7px_0_#b72d54] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_2px_0_#b72d54]"
+                >
+                  Usar esta opción <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <button type="button" onClick={spinWheel} className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-black text-[#765c66] hover:bg-white">
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" /> Repetir
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
     </main>
   );
 }

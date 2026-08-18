@@ -1,7 +1,104 @@
-export type RestaurantChoice = {
+export type ProteinTag = "pollo" | "carne" | "cerdo" | "pescado" | "veggie" | "queso";
+export type BaseTag = "arroz" | "pan" | "masa" | "papas" | "pure" | "tortilla" | "ensalada";
+export type StyleTag =
+  | "picante"
+  | "bbq"
+  | "clasico"
+  | "casero"
+  | "callejero"
+  | "cremoso"
+  | "plancha"
+  | "ajillo"
+  | "crispy";
+export type ExtraTag = "queso-extra" | "frijoles" | "aguacate" | "salsa-especial" | "vegetales" | "para-compartir";
+
+export type IngredientTag = ProteinTag | BaseTag | StyleTag | ExtraTag;
+
+export type IngredientOption = {
+  id: IngredientTag;
+  label: string;
+  emoji: string;
+};
+
+export type IngredientGroup = {
+  id: "protein" | "base" | "style" | "extra";
+  title: string;
+  subtitle: string;
+  options: readonly IngredientOption[];
+};
+
+export const PROTEIN_OPTIONS = [
+  { id: "pollo", label: "Pollo", emoji: "🍗" },
+  { id: "carne", label: "Carne de res", emoji: "🥩" },
+  { id: "cerdo", label: "Cerdo", emoji: "🥓" },
+  { id: "pescado", label: "Pescado", emoji: "🐟" },
+  { id: "veggie", label: "Sin carne", emoji: "🥦" },
+  { id: "queso", label: "Con mucho queso", emoji: "🧀" },
+] as const satisfies readonly IngredientOption[];
+
+export const BASE_OPTIONS = [
+  { id: "arroz", label: "Arroz", emoji: "🍚" },
+  { id: "pan", label: "Pan", emoji: "🍞" },
+  { id: "masa", label: "Masa / pizza", emoji: "🍕" },
+  { id: "pure", label: "Puré de papa", emoji: "🥔" },
+  { id: "tortilla", label: "Tortilla", emoji: "🌮" },
+  { id: "ensalada", label: "Ensalada", emoji: "🥗" },
+] as const satisfies readonly IngredientOption[];
+
+export const STYLE_OPTIONS = [
+  { id: "plancha", label: "A la plancha", emoji: "♨️" },
+  { id: "ajillo", label: "Al ajillo", emoji: "🧄" },
+  { id: "crispy", label: "Crispy / empanizado", emoji: "✨" },
+  { id: "picante", label: "Picante", emoji: "🌶️" },
+  { id: "bbq", label: "BBQ / ahumado", emoji: "🔥" },
+  { id: "casero", label: "Casero", emoji: "🏠" },
+] as const satisfies readonly IngredientOption[];
+
+export const EXTRA_OPTIONS = [
+  { id: "queso-extra", label: "Queso extra", emoji: "🧀" },
+  { id: "frijoles", label: "Frijoles", emoji: "🫘" },
+  { id: "aguacate", label: "Aguacate", emoji: "🥑" },
+  { id: "salsa-especial", label: "Salsa especial", emoji: "🥫" },
+  { id: "vegetales", label: "Vegetales", emoji: "🥬" },
+  { id: "para-compartir", label: "Para compartir", emoji: "🍽️" },
+] as const satisfies readonly IngredientOption[];
+
+export const INGREDIENT_GROUPS: readonly IngredientGroup[] = [
+  {
+    id: "protein",
+    title: "¿Con qué proteína?",
+    subtitle: "Elegí al menos una",
+    options: PROTEIN_OPTIONS,
+  },
+  {
+    id: "base",
+    title: "¿Sobre qué base?",
+    subtitle: "El acompañante principal",
+    options: BASE_OPTIONS,
+  },
+  {
+    id: "style",
+    title: "¿Con qué estilo?",
+    subtitle: "El sabor que buscás hoy",
+    options: STYLE_OPTIONS,
+  },
+  {
+    id: "extra",
+    title: "¿Algo extra?",
+    subtitle: "Opcional, para completar el antojo",
+    options: EXTRA_OPTIONS,
+  },
+];
+
+export type Dish = {
+  name: string;
+  tags: readonly IngredientTag[];
+};
+
+export type Restaurant = {
   name: string;
   location: string;
-  dishes: readonly [string, string, string];
+  dishes: readonly Dish[];
 };
 
 export type FoodCategory = {
@@ -10,11 +107,13 @@ export type FoodCategory = {
   wheelLabel: string;
   emoji: string;
   color: string;
-  restaurants: readonly RestaurantChoice[];
+  restaurants: readonly Restaurant[];
 };
 
 // Catálogo local de San Carlos. Está separado de la interfaz para que sea
 // sencillo sumar restaurantes y corregir platos conforme llegue información.
+// Cada plato lleva `tags` para poder emparejarlo contra los ingredientes que
+// arma el usuario en el Plate Builder.
 export const FOOD_CATEGORIES = [
   {
     id: "pizza",
@@ -26,12 +125,20 @@ export const FOOD_CATEGORIES = [
       {
         name: "Pizza Ranch",
         location: "San Carlos",
-        dishes: ["Pizza Meat Lover Ranch", "Pizza Chicken Ranch", "Breadsticks Ranch"],
+        dishes: [
+          { name: "Pizza Meat Lover Ranch", tags: ["carne", "cerdo", "masa", "clasico", "queso-extra"] },
+          { name: "Pizza Chicken Ranch", tags: ["pollo", "masa", "cremoso", "queso-extra"] },
+          { name: "Breadsticks Ranch", tags: ["masa", "para-compartir", "queso-extra"] },
+        ],
       },
       {
         name: "Pizza Ready",
         location: "Ciudad Quesada",
-        dishes: ["Pizza de pepperoni", "Pizza hawaiana", "Pizza suprema"],
+        dishes: [
+          { name: "Pizza de pepperoni", tags: ["cerdo", "masa", "clasico", "queso-extra"] },
+          { name: "Pizza hawaiana", tags: ["cerdo", "masa", "clasico"] },
+          { name: "Pizza suprema", tags: ["carne", "pollo", "masa", "vegetales", "para-compartir"] },
+        ],
       },
     ],
   },
@@ -45,17 +152,29 @@ export const FOOD_CATEGORIES = [
       {
         name: "Comidas Umaña",
         location: "Barrio San Antonio, Ciudad Quesada",
-        dishes: ["Casado del día", "Arroz con pollo", "Hamburguesa con papas"],
+        dishes: [
+          { name: "Casado del día", tags: ["pollo", "carne", "arroz", "casero", "frijoles"] },
+          { name: "Arroz con pollo", tags: ["pollo", "arroz", "casero"] },
+          { name: "Hamburguesa con papas", tags: ["carne", "pan", "papas", "clasico"] },
+        ],
       },
       {
         name: "Soda Mary",
         location: "San Carlos",
-        dishes: ["Casado del día", "Hamburguesa con papas", "Taco arreglado"],
+        dishes: [
+          { name: "Casado del día", tags: ["pollo", "carne", "arroz", "casero", "frijoles"] },
+          { name: "Hamburguesa con papas", tags: ["carne", "pan", "papas", "clasico"] },
+          { name: "Taco arreglado", tags: ["carne", "pollo", "tortilla", "callejero", "salsa-especial"] },
+        ],
       },
       {
         name: "Bar San Gerardo",
         location: "San Gerardo, Ciudad Quesada",
-        dishes: ["Chifrijo", "Bocas mixtas", "Casado del día"],
+        dishes: [
+          { name: "Chifrijo", tags: ["cerdo", "arroz", "frijoles", "casero", "para-compartir"] },
+          { name: "Bocas mixtas", tags: ["carne", "cerdo", "pollo", "para-compartir", "casero"] },
+          { name: "Casado del día", tags: ["pollo", "carne", "arroz", "casero", "frijoles"] },
+        ],
       },
     ],
   },
@@ -69,17 +188,29 @@ export const FOOD_CATEGORIES = [
       {
         name: "KFC",
         location: "Ciudad Quesada",
-        dishes: ["Big Box Kentucky", "Zinger", "Popcorn chicken"],
+        dishes: [
+          { name: "Big Box Kentucky", tags: ["pollo", "papas", "clasico", "salsa-especial"] },
+          { name: "Zinger", tags: ["pollo", "pan", "picante"] },
+          { name: "Popcorn chicken", tags: ["pollo", "callejero", "para-compartir"] },
+        ],
       },
       {
         name: "TodoAMil",
         location: "San Carlos",
-        dishes: ["Hamburguesa", "Salchipapas", "Tacos"],
+        dishes: [
+          { name: "Hamburguesa", tags: ["carne", "pan", "clasico", "queso-extra"] },
+          { name: "Salchipapas", tags: ["cerdo", "papas", "callejero", "salsa-especial"] },
+          { name: "Tacos", tags: ["carne", "tortilla", "callejero", "picante"] },
+        ],
       },
       {
         name: "FabitosFood",
         location: "San Carlos",
-        dishes: ["Hamburguesa especial", "Salchipapas", "Nachos con carne"],
+        dishes: [
+          { name: "Hamburguesa especial", tags: ["carne", "pan", "queso-extra", "salsa-especial"] },
+          { name: "Salchipapas", tags: ["cerdo", "papas", "callejero", "salsa-especial"] },
+          { name: "Nachos con carne", tags: ["carne", "queso", "queso-extra", "para-compartir", "picante"] },
+        ],
       },
     ],
   },
