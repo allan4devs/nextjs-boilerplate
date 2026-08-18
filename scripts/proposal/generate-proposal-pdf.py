@@ -362,7 +362,7 @@ def build_story():
         ),
         Spacer(1, 14),
         section_label("Plataforma ya desarrollada"),
-        p("La fase anterior, desarrollada por $300 USD, ya dejó una base digital robusta y en producción:"),
+        p("La Fase 1 ya dejó una base digital robusta y en producción:"),
         grid(
             [
                 ("Dominio + landing", "Presencia web oficial y puntos de conversión."),
@@ -378,6 +378,62 @@ def build_story():
             "Cortesía incluida",
             "El inventario de bebidas, registro de productos y control de ventas desarrollado previamente se "
             "mantiene sin costo adicional.",
+        ),
+    ]
+
+    story.append(PageBreak())
+    story += [
+        section_label("Resultados comprobables - corte al 18 de agosto de 2026"),
+        p("La plataforma ya produce datos útiles", "ProposalH1"),
+        p(
+            "La bitácora, los ingresos, los cobros, las ventas y la presencia digital ya generan evidencia real. "
+            "La Fase 2 conecta esa base con máquinas, tiempos, ocupación, biometría y Hacienda."
+        ),
+        Spacer(1, 6),
+        accent_box(
+            "Bitácora interna - últimos 14 días",
+            "334 sesiones, 10 socios identificados, 3.671 vistas, 1.230 clics y 162 acciones. "
+            "El corte excluye 25 sesiones internas de prueba o QA.",
+        ),
+        Spacer(1, 13),
+        grid(
+            [
+                ("2.076 socios", "Base central de personas, membresías y seguimiento."),
+                ("70 ingresos", "60 socios únicos identificados en los últimos 30 días."),
+                ("CRC 179.000 en cobros", "8 pagos completados y trazables durante 30 días."),
+                ("28 ventas de productos", "29 unidades y CRC 37.000 registrados desde recepción."),
+            ]
+        ),
+        Spacer(1, 15),
+        section_label("Google Search - 11 de julio al 16 de agosto"),
+        p("La visibilidad orgánica ya está creciendo", "ProposalH2"),
+        data_table(
+            ["Visibilidad", "Respuesta", "Posicionamiento"],
+            [
+                ["1.178 impresiones", "39 clics - CTR 3,31%", "Posición media 4,36"],
+                ["+51,5% de impresiones", "163 a 247 por semana", "Consultas locales entre 1 y 4"],
+            ],
+            [168.3] * 3,
+        ),
+        Spacer(1, 13),
+        accent_box(
+            "Vercel Analytics - últimos 7 días",
+            "102 visitantes y 1.924 páginas vistas; 84% desde Costa Rica, 62% móvil y 8 visitantes "
+            "referidos por Google.",
+            warm=True,
+        ),
+        Spacer(1, 11),
+        p(
+            "<b>Lectura comercial:</b> Xtreme ya puede medir atención, uso, ingresos, dinero y demanda digital. "
+            "La Fase 2 convierte estas señales en una ruta completa: búsqueda o campaña, visita web, ingreso al "
+            "gimnasio, uso, cobro y factura.",
+            "ProposalSmall",
+        ),
+        Spacer(1, 7),
+        p(
+            "Fuentes: Admin OS y base operativa de xtremecr.com; Search Console; Vercel Analytics. "
+            "Google Ads y Google Maps se incorporan al tablero de atribución al conectar o exportar sus métricas.",
+            "ProposalSmall",
         ),
     ]
 
@@ -430,14 +486,14 @@ def build_story():
         ),
         Spacer(1, 14),
         section_label("04 - Ingreso y ocupación"),
-        p("Lector facial más fácil y una vista viva del gimnasio", "ProposalH2"),
+        p("Acceso biométrico propio y una vista viva del gimnasio", "ProposalH2"),
         p(
-            "La identidad y membresía existentes se conectan mejor con el lector facial. Cada ingreso o salida "
-            "alimenta una vista clara de personas dentro del gimnasio para recepción y administración."
+            "xtremecr.com administra el registro facial, lo vincula con identidad y membresía y valida cada ingreso. "
+            "Las entradas y salidas alimentan una vista clara para recepción y administración."
         ),
         grid(
             [
-                ("Ingreso", "Validación facial más rápida."),
+                ("Biometría", "Registro y validación facial propios."),
                 ("Ocupación", "Personas dentro en tiempo real."),
                 ("Flujo", "Entradas, salidas y permanencia por hora."),
                 ("Capacidad", "Mejor lectura de horas pico."),
@@ -465,8 +521,8 @@ def build_story():
         section_label("06 - Facturación electrónica"),
         p("Integración directa con Hacienda", "ProposalH1"),
         p(
-            "Xtreme podrá facturar desde <b>xtremecr.com</b> como lo haría en Odoo u otro facturador, pero dentro "
-            "de su propio sistema. El módulo completará el ciclo técnico del comprobante electrónico:"
+            "Xtreme podrá facturar directamente desde <b>xtremecr.com</b>. El módulo completará dentro de su "
+            "propio sistema todo el ciclo técnico del comprobante electrónico:"
         ),
         grid(
             [
@@ -489,8 +545,8 @@ def build_story():
         Spacer(1, 12),
         accent_box(
             "Control propio",
-            "No se requiere contratar un facturador externo. Latinsoft puede seguir manejando el acceso biométrico, "
-            "pero la facturación deja de depender de esa plataforma.",
+            "xtremecr.com administra identidad, registro facial, validación biométrica, membresía, ingreso, salida, "
+            "ocupación y facturación dentro del mismo ecosistema.",
         ),
         Spacer(1, 17),
         section_label("07 - Visión operativa"),
@@ -605,7 +661,7 @@ def build_story():
                     "Ingreso, ocupación y control",
                     "Une identidad, membresía, ingreso y recepción.",
                     [
-                        "Ingreso facial más fluido.",
+                        "Registro y acceso biométrico propios.",
                         "Personas dentro, entradas y permanencia.",
                         "Cobros por método, operador e historial.",
                     ],

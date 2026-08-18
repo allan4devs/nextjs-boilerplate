@@ -3,231 +3,259 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Fase 2 · Propuesta de desarrollo",
   description:
-    "Propuesta de desarrollo Fase 2 para Xtreme Gym: inventario inteligente, QR con registro de uso, ingreso facial, cobros y facturación directa con Hacienda.",
+    "Propuesta Fase 2 para Xtreme Gym: facturación electrónica directa con Hacienda, Machine Tracker, biometría facial, QR y analítica conectada.",
   robots: { index: false, follow: false },
 };
 
 const FOUNDATION = [
   {
-    title: "App de socios",
-    text: "Login por cédula, PIN, recuperación, membresía y progreso — usada a diario.",
+    title: "Página web",
+    text: "Presencia oficial, precios, zonas, contacto y rutas de conversión.",
   },
   {
-    title: "Recepción & Trainer OS",
-    text: "Ingreso, entrenamientos y herramientas para Verónica, Valeska, Kengie y Josué.",
+    title: "Member OS",
+    text: "Identidad, PIN, membresía, entrenamientos, progreso y experiencia del socio.",
   },
   {
-    title: "Admin & pagos",
-    text: "Gestión centralizada de socios, membresías y cobros dentro del ecosistema.",
+    title: "Reception OS",
+    text: "Ingresos, atención, cobros, ventas y operación diaria de recepción.",
+  },
+  {
+    title: "Admin OS",
+    text: "Socios, pagos, bitácora, analítica, seguridad y control administrativo.",
+  },
+];
+
+const PRODUCTION_RESULTS = [
+  {
+    value: "2.076",
+    label: "socios gestionados",
+    detail: "Una base central de personas, membresías y seguimiento.",
+  },
+  {
+    value: "334",
+    label: "sesiones en 14 días",
+    detail: "3.671 vistas, 1.230 clics y 162 acciones en la bitácora interna.",
+  },
+  {
+    value: "70",
+    label: "ingresos en 30 días",
+    detail: "60 socios únicos identificados al entrar al gimnasio.",
+  },
+  {
+    value: "0",
+    label: "facturas fiscales emitidas",
+    detail: "La facturación real con Hacienda aún no ha iniciado; todos los registros existentes fueron pruebas.",
+  },
+  {
+    value: "28",
+    label: "ventas de productos",
+    detail: "29 unidades y ₡37.000 registrados desde recepción en 30 días.",
+  },
+  {
+    value: "1.178",
+    label: "impresiones en Google",
+    detail: "39 clics, CTR de 3,31% y posición media de 4,36 en Search.",
+  },
+];
+
+const DIGITAL_RESULTS = [
+  {
+    source: "Google Search Console",
+    headline: "+51,5% de visibilidad",
+    text: "Las impresiones pasaron de 163 en la primera semana completa a 247 en la semana más reciente.",
+  },
+  {
+    source: "Búsquedas locales",
+    headline: "Posiciones 1 a 4",
+    text: "“xtreme gym ciudad quesada” promedia 1,85; “gimnasios en ciudad quesada”, 1,50.",
+  },
+  {
+    source: "Vercel Analytics",
+    headline: "102 visitantes · 1.924 vistas",
+    text: "En 7 días: 84% desde Costa Rica, 62% móvil y 8 visitantes referidos por Google.",
   },
 ];
 
 const COST_ROWS = [
   {
-    situation: "Las máquinas y sus accesorios no tienen ficha ni historial digital.",
+    situation: "El cobro y la factura ante Hacienda todavía no forman un solo ciclo.",
     consequence:
-      "Almohadillas, cadenas, agarres y repuestos se separan del equipo sin una trazabilidad clara de ubicación, estado o mantenimiento.",
-    fix: "Inventario conectado de equipo y accesorios",
+      "Recepción puede registrar dinero, pero falta emitir, firmar, enviar, consultar y conservar cada comprobante desde Xtreme.",
+    fix: "01 · Hacienda Billing Tracker",
   },
   {
-    situation: "Los cobros de recepción y la facturación fiscal viven en procesos separados.",
+    situation: "Las máquinas y sus accesorios no tienen una ficha operativa completa.",
     consequence:
-      "Se duplica trabajo y cuesta seguir, desde un solo lugar, qué se cobró, quién lo atendió y qué respondió Hacienda.",
-    fix: "Cobro + comprobante electrónico desde Xtreme",
+      "No existe una trazabilidad común para estado, video, uso, tiempos, averías, almohadillas, cadenas, agarres y repuestos.",
+    fix: "02 · Machine Tracker",
   },
   {
-    situation: "El uso real de cada máquina y los horarios de mayor demanda no quedan registrados.",
-    consequence: "No se puede saber qué equipos se usan más, cuánto duran ocupados ni cómo mejorar la rotación en horas pico.",
-    fix: "QR personal + tiempos de uso",
+    situation: "Rostro, QR, membresía, ingreso y ocupación aún no comparten el mismo tracker.",
+    consequence:
+      "Recepción necesita una validación más fluida y una sola vista de quién entró, quién sigue dentro y cuánto permaneció.",
+    fix: "03 · Biometría facial + QR",
   },
   {
-    situation: "Ingreso, presencia y ocupación se observan como procesos separados.",
-    consequence: "Recepción pierde tiempo validando personas y no tiene una vista sencilla de quién entró, quién sigue dentro o cuándo fluye mejor el gimnasio.",
-    fix: "Lector facial + ocupación en vivo",
+    situation: "Los datos existen, pero todavía se leen desde módulos separados.",
+    consequence:
+      "Bitácora, ingresos, ventas, uso, ocupación y resultados digitales necesitan un cierre común para tomar decisiones.",
+    fix: "04 · Analytics + Control",
   },
 ];
 
-const OPERATIONS_MODULES = [
+const PHASE2_PRIORITIES = [
   {
     num: "01",
-    title: "Inventario conectado de máquinas, equipo y accesorios",
-    text: "Cada activo deja de ser una pieza suelta. Máquinas, almohadillas, cadenas, agarres, repuestos y accesorios quedan asociados a ubicación, estado e historial desde un mismo panel.",
+    eyebrow: "Tema principal de la Fase 2",
+    title: "Factura Hacienda: del cobro al comprobante electrónico trazable",
+    text: "La prioridad es cerrar el ciclo fiscal completo dentro de xtremecr.com. Recepción registra el cobro y el sistema construye, firma, envía y sigue el comprobante hasta conocer la respuesta de Hacienda.",
     items: [
-      "Nombre, marca, modelo, código interno",
-      "Ubicación, categoría y accesorios asignados",
-      "Estado, disponibilidad y observaciones",
-      "Fotografías e historial de mantenimiento",
+      "Facturas, tiquetes y notas de crédito o débito",
+      "XML oficial v4.4, impuestos, clave y consecutivo",
+      "Firma electrónica XAdES con la llave configurada",
+      "Autenticación, envío y consulta directa ante Hacienda",
+      "Aceptación, rechazo, mensajes y reintentos controlados",
+      "Historial, XML, representación PDF y entrega al cliente",
     ],
+    note: "Alcance real: Hoy existen 0 facturas fiscales emitidas: todos los registros anteriores fueron pruebas y la facturación real con Hacienda aún no ha iniciado. Xtreme aporta sus datos fiscales y el acceso vigente de TRIBU-CR o ATV. Allan configura credenciales, llave y firma, consecutivos y comunicación con Hacienda.",
+    featured: true,
   },
   {
     num: "02",
-    title: "Cada máquina se convierte en un punto interactivo",
-    text: "Al escanear el QR, el socio ve el video de uso correcto, instrucciones y ejercicios asociados; desde el mismo punto puede iniciar o finalizar su tiempo de uso sin buscar la máquina dentro de la app.",
+    eyebrow: "Segunda prioridad",
+    title: "Machine Tracker: cada equipo tiene ficha, contenido, uso y estado",
+    text: "Todas las máquinas pasan a formar parte del sistema. Cada una conecta su identidad física con sus accesorios, video, instrucciones, tiempos de uso, incidencias y mantenimiento.",
     items: [
-      "Video e instrucciones en cada máquina",
-      "Ejercicios y grupos musculares relacionados",
-      "Inicio y finalización del tiempo de uso",
-      "Reporte de averías desde el piso",
+      "Máquina, marca, modelo, código, ubicación y categoría",
+      "Almohadillas, cadenas, agarres, repuestos y accesorios",
+      "Video de uso, instrucciones y ejercicios relacionados",
+      "Inicio, fin y duración por persona y por máquina",
+      "Estado, disponibilidad, averías y observaciones",
+      "Demanda, rotación, horas pico e historial de mantenimiento",
     ],
   },
   {
     num: "03",
-    title: "El QR personal registra la experiencia completa",
-    text: "Todos los usuarios usan su QR para dejar trazabilidad de sus tiempos en máquinas. Cada sesión queda ligada a una persona, un equipo y una hora, sin volver a digitar sus datos.",
+    eyebrow: "Tercera prioridad",
+    title: "Biometría facial + QR App: una identidad para cada ingreso y uso",
+    text: "xtremecr.com administra el registro facial y el QR personal. Ambos se vinculan con la misma identidad y membresía para validar acceso, registrar presencia y relacionar al socio con sus tiempos de uso.",
     items: [
-      "Duración por usuario y por máquina",
-      "Historial personal de uso dentro de la app",
-      "Datos reales para rotación y horarios fluidos",
-      "Base para progreso y recomendaciones futuras",
+      "Registro y validación facial propios",
+      "QR personal dentro de la aplicación del socio",
+      "Validación de identidad y membresía vigente",
+      "Entradas, salidas, permanencia y ocupación en vivo",
+      "Historial de acceso unido al historial de máquinas",
+      "Ingreso más rápido y atención más fluida en recepción",
     ],
   },
   {
     num: "04",
-    title: "Ingreso facial más fácil y una vista viva del gimnasio",
-    text: "El lector facial se integra mejor con la identidad y membresía que ya existen. Cada ingreso o salida alimenta una vista clara de ocupación para recepción y administración.",
+    eyebrow: "Cierre de la Fase 2",
+    title: "Analytics + Control: todos los trackers visibles en el Admin OS",
+    text: "La última entrega reúne facturación, máquinas, accesos, QR, ocupación y la analítica que Xtreme ya genera. No crea otra base separada: amplía el mismo Admin OS.",
     items: [
-      "Validación más rápida al ingresar",
-      "Personas dentro del gimnasio en tiempo real",
-      "Entradas, salidas y permanencia por horario",
-      "Mejor lectura de horas pico y capacidad",
+      "Bitácora de sesiones, páginas, clics y acciones",
+      "Ingresos al gimnasio, ocupación y permanencia",
+      "Cobros, ventas y estados ante Hacienda",
+      "Uso de máquinas por socio, equipo y horario",
+      "Resultados de Search, Ads, Maps y Vercel al conectarlos",
+      "Base limpia para la centralización completa de la Fase 3",
     ],
-  },
-];
-
-const MONEY_MODULES = [
-  {
-    num: "05",
-    title: "Registro de cobros con método y operador",
-    text: "Cada pase del día, cobro suelto o cargo interno queda registrado con cliente, concepto, monto, método de pago y quién de recepción lo procesó.",
-    items: [
-      "Método de pago: SINPE, efectivo o tarjeta",
-      "Operador de recepción que atendió el cobro",
-      "Historial y consulta administrativa",
-      "Base para cuadrar caja sin hojas sueltas",
-    ],
-  },
-  {
-    num: "06",
-    title: "Facturación electrónica directa con Hacienda",
-    text: "Xtreme podrá emitir desde xtremecr.com sin depender de Odoo, Latinsoft ni otro facturador. El sistema generará el comprobante electrónico, lo firmará, lo enviará directamente a Hacienda y conservará todo el historial de la operación.",
-    items: [
-      "Facturas, tiquetes y notas de crédito o débito",
-      "XML v4.4 y firma electrónica XAdES",
-      "Envío y consulta directa ante Hacienda",
-      "Aceptación, rechazo, reintentos, XML y PDF",
-    ],
-    note: "Alcance real: Xtreme aporta sus datos fiscales y el acceso vigente de TRIBU-CR o ATV. Allan configura las credenciales de comprobantes electrónicos, la llave y firma, los consecutivos y la comunicación con Hacienda como parte de esta fase.",
   },
 ];
 
 const ADMIN_ITEMS = [
+  "Ver comprobantes emitidos, aceptados, rechazados o pendientes",
+  "Consultar cobros por método, operador y estado ante Hacienda",
+  "Administrar máquinas, accesorios, videos, QR y mantenimiento",
+  "Medir uso por máquina, socio, duración y horario",
   "Ver quién está dentro, ingresos, salidas y permanencia",
-  "Consultar tiempos de uso por máquina, socio y horario",
-  "Administrar máquinas, accesorios, videos y códigos QR",
-  "Detectar horas pico, rotación y equipos con mayor demanda",
-  "Ver cobros por método, operador y estado en Hacienda",
-  "Emitir, consultar y reenviar comprobantes electrónicos",
-  "Mantener identidad, membresía, acceso y actividad unidos",
+  "Cruzar bitácora, ventas, ocupación y demanda digital",
 ];
 
-const PHASE2_BRIDGE = [
+const PHASE_MAP = [
   {
-    title: "Una identidad",
-    text: "QR, rostro, membresía y actividad apuntan al mismo socio.",
+    num: "01",
+    phase: "Fase 1",
+    status: "Construida y en producción",
+    title: "La base digital",
+    description: "Las superficies principales ya comparten identidad, sesiones y operación.",
+    systems: ["Página web", "Member OS", "Reception OS", "Admin OS"],
   },
   {
-    title: "Cada uso deja un evento",
-    text: "Persona, máquina, inicio, fin y duración quedan conectados.",
+    num: "02",
+    phase: "Fase 2",
+    status: "Propuesta actual · $800",
+    title: "Los trackers que conectan operación y dinero",
+    description: "Hacienda es el eje; máquinas y acceso convierten la actividad física en datos trazables.",
+    systems: ["Hacienda Billing Tracker", "Machine Tracker", "Biometría facial + QR", "Analytics + Control"],
   },
   {
-    title: "Cada activo tiene contexto",
-    text: "Equipo, accesorios, contenido, estado y mantenimiento comparten ficha.",
-  },
-  {
-    title: "Cada cobro cierra el ciclo",
-    text: "Recepción, pago, factura y respuesta de Hacienda quedan unidos.",
-  },
-];
-
-const PHASE3_ITEMS = [
-  {
-    title: "Una única fuente de verdad",
-    text: "Socios, staff, activos, accesos, cobros, gastos y operaciones dejan de vivir en sistemas separados.",
-  },
-  {
-    title: "Bronceado 100% digital",
-    text: "Clientes, paquetes, sesiones, tiempos, disponibilidad, consentimiento y seguimiento del área.",
-  },
-  {
-    title: "Matrícula y documentos legales",
-    text: "Expediente digital, contratos, autorizaciones y documentos de padres o encargados para menores.",
-  },
-  {
-    title: "Gastos y recibos de luz",
-    text: "Registro, archivo, vencimientos, comparación por periodo y trazabilidad de gastos operativos.",
-  },
-  {
-    title: "Facilidades y cámaras",
-    text: "Seguimiento de zonas, incidencias, revisiones, responsables y estado de cámaras y facilidades.",
-  },
-  {
-    title: "Mantenimiento y limpieza",
-    text: "Personas responsables, turnos, tareas, evidencia, frecuencia y cumplimiento por zona o activo.",
-  },
-  {
-    title: "Operación de relojes y música",
-    text: "Control y registro de dispositivos, horarios, configuraciones e incidencias operativas.",
-  },
-  {
-    title: "Cierres, caja e incidencias",
-    text: "Aperturas y cierres operativos, arqueos, inspecciones, pendientes y entrega de turno completamente digitales.",
+    num: "03",
+    phase: "Fase 3",
+    status: "Centralización completa",
+    title: "Todos los subsistemas en una sola base de datos",
+    description: "Inventarios, servicios, gastos, responsables y trackers operan como una única fuente de verdad.",
+    systems: [
+      "Inventarios conectados",
+      "Gastos y misceláneos",
+      "Mantenimiento y limpieza",
+      "Electricidad y facilidades",
+      "Cámaras y cierres",
+      "Valari Dance",
+      "Bronceado",
+      "VIP",
+      "Funcional",
+      "Entrenadores",
+    ],
   },
 ];
 
 const WORK_PROPOSALS = [
   {
     num: "01",
-    title: "Base operativa e inventario",
+    title: "Hacienda Billing Tracker",
     price: "$200",
-    text: "Crea el catálogo de activos que las siguientes entregas necesitan para compartir datos confiables.",
-    items: [
-      "Máquinas, accesorios, repuestos y ubicaciones",
-      "Ficha, estado, fotografías e historial",
-      "Administración central desde el Admin OS",
-    ],
-  },
-  {
-    num: "02",
-    title: "Experiencia QR y tiempos",
-    price: "$200",
-    text: "Convierte cada máquina en un punto interactivo y cada sesión en información medible.",
-    items: [
-      "Videos, instrucciones y ejercicios por máquina",
-      "QR personal con inicio, fin y duración",
-      "Horas pico, demanda y rotación de equipos",
-    ],
-  },
-  {
-    num: "03",
-    title: "Ingreso, ocupación y control",
-    price: "$200",
-    text: "Une identidad, membresía, ingreso y recepción para visualizar mejor la operación diaria.",
-    items: [
-      "Ingreso facial más fluido",
-      "Personas dentro, entradas, salidas y permanencia",
-      "Cobros por método, operador e historial",
-    ],
-  },
-  {
-    num: "04",
-    title: "Hacienda y facturación electrónica",
-    price: "$200",
-    text: "Es la entrega de mayor complejidad técnica. Reutiliza la identidad, catálogos y cobros construidos en las propuestas anteriores.",
+    text: "Construye el eje fiscal y la trazabilidad completa de cada comprobante electrónico.",
     featured: true,
     items: [
       "Facturas, tiquetes y notas electrónicas",
       "XML v4.4, firma XAdES y envío a Hacienda",
-      "Aceptación, rechazo, reintentos, XML y PDF",
+      "Estados, reintentos, historial, XML y PDF",
+    ],
+  },
+  {
+    num: "02",
+    title: "Machine Tracker",
+    price: "$200",
+    text: "Convierte cada máquina, accesorio y sesión de uso en información administrable.",
+    items: [
+      "Ficha, estado, ubicación, accesorios y repuestos",
+      "Videos, instrucciones, averías y mantenimiento",
+      "Inicio, fin, duración, demanda y rotación",
+    ],
+  },
+  {
+    num: "03",
+    title: "Biometría facial + QR App",
+    price: "$200",
+    text: "Une rostro, QR, identidad, membresía, ingreso y presencia dentro del gimnasio.",
+    items: [
+      "Registro y validación facial propios",
+      "QR personal conectado con el Member OS",
+      "Entradas, salidas, permanencia y ocupación",
+    ],
+  },
+  {
+    num: "04",
+    title: "Analytics + integración final",
+    price: "$200",
+    text: "Reúne Hacienda, máquinas, biometría, QR y la analítica actual en el Admin OS.",
+    items: [
+      "Tableros de dinero, uso, acceso y ocupación",
+      "Bitácora y resultados digitales conectados",
+      "Base preparada para la centralización de Fase 3",
     ],
   },
 ];
@@ -235,10 +263,10 @@ const WORK_PROPOSALS = [
 const FINE_PRINT = [
   "La inversión cubre las funcionalidades descritas e integración con la plataforma existente.",
   "Las cuatro propuestas funcionan como entregas conectadas de $200 cada una; el total de la Fase 2 es $800.",
-  "Hacienda es el bloque de mayor complejidad y se entrega al final, apoyado en los datos e integraciones de las tres propuestas anteriores.",
+  "Hacienda es el tema principal y el bloque de mayor complejidad técnica de esta fase.",
   "Xtreme aporta sus datos fiscales correctos y el acceso vigente de TRIBU-CR o ATV; la configuración técnica, firma e integración directa con Hacienda están incluidas.",
   "No se requiere contratar un facturador externo. Hardware, impresoras, etiquetas, lectores QR o servicios opcionales de terceros no están incluidos.",
-  "La centralización total descrita como Fase 3 no forma parte de esta inversión y se cotiza por separado una vez consolidada la Fase 2.",
+  "La Fase 3 centraliza inventarios, subsistemas y trackers en una sola base de datos; se cotiza por separado.",
 ];
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -251,34 +279,56 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function ModuleCard({
   num,
+  eyebrow,
   title,
   text,
   items,
   note,
+  featured = false,
 }: {
   num: string;
+  eyebrow?: string;
   title: string;
   text: string;
   items: string[];
   note?: string;
+  featured?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-5 border-t border-[#e7e2d3] bg-[#fffdf7] p-7 first:border-t-0 sm:grid-cols-[64px_1fr] sm:p-8">
-      <div className="font-mono text-[13px] text-[#948a6e]">{num}</div>
+    <div
+      className={`grid grid-cols-1 gap-5 border-t p-7 first:border-t-0 sm:grid-cols-[64px_1fr] sm:p-8 ${
+        featured
+          ? "border-[#3b382d] bg-[#141208] text-[#f4f1e6] ring-2 ring-inset ring-[#f6c400]"
+          : "border-[#e7e2d3] bg-[#fffdf7]"
+      }`}
+    >
+      <div className={`font-mono text-[13px] ${featured ? "text-[#f6c400]" : "text-[#948a6e]"}`}>
+        {num}
+      </div>
       <div>
-        <h3 className="mb-2 text-[1.25rem] font-semibold tracking-tight text-[#141208]">{title}</h3>
-        <p className="mb-4 max-w-[58ch] text-[0.95rem] text-[#585138]">{text}</p>
+        {eyebrow ? (
+          <div className={`mb-2 font-mono text-[10px] uppercase tracking-[0.12em] ${featured ? "text-[#f6c400]" : "text-[#8a6f00]"}`}>
+            {eyebrow}
+          </div>
+        ) : null}
+        <h3 className={`mb-2 text-[1.25rem] font-semibold tracking-tight ${featured ? "text-white" : "text-[#141208]"}`}>
+          {title}
+        </h3>
+        <p className={`mb-4 max-w-[62ch] text-[0.95rem] ${featured ? "text-white/65" : "text-[#585138]"}`}>
+          {text}
+        </p>
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {items.map((item) => (
-            <li key={item} className="relative pl-4 text-[0.87rem] text-[#141208]">
+            <li key={item} className={`relative pl-4 text-[0.87rem] ${featured ? "text-white/85" : "text-[#141208]"}`}>
               <span className="absolute left-0 top-[8px] h-[6px] w-[6px] bg-[#f6c400]" />
               {item}
             </li>
           ))}
         </ul>
         {note ? (
-          <div className="mt-4 border-t border-dashed border-[#d8d2bd] pt-3 text-[0.83rem] text-[#948a6e]">
-            <b className="text-[#585138]">Alcance real:</b> {note.replace("Alcance real: ", "")}
+          <div className={`mt-4 border-t border-dashed pt-3 text-[0.83rem] ${featured ? "border-white/20 text-white/55" : "border-[#d8d2bd] text-[#948a6e]"}`}>
+            <b className={featured ? "text-white/85" : "text-[#585138]"}>Alcance real:</b>{" "}
+            {note.replace("Alcance real: ", "")}
           </div>
         ) : null}
       </div>
@@ -305,14 +355,14 @@ export default function Fase2Page() {
             Fase 2 de la plataforma
           </span>
           <h1 className="mb-5 text-balance text-[clamp(2.1rem,4.4vw,3.1rem)] font-semibold leading-[1.08] tracking-tight text-[#141208]">
-            El gimnasio ya tiene una página.
+            Facturación directa con Hacienda.
             <br />
-            Ahora necesita un sistema que <em className="italic text-[#8a6f00]">gobierne todo lo demás.</em>
+            Máquinas y accesos que <em className="italic text-[#8a6f00]">también dejan rastro.</em>
           </h1>
           <p className="max-w-[62ch] text-[1.18rem] text-[#585138]">
-            La Fase 1 conectó socios, entrenadores, recepción y pagos en una sola plataforma. Lo que
-            falta es que cada máquina, cada ingreso, cada minuto de uso y cada cobro alimente esa misma
-            plataforma. La Fase 2 convierte funciones aisladas en una operación conectada y medible.
+            La Fase 2 tiene un eje principal: que cada cobro termine en una factura o tiquete electrónico
+            trazable desde xtremecr.com. A ese núcleo se conectan el Machine Tracker, la biometría facial,
+            el QR personal y un tablero operativo común.
           </p>
 
           <div className="mt-9 grid grid-cols-2 border-y border-[#e7e2d3] sm:grid-cols-4">
@@ -339,8 +389,8 @@ export default function Fase2Page() {
         <section className="mt-16">
           <div className="border border-[#141208]/15 border-l-[3px] border-l-[#f6c400] bg-[#fffdf7] p-7 sm:p-8">
             <p className="max-w-[60ch] text-[1.28rem] italic leading-[1.42] text-[#141208]">
-              Cada QR, rostro, máquina y cobro deja de ser un dato aislado. Todos pasan a contar la misma
-              historia operativa dentro de Xtreme.
+              Cobro → Hacienda. Persona → rostro o QR. Máquina → uso y mantenimiento. Cada tracker
+              alimenta la misma operación y deja lista la centralización de la Fase 3.
             </p>
             <footer className="mt-3.5 font-mono text-[12px] tracking-[0.03em] text-[#948a6e]">
               Resumen ejecutivo — Fase 2
@@ -352,14 +402,13 @@ export default function Fase2Page() {
         <section className="mt-16">
           <SectionLabel>Lo que ya está en pie</SectionLabel>
           <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            La Fase 1 no fue un experimento. Es la base sobre la que se construye esto.
+            Cuatro sistemas ya sostienen la operación digital de Xtreme
           </h2>
           <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            Por $300 se levantó una plataforma completa y en producción. Nada de la Fase 2 empieza de
-            cero: reutiliza usuarios, sesiones, pagos y arquitectura que ya funcionan todos los días en
-            el gimnasio.
+            La Fase 1 dejó página web, Member OS, Reception OS y Admin OS en producción. La Fase 2 no
+            crea otra plataforma: extiende esa misma base con trackers especializados.
           </p>
-          <div className="grid grid-cols-1 gap-px border border-[#e7e2d3] bg-[#e7e2d3] sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-px border border-[#e7e2d3] bg-[#e7e2d3] sm:grid-cols-2 lg:grid-cols-4">
             {FOUNDATION.map((f) => (
               <div key={f.title} className="bg-[#fffdf7] p-4.5 pb-5">
                 <span className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-[#3f7d3f]">
@@ -370,6 +419,128 @@ export default function Fase2Page() {
                 <p className="text-[0.87rem] text-[#948a6e]">{f.text}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Measured results */}
+        <section className="mt-16">
+          <SectionLabel>Resultados medibles · corte al 18 de agosto de 2026</SectionLabel>
+          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
+            La plataforma ya produce datos útiles antes de comenzar la Fase 2
+          </h2>
+          <p className="mb-7 max-w-[68ch] text-[1.03rem] text-[#585138]">
+            No se trata únicamente de funciones instaladas. La bitácora, los ingresos, las ventas y la
+            presencia digital ya generan evidencia real. El seguimiento fiscal parte correctamente en
+            cero: la facturación real con Hacienda aún no ha iniciado y todos los registros anteriores
+            fueron pruebas. La Fase 2 conecta esos datos con máquinas, tiempos, ocupación, biometría y
+            Hacienda.
+          </p>
+
+          <div className="grid grid-cols-1 gap-px border border-[#e7e2d3] bg-[#e7e2d3] sm:grid-cols-2 lg:grid-cols-3">
+            {PRODUCTION_RESULTS.map((result) => (
+              <div key={result.label} className="bg-[#fffdf7] p-5">
+                <div className="font-mono text-[1.45rem] font-bold tabular-nums text-[#8a6f00]">
+                  {result.value}
+                </div>
+                <h4 className="mt-1 text-[0.94rem] font-bold">{result.label}</h4>
+                <p className="mt-1.5 text-[0.82rem] leading-relaxed text-[#948a6e]">{result.detail}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-px border border-[#141208] bg-[#3b382d] lg:grid-cols-3">
+            {DIGITAL_RESULTS.map((result) => (
+              <div key={result.source} className="bg-[#141208] p-5 text-white">
+                <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#f6c400]">
+                  {result.source}
+                </div>
+                <h4 className="mt-2 text-[1.02rem] font-semibold">{result.headline}</h4>
+                <p className="mt-2 text-[0.8rem] leading-relaxed text-white/60">{result.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-4 max-w-[72ch] font-mono text-[10.5px] leading-relaxed text-[#948a6e]">
+            Fuentes: Admin OS y base operativa de xtremecr.com; Google Search Console del 11/07 al
+            16/08/2026; Vercel Analytics del 11/08 al 18/08/2026. Las sesiones internas excluyen pruebas
+            identificadas. Google Ads y Google Maps se incorporarán al tablero de atribución cuando se
+            conecten o exporten sus métricas propias.
+          </p>
+        </section>
+
+        {/* Three-phase map */}
+        <section className="mt-16">
+          <SectionLabel>Mapa completo · de plataforma a fuente única de verdad</SectionLabel>
+          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
+            El proyecto se entiende mejor cuando cada sistema ocupa su fase
+          </h2>
+          <p className="mb-7 max-w-[68ch] text-[1.03rem] text-[#585138]">
+            La Fase 1 construyó las superficies principales. La Fase 2 agrega los trackers críticos. La
+            Fase 3 conecta inventarios y subsistemas completos sobre una sola base de datos centralizada.
+          </p>
+
+          <div className="space-y-3">
+            {PHASE_MAP.map((phase, phaseIndex) => {
+              const isCurrent = phase.phase === "Fase 2";
+              const isCentralized = phase.phase === "Fase 3";
+              return (
+                <div key={phase.phase}>
+                  <article
+                    className={`border p-5 sm:p-6 ${
+                      isCurrent
+                        ? "border-[#141208] bg-[#141208] text-white ring-2 ring-[#f6c400] ring-offset-2 ring-offset-[#f4f1e6]"
+                        : "border-[#d8d2bd] bg-[#fffdf7]"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex items-baseline gap-3">
+                        <span className={`font-mono text-[12px] ${isCurrent ? "text-[#f6c400]" : "text-[#8a6f00]"}`}>
+                          {phase.num}
+                        </span>
+                        <h3 className="text-[1.15rem] font-semibold">{phase.phase} · {phase.title}</h3>
+                      </div>
+                      <span className={`font-mono text-[9.5px] uppercase tracking-[0.1em] ${isCurrent ? "text-white/55" : "text-[#948a6e]"}`}>
+                        {phase.status}
+                      </span>
+                    </div>
+                    <p className={`mt-2 max-w-[68ch] text-[0.86rem] ${isCurrent ? "text-white/60" : "text-[#948a6e]"}`}>
+                      {phase.description}
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-2 font-mono text-[11px]">
+                      {phase.systems.map((system, index) => (
+                        <span key={system} className="flex items-center gap-2">
+                          <span
+                            className={`border px-3 py-2 font-semibold ${
+                              isCurrent
+                                ? "border-[#f6c400] bg-[#f6c400] text-[#141208]"
+                                : "border-[#d8d2bd] bg-[#efeadb] text-[#141208]"
+                            }`}
+                          >
+                            {system}
+                          </span>
+                          {!isCentralized && index < phase.systems.length - 1 ? (
+                            <span className={isCurrent ? "text-white/35" : "text-[#b2aa91]"}>→</span>
+                          ) : null}
+                        </span>
+                      ))}
+                    </div>
+
+                    {isCentralized ? (
+                      <div className="mt-5 border-t border-dashed border-[#d8d2bd] pt-4 text-center">
+                        <div className="mb-2 font-mono text-[15px] text-[#b2aa91]">↓</div>
+                        <div className="inline-flex border-2 border-[#141208] bg-[#141208] px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-[#f6c400]">
+                          Base de datos centralizada · única fuente de verdad
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
+                  {phaseIndex < PHASE_MAP.length - 1 ? (
+                    <div className="py-1 text-center font-mono text-[18px] text-[#b2aa91]">↓</div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -405,65 +576,60 @@ export default function Fase2Page() {
           </div>
         </section>
 
-        {/* Connected operations */}
+        {/* Phase 2 priorities */}
         <section className="mt-16">
-          <SectionLabel>01 — Operación conectada</SectionLabel>
+          <SectionLabel>Fase 2 · orden de prioridad</SectionLabel>
           <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Cada máquina deja de ser equipo aislado y se vuelve parte del sistema
+            Hacienda es el tema principal. Los demás trackers completan la operación.
           </h2>
-          <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            La Fase 2 une inventario, contenido, identidad y tiempo. El socio escanea, aprende a usar la
-            máquina, registra su sesión y genera información útil para mejorar horarios, rotación,
-            mantenimiento y experiencia dentro del gimnasio.
+          <p className="mb-7 max-w-[68ch] text-[1.03rem] text-[#585138]">
+            El alcance se organiza por valor operativo: primero facturación electrónica; segundo,
+            Machine Tracker; tercero, acceso biométrico y QR; cuarto, la vista analítica que los une.
           </p>
-          <div className="flex flex-col gap-px border border-[#e7e2d3] bg-[#e7e2d3]">
-            {OPERATIONS_MODULES.map((m) => (
-              <ModuleCard key={m.num} {...m} />
+          <div className="flex flex-col gap-px border border-[#141208] bg-[#3b382d]">
+            {PHASE2_PRIORITIES.map((priority) => (
+              <ModuleCard key={priority.num} {...priority} />
             ))}
           </div>
         </section>
 
-        {/* Money */}
+        {/* Connected control */}
         <section className="mt-16">
-          <SectionLabel>02 — Cobros y Hacienda</SectionLabel>
+          <SectionLabel>Control conectado en Admin OS</SectionLabel>
           <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Cobrar, facturar y saber exactamente qué pasó
+            Tres recorridos operativos, una sola vista administrativa
           </h2>
-          <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            Cada cobro podrá completar su ciclo dentro de Xtreme: recepción registra el pago, el
-            sistema emite el comprobante correspondiente, lo firma, lo envía a Hacienda y conserva la
-            respuesta. <b className="text-[#141208]">Latinsoft puede seguir manejando el acceso
-            biométrico</b>, pero la facturación deja de depender de un sistema externo.
+          <p className="mb-7 max-w-[68ch] text-[1.03rem] text-[#585138]">
+            Allan, Alejandro y Eileen continúan usando el Admin OS existente. La diferencia es que cada
+            cobro, ingreso y uso de máquina llega con contexto suficiente para actuar y auditar.
           </p>
-          <div className="flex flex-col gap-px border border-[#e7e2d3] bg-[#e7e2d3]">
-            {MONEY_MODULES.map((m) => (
-              <ModuleCard key={m.num} {...m} />
+
+          <div className="border border-[#141208]/15 bg-[#fffdf7] p-6 sm:p-8">
+            {[
+              ["Cobro", "Factura", "Firma", "Hacienda", "Estado"],
+              ["Socio", "Rostro / QR", "Ingreso", "Ocupación", "Historial"],
+              ["Máquina", "Uso", "Tiempo", "Avería", "Mantenimiento"],
+            ].map((flow, flowIndex) => (
+              <div key={flow[0]} className={`flex flex-wrap items-center gap-2 font-mono text-[11px] ${flowIndex ? "mt-3" : ""}`}>
+                {flow.map((node, index) => (
+                  <span key={node} className="flex items-center gap-2">
+                    <span
+                      className={`border px-3 py-2 font-semibold ${
+                        flowIndex === 0
+                          ? "border-[#f6c400] bg-[#f6c400] text-[#141208]"
+                          : "border-[#d8d2bd] bg-[#efeadb] text-[#141208]"
+                      }`}
+                    >
+                      {node}
+                    </span>
+                    {index < flow.length - 1 ? <span className="text-[#b2aa91]">→</span> : null}
+                  </span>
+                ))}
+              </div>
             ))}
           </div>
 
-          <div className="mt-5 border border-[#141208]/15 bg-[#efeadb] p-6">
-            <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#a15b00]">
-              Facturación bajo control de Xtreme
-            </div>
-            <p className="max-w-[62ch] text-[0.9rem] text-[#585138]">
-              Xtreme entrega los datos fiscales y el acceso que tenga vigente en TRIBU-CR o ATV. Allan
-              se encarga de configurar credenciales, llave y firma electrónica, consecutivos, envío,
-              consulta de estado y manejo de respuestas para que todo se opere desde xtremecr.com.
-            </p>
-          </div>
-        </section>
-
-        {/* Admin */}
-        <section className="mt-16">
-          <SectionLabel>03 — Visión operativa</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Un panel para ver personas, equipos, tiempos y dinero
-          </h2>
-          <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            Todo lo nuevo se administra desde el mismo Admin OS que Allan, Alejandro y Eileen ya usan —
-            cada quien con su PIN, su sesión y su identidad.
-          </p>
-          <div className="border border-[#e7e2d3] bg-[#fffdf7] p-7 sm:p-8">
+          <div className="mt-4 border border-[#e7e2d3] bg-[#fffdf7] p-7 sm:p-8">
             <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {ADMIN_ITEMS.map((item) => (
                 <li key={item} className="relative pl-4 text-[0.87rem] text-[#141208]">
@@ -475,83 +641,6 @@ export default function Fase2Page() {
           </div>
         </section>
 
-        {/* Flow */}
-        <section className="mt-16">
-          <SectionLabel>La interconexión que compra esta fase</SectionLabel>
-          <h2 className="mb-7 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Cada acción deja un rastro que el siguiente proceso puede aprovechar
-          </h2>
-          <div className="border border-[#141208]/15 bg-[#fffdf7] p-6 sm:p-8">
-            <div className="flex flex-wrap items-center gap-2.5 font-mono text-[13px]">
-              {["Socio", "QR", "Máquina", "Tiempo", "Progreso"].map((n, i, arr) => (
-                <span key={n} className="flex items-center gap-2.5">
-                  <span className="border border-[#f6c400] bg-[#efeadb] px-3.5 py-2 font-semibold text-[#8a6f00]">
-                    {n}
-                  </span>
-                  {i < arr.length - 1 ? <span className="text-[#948a6e]">→</span> : null}
-                </span>
-              ))}
-            </div>
-            <div className="mt-3.5 flex flex-wrap items-center gap-2.5 font-mono text-[13px]">
-              {["Rostro", "Ingreso", "Ocupación", "Cobro", "Hacienda"].map((n, i, arr) => (
-                <span key={n} className="flex items-center gap-2.5">
-                  <span className="border border-[#e7e2d3] bg-[#efeadb] px-3.5 py-2 font-semibold text-[#141208]">
-                    {n}
-                  </span>
-                  {i < arr.length - 1 ? <span className="text-[#948a6e]">→</span> : null}
-                </span>
-              ))}
-            </div>
-            <p className="mt-5 max-w-[60ch] text-[0.88rem] text-[#948a6e]">
-              La Fase 2 crea la identidad, los catálogos y los eventos operativos que necesita la
-              centralización total. Sin esta base, la Fase 3 solo conectaría datos incompletos.
-            </p>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {PHASE2_BRIDGE.map((item) => (
-              <div key={item.title} className="border border-[#e7e2d3] bg-[#fffdf7] p-5">
-                <h5 className="mb-1 text-[0.92rem] font-bold">{item.title}</h5>
-                <p className="text-[0.83rem] text-[#948a6e]">{item.text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Phase 3 */}
-        <section className="mt-16">
-          <SectionLabel>Fase 3 — La centralización completa</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Todos los sistemas conectados. Una única fuente de verdad.
-          </h2>
-          <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            La Fase 3 termina de digitalizar la operación completa. Todo se relaciona con personas,
-            responsables, fechas, costos y evidencia dentro del mismo sistema. No está incluida en esta
-            cotización: es la siguiente inversión que la Fase 2 deja técnicamente preparada.
-          </p>
-          <div className="grid grid-cols-1 gap-px border border-[#e7e2d3] bg-[#e7e2d3] sm:grid-cols-2">
-            {PHASE3_ITEMS.map((item, index) => (
-              <div key={item.title} className="bg-[#fffdf7] p-5 sm:p-6">
-                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[#8a6f00]">
-                  Fase 3 · {String(index + 1).padStart(2, "0")}
-                </div>
-                <h5 className="mb-1 text-[0.96rem] font-bold">{item.title}</h5>
-                <p className="text-[0.83rem] text-[#948a6e]">{item.text}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 border border-[#141208] bg-[#141208] p-6 text-[#f4f1e6]">
-            <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#f6c400]">
-              El paso que desbloquea todo
-            </div>
-            <p className="max-w-[62ch] text-[0.93rem] text-[#d8d2bd]">
-              Cerrar la Fase 2 significa que usuarios, activos, accesos, tiempos, cobros y facturas ya
-              hablan el mismo idioma. Ahí la Fase 3 puede centralizar el resto sin rehacer la base.
-            </p>
-          </div>
-        </section>
-
         {/* Pricing */}
         <section className="mt-16">
           <SectionLabel>Inversión</SectionLabel>
@@ -559,9 +648,9 @@ export default function Fase2Page() {
             Cuatro propuestas de $200. Una sola Fase 2 de $800.
           </h2>
           <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            Cada propuesta produce una entrega verificable y prepara la siguiente. Hacienda es el
-            trabajo técnico más pesado, por eso se construye al final sobre datos, identidad y cobros que
-            ya quedaron conectados.
+            Cada propuesta produce una entrega verificable de $200. Hacienda ocupa la Propuesta 01 y
+            define el tema central; máquinas y biometría amplían la trazabilidad, y la Propuesta 04 cierra
+            la integración dentro del Admin OS.
           </p>
 
           <div className="border border-[#141208]/15 bg-[#fffdf7]">
@@ -626,7 +715,7 @@ export default function Fase2Page() {
                     $300 + $250 + $250
                   </div>
                   <p className="mt-2 text-[0.78rem] text-[#948a6e]">
-                    Inicio · operación conectada · entrega final con Hacienda
+                    Hacienda · trackers operativos · integración final
                   </p>
                 </div>
                 <div className="border border-[#e7e2d3] bg-[#efeadb] p-5">
@@ -649,7 +738,8 @@ export default function Fase2Page() {
             <div className="mx-7 mb-6 border border-[#bcd9bc] bg-[#eef6ee] p-4.5 text-[0.86rem] text-[#585138]">
               <b className="text-[#141208]">Cortesía incluida — $0:</b> el sistema de inventario de
               bebidas, registro de productos y control de ventas desarrollado previamente se mantiene
-              sin costo adicional.
+              sin costo adicional. Su interconexión con todos los demás inventarios y subsistemas queda
+              reservada para la Fase 3.
             </div>
 
             <div className="mx-7 mb-7 border-t border-[#e7e2d3] pt-4.5">
