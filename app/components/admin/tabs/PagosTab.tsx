@@ -7,6 +7,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   CalendarClock,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
@@ -678,6 +679,7 @@ export function PagosTab({ members, today, busy, onRemindEmail }: PagosTabProps)
                 const hasEmail = isValidEmail(m.email);
                 const whatsapp = waLink(m.phone, membershipReminderText(m));
                 const busyThis = busy === `remind-${m.normalizedName}`;
+                const reminderSent = m.paymentReminderSent === true;
                 const urgent = hasDueDate(m) && m.daysRemaining >= 0 && m.daysRemaining <= 3;
 
                 return (
@@ -737,16 +739,22 @@ export function PagosTab({ members, today, busy, onRemindEmail }: PagosTabProps)
                           <button
                             type="button"
                             onClick={() => onRemindEmail(m)}
-                            disabled={busyThis}
-                            title={`Enviar recordatorio a ${m.email}`}
-                            className="inline-flex min-h-9 items-center gap-1.5 border-2 border-lime-300/50 bg-lime-300/10 px-2.5 py-1.5 text-[11px] font-black uppercase text-lime-200 transition hover:border-lime-300 hover:bg-lime-300/20 disabled:opacity-50"
+                            disabled={busyThis || reminderSent}
+                            title={
+                              reminderSent
+                                ? "El recordatorio de este vencimiento ya fue enviado"
+                                : `Enviar recordatorio a ${m.email}`
+                            }
+                            className="inline-flex min-h-9 items-center gap-1.5 border-2 border-lime-300/50 bg-lime-300/10 px-2.5 py-1.5 text-[11px] font-black uppercase text-lime-200 transition hover:border-lime-300 hover:bg-lime-300/20 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-white/5 disabled:text-white/35"
                           >
                             {busyThis ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : reminderSent ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
                             ) : (
                               <Mail className="h-3.5 w-3.5" />
                             )}
-                            Correo
+                            {reminderSent ? "Enviado" : "Correo"}
                           </button>
                         )}
                         {!hasEmail && !whatsapp && (

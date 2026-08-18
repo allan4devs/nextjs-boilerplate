@@ -34,6 +34,8 @@ export const FACE_TEMPLATES_COLLECTION = "xtreme_gym_face_templates";
 export const HABIT_LOGS_COLLECTION = "xtreme_gym_habit_logs";
 /** Bitácora de todo correo saliente (transaccional y de campaña). */
 export const EMAIL_LOG_COLLECTION = "xtreme_gym_email_log";
+/** Reserva idempotente por socio + ciclo para no duplicar recordatorios de pago. */
+export const PAYMENT_REMINDERS_COLLECTION = "xtreme_gym_payment_reminders";
 /** Notas internas de staff sobre un socio, con autor y fecha. */
 export const MEMBER_NOTES_COLLECTION = "xtreme_gym_member_notes";
 

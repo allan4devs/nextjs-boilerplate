@@ -54,6 +54,13 @@ import {
 } from "@/lib/xtreme/member-app-invite";
 import { requestAppUrl } from "@/lib/constants/app-url";
 import { nextBillingDateFromPayment } from "@/lib/xtreme/membership-billing";
+import {
+  completePaymentReminder,
+  listPaymentReminderStates,
+  PAYMENT_REMINDER_AUDIT_ACTION,
+  releasePaymentReminder,
+  reservePaymentReminder,
+} from "@/lib/xtreme/payment-reminders";
 
 export const dynamic = "force-dynamic";
 
@@ -228,16 +235,20 @@ export async function GET(req: NextRequest) {
       pinKeysRaw.map((k) => String(k || "").trim().toUpperCase()).filter(Boolean),
     );
 
-    const members = docs
-      .map((doc) => {
-        const base = toAdminMember(doc);
+    const memberBases = docs.map((doc) => toAdminMember(doc));
+    const paymentReminderStates = await listPaymentReminderStates(db, memberBases);
+    const members = memberBases
+      .map((base) => {
         const emailNorm = String(base.email || "")
           .trim()
           .toLowerCase();
+        const reminderState = paymentReminderStates.get(normalizeKey(base.normalizedName));
         return {
           ...base,
           hasPin: pinKeys.has(String(base.normalizedName || "").toUpperCase()),
           campaignInviteSent: Boolean(emailNorm && campaignSentEmails.has(emailNorm)),
+          paymentReminderSent: Boolean(reminderState),
+          paymentReminderSentAt: reminderState?.sentAt ?? null,
         };
       })
       .sort(
@@ -1037,14 +1048,41 @@ export async function POST(req: NextRequest) {
       }
 
       const ms = membershipStatus(member.membership);
-      const result = await sendMembershipReminderEmail({
-        to: email,
-        memberName: member.memberName || memberName,
-        plan: ms.plan,
+      const reminderMember = {
+        normalizedName: member.normalizedName || normalizeKey(memberName),
+        lastPaidAt: member.membership?.lastPaidAt ?? "",
         nextBillingDate: ms.nextBillingDate,
-        daysRemaining: ms.daysRemaining,
+      };
+      const reservation = await reservePaymentReminder(db, reminderMember, {
+        email,
+        createdBy: session.staffId,
       });
+      if (!reservation.ok) {
+        return NextResponse.json(
+          {
+            error: "Ya se envió el recordatorio de pago para este vencimiento.",
+            alreadySent: true,
+            sentAt: reservation.sentAt,
+          },
+          { status: 409 },
+        );
+      }
+
+      let result: Awaited<ReturnType<typeof sendMembershipReminderEmail>>;
+      try {
+        result = await sendMembershipReminderEmail({
+          to: email,
+          memberName: member.memberName || memberName,
+          plan: ms.plan,
+          nextBillingDate: ms.nextBillingDate,
+          daysRemaining: ms.daysRemaining,
+        });
+      } catch (error) {
+        await releasePaymentReminder(db, reservation.id).catch(() => null);
+        throw error;
+      }
       if (!result.ok) {
+        await releasePaymentReminder(db, reservation.id).catch(() => null);
         return NextResponse.json(
           {
             error: result.error || "No se pudo enviar el correo.",
@@ -1053,15 +1091,33 @@ export async function POST(req: NextRequest) {
           { status: 502 },
         );
       }
+      const sentAt = await completePaymentReminder(db, reservation.id).catch((error) => {
+        // El correo ya salió: conservar la reserva "sending" también bloquea
+        // duplicados aunque Mongo falle justo al marcarla como completada.
+        console.error("PAYMENT REMINDER COMPLETE", error);
+        return new Date();
+      });
       await writeAudit(db, {
         ...auditActor(session),
-        action: "member.payment_reminder",
+        action: PAYMENT_REMINDER_AUDIT_ACTION,
         targetType: "member",
         targetId: member.normalizedName || normalizeKey(memberName),
         summary: `Recordatorio de pago enviado a ${member.memberName || memberName} (${email})`,
-        meta: { channel: "email", verified: member.emailVerified === true, daysRemaining: ms.daysRemaining },
+        meta: {
+          channel: "email",
+          verified: member.emailVerified === true,
+          daysRemaining: ms.daysRemaining,
+          lastPaidAt: reminderMember.lastPaidAt,
+          nextBillingDate: reminderMember.nextBillingDate,
+          reminderId: reservation.id,
+        },
       });
-      return NextResponse.json({ ok: true, sentTo: email, verified: member.emailVerified === true });
+      return NextResponse.json({
+        ok: true,
+        sentTo: email,
+        sentAt: sentAt.toISOString(),
+        verified: member.emailVerified === true,
+      });
     }
 
     // Recordatorio masivo a membresias por vencer / vencidas (Resend Batch API).

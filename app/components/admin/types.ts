@@ -63,6 +63,9 @@ export type AdminMember = {
   /** Fecha del último pago real o inferida desde vencimiento + tarifa de Latinsoft. */
   lastPaidAt: string;
   nextBillingDate: string;
+  /** Ya se envió el recordatorio por correo para el vencimiento actual. */
+  paymentReminderSent?: boolean;
+  paymentReminderSentAt?: string | null;
   startedAt: string;
   latestWeight: number | null;
   latestWaist: number | null;

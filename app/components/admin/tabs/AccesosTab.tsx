@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   CalendarClock,
+  CheckCircle2,
   DoorOpen,
   Loader2,
   Mail,
@@ -207,6 +208,7 @@ function AccessCard({
   const hasEmail = member ? isValidEmail(member.email) : false;
   const wa = member ? waLink(member.phone, membershipReminderText(member)) : "";
   const busyThis = member ? busy === `remind-${member.normalizedName}` : false;
+  const reminderSent = member?.paymentReminderSent === true;
 
   const open = () => member && onOpenDetail(member);
 
@@ -299,11 +301,21 @@ function AccessCard({
                 <button
                   type="button"
                   onClick={() => onRemindEmail(member)}
-                  disabled={busyThis}
-                  title={`Recordatorio a ${member.email}`}
-                  className="grid h-9 w-9 place-items-center border-2 border-lime-300/50 bg-lime-300/10 text-lime-200 transition hover:border-lime-300 hover:bg-lime-300/20 disabled:opacity-50"
+                  disabled={busyThis || reminderSent}
+                  title={
+                    reminderSent
+                      ? "El recordatorio de este vencimiento ya fue enviado"
+                      : `Recordatorio a ${member.email}`
+                  }
+                  className="grid h-9 w-9 place-items-center border-2 border-lime-300/50 bg-lime-300/10 text-lime-200 transition hover:border-lime-300 hover:bg-lime-300/20 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-white/5 disabled:text-white/35"
                 >
-                  {busyThis ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  {busyThis ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : reminderSent ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <Mail className="h-4 w-4" />
+                  )}
                 </button>
               )}
               {wa && (
