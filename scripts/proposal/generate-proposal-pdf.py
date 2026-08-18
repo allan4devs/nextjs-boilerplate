@@ -242,6 +242,58 @@ def data_table(headers: list[str], rows: list[list[str]], widths: list[float]) -
     return table
 
 
+def work_proposal_card(
+    num: str,
+    title: str,
+    text: str,
+    items: list[str],
+    featured: bool = False,
+) -> Table:
+    header = Table(
+        [[
+            p(
+                f"PROPUESTA {num}<br/><font size='11' color='#151817'><b>{title}</b></font>",
+                "ProposalLabel",
+            ),
+            p("<font color='#557800'><b>$200</b></font>", "ProposalH2"),
+        ]],
+        colWidths=[175, 55],
+    )
+    header.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]
+        )
+    )
+    content = []
+    if featured:
+        content.append(p("<font color='#8A6F00'><b>MAYOR COMPLEJIDAD TÉCNICA</b></font>", "ProposalLabel"))
+    content.extend([header, p(text, "ProposalSmall"), Spacer(1, 5)])
+    content.extend(bullets(items))
+    card = Table([[content]], colWidths=[238])
+    card.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), WARM if featured else SOFT),
+                ("BOX", (0, 0), (-1, -1), 1.5 if featured else 0.5, GOLD if featured else LINE),
+                ("LINEABOVE", (0, 0), (-1, 0), 4 if featured else 0.5, LIME if featured else LINE),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 11),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 11),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+            ]
+        )
+    )
+    return card
+
+
 def page_chrome(canvas, doc):
     canvas.saveState()
     canvas.setFont("Helvetica-Bold", 7.5)
@@ -259,8 +311,8 @@ def build_story():
     hero = Table(
         [[p("XTREME <font color='#C8FF28'>GYM</font>", "ProposalHeroTitle")],
          [p("FASE 2 - PROPUESTA DE DESARROLLO", "ProposalHeroKicker")],
-         [p("Inventario de máquinas, ecosistema QR y facturación electrónica directa", "ProposalHeroTitle")],
-         [p("Una nueva capa operativa integrada sobre la plataforma actual de Xtreme Gym.", "ProposalHeroBody")]],
+         [p("Operación conectada: máquinas, QR, ingreso y Hacienda", "ProposalHeroTitle")],
+         [p("La fase que convierte cada uso, ingreso y cobro en información compartida.", "ProposalHeroBody")]],
         colWidths=[505],
     )
     hero.setStyle(
@@ -279,7 +331,7 @@ def build_story():
 
     facts = [
         [p("CLIENTE<br/><font color='#151817'><b>Xtreme Gym</b></font>", "ProposalLabel"), p("ATENCIÓN<br/><font color='#151817'><b>Eyleen &amp; Alejandro</b></font>", "ProposalLabel"), p("DESARROLLO<br/><font color='#151817'><b>Allan Rojas</b></font>", "ProposalLabel")],
-        [p("FECHA<br/><font color='#151817'><b>18 de agosto de 2026</b></font>", "ProposalLabel"), p("INVERSIÓN<br/><font color='#557800'><b>$800 USD</b></font>", "ProposalLabel"), p("MODALIDAD<br/><font color='#151817'><b>50% / 50%</b></font>", "ProposalLabel")],
+        [p("FECHA<br/><font color='#151817'><b>18 de agosto de 2026</b></font>", "ProposalLabel"), p("INVERSIÓN<br/><font color='#557800'><b>$800 USD</b></font>", "ProposalLabel"), p("MODALIDAD<br/><font color='#151817'><b>3 o 4 pagos</b></font>", "ProposalLabel")],
     ]
     fact_table = Table(facts, colWidths=[168.3] * 3)
     fact_table.setStyle(
@@ -298,15 +350,15 @@ def build_story():
     story += [fact_table, Spacer(1, 14), section_label("Resumen ejecutivo")]
     story += [
         p(
-            "Esta segunda etapa conecta activos físicos, socios, cobros y Hacienda dentro de una sola plataforma. "
-            "Incluye inventario completo de máquinas, QR por máquina, QR personal por socio y facturación "
-            "electrónica real operada directamente desde <b>xtremecr.com</b>."
+            "Esta segunda etapa conecta identidad, activos, uso, ingreso, cobros y Hacienda dentro de una sola "
+            "plataforma. Cada QR, rostro y transacción genera datos que administración puede aprovechar para "
+            "mejorar la experiencia diaria y preparar la centralización total de la Fase 3."
         ),
         Spacer(1, 3),
         accent_box(
             "Resultado principal",
-            "Xtreme podrá emitir, firmar y enviar comprobantes electrónicos a Hacienda sin depender de Odoo, "
-            "Latinsoft ni otro facturador externo.",
+            "El socio escanea, aprende, registra su tiempo y entra con mayor facilidad; Xtreme ve ocupación, "
+            "activos, cobros y facturas dentro de la misma operación.",
         ),
         Spacer(1, 14),
         section_label("Plataforma ya desarrollada"),
@@ -331,60 +383,71 @@ def build_story():
 
     story.append(PageBreak())
     story += [
-        section_label("01 - Activos físicos"),
-        p("Sistema de inventario de máquinas", "ProposalH1"),
+        section_label("01 - Operación conectada"),
+        p("Cada máquina se vuelve parte activa del sistema", "ProposalH1"),
         p(
-            "Un módulo para administrar el inventario completo de máquinas y equipos sin perder orden, historial "
-            "ni trazabilidad. Cada activo tendrá una ficha viva, consultable y editable desde administración."
+            "La Fase 2 une inventario, contenido, identidad y tiempo. Máquinas, almohadillas, cadenas, agarres, "
+            "repuestos y accesorios quedan vinculados a una ficha viva con ubicación, estado e historial."
         ),
         Spacer(1, 5),
         data_table(
-            ["Identificación", "Operación", "Seguimiento"],
+            ["Activo", "Contexto", "Seguimiento"],
             [
-                ["Nombre, tipo y código interno", "Ubicación y categoría", "Estado y observaciones"],
-                ["Marca, modelo y fotografías", "Grupo muscular", "Historial de mantenimiento"],
-                ["Fecha de adquisición", "Instrucciones de uso", "Reportes de avería"],
+                ["Nombre, marca, modelo y código", "Ubicación y categoría", "Estado y disponibilidad"],
+                ["Fotografías y fecha de compra", "Accesorios y repuestos asignados", "Mantenimiento e incidencias"],
             ],
             [168.3] * 3,
         ),
-        Spacer(1, 11),
-        accent_box(
-            "Resultado operativo",
-            "Administración podrá consultar, filtrar y actualizar el inventario desde un solo panel, facilitando "
-            "el mantenimiento, la ubicación y el control de cada activo.",
-        ),
-        Spacer(1, 17),
+        Spacer(1, 15),
         section_label("02 - QR por máquina"),
-        p("Identificación individual y acceso inmediato", "ProposalH2"),
-        p("Cada máquina tendrá un QR único asociado directamente con su registro. Al escanearlo, el sistema abrirá su información correspondiente."),
-        *bullets(
-            [
-                "Identificación inmediata del equipo.",
-                "Información de uso, ejercicios y grupos musculares asociados.",
-                "Historial de mantenimiento y reporte de averías desde el piso.",
-                "Base para estadísticas de utilización y mantenimiento preventivo.",
-            ]
+        p("Video, instrucciones y uso medible desde el mismo punto", "ProposalH2"),
+        p(
+            "Al escanear el código, el socio abre la experiencia de esa máquina sin buscarla dentro de la app. "
+            "Desde ahí aprende a usarla e inicia o finaliza su tiempo."
         ),
-        Spacer(1, 13),
-        section_label("03 - QR personal por socio"),
-        p("Cada socio tendrá su propio QR dentro de la app", "ProposalH2"),
-        p("El código quedará vinculado a la cuenta del socio como una capa rápida de identificación dentro del ecosistema de Xtreme."),
         grid(
             [
-                ("Identificación", "Consulta rápida del socio."),
-                ("Membresía", "Validación de estado y datos autorizados."),
-                ("Recepción", "Integración con procesos de atención."),
-                ("Ingreso", "Base para una futura entrada mediante QR."),
-                ("Actividad", "Asociación de acciones o máquinas al usuario."),
-                ("App", "Visualización desde su cuenta personal."),
+                ("Contenido", "Video de uso correcto, instrucciones y seguridad."),
+                ("Entrenamiento", "Ejercicios y grupos musculares relacionados."),
+                ("Tiempo", "Inicio y finalización del uso de la máquina."),
+                ("Soporte", "Reporte de averías desde el piso."),
+            ]
+        ),
+        Spacer(1, 14),
+        section_label("03 - QR personal por socio"),
+        p("Todos los usuarios dejan trazabilidad de sus tiempos", "ProposalH2"),
+        p(
+            "Cada sesión queda ligada a una persona, una máquina y una hora. Esto crea historial personal y datos "
+            "reales para entender demanda, rotación y horarios más fluidos."
+        ),
+        grid(
+            [
+                ("Por usuario", "Historial y duración dentro de la app."),
+                ("Por máquina", "Uso acumulado y equipos con mayor demanda."),
+                ("Por horario", "Horas pico, permanencia y rotación."),
+                ("A futuro", "Progreso y recomendaciones con datos reales."),
             ],
-            columns=3,
+        ),
+        Spacer(1, 14),
+        section_label("04 - Ingreso y ocupación"),
+        p("Lector facial más fácil y una vista viva del gimnasio", "ProposalH2"),
+        p(
+            "La identidad y membresía existentes se conectan mejor con el lector facial. Cada ingreso o salida "
+            "alimenta una vista clara de personas dentro del gimnasio para recepción y administración."
+        ),
+        grid(
+            [
+                ("Ingreso", "Validación facial más rápida."),
+                ("Ocupación", "Personas dentro en tiempo real."),
+                ("Flujo", "Entradas, salidas y permanencia por hora."),
+                ("Capacidad", "Mejor lectura de horas pico."),
+            ]
         ),
     ]
 
     story.append(PageBreak())
     story += [
-        section_label("04 - Cobros de recepción"),
+        section_label("05 - Cobros de recepción"),
         p("Del pago al comprobante, sin duplicar trabajo", "ProposalH1"),
         p(
             "Cada pase del día, mensualidad o cobro suelto quedará registrado con cliente, concepto, monto, "
@@ -399,7 +462,7 @@ def build_story():
             [168.3] * 3,
         ),
         Spacer(1, 17),
-        section_label("05 - Facturación electrónica"),
+        section_label("06 - Facturación electrónica"),
         p("Integración directa con Hacienda", "ProposalH1"),
         p(
             "Xtreme podrá facturar desde <b>xtremecr.com</b> como lo haría en Odoo u otro facturador, pero dentro "
@@ -430,30 +493,72 @@ def build_story():
             "pero la facturación deja de depender de esa plataforma.",
         ),
         Spacer(1, 17),
-        section_label("06 - Administración e integración total"),
-        p("Todo se maneja desde el Admin OS actual", "ProposalH2"),
+        section_label("07 - Visión operativa"),
+        p("Personas, equipos, tiempos y dinero en el Admin OS", "ProposalH2"),
         *bullets(
             [
+                "Ver quién está dentro, ingresos, salidas y permanencia.",
+                "Consultar tiempos por máquina, socio y horario.",
+                "Administrar activos, accesorios, videos y códigos QR.",
                 "Consultar cobros por método, operador y estado ante Hacienda.",
                 "Emitir, consultar y reenviar comprobantes electrónicos.",
-                "Administrar usuarios, máquinas y sus códigos QR.",
-                "Mantener unidos socios, membresías, activos, cobros y documentos fiscales.",
             ]
         ),
         Spacer(1, 8),
         p(
-            "<b>SOCIOS  &gt;  RECEPCIÓN  &gt;  COBROS  &gt;  FIRMA  &gt;  HACIENDA  &gt;  HISTORIAL</b>",
+            "<b>SOCIO &gt; QR &gt; MÁQUINA &gt; TIEMPO &gt; PROGRESO</b><br/>"
+            "<b>ROSTRO &gt; INGRESO &gt; OCUPACIÓN &gt; COBRO &gt; HACIENDA</b>",
             "ProposalSmall",
         ),
     ]
 
     story.append(PageBreak())
     story += [
+        section_label("Fase 3 - La centralización completa"),
+        p("Todos los sistemas conectados. Una única fuente de verdad.", "ProposalH1"),
+        p(
+            "La Fase 3 termina de digitalizar la operación completa. Socios, staff, activos, accesos, cobros, "
+            "gastos y tareas se relacionan con responsables, fechas, costos y evidencia dentro del mismo sistema."
+        ),
+        Spacer(1, 8),
+        accent_box(
+            "El paso que hace posible esta visión",
+            "Cerrar la Fase 2 significa que usuarios, activos, accesos, tiempos, cobros y facturas ya hablan el "
+            "mismo idioma. La Fase 3 puede centralizar el resto sin rehacer la base.",
+        ),
+        Spacer(1, 14),
+        grid(
+            [
+                ("Una fuente de verdad", "Personas, activos, accesos, dinero y operación sin sistemas separados."),
+                ("Bronceado 100% digital", "Clientes, paquetes, sesiones, tiempos, disponibilidad y consentimientos."),
+                ("Matrícula legal", "Contratos, autorizaciones y documentos de padres o encargados para menores."),
+                ("Gastos y recibos de luz", "Archivo, vencimientos, comparación por periodo y trazabilidad."),
+                ("Facilidades y cámaras", "Zonas, incidencias, revisiones, responsables y estado de equipos."),
+                ("Mantenimiento y limpieza", "Personas, turnos, tareas, evidencia, frecuencia y cumplimiento."),
+                ("Relojes y música", "Dispositivos, horarios, configuraciones e incidencias operativas."),
+                ("Cierres, caja e incidencias", "Arqueos, inspecciones, pendientes y entrega de turno digital."),
+            ]
+        ),
+        Spacer(1, 16),
+        accent_box(
+            "Alcance comercial",
+            "Esta visión de Fase 3 no forma parte de la inversión actual. Se cotiza por separado una vez "
+            "consolidada la Fase 2 y sus datos operativos.",
+            warm=True,
+        ),
+    ]
+
+    story.append(PageBreak())
+    story += [
         section_label("Inversión"),
-        p("Propuesta económica", "ProposalH1"),
+        p("Cuatro propuestas de $200. Una Fase 2 de $800.", "ProposalH1"),
+        p(
+            "Cada propuesta genera una entrega verificable y prepara la siguiente. Hacienda se desarrolla al final "
+            "porque reutiliza la identidad, catálogos y cobros construidos en los tres bloques anteriores."
+        ),
     ]
     pricing = Table(
-        [[p("<font color='#FFFFFF'><b>DESARROLLO FASE 2</b></font><br/><font color='#CDD2D0'>Inventario + QR + cobros + Hacienda</font>", "ProposalBody"), p("<b>$800 USD</b>", "ProposalH1")]],
+        [[p("<font color='#FFFFFF'><b>TOTAL FASE 2</b></font><br/><font color='#CDD2D0'>4 propuestas conectadas  |  $200 cada una</font>", "ProposalBody"), p("<b>$800 USD</b>", "ProposalH1")]],
         colWidths=[310, 195],
     )
     pricing.setStyle(
@@ -470,29 +575,128 @@ def build_story():
             ]
         )
     )
-    story += [pricing, Spacer(1, 16), section_label("Incluye")]
-    story += bullets(
+    work_grid = Table(
         [
-            "Sistema de inventario de máquinas con panel administrativo.",
-            "QR individual para cada máquina, con ficha, historial y reporte de averías.",
-            "QR personal para cada socio, integrado a la app existente.",
-            "Registro de cobros de recepción con método de pago y operador.",
-            "Emisión de facturas, tiquetes y notas electrónicas desde xtremecr.com.",
-            "XML v4.4, firma XAdES y comunicación directa con Hacienda.",
-            "Seguimiento de aceptación o rechazo, reintentos y entrega de XML y PDF.",
-            "Diseño de datos, lógica, integración con Admin OS y pruebas funcionales.",
-        ]
-    )
-    story += [Spacer(1, 13), section_label("Forma de pago")]
-    payment = Table(
-        [[p("50% AL INICIAR<br/><font size='15' color='#151817'>$400</font>", "ProposalPayment"), p("50% CONTRA ENTREGA<br/><font size='15' color='#151817'>$400</font>", "ProposalPayment")]],
+            [
+                work_proposal_card(
+                    "01",
+                    "Base operativa e inventario",
+                    "Crea el catálogo de activos que las siguientes entregas necesitan.",
+                    [
+                        "Máquinas, accesorios, repuestos y ubicaciones.",
+                        "Ficha, estado, fotografías e historial.",
+                        "Administración desde el Admin OS.",
+                    ],
+                ),
+                work_proposal_card(
+                    "02",
+                    "Experiencia QR y tiempos",
+                    "Convierte cada sesión en información medible.",
+                    [
+                        "Videos e instrucciones por máquina.",
+                        "QR personal con inicio, fin y duración.",
+                        "Horas pico, demanda y rotación.",
+                    ],
+                ),
+            ],
+            [
+                work_proposal_card(
+                    "03",
+                    "Ingreso, ocupación y control",
+                    "Une identidad, membresía, ingreso y recepción.",
+                    [
+                        "Ingreso facial más fluido.",
+                        "Personas dentro, entradas y permanencia.",
+                        "Cobros por método, operador e historial.",
+                    ],
+                ),
+                work_proposal_card(
+                    "04",
+                    "Hacienda y facturación",
+                    "El bloque más exigente, apoyado en las tres propuestas anteriores.",
+                    [
+                        "Facturas, tiquetes y notas electrónicas.",
+                        "XML v4.4, firma XAdES y envío.",
+                        "Estados, reintentos, XML y PDF.",
+                    ],
+                    featured=True,
+                ),
+            ],
+        ],
         colWidths=[252.5, 252.5],
     )
-    payment.setStyle(
+    work_grid.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
+    story += [
+        pricing,
+        Spacer(1, 14),
+        work_grid,
+        Spacer(1, 12),
+        accent_box(
+            "Por qué Hacienda aparece en $200",
+            "Es la entrega de mayor complejidad y valor técnico. Su precio dentro del paquete completo se sostiene "
+            "porque reutiliza datos, catálogos, identidad y cobros construidos en las propuestas 01, 02 y 03.",
+            warm=True,
+        ),
+    ]
+
+    story.append(PageBreak())
+    story += [
+        section_label("Opciones de pago"),
+        p("El mismo total de $800, con dos formas de avanzar", "ProposalH1"),
+        p(
+            "La opción de tres pagos reduce fricción administrativa. La opción de cuatro pagos mantiene una "
+            "relación directa entre cada pago y su propuesta de trabajo."
+        ),
+        Spacer(1, 10),
+        p("Opción recomendada - 3 pagos", "ProposalH3"),
+    ]
+    payment_three = Table(
+        [[
+            p("INICIO<br/><font size='15' color='#151817'><b>$300</b></font>", "ProposalPayment"),
+            p("OPERACIÓN CONECTADA<br/><font size='15' color='#151817'><b>$250</b></font>", "ProposalPayment"),
+            p("ENTREGA CON HACIENDA<br/><font size='15' color='#151817'><b>$250</b></font>", "ProposalPayment"),
+        ]],
+        colWidths=[168.3] * 3,
+    )
+    payment_three.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), WARM),
+                ("BOX", (0, 0), (-1, -1), 2, GOLD),
+                ("INNERGRID", (0, 0), (-1, -1), 0.5, GOLD),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+            ]
+        )
+    )
+    story += [payment_three, Spacer(1, 18), p("Opción por propuesta - 4 pagos", "ProposalH3")]
+    payment_four = Table(
+        [[
+            p("PROPUESTA 01<br/><font size='14' color='#151817'><b>$200</b></font>", "ProposalPayment"),
+            p("PROPUESTA 02<br/><font size='14' color='#151817'><b>$200</b></font>", "ProposalPayment"),
+            p("PROPUESTA 03<br/><font size='14' color='#151817'><b>$200</b></font>", "ProposalPayment"),
+            p("PROPUESTA 04<br/><font size='14' color='#151817'><b>$200</b></font>", "ProposalPayment"),
+        ]],
+        colWidths=[126.25] * 4,
+    )
+    payment_four.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), SOFT),
-                ("GRID", (0, 0), (-1, -1), 0.5, LINE),
+                ("BOX", (0, 0), (-1, -1), 0.5, LINE),
+                ("INNERGRID", (0, 0), (-1, -1), 0.5, LINE),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("TOPPADDING", (0, 0), (-1, -1), 10),
@@ -501,30 +705,24 @@ def build_story():
         )
     )
     story += [
-        payment,
-        Spacer(1, 13),
+        payment_four,
+        Spacer(1, 18),
         accent_box(
             "Cortesía: $0",
             "Inventario de bebidas, registro de productos y control de ventas desarrollado previamente. Se mantiene sin costo adicional.",
         ),
-        Spacer(1, 13),
+        Spacer(1, 16),
         section_label("Consideraciones"),
         *bullets(
             [
-                "La inversión cubre las funcionalidades descritas y su integración con la plataforma existente.",
+                "Las cuatro propuestas funcionan como entregas conectadas de $200; el total de la Fase 2 es $800.",
+                "Hacienda es el bloque de mayor complejidad y se entrega al final sobre la base ya construida.",
                 "Xtreme aporta sus datos fiscales correctos y el acceso vigente de TRIBU-CR o ATV; la configuración técnica, firma e integración con Hacienda están incluidas.",
                 "No se requiere un facturador externo. Hardware, impresoras, etiquetas, lectores QR o servicios opcionales de terceros no están incluidos.",
-                "Cambios fuera de este alcance, incluida la superficie VIP, se evalúan como una fase posterior.",
+                "La centralización total de la Fase 3 se cotiza por separado una vez consolidada esta fase.",
             ]
         ),
-        Spacer(1, 12),
-        section_label("Visión de crecimiento"),
-        p(
-            "Esta fase convierte la plataforma en un sistema propio de operación y facturación para Xtreme Gym. "
-            "Sobre esta base podrán incorporarse mantenimiento preventivo, analítica financiera, proveedores, compras, "
-            "gastos y nuevas automatizaciones."
-        ),
-        Spacer(1, 16),
+        Spacer(1, 14),
         KeepTogether(
             Table(
                 [[p("<font color='#FFFFFF'><b>Allan Rojas</b></font><br/><font color='#C8FF28'>Desarrollo de Software  |  Xtreme Gym</font>", "ProposalBody")]],
