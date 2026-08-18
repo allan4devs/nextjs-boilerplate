@@ -29,6 +29,7 @@ import {
   countActiveStaffSessions,
   resolveStaffSession,
   revokeAllStaffSessions,
+  type StaffSession,
 } from "@/lib/xtreme/staff-session";
 import { listOnlineMembers } from "@/lib/xtreme/session";
 import { writeAudit } from "@/lib/xtreme/audit";
@@ -54,9 +55,23 @@ import { requestAppUrl } from "@/lib/constants/app-url";
 
 export const dynamic = "force-dynamic";
 
+async function adminSessionFromReq(req: NextRequest, touchActivity = false): Promise<StaffSession | null> {
+  const session = await resolveStaffSession(req, "admin", touchActivity);
+  if (session?.role !== "admin" && session?.role !== "super") return null;
+  return session;
+}
+
 async function roleFromReq(req: NextRequest): Promise<AdminRole | null> {
-  const session = await resolveStaffSession(req, "admin");
-  return session?.role === "admin" || session?.role === "super" ? session.role : null;
+  const session = await adminSessionFromReq(req);
+  return session ? (session.role as AdminRole) : null;
+}
+
+function auditActor(session: StaffSession) {
+  return {
+    actorRole: session.role,
+    actorId: session.staffId,
+    actorName: session.staffName,
+  };
 }
 
 function unauthorized() {
@@ -150,6 +165,8 @@ async function revenueSummary(db: Awaited<ReturnType<typeof getDb>>) {
       note: p.note || "",
       paypalCaptureId: p.paypalCaptureId ?? null,
       recordedBy: p.recordedBy,
+      recordedByStaffId: p.recordedByStaffId ?? null,
+      recordedByStaffName: p.recordedByStaffName ?? null,
     })),
   };
 }
@@ -359,8 +376,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const role = await roleFromReq(req);
-  if (!role) return unauthorized();
+  const session = await adminSessionFromReq(req, true);
+  if (!session) return unauthorized();
+  const role = session.role;
 
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -370,15 +388,13 @@ export async function POST(req: NextRequest) {
     // Conserva la sesión actual para no echarte del panel a mitad del click.
     if (action === "revoke_all_staff_sessions") {
       if (role !== "super") return forbidden();
-      const session = await resolveStaffSession(req, "admin");
-      if (!session) return unauthorized();
       const db = await getDb();
       const includeSelf = body.includeSelf === true;
       const revoked = await revokeAllStaffSessions(db, {
         exceptTokenHash: includeSelf ? undefined : session.tokenHash,
       });
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "staff.revoke_all_sessions",
         targetType: "system",
         targetId: "staff_sessions",
@@ -418,7 +434,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: result.error }, { status: result.status });
       }
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "registration.invite_member",
         targetType: "member",
         targetId: result.memberKey,
@@ -448,7 +464,7 @@ export async function POST(req: NextRequest) {
       const db = await getDb();
       await resolveOpsAlert(db, fingerprint);
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "ops_alert.resolve",
         targetType: "system",
         targetId: fingerprint,
@@ -560,7 +576,7 @@ export async function POST(req: NextRequest) {
       }
 
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "member.quick_plan_grant",
         targetType: "member",
         targetId: memberKey,
@@ -637,7 +653,7 @@ export async function POST(req: NextRequest) {
         { upsert: true },
       );
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "member.save_plan",
         targetType: "member",
         targetId: normalizedName,
@@ -699,7 +715,7 @@ export async function POST(req: NextRequest) {
       );
 
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "member.update_profile",
         targetType: "member",
         targetId: normalizedName,
@@ -774,7 +790,7 @@ export async function POST(req: NextRequest) {
         console.error("XTREME ADMIN DAY PASS ACTIVATE ERROR", actErr);
       }
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "member.checkin",
         targetType: "member",
         targetId: normalizedName,
@@ -841,6 +857,8 @@ export async function POST(req: NextRequest) {
         date: String(body.date ?? todayIso()).slice(0, 10) || todayIso(),
         createdAt: now,
         recordedBy: "admin",
+        recordedByStaffId: session.staffId,
+        recordedByStaffName: session.staffName,
       };
 
       await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).insertOne(payment);
@@ -906,7 +924,7 @@ export async function POST(req: NextRequest) {
       }
 
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "payment.create",
         targetType: "payment",
         targetId: payment.id,
@@ -1007,7 +1025,7 @@ export async function POST(req: NextRequest) {
         );
       }
       await writeAudit(db, {
-        actorRole: role,
+        ...auditActor(session),
         action: "member.payment_reminder",
         targetType: "member",
         targetId: member.normalizedName || normalizeKey(memberName),
@@ -1081,15 +1099,25 @@ export async function POST(req: NextRequest) {
         createdAt: now,
       };
 
-      await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+      const metricUpdate = await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
         { normalizedName },
         {
           $push: { bodyMetrics: metric },
           $set: { updatedAt: now },
-          $setOnInsert: { workouts: [], createdAt: now },
         },
-        { upsert: true },
       );
+      if (!metricUpdate.matchedCount) {
+        return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+      }
+
+      await writeAudit(db, {
+        ...auditActor(session),
+        action: "member.add_body_metric",
+        targetType: "member",
+        targetId: normalizedName,
+        summary: `Métrica corporal registrada para ${memberName}`,
+        meta: { date, weightKg: metric.weightKg, waistCm: metric.waistCm },
+      });
 
       return NextResponse.json({ ok: true, metric });
     }
@@ -1102,8 +1130,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const role = await roleFromReq(req);
-  if (!role) return unauthorized();
+  const session = await adminSessionFromReq(req, true);
+  if (!session) return unauthorized();
 
   try {
     const body = (await req.json().catch(() => ({}))) as {
@@ -1121,7 +1149,7 @@ export async function PATCH(req: NextRequest) {
     const normalizedName = normalizeKey(memberName);
     const done = Boolean(body.done);
     const result = await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
-      { normalizedName },
+      { normalizedName, "trainingPlan.items.id": itemId },
       {
         $set: {
           "trainingPlan.items.$[el].done": done,
@@ -1137,6 +1165,15 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Sesion no encontrada." }, { status: 404 });
     }
 
+    await writeAudit(db, {
+      ...auditActor(session),
+      action: "member.update_plan_item",
+      targetType: "member",
+      targetId: normalizedName,
+      summary: `${done ? "Completó" : "Reabrió"} una sesión del plan de ${memberName}`,
+      meta: { itemId, done },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("XTREME ADMIN PATCH", err);
@@ -1145,8 +1182,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const role = await roleFromReq(req);
-  if (!role) return unauthorized();
+  const session = await adminSessionFromReq(req, true);
+  if (!session) return unauthorized();
+  const role = session.role;
 
   try {
     const body = (await req.json().catch(() => ({}))) as { memberName?: string; paymentId?: string };
@@ -1155,9 +1193,23 @@ export async function DELETE(req: NextRequest) {
     if (paymentId) {
       if (role !== "super") return forbidden();
       const db = await getDb();
+      const payment = await db.collection<PaymentDoc>(PAYMENTS_COLLECTION).findOne({ id: paymentId });
+      if (!payment) {
+        return NextResponse.json({ error: "Pago no encontrado." }, { status: 404 });
+      }
       await db.collection(PAYMENTS_COLLECTION).deleteOne({ id: paymentId });
+      await writeAudit(db, {
+        ...auditActor(session),
+        action: "payment.delete",
+        targetType: "payment",
+        targetId: paymentId,
+        summary: `Pago eliminado: ${payment.optionLabel} (${payment.customerName})`,
+        meta: { amountCrc: payment.amountCrc, method: payment.method, date: payment.date },
+      });
       return NextResponse.json({ ok: true });
     }
+
+    if (role !== "super") return forbidden();
 
     const memberName = normalizeName(body.memberName);
     if (!memberName) {
@@ -1166,12 +1218,22 @@ export async function DELETE(req: NextRequest) {
 
     const db = await getDb();
     const normalizedName = normalizeKey(memberName);
-    await Promise.all([
+    const [memberDelete] = await Promise.all([
       db.collection(MEMBERS_COLLECTION).deleteOne({ normalizedName }),
       db.collection(PINS_COLLECTION).deleteOne({ normalizedName }),
       db.collection(RESERVATIONS_COLLECTION).deleteMany({ normalizedName }),
       db.collection(CHECKINS_COLLECTION).deleteMany({ normalizedName }),
     ]);
+    if (!memberDelete.deletedCount) {
+      return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+    }
+    await writeAudit(db, {
+      ...auditActor(session),
+      action: "member.delete",
+      targetType: "member",
+      targetId: normalizedName,
+      summary: `Socio eliminado: ${memberName}`,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -26,7 +26,6 @@ if (!uri) { console.error("Missing MONGODB_URI"); process.exit(1); }
 const digits = (v) => String(v || "").replace(/\D/g, "");
 const normKey = (v) => String(v || "").trim().toUpperCase().replace(/\s+/g, " ");
 const stripVip = (name) => normKey(name).replace(/^VIP\s+/, "").replace(/\s+VIP\b/, "").trim();
-const isVipName = (name) => /\bVIP\b/.test(normKey(name));
 
 const client = new MongoClient(uri);
 await client.connect();

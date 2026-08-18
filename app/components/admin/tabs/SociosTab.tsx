@@ -465,19 +465,21 @@ export function SociosTab({ data, roster, actions, busy }: SociosTabProps) {
                           <DoorOpen className="h-3.5 w-3.5" />
                         )}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void removeMember(m.memberName)}
-                        disabled={Boolean(busy)}
-                        title="Eliminar"
-                        className="grid h-8 w-8 place-items-center border border-white/10 text-white/50 transition hover:border-red-400 hover:text-red-300 disabled:opacity-40"
-                      >
-                        {busy === `del-${m.memberName}` ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3.5 w-3.5" />
-                        )}
-                      </button>
+                      {data.role === "super" ? (
+                        <button
+                          type="button"
+                          onClick={() => void removeMember(m.memberName)}
+                          disabled={Boolean(busy)}
+                          title="Eliminar"
+                          className="grid h-8 w-8 place-items-center border border-white/10 text-white/50 transition hover:border-red-400 hover:text-red-300 disabled:opacity-40"
+                        >
+                          {busy === `del-${m.memberName}` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

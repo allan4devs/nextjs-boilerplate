@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { AdminRole } from "../types";
+import { adminFetch, adminRequestError } from "../request";
 import type { AdminFeedback } from "./useAdminFeedback";
 
 export type AdminAuth = {
@@ -45,7 +46,7 @@ export function useAdminAuth(feedback: AdminFeedback): AdminAuth {
     setIsSigningIn(true);
     setError("");
     try {
-      const response = await fetch(SESSION_ENDPOINT, {
+      const response = await adminFetch(SESSION_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ surface: "admin", code: accessCode }),
@@ -56,7 +57,7 @@ export function useAdminAuth(feedback: AdminFeedback): AdminAuth {
       setCodeInput("");
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo iniciar sesion.");
+      setError(adminRequestError(err, "No se pudo iniciar sesion."));
       return false;
     } finally {
       setIsSigningIn(false);
@@ -64,10 +65,15 @@ export function useAdminAuth(feedback: AdminFeedback): AdminAuth {
   }, [codeInput, setError]);
 
   const signOut = useCallback(async () => {
-    await fetch(`${SESSION_ENDPOINT}?surface=admin`, { method: "DELETE" });
-    setRole("");
-    setStaffName("");
-  }, []);
+    try {
+      await adminFetch(`${SESSION_ENDPOINT}?surface=admin`, { method: "DELETE" });
+    } catch (err) {
+      setError(adminRequestError(err, "No se pudo cerrar la sesión en el servidor."));
+    } finally {
+      setRole("");
+      setStaffName("");
+    }
+  }, [setError]);
 
   return useMemo(
     () => ({

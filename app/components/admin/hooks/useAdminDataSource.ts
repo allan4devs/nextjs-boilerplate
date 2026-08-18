@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { AdminData, AdminRole, GamiData } from "../types";
+import { adminFetch, adminRequestError } from "../request";
 import type { AdminFeedback } from "./useAdminFeedback";
 
 export type AdminDataSource = {
   data: AdminData | null;
   gami: GamiData | null;
   isLoading: boolean;
+  isLoadingDetails: boolean;
+  detailsError: string;
+  isLoadingGami: boolean;
+  gamiError: string;
   /** Expuesto para las actualizaciones optimistas de las acciones del panel. */
   setData: Dispatch<SetStateAction<AdminData | null>>;
   setGami: Dispatch<SetStateAction<GamiData | null>>;
@@ -36,6 +41,12 @@ export function useAdminDataSource({
   const [data, setData] = useState<AdminData | null>(null);
   const [gami, setGami] = useState<GamiData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState("");
+  const [isLoadingGami, setIsLoadingGami] = useState(false);
+  const [gamiError, setGamiError] = useState("");
+  const detailsRequestId = useRef(0);
+  const gamiRequestId = useRef(0);
 
   const { setError } = feedback;
 
@@ -43,8 +54,10 @@ export function useAdminDataSource({
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/xtreme/admin?scope=core", { cache: "no-store" });
+      const response = await adminFetch("/api/xtreme/admin?scope=core", { cache: "no-store" });
       if (response.status === 401) {
+        detailsRequestId.current += 1;
+        setIsLoadingDetails(false);
         setError("Codigo incorrecto.");
         onUnauthorized();
         setData(null);
@@ -55,36 +68,78 @@ export function useAdminDataSource({
       setData(json);
       onRole(json.role);
 
-      // El panel ya puede usarse con el núcleo operativo. Revenue, growth,
-      // bitácora y salud llegan después sin mantener bloqueada la pantalla.
-      void fetch("/api/xtreme/admin", { cache: "no-store" })
-        .then(async (fullResponse) => {
+      const requestId = ++detailsRequestId.current;
+      setIsLoadingDetails(true);
+      setDetailsError("");
+      void (async () => {
+        try {
+          const fullResponse = await adminFetch("/api/xtreme/admin", { cache: "no-store" });
           const fullJson = (await fullResponse.json()) as AdminData & { error?: string };
-          if (fullResponse.ok) setData(fullJson);
-        })
-        .catch(() => {
-          // El core permanece funcional aunque falle una métrica secundaria.
-        });
+          if (!fullResponse.ok) {
+            throw new Error(fullJson.error ?? "No se pudieron cargar los detalles del panel.");
+          }
+          if (detailsRequestId.current === requestId) setData(fullJson);
+        } catch (err) {
+          if (detailsRequestId.current === requestId) {
+            setDetailsError(adminRequestError(err, "No se pudieron cargar los detalles del panel."));
+          }
+        } finally {
+          if (detailsRequestId.current === requestId) setIsLoadingDetails(false);
+        }
+      })();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error de conexion.");
+      detailsRequestId.current += 1;
+      setIsLoadingDetails(false);
+      setError(adminRequestError(err, "Error de conexion."));
     } finally {
       setIsLoading(false);
     }
   }, [onRole, onUnauthorized, setError]);
 
   const loadGami = useCallback(async () => {
+    const requestId = ++gamiRequestId.current;
+    setIsLoadingGami(true);
+    setGamiError("");
     try {
-      const response = await fetch("/api/xtreme/admin/gamification", { cache: "no-store" });
+      const response = await adminFetch("/api/xtreme/admin/gamification", { cache: "no-store" });
       const json = (await response.json()) as GamiData & { error?: string };
       if (!response.ok) throw new Error(json.error ?? "No se pudo cargar gamificacion.");
-      setGami(json);
+      if (gamiRequestId.current === requestId) setGami(json);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando gamificacion.");
+      const message = adminRequestError(err, "Error cargando gamificacion.");
+      if (gamiRequestId.current === requestId) {
+        setGamiError(message);
+        setError(message);
+      }
+    } finally {
+      if (gamiRequestId.current === requestId) setIsLoadingGami(false);
     }
   }, [setError]);
 
   return useMemo(
-    () => ({ data, gami, isLoading, setData, setGami, load, loadGami }),
-    [data, gami, isLoading, load, loadGami],
+    () => ({
+      data,
+      gami,
+      isLoading,
+      isLoadingDetails,
+      detailsError,
+      isLoadingGami,
+      gamiError,
+      setData,
+      setGami,
+      load,
+      loadGami,
+    }),
+    [
+      data,
+      detailsError,
+      gami,
+      gamiError,
+      isLoading,
+      isLoadingDetails,
+      isLoadingGami,
+      load,
+      loadGami,
+    ],
   );
 }

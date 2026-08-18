@@ -6,7 +6,6 @@ import {
   ArrowRight,
   CalendarClock,
   DoorOpen,
-  Flame,
   Loader2,
   Mail,
   MessageCircle,

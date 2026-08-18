@@ -271,7 +271,14 @@ export function IngresosTab({ revenue, busy, payments, onSavePayment, onDeletePa
                   </td>
                   <td className="px-3 py-3 uppercase text-white/60">{p.method}</td>
                   <td className="px-3 py-3 font-black text-amber-200">{money(p.amountCrc)}</td>
-                  <td className="px-3 py-3 text-xs text-white/40">{p.recordedBy}</td>
+                  <td className="px-3 py-3 text-xs text-white/40">
+                    <span className="block uppercase">{p.recordedBy}</span>
+                    {p.recordedByStaffName ? (
+                      <span className="mt-0.5 block font-bold text-white/65">
+                        {p.recordedByStaffName}
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="px-3 py-3">
                     <button
                       type="button"

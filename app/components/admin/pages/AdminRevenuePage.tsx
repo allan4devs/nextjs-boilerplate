@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 import { useAdmin } from "../context/AdminProvider";
 import { usePaymentDraft } from "../hooks/usePaymentDraft";
 import { IngresosTab } from "../tabs/IngresosTab";
@@ -8,7 +8,7 @@ import { IngresosTab } from "../tabs/IngresosTab";
 export function AdminRevenuePage() {
   const {
     auth: { role },
-    data: { data, load },
+    data: { data, load, isLoadingDetails, detailsError },
     feedback: { busy, setBusy, setError, setMessage },
   } = useAdmin();
   const payments = usePaymentDraft(data?.members);
@@ -22,9 +22,34 @@ export function AdminRevenuePage() {
 
   if (!data || data.role !== "super") return null;
   if (!data.revenue) {
+    if (!isLoadingDetails) {
+      return (
+        <div className="border-[3px] border-orange-300/40 bg-orange-300/[0.06] p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-orange-300" />
+          <h2 className="mt-3 text-xl font-black uppercase text-orange-100">
+            No se pudieron cargar los ingresos
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm font-bold text-white/50">
+            {detailsError || "La carga operativa sí está disponible, pero falló el detalle financiero."}
+          </p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="mt-5 inline-flex min-h-11 items-center gap-2 border-[3px] border-orange-300 bg-orange-300 px-4 text-xs font-black uppercase text-black"
+          >
+            <RefreshCw className="h-4 w-4" /> Reintentar
+          </button>
+        </div>
+      );
+    }
     return (
-      <div className="grid min-h-[280px] place-items-center border-[3px] border-white/15 bg-[#0c0c0c]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#d8ff3e]" aria-label="Cargando ingresos" />
+      <div className="grid min-h-[280px] place-items-center border-[3px] border-white/15 bg-[#0c0c0c] text-center">
+        <div>
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#d8ff3e]" aria-label="Cargando ingresos" />
+          <p className="mt-3 text-xs font-black uppercase tracking-[.16em] text-white/35">
+            Cargando detalle financiero
+          </p>
+        </div>
       </div>
     );
   }

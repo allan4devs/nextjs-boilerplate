@@ -42,6 +42,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
     feedback: { busy, setBusy, error, setError, message, setMessage },
     login,
     logout,
+    isBusy,
+    isRestoringSession,
   } = useAdmin();
 
   const isSuper = data?.role === "super";
@@ -83,6 +85,18 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   if (!role) {
+    if (isRestoringSession) {
+      return (
+        <main className="xg-os-login-shell grid bg-[#050505] text-white">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-9 w-9 animate-spin text-[#d8ff3e]" />
+            <p className="mt-3 text-xs font-black uppercase tracking-[.18em] text-white/40">
+              Recuperando sesión de admin
+            </p>
+          </div>
+        </main>
+      );
+    }
     return (
       <main className="xg-os-login-shell grid bg-[#050505] text-white">
         <form
@@ -115,8 +129,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
               {error}
             </div>
           )}
-          <GameButton type="submit" full className="mt-5" disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
+          <GameButton type="submit" full className="mt-5" disabled={isBusy}>
+            {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
           </GameButton>
           <p className="mt-5 text-xs font-semibold text-white/35">
             Si no tenés el código, pedilo a la administración del gym.

@@ -10,6 +10,9 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const RESEND_BATCH_ENDPOINT = "https://api.resend.com/emails/batch";
 export const RESEND_BATCH_MAX = 100;
 const PREFERENCES_BLOCK = "__XTREME_EMAIL_PREFERENCES__";
+const EMAIL_HTTP_TIMEOUT_MS = 15_000;
+const SMTP_CONNECTION_TIMEOUT_MS = 10_000;
+const SMTP_SOCKET_TIMEOUT_MS = 20_000;
 
 export type SendEmailResult = {
   ok: boolean;
@@ -284,6 +287,9 @@ function getSmtpTransport(): Transporter {
     pool: true,
     maxConnections: 3,
     maxMessages: 100,
+    connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+    greetingTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+    socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
   });
   cache.transporter = transporter;
   cache.signature = signature;
@@ -367,6 +373,7 @@ async function sendViaResend(
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey.slice(0, 256) } : {}),
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(EMAIL_HTTP_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -490,10 +497,22 @@ export async function sendBatchEmails(
     // reutilizando el pool de conexiones del transporter. Un fallo por rate limit
     // (4xx temporal) corta el resto del lote, igual que el batch de Resend.
     if (emailProvider() === "smtp") {
-      for (const row of ready) {
+      for (let readyIndex = 0; readyIndex < ready.length; readyIndex += 1) {
+        const row = ready[readyIndex];
         const result = await sendViaSmtp(row.payload);
         results[row.index] = { index: row.index, ref: items[row.index].ref, ...result };
-        if (result.code === "rate_limit") break;
+        if (result.code === "rate_limit") {
+          for (const pending of ready.slice(readyIndex + 1)) {
+            results[pending.index] = {
+              index: pending.index,
+              ref: items[pending.index].ref,
+              ok: false,
+              code: "rate_limit",
+              error: result.error || "El proveedor limitó temporalmente el envío.",
+            };
+          }
+          break;
+        }
       }
       const sent = results.filter((r) => r.ok).length;
       const skipped = results.filter((r) => r.skipped).length;
@@ -526,6 +545,7 @@ export async function sendBatchEmails(
           ...(chunkKey ? { "Idempotency-Key": chunkKey } : {}),
         },
         body: JSON.stringify(chunk.map((row) => row.payload)),
+        signal: AbortSignal.timeout(EMAIL_HTTP_TIMEOUT_MS),
       });
 
       if (!response.ok) {
@@ -543,8 +563,21 @@ export async function sendBatchEmails(
             error,
           };
         }
-        // Si es rate limit, no seguir con más chunks.
-        if (response.status === 429) break;
+        // Si es rate limit, no seguir con más chunks y marcar lo no intentado
+        // como reintentable. Así no se consumen intentos sin llamar al proveedor.
+        if (response.status === 429) {
+          for (const pending of ready.slice(offset + chunk.length)) {
+            results[pending.index] = {
+              index: pending.index,
+              ref: items[pending.index].ref,
+              ok: false,
+              status: response.status,
+              code: "rate_limit",
+              error,
+            };
+          }
+          break;
+        }
         continue;
       }
 

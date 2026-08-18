@@ -213,7 +213,7 @@ html.xg-staff-light [class*="shadow-["] {
   box-shadow: 3px 3px 0 rgba(44, 63, 49, 0.13) !important;
 }
 
-/* El lima neÃ³n del tema oscuro se convierte en verde institucional en claro. */
+/* El lima neón del tema oscuro se convierte en verde institucional en claro. */
 html.xg-staff-light [class~="bg-[#d8ff3e]"] {
   border-color: #236b43 !important;
   background-color: #236b43 !important;

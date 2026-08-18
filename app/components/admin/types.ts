@@ -127,6 +127,8 @@ export type PaymentRow = {
   note: string;
   paypalCaptureId: string | null;
   recordedBy: string;
+  recordedByStaffId: string | null;
+  recordedByStaffName: string | null;
 };
 
 export type RevenueBucket = { count: number; crc: number; usd: number };
