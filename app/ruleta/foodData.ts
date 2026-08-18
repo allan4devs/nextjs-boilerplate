@@ -10,7 +10,16 @@ export type StyleTag =
   | "plancha"
   | "ajillo"
   | "crispy";
-export type ExtraTag = "queso-extra" | "frijoles" | "aguacate" | "salsa-especial" | "vegetales" | "para-compartir";
+export type ExtraTag =
+  | "queso-extra"
+  | "frijoles"
+  | "aguacate"
+  | "salsa-especial"
+  | "vegetales"
+  | "brocoli"
+  | "coliflor"
+  | "papa"
+  | "para-compartir";
 
 export type IngredientTag = ProteinTag | BaseTag | StyleTag | ExtraTag;
 
@@ -60,6 +69,9 @@ export const EXTRA_OPTIONS = [
   { id: "aguacate", label: "Aguacate", emoji: "🥑" },
   { id: "salsa-especial", label: "Salsa especial", emoji: "🥫" },
   { id: "vegetales", label: "Vegetales", emoji: "🥬" },
+  { id: "brocoli", label: "Brócoli", emoji: "🥦" },
+  { id: "coliflor", label: "Coliflor", emoji: "🤍" },
+  { id: "papa", label: "Papa", emoji: "🥔" },
   { id: "para-compartir", label: "Para compartir", emoji: "🍽️" },
 ] as const satisfies readonly IngredientOption[];
 

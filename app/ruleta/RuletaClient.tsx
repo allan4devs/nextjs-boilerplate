@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, Heart, MapPin, RotateCcw, Shuffle, Sparkles, Utensils, X } from "lucide-react";
 import { CATALOG_TOTALS, FOOD_CATEGORIES } from "./foodData";
+import { useFoodPreferences } from "./useFoodPreferences";
 import styles from "./ruleta.module.css";
 
 const WHEEL_COLORS = ["#ff6b6b", "#ffd166", "#60d394", "#56a8e8", "#9b78f6", "#f27aa4"];
@@ -95,8 +96,10 @@ export default function RuletaClient({ onExit }: { onExit?: () => void }) {
   const [wheelSpinning, setWheelSpinning] = useState(false);
   const [wheelWinner, setWheelWinner] = useState<number | null>(null);
   const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
+  const [orderSaved, setOrderSaved] = useState(false);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { recordEvent } = useFoodPreferences();
 
   const category = categoryIndex === null ? null : FOOD_CATEGORIES[categoryIndex];
   const restaurant = category && restaurantIndex !== null ? category.restaurants[restaurantIndex] : null;
@@ -157,11 +160,13 @@ export default function RuletaClient({ onExit }: { onExit?: () => void }) {
     };
   }, [wheelOpen, wheelSpinning]);
 
-  function choose(index: number) {
+  function choose(index: number, method: "button" | "roulette" = "button") {
     if (transitioning || step === 3) return;
 
     setTransitioning(true);
     const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 210;
+    const selectedChoice = choices[index];
+    const selectionStage = (["category", "restaurant", "dish"] as const)[step];
 
     transitionTimerRef.current = setTimeout(() => {
       if (step === 0) {
@@ -178,6 +183,12 @@ export default function RuletaClient({ onExit }: { onExit?: () => void }) {
 
       setStep((step + 1) as Step);
       setTransitioning(false);
+      void recordEvent({
+        type: "roulette_choice",
+        selectionStage,
+        choiceLabel: selectedChoice.label,
+        choiceMethod: method,
+      });
     }, delay);
   }
 
@@ -185,6 +196,7 @@ export default function RuletaClient({ onExit }: { onExit?: () => void }) {
     if (transitioning || wheelSpinning || step === 0) return;
 
     setConfetti([]);
+    setOrderSaved(false);
     if (step === 1) {
       setCategoryIndex(null);
       setRestaurantIndex(null);
@@ -213,6 +225,7 @@ export default function RuletaClient({ onExit }: { onExit?: () => void }) {
     setWheelWinner(null);
     setWheelRotation(0);
     setConfetti([]);
+    setOrderSaved(false);
   }
 
   function openWheel() {
@@ -252,7 +265,21 @@ export default function RuletaClient({ onExit }: { onExit?: () => void }) {
     const selectedIndex = wheelWinner;
     setWheelOpen(false);
     setWheelWinner(null);
-    choose(selectedIndex);
+    choose(selectedIndex, "roulette");
+  }
+
+  async function saveFinalOrder() {
+    if (!category || !restaurant || !dish || orderSaved) return;
+    const saved = await recordEvent({
+      type: "dish_ordered",
+      candidateKey: `${restaurant.name}::${dish.name}`,
+      restaurant: restaurant.name,
+      location: restaurant.location,
+      dish: dish.name,
+      categoryEmoji: category.emoji,
+      selectedTags: dish.tags,
+    });
+    if (saved) setOrderSaved(true);
   }
 
   const activeStep = step < 3 ? (step as 0 | 1 | 2) : null;
@@ -434,10 +461,18 @@ export default function RuletaClient({ onExit }: { onExit?: () => void }) {
                 <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <button
                     type="button"
-                    onClick={restart}
-                    className="inline-flex min-h-14 min-w-56 items-center justify-center gap-2 rounded-full bg-[#ff7096] px-7 py-4 font-black text-white shadow-[0_7px_0_#a62f53] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_2px_0_#a62f53]"
+                    onClick={saveFinalOrder}
+                    disabled={orderSaved}
+                    className="inline-flex min-h-14 min-w-56 items-center justify-center gap-2 rounded-full bg-[#ff7096] px-7 py-4 font-black text-white shadow-[0_7px_0_#a62f53] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_2px_0_#a62f53] disabled:bg-[#60a5a0] disabled:shadow-[0_7px_0_#397b77]"
                   >
-                    <Heart className="h-5 w-5 fill-current" aria-hidden="true" /> Elegir otra comida
+                    <Heart className="h-5 w-5 fill-current" aria-hidden="true" /> {orderSaved ? "Pedido guardado" : "Esto pedimos"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={restart}
+                    className="inline-flex min-h-12 items-center gap-2 rounded-full px-5 py-3 text-sm font-black text-white/75 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <RotateCcw className="h-4 w-4" aria-hidden="true" /> Elegir otra comida
                   </button>
                   <button
                     type="button"

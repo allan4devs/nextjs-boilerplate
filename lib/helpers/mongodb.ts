@@ -123,6 +123,13 @@ async function ensureIndexes(db: Db) {
       .collection("xtreme_gym_chat_messages")
       .createIndex({ sessionId: 1, seq: 1 }, { unique: true }),
     db.collection("xtreme_gym_chat_messages").createIndex({ sessionId: 1, createdAt: 1 }),
+    // Decisiones de comida: historial anónimo y tablero persistente de posibles platos.
+    db.collection("xtreme_gym_food_choice_events").createIndex({ profileId: 1, createdAt: -1 }),
+    db.collection("xtreme_gym_food_choice_events").createIndex({ profileId: 1, type: 1, dayKey: -1 }),
+    db.collection("xtreme_gym_food_choice_events").createIndex({ profileId: 1, type: 1, weekKey: -1 }),
+    db.collection("xtreme_gym_food_choice_events").createIndex({ profileId: 1, type: 1, monthKey: -1 }),
+    db.collection("xtreme_gym_food_candidates").createIndex({ profileId: 1, candidateKey: 1 }, { unique: true }),
+    db.collection("xtreme_gym_food_candidates").createIndex({ profileId: 1, active: 1, updatedAt: -1 }),
   ]);
   for (const r of results) {
     if (r.status === "rejected") console.error("MONGO INDEX", r.reason);

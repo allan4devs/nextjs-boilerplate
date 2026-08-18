@@ -49,7 +49,10 @@ scripts/email-recovery-report.json
 agents/
 skills/
 .scripts/*
-public/
+!public/
+public/*
+!public/ruleta/
+!public/ruleta/*.webp
 
 .vercel
 .env*.local
