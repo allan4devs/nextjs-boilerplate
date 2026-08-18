@@ -60,7 +60,7 @@ export type AdminMember = {
   plan: string;
   membershipStatus: MembershipStatus;
   daysRemaining: number;
-  /** Fecha del último pago; si el import de Latinsoft no la trajo, cae a `startedAt`. */
+  /** Fecha del último pago real o inferida desde vencimiento + tarifa de Latinsoft. */
   lastPaidAt: string;
   nextBillingDate: string;
   startedAt: string;
@@ -348,7 +348,8 @@ export type AdminTabId =
   | "ingresos"
   | "gamificacion"
   | "correos"
-  | "bitacora";
+  | "bitacora"
+  | "herramientas";
 
 export type GamiBadge = {
   id: string;

@@ -3,12 +3,12 @@ import { getDb } from "@/lib/helpers/mongodb";
 import {
   MEMBERS_COLLECTION,
   PAYMENTS_COLLECTION,
-  addDays,
+  membershipStatus,
   todayIso,
-  toUtcDate,
   type MemberDoc,
   type PaymentDoc,
 } from "@/lib/xtreme/shared";
+import { nextBillingDateFromPayment } from "@/lib/xtreme/membership-billing";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
@@ -95,14 +95,23 @@ export async function POST(req: NextRequest) {
 
   let nextBillingDate: string | null = null;
   if (item.category === "Plan" && item.days > 0) {
-    const base = member.membership?.nextBillingDate && member.membership.nextBillingDate > todayIso()
-      ? member.membership.nextBillingDate : todayIso();
-    nextBillingDate = addDays(toUtcDate(base), item.days).toISOString().slice(0, 10);
+    nextBillingDate = nextBillingDateFromPayment(payment.date, {
+      optionId: itemId,
+      planLabel: item.label,
+      fallbackDays: item.days,
+    });
+    const startedAt = member.membership?.startedAt || payment.date;
     await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne({ normalizedName: member.normalizedName }, { $set: {
       "membership.plan": item.label,
+      "membership.lastPaidAt": payment.date,
       "membership.nextBillingDate": nextBillingDate,
-      "membership.status": "active",
-      "membership.startedAt": member.membership?.startedAt || todayIso(),
+      "membership.status": membershipStatus({
+        plan: item.label,
+        lastPaidAt: payment.date,
+        nextBillingDate,
+        startedAt,
+      }).status,
+      "membership.startedAt": startedAt,
       updatedAt: now,
     } });
   }

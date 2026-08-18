@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { AdminProvider } from "@/app/components/admin/context/AdminProvider";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { AdminFrame } from "@/app/components/admin/AdminFrame";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -8,9 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <AdminProvider>
-      <AdminShell>{children}</AdminShell>
-    </AdminProvider>
-  );
+  return <AdminFrame>{children}</AdminFrame>;
 }

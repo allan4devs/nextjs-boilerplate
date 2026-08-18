@@ -6,14 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
   ClipboardList,
-  Database,
   DoorOpen,
   Loader2,
   Lock,
   LogOut,
   RefreshCw,
   Shield,
-  ShieldAlert,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -36,10 +34,11 @@ function isActiveRoute(pathname: string, href: string): boolean {
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isDevelopment = process.env.NODE_ENV !== "production";
   const {
     auth: { role, staffName, codeInput, setCodeInput },
     data: { data, isLoading, load },
-    feedback: { busy, setBusy, error, setError, message, setMessage },
+    feedback: { busy, error, message },
     login,
     logout,
     isBusy,
@@ -48,41 +47,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   const isSuper = data?.role === "super";
   const visibleTabs = ADMIN_TABS.filter((item) => !item.superOnly || isSuper);
+  const primaryTabs = visibleTabs.filter((item) => !item.hiddenFromNav);
   const activeTab = ADMIN_TABS.find((item) => isActiveRoute(pathname, item.href)) ?? ADMIN_TABS[0];
   const blockedRoute = Boolean(data && activeTab.superOnly && !isSuper);
 
   useEffect(() => {
     if (blockedRoute) router.replace("/admin");
   }, [blockedRoute, router]);
-
-  async function seed(wipeAll: boolean) {
-    if (!role) return;
-    setBusy(wipeAll ? "reset" : "seed");
-    setError("");
-    setMessage("");
-    try {
-      const response = await fetch("/api/xtreme/seed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wipeAll }),
-      });
-      const json = (await response.json()) as {
-        insertedMembers?: number;
-        insertedPayments?: number;
-        pin?: string;
-        error?: string;
-      };
-      if (!response.ok) throw new Error(json.error ?? "No se pudo generar el seed.");
-      setMessage(
-        `Listo: ${json.insertedMembers} socios, ${json.insertedPayments ?? 0} pagos demo. PIN: ${json.pin}.`,
-      );
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al generar el seed.");
-    } finally {
-      setBusy("");
-    }
-  }
 
   if (!role) {
     if (isRestoringSession) {
@@ -145,7 +116,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <section className="xg-safe-top sticky top-0 z-30 border-b-[3px] border-white/15 bg-[#050505]/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-3 sm:px-6 sm:py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto grid max-w-7xl gap-4 px-3 py-3 sm:px-6 sm:py-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <GameLabel tone="lime">Xtreme · Admin OS</GameLabel>
@@ -164,7 +135,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </h1>
             {staffName && (
               <p className="mt-1 text-xs font-black uppercase tracking-[.16em] text-[#d8ff3e]">
-                Sesión de {staffName}
+                {isDevelopment ? `Desarrollo · ${staffName}` : `Sesión de ${staffName}`}
               </p>
             )}
             <p className="mt-1 hidden text-sm font-bold text-white/50 sm:block">
@@ -178,59 +149,47 @@ export function AdminShell({ children }: { children: ReactNode }) {
               </div>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StaffThemeToggle />
-            <Link
-              href="/entrenador"
-              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 bg-cyan-300/10 px-3 py-2 text-xs font-black uppercase text-cyan-200 sm:text-sm"
+          <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:justify-between xl:w-auto xl:justify-end">
+            <nav className="grid grid-cols-2 gap-2 md:flex" aria-label="Cambiar de panel">
+              <Link
+                href="/entrenador"
+                className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap border-[3px] border-cyan-300/50 bg-cyan-300/10 px-3 py-2 text-xs font-black uppercase text-cyan-200 transition hover:border-cyan-200 hover:bg-cyan-300/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200 sm:text-sm"
+              >
+                <ClipboardList className="h-4 w-4" /> Trainer
+              </Link>
+              <Link
+                href="/recepcion"
+                className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap border-[3px] border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-3 py-2 text-xs font-black uppercase text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e] sm:text-sm"
+              >
+                <DoorOpen className="h-4 w-4" /> Recepción
+              </Link>
+            </nav>
+            <div
+              className={`grid gap-2 md:flex ${isDevelopment ? "grid-cols-2" : "grid-cols-3"}`}
+              role="group"
+              aria-label="Controles del panel"
             >
-              <ClipboardList className="h-4 w-4" /> Trainer OS
-            </Link>
-            <Link
-              href="/recepcion"
-              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-3 py-2 text-xs font-black uppercase text-[#eaff93] sm:text-sm"
-            >
-              <DoorOpen className="h-4 w-4" /> Reception OS
-            </Link>
-            <button
-              type="button"
-              onClick={() => void load()}
-              disabled={isLoading || Boolean(busy)}
-              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/80 disabled:opacity-50 sm:text-sm"
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">Refrescar</span>
-            </button>
-            {process.env.NODE_ENV !== "production" && (
-              <>
+              <StaffThemeToggle />
+              <button
+                type="button"
+                onClick={() => void load()}
+                disabled={isLoading || Boolean(busy)}
+                className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">Refrescar</span>
+              </button>
+              {isDevelopment ? null : (
                 <button
                   type="button"
-                  onClick={() => void seed(false)}
-                  disabled={Boolean(busy)}
-                  className="hidden min-h-11 items-center gap-2 border-[3px] border-black/30 bg-[#d8ff3e] px-3 py-2 text-xs font-black uppercase text-black disabled:opacity-50 sm:inline-flex sm:text-sm"
+                  onClick={() => void logout()}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/60 transition hover:border-red-300/50 hover:text-red-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300 sm:text-sm"
                 >
-                  {busy === "seed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-                  Seed
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Salir</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void seed(true)}
-                  disabled={Boolean(busy)}
-                  className="hidden min-h-11 items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-black uppercase text-red-200 disabled:opacity-50 md:inline-flex md:text-sm"
-                >
-                  {busy === "reset" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
-                  Reset
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/60 sm:text-sm"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Salir</span>
-            </button>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -239,7 +198,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         className="xg-app-dock xg-safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t-[3px] border-white/20 bg-[#0a0a0a]/98 backdrop-blur-md lg:hidden"
         aria-label="Páginas de administración"
       >
-        {visibleTabs.map((item) => (
+        {primaryTabs.map((item) => (
           <GameDockItem
             key={item.id}
             label={item.label}
@@ -252,7 +211,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
       <section className="xg-os-content mx-auto max-w-7xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-6">
         <nav className="hidden flex-wrap gap-2 lg:flex" aria-label="Páginas de administración">
-          {visibleTabs.map((item) => (
+          {primaryTabs.map((item) => (
             <Link
               key={item.id}
               href={item.href}

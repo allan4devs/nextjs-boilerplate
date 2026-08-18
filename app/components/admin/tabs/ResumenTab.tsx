@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Trophy,
   Users,
+  Wrench,
   Zap,
 } from "lucide-react";
 import {
@@ -174,6 +175,16 @@ export function ResumenTab({ data, isSuper, busy, onNotifyExpiring, onResolveAle
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              {process.env.NODE_ENV !== "production" ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenTab("herramientas")}
+                  className="inline-flex min-h-11 items-center gap-2 border-[3px] border-amber-300/45 bg-amber-300/10 px-3 py-2 text-[11px] font-black uppercase text-amber-100 transition hover:bg-amber-300 hover:text-black"
+                >
+                  <Wrench className="h-4 w-4" />
+                  Herramientas dev
+                </button>
+              ) : null}
               <button
                 type="button"
                 disabled={Boolean(busy)}

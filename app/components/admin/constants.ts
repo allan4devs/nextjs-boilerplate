@@ -12,6 +12,7 @@ import {
   ReceiptText,
   Trophy,
   Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -83,17 +84,27 @@ export type AdminTabDefinition = {
   icon: LucideIcon;
   /** Solo visible para super admin (Allan, Alejandro, Eileen). */
   superOnly?: boolean;
+  /** Ruta secundaria: existe, pero no ocupa espacio en la navegación principal. */
+  hiddenFromNav?: boolean;
 };
 
 export const ADMIN_TABS: AdminTabDefinition[] = [
   { id: "resumen", label: "Resumen", href: "/admin", icon: Activity },
   { id: "socios", label: "Socios", href: "/admin/socios", icon: Users },
   { id: "accesos", label: "Accesos", href: "/admin/accesos", icon: DoorOpen },
-  { id: "bitacora", label: "Bitácora", href: "/admin/bitacora", icon: ClipboardList },
+  { id: "bitacora", label: "Bitácora", href: "/analytics", icon: ClipboardList },
   { id: "gamificacion", label: "Game", href: "/admin/gamificacion", icon: Trophy },
   { id: "pagos", label: "Pagos", href: "/admin/pagos", icon: ReceiptText, superOnly: true },
   { id: "correos", label: "Correos", href: "/admin/correos", icon: Mail, superOnly: true },
   { id: "ingresos", label: "Ingresos", href: "/admin/ingresos", icon: Banknote, superOnly: true },
+  {
+    id: "herramientas",
+    label: "Herramientas",
+    href: "/admin/herramientas",
+    icon: Wrench,
+    superOnly: true,
+    hiddenFromNav: true,
+  },
 ];
 
 export function adminHref(tab: AdminTabId): string {

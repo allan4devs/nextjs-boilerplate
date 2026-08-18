@@ -26,6 +26,8 @@ type Options = {
   onUnauthorized: () => void;
   /** Rol confirmado por el servidor, única fuente de verdad del permiso. */
   onRole: (role: AdminRole) => void;
+  /** Algunas páginas cargan su detalle desde un endpoint dedicado más liviano. */
+  includeDetails?: boolean;
 };
 
 /**
@@ -37,6 +39,7 @@ export function useAdminDataSource({
   feedback,
   onUnauthorized,
   onRole,
+  includeDetails = true,
 }: Options): AdminDataSource {
   const [data, setData] = useState<AdminData | null>(null);
   const [gami, setGami] = useState<GamiData | null>(null);
@@ -67,6 +70,13 @@ export function useAdminDataSource({
       if (!response.ok) throw new Error(json.error ?? "No se pudo cargar.");
       setData(json);
       onRole(json.role);
+
+      if (!includeDetails) {
+        detailsRequestId.current += 1;
+        setIsLoadingDetails(false);
+        setDetailsError("");
+        return;
+      }
 
       const requestId = ++detailsRequestId.current;
       setIsLoadingDetails(true);
@@ -99,7 +109,7 @@ export function useAdminDataSource({
     } finally {
       setIsLoading(false);
     }
-  }, [onRole, onUnauthorized, setError]);
+  }, [includeDetails, onRole, onUnauthorized, setError]);
 
   const loadGami = useCallback(async () => {
     const requestId = ++gamiRequestId.current;

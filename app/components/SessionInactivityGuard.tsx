@@ -27,7 +27,9 @@ function targetForPath(pathname: string): SessionTarget | null {
       ? "ingreso"
       : pathname.startsWith("/entrenador")
         ? "trainer"
-        : pathname.startsWith("/admin")
+        : pathname.startsWith("/admin") ||
+            pathname === "/analytics" ||
+            pathname.startsWith("/analytics/")
           ? "admin"
           : null;
 
@@ -52,6 +54,15 @@ export default function SessionInactivityGuard() {
   useEffect(() => {
     const target = targetForPath(pathname);
     if (!target) return;
+
+    if (process.env.NODE_ENV !== "production" && target.kind === "staff") {
+      try {
+        window.localStorage.removeItem(target.storageKey);
+      } catch {
+        // En desarrollo la sesión de staff no usa almacenamiento del navegador.
+      }
+      return;
+    }
 
     let lastActivity = Date.now();
     let lastPersistedAt = 0;

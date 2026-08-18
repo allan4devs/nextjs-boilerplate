@@ -149,6 +149,18 @@ export async function resolveStaffSession(
   surface: StaffSurface,
   touchActivity = false,
 ): Promise<StaffSession | null> {
+  // Desarrollo local: Admin OS corre como Allan sin PIN, cookie ni consulta de sesión.
+  if (process.env.NODE_ENV !== "production" && surface === "admin") {
+    return {
+      surface: "admin",
+      role: "super",
+      staffId: "allan",
+      staffName: "Allan",
+      tokenHash: "development-admin",
+      expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
+    };
+  }
+
   const token = req.cookies.get(COOKIE_BY_SURFACE[surface])?.value?.trim() ?? "";
   if (!token) return null;
 

@@ -18,6 +18,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import { useAdminAuth, type AdminAuth } from "../hooks/useAdminAuth";
 import { useAdminDataSource, type AdminDataSource } from "../hooks/useAdminDataSource";
 import { useAdminFeedback, type AdminFeedback } from "../hooks/useAdminFeedback";
@@ -38,16 +39,23 @@ export type AdminContextValue = {
 };
 
 const AdminContext = createContext<AdminContextValue | null>(null);
+const DEVELOPMENT_ADMIN_BYPASS = process.env.NODE_ENV !== "production";
 
 export function AdminProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const feedback = useAdminFeedback();
   const { setError } = feedback;
   const auth = useAdminAuth(feedback);
   const { setRole, setStaffName } = auth;
-  const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const [isRestoringSession, setIsRestoringSession] = useState(!DEVELOPMENT_ADMIN_BYPASS);
 
   // El servidor manda: si rechaza la sesión, la capa de auth se limpia sola.
   const handleUnauthorized = useCallback(() => {
+    if (DEVELOPMENT_ADMIN_BYPASS) {
+      setRole("super");
+      setStaffName("Allan");
+      return;
+    }
     setRole("");
     setStaffName("");
   }, [setRole, setStaffName]);
@@ -55,6 +63,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     feedback,
     onUnauthorized: handleUnauthorized,
     onRole: setRole,
+    includeDetails: pathname !== "/analytics",
   });
 
   const { load } = data;
@@ -66,6 +75,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, [load, signIn]);
 
   const logout = useCallback(async () => {
+    if (DEVELOPMENT_ADMIN_BYPASS) return;
     await signOut();
     setData(null);
     setGami(null);
@@ -73,6 +83,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   // Sesión ya abierta en este navegador: se retoma sin pedir el código.
   useEffect(() => {
+    if (DEVELOPMENT_ADMIN_BYPASS) {
+      void load();
+      return;
+    }
+
     let active = true;
     void (async () => {
       try {

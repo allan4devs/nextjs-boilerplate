@@ -30,6 +30,7 @@ import {
   computeOccupancy,
   formatAccessCode,
   hammingHexDistance,
+  isoDateOrEmpty,
   isValidEmail,
   isCheckinOpen,
   memberAccessCode,
@@ -44,6 +45,7 @@ import {
 } from "@/lib/xtreme/shared";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { resolveMember } from "@/lib/xtreme/members/resolve-member";
+import { nextBillingDateFromPayment } from "@/lib/xtreme/membership-billing";
 
 export const dynamic = "force-dynamic";
 
@@ -53,12 +55,6 @@ function unauthorized() {
 
 async function roleFromReq(req: NextRequest) {
   return (await resolveStaffSession(req, "reception"))?.role ?? null;
-}
-
-function addMonths(date: Date, months: number) {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + months);
-  return next;
 }
 
 function isDataUrlPhoto(value: string) {
@@ -533,13 +529,21 @@ export async function POST(req: NextRequest) {
       const phone = normalizePhone(body.phone);
       const email = normalizeEmail(body.email);
       const plan = String(body.plan ?? "").trim();
-      const lastPaidAt = String(body.lastPaidAt ?? "").trim();
-      const nextBillingDate = String(body.nextBillingDate ?? "").trim();
+      const rawLastPaidAt = String(body.lastPaidAt ?? "").trim();
+      const rawNextBillingDate = String(body.nextBillingDate ?? "").trim();
+      const lastPaidAt = isoDateOrEmpty(rawLastPaidAt);
+      const requestedBillingDate = isoDateOrEmpty(rawNextBillingDate);
       if (!memberKey || !memberName || !cedula || !phone) {
         return NextResponse.json({ error: "Nombre, cédula y teléfono son requeridos." }, { status: 400 });
       }
       if (email && !isValidEmail(email)) {
         return NextResponse.json({ error: "Correo inválido." }, { status: 400 });
+      }
+      if ((rawLastPaidAt && !lastPaidAt) || (rawNextBillingDate && !requestedBillingDate)) {
+        return NextResponse.json({ error: "Revisá las fechas de pago y vencimiento." }, { status: 400 });
+      }
+      if (lastPaidAt && lastPaidAt > todayIso()) {
+        return NextResponse.json({ error: "La fecha del pago no puede estar en el futuro." }, { status: 400 });
       }
       const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName: memberKey });
       if (!existing) return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
@@ -550,10 +554,29 @@ export async function POST(req: NextRequest) {
       if (duplicate) {
         return NextResponse.json({ error: `La cédula o teléfono ya pertenece a ${duplicate.memberName}.` }, { status: 409 });
       }
+      const effectivePlan = plan || existing.membership?.plan || "";
+      const calculatedBillingDate = lastPaidAt
+        ? nextBillingDateFromPayment(lastPaidAt, { planLabel: effectivePlan })
+        : "";
+      const nextBillingDate = calculatedBillingDate || requestedBillingDate;
+      if (lastPaidAt && nextBillingDate && nextBillingDate <= lastPaidAt) {
+        return NextResponse.json(
+          { error: "El próximo cobro debe ser posterior al último pago." },
+          { status: 400 },
+        );
+      }
       const set: Record<string, unknown> = { memberName, cedula, phone, email, updatedAt: now };
       if (plan) set["membership.plan"] = plan;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(lastPaidAt)) set["membership.lastPaidAt"] = lastPaidAt;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(nextBillingDate)) set["membership.nextBillingDate"] = nextBillingDate;
+      if (lastPaidAt) set["membership.lastPaidAt"] = lastPaidAt;
+      if (nextBillingDate) {
+        set["membership.nextBillingDate"] = nextBillingDate;
+        set["membership.status"] = membershipStatus({
+          plan: effectivePlan,
+          lastPaidAt: lastPaidAt || existing.membership?.lastPaidAt,
+          nextBillingDate,
+          startedAt: existing.membership?.startedAt,
+        }).status;
+      }
       await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne({ normalizedName: memberKey }, { $set: set });
       await writeAudit(db, {
         actorRole: role,
@@ -582,12 +605,12 @@ export async function POST(req: NextRequest) {
             .replace(/[^0-9a-f]/g, "")
         : "";
       const checkInNow = body.checkInNow !== false;
-      const lastPaidAt = /^\d{4}-\d{2}-\d{2}$/.test(String(body.lastPaidAt ?? ""))
-        ? String(body.lastPaidAt)
-        : now.toISOString().slice(0, 10);
-      const requestedBillingDate = /^\d{4}-\d{2}-\d{2}$/.test(String(body.nextBillingDate ?? ""))
-        ? String(body.nextBillingDate)
-        : addMonths(now, 1).toISOString().slice(0, 10);
+      const rawLastPaidAt = String(body.lastPaidAt ?? "").trim();
+      const rawNextBillingDate = String(body.nextBillingDate ?? "").trim();
+      const lastPaidAt = isoDateOrEmpty(rawLastPaidAt) || now.toISOString().slice(0, 10);
+      const requestedBillingDate =
+        nextBillingDateFromPayment(lastPaidAt, { planLabel: plan }) ||
+        isoDateOrEmpty(rawNextBillingDate);
 
       if (!memberName) {
         return NextResponse.json({ error: "El nombre es requerido." }, { status: 400 });
@@ -600,6 +623,22 @@ export async function POST(req: NextRequest) {
       }
       if (email && !isValidEmail(email)) {
         return NextResponse.json({ error: "Correo invalido." }, { status: 400 });
+      }
+      if (
+        (rawLastPaidAt && !isoDateOrEmpty(rawLastPaidAt)) ||
+        (rawNextBillingDate && !isoDateOrEmpty(rawNextBillingDate)) ||
+        lastPaidAt > todayIso()
+      ) {
+        return NextResponse.json(
+          { error: "Revisá las fechas: el pago debe ser válido y no puede estar en el futuro." },
+          { status: 400 },
+        );
+      }
+      if (!requestedBillingDate || requestedBillingDate <= lastPaidAt) {
+        return NextResponse.json(
+          { error: "El plan necesita una fecha de próximo cobro posterior al pago." },
+          { status: 400 },
+        );
       }
       if (photoUrl && !isDataUrlPhoto(photoUrl) && !photoUrl.startsWith("https://")) {
         return NextResponse.json({ error: "Foto invalida." }, { status: 400 });
@@ -663,20 +702,22 @@ export async function POST(req: NextRequest) {
       if (faceHash) set.faceHash = faceHash;
 
       if (!existing) {
+        const startedAt = now.toISOString().slice(0, 10);
         set.membership = {
           plan,
           lastPaidAt,
           nextBillingDate: requestedBillingDate,
-          startedAt: now.toISOString().slice(0, 10),
-          status: "active",
+          startedAt,
+          status: membershipStatus({ plan, lastPaidAt, nextBillingDate: requestedBillingDate, startedAt }).status,
         };
       } else if (!existing.membership) {
+        const startedAt = now.toISOString().slice(0, 10);
         set.membership = {
           plan,
           lastPaidAt,
           nextBillingDate: requestedBillingDate,
-          startedAt: now.toISOString().slice(0, 10),
-          status: "active",
+          startedAt,
+          status: membershipStatus({ plan, lastPaidAt, nextBillingDate: requestedBillingDate, startedAt }).status,
         };
       }
 

@@ -15,6 +15,7 @@ import {
   todayIso,
 } from "@/lib/xtreme/shared";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
+import { RESET_CONFIRMATION_PHRASE } from "@/lib/xtreme/seed-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -205,18 +206,26 @@ export async function POST(req: NextRequest) {
   }
 
   const session = await resolveStaffSession(req, "admin");
-  const role = session?.role === "admin" || session?.role === "super" ? session.role : null;
-  if (!role) {
+  if (!session) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
+  if (session.role !== "super") {
+    return NextResponse.json(
+      { error: "Solo super admin puede usar herramientas de datos." },
+      { status: 403 },
+    );
   }
 
   try {
-    const body = (await req.json().catch(() => ({}))) as { wipeAll?: boolean };
+    const body = (await req.json().catch(() => ({}))) as {
+      wipeAll?: boolean;
+      confirmation?: unknown;
+    };
     const wipeAll = Boolean(body.wipeAll);
-    if (wipeAll && role !== "super") {
+    if (wipeAll && body.confirmation !== RESET_CONFIRMATION_PHRASE) {
       return NextResponse.json(
-        { error: "Solo super admin puede hacer reset total." },
-        { status: 403 },
+        { error: `Escribí ${RESET_CONFIRMATION_PHRASE} para confirmar el reset total.` },
+        { status: 400 },
       );
     }
 

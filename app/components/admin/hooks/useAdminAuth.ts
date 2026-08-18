@@ -33,8 +33,12 @@ const SESSION_ENDPOINT = "/api/xtreme/staff-session";
  * el provider, y así esta capa no depende de la de datos.
  */
 export function useAdminAuth(feedback: AdminFeedback): AdminAuth {
-  const [role, setRole] = useState<AdminRole | "">("");
-  const [staffName, setStaffName] = useState("");
+  const [role, setRole] = useState<AdminRole | "">(() =>
+    process.env.NODE_ENV === "production" ? "" : "super",
+  );
+  const [staffName, setStaffName] = useState(() =>
+    process.env.NODE_ENV === "production" ? "" : "Allan",
+  );
   const [codeInput, setCodeInput] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
 

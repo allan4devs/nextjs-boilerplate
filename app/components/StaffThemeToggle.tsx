@@ -35,7 +35,7 @@ export default function StaffThemeToggle() {
 
   const light = theme === "light";
   return (
-    <button type="button" onClick={toggle} aria-label={light ? "Activar tema oscuro" : "Activar tema claro"} aria-pressed={light} className="xg-theme-toggle inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/65 transition hover:border-[#d8ff3e]/60 hover:text-[#d8ff3e]">
+    <button type="button" onClick={toggle} aria-label={light ? "Activar tema oscuro" : "Activar tema claro"} aria-pressed={light} className="xg-theme-toggle inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap border-[3px] border-white/20 px-3 py-2 text-xs font-black uppercase text-white/65 transition hover:border-[#d8ff3e]/60 hover:text-[#d8ff3e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d8ff3e]">
       {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
       <span className="hidden sm:inline">{light ? "Oscuro" : "Claro"}</span>
     </button>

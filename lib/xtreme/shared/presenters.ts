@@ -121,7 +121,8 @@ export function toAdminMember(doc: MemberDoc) {
     totalMinutes: workouts.reduce((sum, workout) => sum + (workout.minutes || 0), 0),
     lastWorkoutDate: workouts.map((workout) => workout.completedDate).filter(Boolean).sort().at(-1) ?? null,
     plan: membership.plan,
-    lastPaidAt: doc.membership?.lastPaidAt ?? doc.membership?.startedAt ?? "",
+    // `startedAt` es la fecha histórica de alta, no evidencia de un pago.
+    lastPaidAt: doc.membership?.lastPaidAt ?? "",
     membershipStatus: membership.status,
     daysRemaining: membership.daysRemaining,
     nextBillingDate: membership.nextBillingDate,

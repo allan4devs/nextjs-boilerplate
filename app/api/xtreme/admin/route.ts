@@ -16,6 +16,7 @@ import {
   addDays,
   computeOccupancy,
   formatAccessCode,
+  isoDateOrEmpty,
   memberAccessCode,
   membershipStatus,
   normalizeKey,
@@ -52,6 +53,7 @@ import {
   inviteExistingMemberToApp,
 } from "@/lib/xtreme/member-app-invite";
 import { requestAppUrl } from "@/lib/constants/app-url";
+import { nextBillingDateFromPayment } from "@/lib/xtreme/membership-billing";
 
 export const dynamic = "force-dynamic";
 
@@ -677,11 +679,22 @@ export async function POST(req: NextRequest) {
       const plan = String(body.plan ?? existing?.membership?.plan ?? "Xtreme Mensual")
         .trim()
         .slice(0, 80);
+      const rawNextBillingDate = String(
+        body.nextBillingDate ?? existing?.membership?.nextBillingDate ?? todayIso(),
+      );
+      const rawStartedAt = String(body.startedAt ?? existing?.membership?.startedAt ?? todayIso());
+      const lastPaidAt = isoDateOrEmpty(existing?.membership?.lastPaidAt);
+      const requestedBillingDate = isoDateOrEmpty(rawNextBillingDate);
+      const startedAt = isoDateOrEmpty(rawStartedAt);
       const nextBillingDate =
-        String(body.nextBillingDate ?? existing?.membership?.nextBillingDate ?? todayIso()).slice(0, 10) ||
-        todayIso();
-      const startedAt =
-        String(body.startedAt ?? existing?.membership?.startedAt ?? todayIso()).slice(0, 10) || todayIso();
+        (lastPaidAt && nextBillingDateFromPayment(lastPaidAt, { planLabel: plan })) ||
+        requestedBillingDate;
+      if (!nextBillingDate || !startedAt || startedAt > nextBillingDate) {
+        return NextResponse.json(
+          { error: "Revisá las fechas: el inicio debe ser anterior al próximo cobro." },
+          { status: 400 },
+        );
+      }
 
       const displayName = normalizeName(body.displayName) || memberName;
       await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
@@ -703,6 +716,7 @@ export async function POST(req: NextRequest) {
             notes: String(body.notes ?? existing?.notes ?? "").trim().slice(0, 800),
             membership: {
               plan,
+              ...(lastPaidAt ? { lastPaidAt } : {}),
               nextBillingDate,
               startedAt,
               status: membershipStatus({ plan, nextBillingDate, startedAt }).status,
@@ -834,6 +848,14 @@ export async function POST(req: NextRequest) {
       ) as PaymentDoc["method"];
 
       const now = new Date();
+      const rawPaymentDate = String(body.date ?? "").trim();
+      const paymentDate = isoDateOrEmpty(rawPaymentDate) || todayIso();
+      if ((rawPaymentDate && !isoDateOrEmpty(rawPaymentDate)) || paymentDate > todayIso()) {
+        return NextResponse.json(
+          { error: "La fecha del pago no puede ser inválida ni futura." },
+          { status: 400 },
+        );
+      }
       const payment: PaymentDoc = {
         id: `pay-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
         memberName: customerName,
@@ -854,7 +876,7 @@ export async function POST(req: NextRequest) {
         paypalOrderId: null,
         paypalCaptureId: null,
         note: String(body.note ?? "").trim().slice(0, 200),
-        date: String(body.date ?? todayIso()).slice(0, 10) || todayIso(),
+        date: paymentDate,
         createdAt: now,
         recordedBy: "admin",
         recordedByStaffId: session.staffId,
@@ -867,19 +889,26 @@ export async function POST(req: NextRequest) {
       let nextBillingDate: string | undefined;
       if (body.extendMembership && payment.category === "Plan") {
         const days = Math.max(1, Math.min(365, Number(body.extendDays) || 30));
-        const base =
-          member?.membership?.nextBillingDate && member.membership.nextBillingDate > todayIso()
-            ? member.membership.nextBillingDate
-            : todayIso();
-        nextBillingDate = addDays(toUtcDate(base), days).toISOString().slice(0, 10);
+        nextBillingDate = nextBillingDateFromPayment(payment.date, {
+          optionId: payment.optionId,
+          planLabel: payment.optionLabel,
+          fallbackDays: days,
+        });
+        const startedAt = member.membership?.startedAt || payment.date;
         await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
           { normalizedName: payment.normalizedName },
           {
             $set: {
               "membership.plan": payment.optionLabel,
+              "membership.lastPaidAt": payment.date,
               "membership.nextBillingDate": nextBillingDate,
-              "membership.status": "active",
-              "membership.startedAt": member.membership?.startedAt || todayIso(),
+              "membership.status": membershipStatus({
+                plan: payment.optionLabel,
+                lastPaidAt: payment.date,
+                nextBillingDate,
+                startedAt,
+              }).status,
+              "membership.startedAt": startedAt,
               updatedAt: now,
             },
           },

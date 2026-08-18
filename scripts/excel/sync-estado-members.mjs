@@ -65,6 +65,38 @@ function membershipStatus(nextBillingDate) {
   return { daysRemaining, status };
 }
 
+function billingPeriod(...values) {
+  const text = values.map(normalizeText).join(" ");
+  if (/matricul|primer dia|gratis|free|sin plan|pase del dia|pase dia|day-pass|diari/.test(text)) {
+    return null;
+  }
+  if (/trimes|quarter/.test(text)) return { unit: "months", count: 3 };
+  if (/quincen|fortnight/.test(text)) return { unit: "days", count: 15 };
+  if (/seman|week/.test(text)) return { unit: "days", count: 7 };
+  if (/mensual|month|adultos? mayores?|senior|regular/.test(text)) {
+    return { unit: "months", count: 1 };
+  }
+  return null;
+}
+
+function moveBillingDate(dateIso, period, direction) {
+  if (!dateIso || !period) return "";
+  const date = new Date(`${dateIso}T00:00:00.000Z`);
+  if (period.unit === "days") {
+    date.setUTCDate(date.getUTCDate() + period.count * direction);
+    return date.toISOString().slice(0, 10);
+  }
+
+  const originalDay = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + period.count * direction);
+  const targetMonthEnd = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  date.setUTCDate(Math.min(originalDay, targetMonthEnd));
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * Mapea Plan + x Tarifa del Excel → etiqueta del Member OS / admin.
  * Prioridad: Adulto Mayor → tarifa (semanal/quincenal/mensual/diario) → default mensual en Regular*.
@@ -132,6 +164,23 @@ try {
   const members = await collection
     .find({}, { projection: { memberName: 1, normalizedName: 1, cedula: 1, membership: 1, legacyImport: 1 } })
     .toArray();
+  const paymentDocs = await db.collection("xtreme_gym_payments")
+    .find(
+      { status: "completed" },
+      { projection: { normalizedName: 1, date: 1, optionId: 1, optionLabel: 1 } },
+    )
+    .sort({ date: -1, createdAt: -1 })
+    .toArray();
+  const latestPaymentByMember = new Map();
+  for (const payment of paymentDocs) {
+    const paymentKey = normalizedName(payment.normalizedName);
+    const period = billingPeriod(payment.optionId, payment.optionLabel);
+    const paymentDate = clean(payment.date).slice(0, 10);
+    if (!paymentKey || !period || !/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) continue;
+    if (!latestPaymentByMember.has(paymentKey)) {
+      latestPaymentByMember.set(paymentKey, { paymentDate, period });
+    }
+  }
 
   const mongoByName = new Map();
   for (const member of members) {
@@ -179,13 +228,22 @@ try {
     const member = hits[0];
     const rate = canonical.rate || group.find((item) => item.rate)?.rate || "";
     const mappedPlan = mapCanonicalPlan(canonical.plan, rate);
-    const { daysRemaining, status } = membershipStatus(canonical.expiresOn);
+    const paymentEvidence = latestPaymentByMember.get(key);
+    const period = paymentEvidence?.period || billingPeriod(mappedPlan, rate, canonical.plan);
+    const lastPaidAt = paymentEvidence?.paymentDate || moveBillingDate(canonical.expiresOn, period, -1);
+    const nextBillingDate = paymentEvidence
+      ? moveBillingDate(paymentEvidence.paymentDate, period, 1)
+      : canonical.expiresOn;
+    const { daysRemaining, status } = membershipStatus(nextBillingDate);
+    const existingStartedAt = clean(member.membership?.startedAt);
     const startedAt =
-      clean(member.membership?.startedAt) ||
-      (daysRemaining >= 0 ? today : canonical.expiresOn);
+      !existingStartedAt || existingStartedAt > nextBillingDate
+        ? lastPaidAt || nextBillingDate
+        : existingStartedAt;
     const set = {
       "membership.plan": mappedPlan,
-      "membership.nextBillingDate": canonical.expiresOn,
+      ...(lastPaidAt ? { "membership.lastPaidAt": lastPaidAt } : {}),
+      "membership.nextBillingDate": nextBillingDate,
       "membership.status": status,
       "membership.startedAt": startedAt,
       "legacyImport.source": "scripts/estado.xlsx",
@@ -199,7 +257,9 @@ try {
 
     const before = {
       plan: clean(member.membership?.plan),
+      lastPaidAt: clean(member.membership?.lastPaidAt),
       expiresOn: clean(member.membership?.nextBillingDate),
+      startedAt: clean(member.membership?.startedAt),
       cedula: digits(member.cedula),
       rate: clean(member.legacyImport?.canonicalRate),
       sourceStatus: clean(member.legacyImport?.canonicalSourceStatus),
@@ -207,14 +267,18 @@ try {
     };
     const after = {
       plan: mappedPlan,
-      expiresOn: canonical.expiresOn,
+      lastPaidAt,
+      expiresOn: nextBillingDate,
+      startedAt,
       cedula: cedula || before.cedula,
       rate,
       sourceStatus: canonical.sourceStatus,
       excelPlan: canonical.plan,
     };
     const changed = before.plan !== after.plan ||
+      before.lastPaidAt !== after.lastPaidAt ||
       before.expiresOn !== after.expiresOn ||
+      before.startedAt !== after.startedAt ||
       before.cedula !== after.cedula ||
       before.rate !== after.rate ||
       before.sourceStatus !== after.sourceStatus ||
@@ -287,14 +351,18 @@ try {
       ...item,
       before: {
         plan: change.before.plan,
+        lastPaidAt: change.before.lastPaidAt,
         expiresOn: change.before.expiresOn,
+        startedAt: change.before.startedAt,
         rate: change.before.rate,
         sourceStatus: change.before.sourceStatus,
         excelPlan: change.before.excelPlan,
       },
       after: {
         plan: change.after.plan,
+        lastPaidAt: change.after.lastPaidAt,
         expiresOn: change.after.expiresOn,
+        startedAt: change.after.startedAt,
         rate: change.after.rate,
         sourceStatus: change.after.sourceStatus,
         excelPlan: change.after.excelPlan,

@@ -41,6 +41,7 @@ import {
   hashRegistrationToken,
 } from "@/lib/xtreme/registration-token";
 import { requestAppUrl } from "@/lib/constants/app-url";
+import { nextBillingDateFromPayment } from "@/lib/xtreme/membership-billing";
 
 type CaptureBody = {
   orderID?: string;
@@ -380,11 +381,14 @@ export async function POST(req: NextRequest) {
       if (option.category === "Plan" || option.id === "day-pass" || option.id === "senior") {
         const days = planDays(option.id);
         const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
-        const base =
-          existing?.membership?.nextBillingDate && existing.membership.nextBillingDate > todayIso()
-            ? existing.membership.nextBillingDate
-            : todayIso();
-        const nextBillingDate = addDays(toUtcDate(base), days).toISOString().slice(0, 10);
+        const nextBillingDate =
+          option.id === "day-pass"
+            ? addDays(toUtcDate(payment.date), days).toISOString().slice(0, 10)
+            : nextBillingDateFromPayment(payment.date, {
+                optionId: option.id,
+                planLabel: option.label,
+                fallbackDays: days,
+              });
         membershipUntil = nextBillingDate;
         const planLabel = option.label ?? existing?.membership?.plan ?? "Xtreme Mensual";
         const startedAt = existing?.membership?.startedAt ?? todayIso();
@@ -403,6 +407,7 @@ export async function POST(req: NextRequest) {
                 .slice(0, 80),
               membership: {
                 plan: planLabel,
+                lastPaidAt: payment.date,
                 nextBillingDate,
                 startedAt,
                 status: membershipStatus({ plan: planLabel, nextBillingDate, startedAt }).status,
