@@ -20,6 +20,7 @@ import type {
   InviteFilter,
   MembershipFilter,
   MembershipStatus,
+  PaymentFilter,
   ProfileFilter,
   QuickPlanOptionId,
   RegistrationFilter,
@@ -65,6 +66,14 @@ export const INVITE_FILTERS: FilterOption<InviteFilter>[] = [
   { id: "not_sent", label: "Sin invitar" },
 ];
 
+export const PAYMENT_FILTERS: FilterOption<PaymentFilter>[] = [
+  { id: "all", label: "Todos" },
+  { id: "expired", label: "Vencidos" },
+  { id: "today", label: "Vence hoy" },
+  { id: "next7", label: "Próximos 7 días" },
+  { id: "no_date", label: "Sin fecha" },
+];
+
 export const QUICK_PLAN_OPTIONS: Array<{
   id: QuickPlanOptionId;
   label: string;
@@ -89,14 +98,54 @@ export type AdminTabDefinition = {
 };
 
 export const ADMIN_TABS: AdminTabDefinition[] = [
-  { id: "resumen", label: "Resumen", href: "/admin", icon: Activity },
-  { id: "socios", label: "Socios", href: "/admin/socios", icon: Users },
-  { id: "accesos", label: "Accesos", href: "/admin/accesos", icon: DoorOpen },
-  { id: "bitacora", label: "Bitácora", href: "/analytics", icon: ClipboardList },
-  { id: "gamificacion", label: "Game", href: "/admin/gamificacion", icon: Trophy },
-  { id: "pagos", label: "Pagos", href: "/admin/pagos", icon: ReceiptText, superOnly: true },
-  { id: "correos", label: "Correos", href: "/admin/correos", icon: Mail, superOnly: true },
-  { id: "ingresos", label: "Ingresos", href: "/admin/ingresos", icon: Banknote, superOnly: true },
+  { id: "users", label: "Users", href: "/admin/users", icon: Users },
+  { id: "resumen", label: "Resumen", href: "/admin", icon: Activity, hiddenFromNav: true },
+  { id: "socios", label: "Socios", href: "/admin/socios", icon: Users, hiddenFromNav: true },
+  {
+    id: "accesos",
+    label: "Accesos",
+    href: "/admin/accesos",
+    icon: DoorOpen,
+    hiddenFromNav: true,
+  },
+  {
+    id: "bitacora",
+    label: "Bitácora",
+    href: "/analytics",
+    icon: ClipboardList,
+    hiddenFromNav: true,
+  },
+  {
+    id: "gamificacion",
+    label: "Game",
+    href: "/admin/gamificacion",
+    icon: Trophy,
+    hiddenFromNav: true,
+  },
+  {
+    id: "pagos",
+    label: "Pagos",
+    href: "/admin/pagos",
+    icon: ReceiptText,
+    superOnly: true,
+    hiddenFromNav: true,
+  },
+  {
+    id: "correos",
+    label: "Correos",
+    href: "/admin/correos",
+    icon: Mail,
+    superOnly: true,
+    hiddenFromNav: true,
+  },
+  {
+    id: "ingresos",
+    label: "Ingresos",
+    href: "/admin/ingresos",
+    icon: Banknote,
+    superOnly: true,
+    hiddenFromNav: true,
+  },
   {
     id: "herramientas",
     label: "Herramientas",

@@ -1,5 +1,14 @@
-import { AdminOverviewPage } from "@/app/components/admin/pages/AdminOverviewPage";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function XtremeAdminPage() {
-  return <AdminOverviewPage />;
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/admin/users");
+  }, [router]);
+
+  return null;
 }

@@ -13,6 +13,7 @@ import type {
   MemberSort,
   MemberSortKey,
   MembershipFilter,
+  PaymentFilter,
   ProfileFilter,
   RegistrationFilter,
 } from "../types";
@@ -38,6 +39,7 @@ export function useMemberRoster(members: readonly AdminMember[] | undefined) {
   const [registrationFilter, setRegistrationFilter] = useState<RegistrationFilter>("all");
   const [profileFilter, setProfileFilter] = useState<ProfileFilter>("all");
   const [inviteFilter, setInviteFilter] = useState<InviteFilter>("all");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const [memberPage, setMemberPage] = useState(1);
   const [memberPageSize, setMemberPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [memberSort, setMemberSort] = useState<MemberSort>(DEFAULT_SORT);
@@ -56,9 +58,18 @@ export function useMemberRoster(members: readonly AdminMember[] | undefined) {
             registration: registrationFilter,
             profile: profileFilter,
             invite: inviteFilter,
+            payment: paymentFilter,
           })
         : [],
-    [members, query, membershipFilter, registrationFilter, profileFilter, inviteFilter],
+    [
+      members,
+      query,
+      membershipFilter,
+      registrationFilter,
+      profileFilter,
+      inviteFilter,
+      paymentFilter,
+    ],
   );
 
   const sortedMembers = useMemo(
@@ -75,6 +86,7 @@ export function useMemberRoster(members: readonly AdminMember[] | undefined) {
     registrationFilter,
     profileFilter,
     inviteFilter,
+    paymentFilter,
     memberSort.key,
     memberSort.direction,
     memberPageSize,
@@ -115,6 +127,8 @@ export function useMemberRoster(members: readonly AdminMember[] | undefined) {
     setProfileFilter,
     inviteFilter,
     setInviteFilter,
+    paymentFilter,
+    setPaymentFilter,
     setMemberPage,
     memberPageSize,
     setMemberPageSize,

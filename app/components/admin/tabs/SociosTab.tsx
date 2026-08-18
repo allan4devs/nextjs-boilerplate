@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  CircleDollarSign,
   DoorOpen,
   Flame,
   Loader2,
   Mail,
+  MessageCircle,
   Pencil,
   Plus,
   Search,
@@ -20,9 +22,12 @@ import {
   REGISTRATION_FILTERS,
   PROFILE_FILTERS,
   INVITE_FILTERS,
+  PAYMENT_FILTERS,
 } from "../constants";
 import {
   memberPageWindow,
+  membershipReminderText,
+  waLink,
 } from "../helpers";
 import {
   FilterChipRow,
@@ -41,6 +46,7 @@ export type MemberTableActions = {
   removeMember: (memberName: string) => void;
   sendReminder: (memberName: string) => void;
   adminCheckin: (memberName: string) => void;
+  remindPayment: (member: AdminMember) => void;
 };
 
 export type SociosTabProps = {
@@ -70,6 +76,8 @@ export function SociosTab({ data, roster, actions, busy }: SociosTabProps) {
     setProfileFilter,
     inviteFilter,
     setInviteFilter,
+    paymentFilter,
+    setPaymentFilter,
     setMemberPage,
     memberPageSize,
     setMemberPageSize,
@@ -90,6 +98,7 @@ export function SociosTab({ data, roster, actions, busy }: SociosTabProps) {
     removeMember,
     sendReminder,
     adminCheckin,
+    remindPayment,
   } = actions;
 
   return (
@@ -151,10 +160,24 @@ export function SociosTab({ data, roster, actions, busy }: SociosTabProps) {
             }}
             activeTone="orange"
           />
+          <FilterChipRow
+            label="Pago"
+            options={PAYMENT_FILTERS}
+            value={paymentFilter}
+            onChange={setPaymentFilter}
+            counts={{
+              expired: memberLifecycleCounts.expired,
+              today: memberLifecycleCounts.today,
+              next7: memberLifecycleCounts.next7,
+              no_date: memberLifecycleCounts.no_date,
+            }}
+            activeTone="cyan"
+          />
           {(membershipFilter !== "all" ||
             registrationFilter !== "all" ||
             profileFilter !== "all" ||
-            inviteFilter !== "all") && (
+            inviteFilter !== "all" ||
+            paymentFilter !== "all") && (
             <button
               type="button"
               onClick={() => {
@@ -162,6 +185,7 @@ export function SociosTab({ data, roster, actions, busy }: SociosTabProps) {
                 setRegistrationFilter("all");
                 setProfileFilter("all");
                 setInviteFilter("all");
+                setPaymentFilter("all");
               }}
               className="text-[10px] font-black uppercase text-white/45 underline decoration-white/25 underline-offset-2 hover:text-lime-200"
             >
@@ -452,6 +476,38 @@ export function SociosTab({ data, roster, actions, busy }: SociosTabProps) {
                           <Mail className="h-3.5 w-3.5" />
                         )}
                       </button>
+                      {data.role === "super" && (
+                        <button
+                          type="button"
+                          onClick={() => void remindPayment(m)}
+                          disabled={Boolean(busy) || !m.email || m.paymentReminderSent}
+                          title={
+                            !m.email
+                              ? "Sin correo registrado"
+                              : m.paymentReminderSent
+                                ? "Recordatorio de pago ya enviado para este vencimiento"
+                                : "Enviar recordatorio de pago por correo"
+                          }
+                          className="grid h-8 w-8 place-items-center border border-white/10 text-white/60 transition hover:border-amber-300 hover:text-amber-200 disabled:opacity-40"
+                        >
+                          {busy === `remind-${m.normalizedName}` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <CircleDollarSign className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      )}
+                      {waLink(m.phone, membershipReminderText(m)) && (
+                        <a
+                          href={waLink(m.phone, membershipReminderText(m))}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={`WhatsApp a ${m.phone}`}
+                          className="grid h-8 w-8 place-items-center border border-white/10 text-white/60 transition hover:border-emerald-300 hover:text-emerald-200"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </a>
+                      )}
                       <button
                         type="button"
                         onClick={() => void adminCheckin(m.memberName)}

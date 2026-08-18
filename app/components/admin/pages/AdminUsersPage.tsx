@@ -20,7 +20,7 @@ import type {
   QuickPlanOptionId,
 } from "../types";
 
-export function AdminMembersPage() {
+export function AdminUsersPage() {
   const {
     auth: { role },
     data: { data, load, setData },

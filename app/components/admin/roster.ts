@@ -11,6 +11,7 @@ import type {
   MemberLifecycleCounts,
   MemberSort,
   MembershipFilter,
+  PaymentFilter,
   ProfileFilter,
   RegistrationFilter,
 } from "./types";
@@ -21,6 +22,7 @@ export type MemberFilters = {
   registration: RegistrationFilter;
   profile: ProfileFilter;
   invite: InviteFilter;
+  payment: PaymentFilter;
 };
 
 export const EMPTY_LIFECYCLE_COUNTS: Required<MemberLifecycleCounts> = {
@@ -34,6 +36,9 @@ export const EMPTY_LIFECYCLE_COUNTS: Required<MemberLifecycleCounts> = {
   active: 0,
   warning: 0,
   expired: 0,
+  today: 0,
+  next7: 0,
+  no_date: 0,
 };
 
 /** Un socio "auditado" confirmó su ficha, sea por profileClaim o verificando correo. */
@@ -63,6 +68,12 @@ export function countMemberLifecycle(
 
     if (member.campaignInviteSent === true) counts.sent += 1;
     else counts.not_sent += 1;
+
+    if (!member.nextBillingDate) counts.no_date += 1;
+    if (member.nextBillingDate && member.daysRemaining === 0) counts.today += 1;
+    if (member.nextBillingDate && member.daysRemaining >= 0 && member.daysRemaining <= 7) {
+      counts.next7 += 1;
+    }
   }
 
   return counts;
@@ -95,6 +106,23 @@ function matchesRegistration(member: AdminMember, filter: RegistrationFilter) {
   }
 }
 
+function matchesPayment(member: AdminMember, filter: PaymentFilter) {
+  switch (filter) {
+    case "expired":
+      return member.membershipStatus === "expired";
+    case "today":
+      return Boolean(member.nextBillingDate) && member.daysRemaining === 0;
+    case "next7":
+      return (
+        Boolean(member.nextBillingDate) && member.daysRemaining >= 0 && member.daysRemaining <= 7
+      );
+    case "no_date":
+      return !member.nextBillingDate;
+    default:
+      return true;
+  }
+}
+
 export function filterMembers(
   members: readonly AdminMember[],
   filters: MemberFilters,
@@ -113,6 +141,8 @@ export function filterMembers(
 
     if (filters.invite === "sent" && member.campaignInviteSent !== true) return false;
     if (filters.invite === "not_sent" && member.campaignInviteSent === true) return false;
+
+    if (!matchesPayment(member, filters.payment)) return false;
 
     return matchesQuery(member, query);
   });

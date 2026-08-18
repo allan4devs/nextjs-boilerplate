@@ -344,6 +344,7 @@ export type MemberDraft = {
 export type QuickPlanOptionId = "week" | "fortnight" | "month" | "quarter";
 
 export type AdminTabId =
+  | "users"
   | "resumen"
   | "socios"
   | "accesos"
@@ -413,11 +414,16 @@ export type RegistrationFilter = "all" | "registered" | "not_registered" | "no_e
 export type ProfileFilter = "all" | "audited" | "pending";
 /** Se les mandó invitación/magic link de campaña. */
 export type InviteFilter = "all" | "sent" | "not_sent";
+/** Urgencia del próximo cobro. */
+export type PaymentFilter = "all" | "expired" | "today" | "next7" | "no_date";
 
 /** Conteos que alimentan los chips de filtro del padrón. */
 export type MemberLifecycleCounts = Partial<
   Record<
-    Exclude<MembershipFilter | RegistrationFilter | ProfileFilter | InviteFilter, "all">,
+    Exclude<
+      MembershipFilter | RegistrationFilter | ProfileFilter | InviteFilter | PaymentFilter,
+      "all"
+    >,
     number
   >
 >;
