@@ -20,7 +20,7 @@ const decoder = new TextDecoder("utf-8", { fatal: true });
 const problems = [];
 
 const hasSequence = (buffer, matches) => {
-  for (let index = 0; index + 3 < buffer.length; index += 1) {
+  for (let index = 0; index + 2 < buffer.length; index += 1) {
     if (matches(buffer, index)) return true;
   }
   return false;

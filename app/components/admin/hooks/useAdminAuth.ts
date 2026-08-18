@@ -66,12 +66,12 @@ export function useAdminAuth(feedback: AdminFeedback): AdminAuth {
 
   const signOut = useCallback(async () => {
     try {
-      await adminFetch(`${SESSION_ENDPOINT}?surface=admin`, { method: "DELETE" });
-    } catch (err) {
-      setError(adminRequestError(err, "No se pudo cerrar la sesión en el servidor."));
-    } finally {
+      const response = await adminFetch(`${SESSION_ENDPOINT}?surface=admin`, { method: "DELETE" });
+      if (!response.ok) throw new Error("El servidor no pudo cerrar la sesión.");
       setRole("");
       setStaffName("");
+    } catch (err) {
+      setError(adminRequestError(err, "No se pudo cerrar la sesión en el servidor."));
     }
   }, [setError]);
 

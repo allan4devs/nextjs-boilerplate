@@ -74,6 +74,11 @@ export function useAdminDataSource({
       void (async () => {
         try {
           const fullResponse = await adminFetch("/api/xtreme/admin", { cache: "no-store" });
+          if (fullResponse.status === 401) {
+            onUnauthorized();
+            setData(null);
+            throw new Error("La sesión de admin venció. Ingresá de nuevo.");
+          }
           const fullJson = (await fullResponse.json()) as AdminData & { error?: string };
           if (!fullResponse.ok) {
             throw new Error(fullJson.error ?? "No se pudieron cargar los detalles del panel.");
@@ -102,6 +107,12 @@ export function useAdminDataSource({
     setGamiError("");
     try {
       const response = await adminFetch("/api/xtreme/admin/gamification", { cache: "no-store" });
+      if (response.status === 401) {
+        onUnauthorized();
+        setData(null);
+        setGami(null);
+        throw new Error("La sesión de admin venció. Ingresá de nuevo.");
+      }
       const json = (await response.json()) as GamiData & { error?: string };
       if (!response.ok) throw new Error(json.error ?? "No se pudo cargar gamificacion.");
       if (gamiRequestId.current === requestId) setGami(json);
@@ -114,7 +125,7 @@ export function useAdminDataSource({
     } finally {
       if (gamiRequestId.current === requestId) setIsLoadingGami(false);
     }
-  }, [setError]);
+  }, [onUnauthorized, setError]);
 
   return useMemo(
     () => ({

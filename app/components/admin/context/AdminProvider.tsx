@@ -47,7 +47,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   // El servidor manda: si rechaza la sesión, la capa de auth se limpia sola.
-  const handleUnauthorized = useCallback(() => setRole(""), [setRole]);
+  const handleUnauthorized = useCallback(() => {
+    setRole("");
+    setStaffName("");
+  }, [setRole, setStaffName]);
   const data = useAdminDataSource({
     feedback,
     onUnauthorized: handleUnauthorized,
