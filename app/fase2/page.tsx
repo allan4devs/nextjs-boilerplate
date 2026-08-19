@@ -1,773 +1,492 @@
 import type { Metadata } from "next";
+import {
+  ArrowDown,
+  ArrowRight,
+  BarChart3,
+  Check,
+  CheckCircle2,
+  Dumbbell,
+  ReceiptText,
+  ScanFace,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Fase 2 · Propuesta de desarrollo",
+  title: "Fase 2 · Propuesta Xtreme Gym",
   description:
-    "Propuesta Fase 2 para Xtreme Gym: facturación electrónica directa con Hacienda, Machine Tracker, biometría facial, QR y analítica conectada.",
+    "Una propuesta sencilla para conectar facturación, accesos, máquinas y control dentro de la plataforma de Xtreme Gym.",
   robots: { index: false, follow: false },
 };
 
-const FOUNDATION = [
+type Deliverable = {
+  number: string;
+  icon: LucideIcon;
+  label: string;
+  title: string;
+  description: string;
+  includes: string[];
+  result: string;
+  featured?: boolean;
+};
+
+const CHANGES = [
   {
-    title: "Página web",
-    text: "Presencia oficial, precios, zonas, contacto y rutas de conversión.",
+    area: "Cobro",
+    before: "Recepción registra el pago",
+    after: "El comprobante deja estado y respaldo",
   },
   {
-    title: "Member OS",
-    text: "Identidad, PIN, membresía, entrenamientos, progreso y experiencia del socio.",
+    area: "Ingreso",
+    before: "El socio se identifica",
+    after: "Se valida la membresía y queda la entrada",
   },
   {
-    title: "Reception OS",
-    text: "Ingresos, atención, cobros, ventas y operación diaria de recepción.",
-  },
-  {
-    title: "Admin OS",
-    text: "Socios, pagos, bitácora, analítica, seguridad y control administrativo.",
+    area: "Máquina",
+    before: "Se usa o se reporta una falla",
+    after: "Queda el seguimiento pendiente",
   },
 ];
 
-const PRODUCTION_RESULTS = [
+const DELIVERABLES: Deliverable[] = [
   {
-    value: "2.076",
-    label: "socios gestionados",
-    detail: "Una base central de personas, membresías y seguimiento.",
-  },
-  {
-    value: "334",
-    label: "sesiones en 14 días",
-    detail: "3.671 vistas, 1.230 clics y 162 acciones en la bitácora interna.",
-  },
-  {
-    value: "70",
-    label: "ingresos en 30 días",
-    detail: "60 socios únicos identificados al entrar al gimnasio.",
-  },
-  {
-    value: "0",
-    label: "facturas fiscales emitidas",
-    detail: "La facturación real con Hacienda aún no ha iniciado; todos los registros existentes fueron pruebas.",
-  },
-  {
-    value: "28",
-    label: "ventas de productos",
-    detail: "29 unidades y ₡37.000 registrados desde recepción en 30 días.",
-  },
-  {
-    value: "1.178",
-    label: "impresiones en Google",
-    detail: "39 clics, CTR de 3,31% y posición media de 4,36 en Search.",
-  },
-];
-
-const DIGITAL_RESULTS = [
-  {
-    source: "Google Search Console",
-    headline: "+51,5% de visibilidad",
-    text: "Las impresiones pasaron de 163 en la primera semana completa a 247 en la semana más reciente.",
-  },
-  {
-    source: "Búsquedas locales",
-    headline: "Posiciones 1 a 4",
-    text: "“xtreme gym ciudad quesada” promedia 1,85; “gimnasios en ciudad quesada”, 1,50.",
-  },
-  {
-    source: "Vercel Analytics",
-    headline: "102 visitantes · 1.924 vistas",
-    text: "En 7 días: 84% desde Costa Rica, 62% móvil y 8 visitantes referidos por Google.",
-  },
-];
-
-const COST_ROWS = [
-  {
-    situation: "El cobro y la factura ante Hacienda todavía no forman un solo ciclo.",
-    consequence:
-      "Recepción puede registrar dinero, pero falta emitir, firmar, enviar, consultar y conservar cada comprobante desde Xtreme.",
-    fix: "01 · Hacienda Billing Tracker",
-  },
-  {
-    situation: "Las máquinas y sus accesorios no tienen una ficha operativa completa.",
-    consequence:
-      "No existe una trazabilidad común para estado, video, uso, tiempos, averías, almohadillas, cadenas, agarres y repuestos.",
-    fix: "02 · Machine Tracker",
-  },
-  {
-    situation: "Rostro, QR, membresía, ingreso y ocupación aún no comparten el mismo tracker.",
-    consequence:
-      "Recepción necesita una validación más fluida y una sola vista de quién entró, quién sigue dentro y cuánto permaneció.",
-    fix: "03 · Biometría facial + QR",
-  },
-  {
-    situation: "Los datos existen, pero todavía se leen desde módulos separados.",
-    consequence:
-      "Bitácora, ingresos, ventas, uso, ocupación y resultados digitales necesitan un cierre común para tomar decisiones.",
-    fix: "04 · Analytics + Control",
-  },
-];
-
-const PHASE2_PRIORITIES = [
-  {
-    num: "01",
-    eyebrow: "Tema principal de la Fase 2",
-    title: "Factura Hacienda: del cobro al comprobante electrónico trazable",
-    text: "La prioridad es cerrar el ciclo fiscal completo dentro de xtremecr.com. Recepción registra el cobro y el sistema construye, firma, envía y sigue el comprobante hasta conocer la respuesta de Hacienda.",
-    items: [
-      "Facturas, tiquetes y notas de crédito o débito",
-      "XML oficial v4.4, impuestos, clave y consecutivo",
-      "Firma electrónica XAdES con la llave configurada",
-      "Autenticación, envío y consulta directa ante Hacienda",
-      "Aceptación, rechazo, mensajes y reintentos controlados",
-      "Historial, XML, representación PDF y entrega al cliente",
+    number: "01",
+    icon: ReceiptText,
+    label: "Cobros + Hacienda",
+    title: "Facturación electrónica",
+    description:
+      "Unir el cobro con el flujo fiscal acordado, respetando que Latinsoft sigue siendo hoy la fuente operativa.",
+    includes: [
+      "Facturas, tiquetes y notas",
+      "Firma, envío, respuesta y respaldo",
     ],
-    note: "Alcance real: Hoy existen 0 facturas fiscales emitidas: todos los registros anteriores fueron pruebas y la facturación real con Hacienda aún no ha iniciado. Xtreme aporta sus datos fiscales y el acceso vigente de TRIBU-CR o ATV. Allan configura credenciales, llave y firma, consecutivos y comunicación con Hacienda.",
+    result: "Cada comprobante queda trazable de principio a fin.",
     featured: true,
   },
   {
-    num: "02",
-    eyebrow: "Segunda prioridad",
-    title: "Machine Tracker: cada equipo tiene ficha, contenido, uso y estado",
-    text: "Todas las máquinas pasan a formar parte del sistema. Cada una conecta su identidad física con sus accesorios, video, instrucciones, tiempos de uso, incidencias y mantenimiento.",
-    items: [
-      "Máquina, marca, modelo, código, ubicación y categoría",
-      "Almohadillas, cadenas, agarres, repuestos y accesorios",
-      "Video de uso, instrucciones y ejercicios relacionados",
-      "Inicio, fin y duración por persona y por máquina",
-      "Estado, disponibilidad, averías y observaciones",
-      "Demanda, rotación, horas pico e historial de mantenimiento",
+    number: "02",
+    icon: Dumbbell,
+    label: "Equipos",
+    title: "Control de máquinas",
+    description:
+      "Dar a cada máquina una ficha y un QR para consultar su información y llevar el seguimiento de su estado.",
+    includes: [
+      "Ficha, accesorios y guía de uso",
+      "Reportes de fallas y mantenimiento",
     ],
+    result: "El equipo que necesita atención deja de depender de la memoria.",
   },
   {
-    num: "03",
-    eyebrow: "Tercera prioridad",
-    title: "Biometría facial + QR App: una identidad para cada ingreso y uso",
-    text: "xtremecr.com administra el registro facial y el QR personal. Ambos se vinculan con la misma identidad y membresía para validar acceso, registrar presencia y relacionar al socio con sus tiempos de uso.",
-    items: [
-      "Registro y validación facial propios",
-      "QR personal dentro de la aplicación del socio",
-      "Validación de identidad y membresía vigente",
-      "Entradas, salidas, permanencia y ocupación en vivo",
-      "Historial de acceso unido al historial de máquinas",
-      "Ingreso más rápido y atención más fluida en recepción",
-    ],
+    number: "03",
+    icon: ScanFace,
+    label: "Socios",
+    title: "Acceso con biometría + QR",
+    description:
+      "Relacionar identidad, membresía e ingreso usando la integración disponible con Latinsoft y un QR personal como alternativa.",
+    includes: ["Validación de membresía", "Entradas, salidas y ocupación"],
+    result: "Cada ingreso queda claro sin crear otra base de socios.",
   },
   {
-    num: "04",
-    eyebrow: "Cierre de la Fase 2",
-    title: "Analytics + Control: todos los trackers visibles en el Admin OS",
-    text: "La última entrega reúne facturación, máquinas, accesos, QR, ocupación y la analítica que Xtreme ya genera. No crea otra base separada: amplía el mismo Admin OS.",
-    items: [
-      "Bitácora de sesiones, páginas, clics y acciones",
-      "Ingresos al gimnasio, ocupación y permanencia",
-      "Cobros, ventas y estados ante Hacienda",
-      "Uso de máquinas por socio, equipo y horario",
-      "Resultados de Search, Ads, Maps y Vercel al conectarlos",
-      "Base limpia para la centralización completa de la Fase 3",
-    ],
+    number: "04",
+    icon: BarChart3,
+    label: "Administración",
+    title: "Control en Admin OS",
+    description:
+      "Juntar los resultados de cobros, accesos y máquinas en una vista sencilla para administración.",
+    includes: ["Pendientes y alertas", "Historial e indicadores básicos"],
+    result: "La información importante queda en un solo lugar.",
   },
 ];
 
-const ADMIN_ITEMS = [
-  "Ver comprobantes emitidos, aceptados, rechazados o pendientes",
-  "Consultar cobros por método, operador y estado ante Hacienda",
-  "Administrar máquinas, accesorios, videos, QR y mantenimiento",
-  "Medir uso por máquina, socio, duración y horario",
-  "Ver quién está dentro, ingresos, salidas y permanencia",
-  "Cruzar bitácora, ventas, ocupación y demanda digital",
-];
-
-const PHASE_MAP = [
+const CONDITIONS = [
   {
-    num: "01",
-    phase: "Fase 1",
-    status: "Construida y en producción",
-    title: "La base digital",
-    description: "Las superficies principales ya comparten identidad, sesiones y operación.",
-    systems: ["Página web", "Member OS", "Reception OS", "Admin OS"],
+    title: "Latinsoft",
+    text: "Sigue siendo la fuente operativa. Antes de conectar facturación o biometría se confirma qué datos puede compartir.",
   },
   {
-    num: "02",
-    phase: "Fase 2",
-    status: "Propuesta actual · $800",
-    title: "Los trackers que conectan operación y dinero",
-    description: "Hacienda es el eje; máquinas y acceso convierten la actividad física en datos trazables.",
-    systems: ["Hacienda Billing Tracker", "Machine Tracker", "Biometría facial + QR", "Analytics + Control"],
+    title: "Accesos",
+    text: "Xtreme aporta las credenciales fiscales vigentes y el acceso necesario a sus sistemas actuales.",
   },
   {
-    num: "03",
-    phase: "Fase 3",
-    status: "Centralización completa",
-    title: "Todos los subsistemas en una sola base de datos",
-    description: "Inventarios, servicios, gastos, responsables y trackers operan como una única fuente de verdad.",
-    systems: [
-      "Inventarios conectados",
-      "Gastos y misceláneos",
-      "Mantenimiento y limpieza",
-      "Electricidad y facilidades",
-      "Cámaras y cierres",
-      "Valari Dance",
-      "Bronceado",
-      "VIP",
-      "Funcional",
-      "Entrenadores",
-    ],
+    title: "Equipo externo",
+    text: "Hardware, impresoras, etiquetas, lectores y servicios de terceros no están incluidos en el precio.",
   },
 ];
 
-const WORK_PROPOSALS = [
-  {
-    num: "01",
-    title: "Hacienda Billing Tracker",
-    price: "$200",
-    text: "Construye el eje fiscal y la trazabilidad completa de cada comprobante electrónico.",
-    featured: true,
-    items: [
-      "Facturas, tiquetes y notas electrónicas",
-      "XML v4.4, firma XAdES y envío a Hacienda",
-      "Estados, reintentos, historial, XML y PDF",
-    ],
-  },
-  {
-    num: "02",
-    title: "Machine Tracker",
-    price: "$200",
-    text: "Convierte cada máquina, accesorio y sesión de uso en información administrable.",
-    items: [
-      "Ficha, estado, ubicación, accesorios y repuestos",
-      "Videos, instrucciones, averías y mantenimiento",
-      "Inicio, fin, duración, demanda y rotación",
-    ],
-  },
-  {
-    num: "03",
-    title: "Biometría facial + QR App",
-    price: "$200",
-    text: "Une rostro, QR, identidad, membresía, ingreso y presencia dentro del gimnasio.",
-    items: [
-      "Registro y validación facial propios",
-      "QR personal conectado con el Member OS",
-      "Entradas, salidas, permanencia y ocupación",
-    ],
-  },
-  {
-    num: "04",
-    title: "Analytics + integración final",
-    price: "$200",
-    text: "Reúne Hacienda, máquinas, biometría, QR y la analítica actual en el Admin OS.",
-    items: [
-      "Tableros de dinero, uso, acceso y ocupación",
-      "Bitácora y resultados digitales conectados",
-      "Base preparada para la centralización de Fase 3",
-    ],
-  },
-];
-
-const FINE_PRINT = [
-  "La inversión cubre las funcionalidades descritas e integración con la plataforma existente.",
-  "Las cuatro propuestas funcionan como entregas conectadas de $200 cada una; el total de la Fase 2 es $800.",
-  "Hacienda es el tema principal y el bloque de mayor complejidad técnica de esta fase.",
-  "Xtreme aporta sus datos fiscales correctos y el acceso vigente de TRIBU-CR o ATV; la configuración técnica, firma e integración directa con Hacienda están incluidas.",
-  "No se requiere contratar un facturador externo. Hardware, impresoras, etiquetas, lectores QR o servicios opcionales de terceros no están incluidos.",
-  "La Fase 3 centraliza inventarios, subsistemas y trackers en una sola base de datos; se cotiza por separado.",
-];
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionIntro({
+  label,
+  title,
+  description,
+  light = false,
+}: {
+  label: string;
+  title: string;
+  description?: string;
+  light?: boolean;
+}) {
   return (
-    <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-[#8a6f00]">
-      {children}
+    <div className="max-w-3xl">
+      <p
+        className={`font-mono text-[11px] font-bold uppercase tracking-[0.16em] ${
+          light ? "text-[#f6c400]" : "text-[#8a6f00]"
+        }`}
+      >
+        {label}
+      </p>
+      <h2 className="mt-3 text-balance text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">
+        {title}
+      </h2>
+      {description ? (
+        <p
+          className={`mt-4 max-w-2xl text-pretty leading-relaxed ${light ? "text-white/65" : "text-[#625b45]"}`}
+        >
+          {description}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function ModuleCard({
-  num,
-  eyebrow,
-  title,
-  text,
-  items,
-  note,
-  featured = false,
-}: {
-  num: string;
-  eyebrow?: string;
-  title: string;
-  text: string;
-  items: string[];
-  note?: string;
-  featured?: boolean;
-}) {
+function DeliverableCard({ item }: { item: Deliverable }) {
+  const Icon = item.icon;
+
   return (
-    <div
-      className={`grid grid-cols-1 gap-5 border-t p-7 first:border-t-0 sm:grid-cols-[64px_1fr] sm:p-8 ${
-        featured
-          ? "border-[#3b382d] bg-[#141208] text-[#f4f1e6] ring-2 ring-inset ring-[#f6c400]"
-          : "border-[#e7e2d3] bg-[#fffdf7]"
+    <article
+      className={`flex break-inside-avoid flex-col border p-6 sm:p-8 ${
+        item.featured
+          ? "border-[#141208] bg-[#141208] text-white"
+          : "border-[#d8d2bd] bg-[#fffdf7] text-[#141208]"
       }`}
     >
-      <div className={`font-mono text-[13px] ${featured ? "text-[#f6c400]" : "text-[#948a6e]"}`}>
-        {num}
+      <div className="flex items-start justify-between gap-4">
+        <span
+          className={`grid h-12 w-12 place-items-center ${
+            item.featured
+              ? "bg-[#f6c400] text-[#141208]"
+              : "bg-[#efeadb] text-[#7a6407]"
+          }`}
+        >
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <span
+          className={`font-mono text-sm font-bold ${item.featured ? "text-[#f6c400]" : "text-[#8a6f00]"}`}
+        >
+          {item.number}
+        </span>
       </div>
-      <div>
-        {eyebrow ? (
-          <div className={`mb-2 font-mono text-[10px] uppercase tracking-[0.12em] ${featured ? "text-[#f6c400]" : "text-[#8a6f00]"}`}>
-            {eyebrow}
-          </div>
-        ) : null}
-        <h3 className={`mb-2 text-[1.25rem] font-semibold tracking-tight ${featured ? "text-white" : "text-[#141208]"}`}>
-          {title}
-        </h3>
-        <p className={`mb-4 max-w-[62ch] text-[0.95rem] ${featured ? "text-white/65" : "text-[#585138]"}`}>
-          {text}
-        </p>
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {items.map((item) => (
-            <li key={item} className={`relative pl-4 text-[0.87rem] ${featured ? "text-white/85" : "text-[#141208]"}`}>
-              <span className="absolute left-0 top-[8px] h-[6px] w-[6px] bg-[#f6c400]" />
-              {item}
-            </li>
-          ))}
-        </ul>
-        {note ? (
-          <div className={`mt-4 border-t border-dashed pt-3 text-[0.83rem] ${featured ? "border-white/20 text-white/55" : "border-[#d8d2bd] text-[#948a6e]"}`}>
-            <b className={featured ? "text-white/85" : "text-[#585138]"}>Alcance real:</b>{" "}
-            {note.replace("Alcance real: ", "")}
-          </div>
-        ) : null}
-      </div>
-    </div>
+
+      <p
+        className={`mt-7 font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${
+          item.featured ? "text-white/50" : "text-[#8a8168]"
+        }`}
+      >
+        {item.label}
+      </p>
+      <h3 className="mt-2 text-2xl font-semibold tracking-tight">
+        {item.title}
+      </h3>
+      <p
+        className={`mt-3 text-pretty text-sm leading-relaxed ${item.featured ? "text-white/65" : "text-[#625b45]"}`}
+      >
+        {item.description}
+      </p>
+
+      <ul
+        className={`mt-6 space-y-2 border-t pt-5 ${item.featured ? "border-white/15" : "border-[#ded8c4]"}`}
+      >
+        {item.includes.map((included) => (
+          <li key={included} className="flex items-start gap-2.5 text-sm">
+            <Check
+              className="mt-0.5 h-4 w-4 shrink-0 text-[#b89a00]"
+              aria-hidden="true"
+            />
+            <span
+              className={item.featured ? "text-white/80" : "text-[#494431]"}
+            >
+              {included}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <p
+        className={`mt-auto pt-7 text-sm font-semibold leading-relaxed ${
+          item.featured ? "text-[#f6c400]" : "text-[#6f5c00]"
+        }`}
+      >
+        {item.result}
+      </p>
+    </article>
   );
 }
 
 export default function Fase2Page() {
   return (
-    <main className="min-h-screen bg-[#f4f1e6] text-[#141208]">
-      <div className="mx-auto max-w-[840px] px-6 pb-32 sm:px-8">
-        {/* Masthead */}
-        <div className="flex flex-wrap items-end justify-between gap-6 border-b border-[#141208]/80 py-10">
-          <div className="flex items-baseline gap-2.5 font-mono text-[12px] uppercase tracking-[0.08em] text-[#948a6e]">
-            <b className="font-bold text-[#141208]">Xtreme Gym</b>
-            <span>· Propuesta de desarrollo</span>
-          </div>
-          <div className="font-mono text-[12px] tracking-[0.04em] text-[#948a6e]">Fase 2 · Agosto 2026</div>
-        </div>
-
-        {/* Hero */}
-        <div className="pb-10 pt-16">
-          <span className="mb-6 inline-flex items-center gap-2 bg-[#f6c400] px-2.5 py-[5px] font-mono text-[12px] uppercase tracking-[0.14em] text-[#141208]">
-            Fase 2 de la plataforma
-          </span>
-          <h1 className="mb-5 text-balance text-[clamp(2.1rem,4.4vw,3.1rem)] font-semibold leading-[1.08] tracking-tight text-[#141208]">
-            Facturación directa con Hacienda.
-            <br />
-            Máquinas y accesos que <em className="italic text-[#8a6f00]">también dejan rastro.</em>
-          </h1>
-          <p className="max-w-[62ch] text-[1.18rem] text-[#585138]">
-            La Fase 2 tiene un eje principal: que cada cobro termine en una factura o tiquete electrónico
-            trazable desde xtremecr.com. A ese núcleo se conectan el Machine Tracker, la biometría facial,
-            el QR personal y un tablero operativo común.
-          </p>
-
-          <div className="mt-9 grid grid-cols-2 border-y border-[#e7e2d3] sm:grid-cols-4">
-            {[
-              ["Atención", "Eyleen & Alejandro"],
-              ["Desarrollo", "Allan Rojas"],
-              ["Inversión", "$800 USD"],
-              ["Modalidad", "3 o 4 pagos"],
-            ].map(([label, value], i) => (
-              <dl
-                key={label}
-                className={`py-4 pr-4 ${i < 3 ? "border-r border-[#e7e2d3]" : ""} ${i === 3 ? "pr-0" : ""}`}
-              >
-                <dt className="mb-1.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#948a6e]">
-                  {label}
-                </dt>
-                <dd className="text-[15px] font-semibold text-[#141208]">{value}</dd>
-              </dl>
-            ))}
-          </div>
-        </div>
-
-        {/* Thesis */}
-        <section className="mt-16">
-          <div className="border border-[#141208]/15 border-l-[3px] border-l-[#f6c400] bg-[#fffdf7] p-7 sm:p-8">
-            <p className="max-w-[60ch] text-[1.28rem] italic leading-[1.42] text-[#141208]">
-              Cobro → Hacienda. Persona → rostro o QR. Máquina → uso y mantenimiento. Cada tracker
-              alimenta la misma operación y deja lista la centralización de la Fase 3.
-            </p>
-            <footer className="mt-3.5 font-mono text-[12px] tracking-[0.03em] text-[#948a6e]">
-              Resumen ejecutivo — Fase 2
-            </footer>
-          </div>
-        </section>
-
-        {/* Foundation */}
-        <section className="mt-16">
-          <SectionLabel>Lo que ya está en pie</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Cuatro sistemas ya sostienen la operación digital de Xtreme
-          </h2>
-          <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            La Fase 1 dejó página web, Member OS, Reception OS y Admin OS en producción. La Fase 2 no
-            crea otra plataforma: extiende esa misma base con trackers especializados.
-          </p>
-          <div className="grid grid-cols-1 gap-px border border-[#e7e2d3] bg-[#e7e2d3] sm:grid-cols-2 lg:grid-cols-4">
-            {FOUNDATION.map((f) => (
-              <div key={f.title} className="bg-[#fffdf7] p-4.5 pb-5">
-                <span className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-[#3f7d3f]">
-                  <span className="inline-block h-[6px] w-[6px] rounded-full bg-[#3f7d3f]" />
-                  En producción
-                </span>
-                <h4 className="mb-1 text-[0.98rem] font-bold">{f.title}</h4>
-                <p className="text-[0.87rem] text-[#948a6e]">{f.text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Measured results */}
-        <section className="mt-16">
-          <SectionLabel>Resultados medibles · corte al 18 de agosto de 2026</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            La plataforma ya produce datos útiles antes de comenzar la Fase 2
-          </h2>
-          <p className="mb-7 max-w-[68ch] text-[1.03rem] text-[#585138]">
-            No se trata únicamente de funciones instaladas. La bitácora, los ingresos, las ventas y la
-            presencia digital ya generan evidencia real. El seguimiento fiscal parte correctamente en
-            cero: la facturación real con Hacienda aún no ha iniciado y todos los registros anteriores
-            fueron pruebas. La Fase 2 conecta esos datos con máquinas, tiempos, ocupación, biometría y
-            Hacienda.
-          </p>
-
-          <div className="grid grid-cols-1 gap-px border border-[#e7e2d3] bg-[#e7e2d3] sm:grid-cols-2 lg:grid-cols-3">
-            {PRODUCTION_RESULTS.map((result) => (
-              <div key={result.label} className="bg-[#fffdf7] p-5">
-                <div className="font-mono text-[1.45rem] font-bold tabular-nums text-[#8a6f00]">
-                  {result.value}
-                </div>
-                <h4 className="mt-1 text-[0.94rem] font-bold">{result.label}</h4>
-                <p className="mt-1.5 text-[0.82rem] leading-relaxed text-[#948a6e]">{result.detail}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 gap-px border border-[#141208] bg-[#3b382d] lg:grid-cols-3">
-            {DIGITAL_RESULTS.map((result) => (
-              <div key={result.source} className="bg-[#141208] p-5 text-white">
-                <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#f6c400]">
-                  {result.source}
-                </div>
-                <h4 className="mt-2 text-[1.02rem] font-semibold">{result.headline}</h4>
-                <p className="mt-2 text-[0.8rem] leading-relaxed text-white/60">{result.text}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-4 max-w-[72ch] font-mono text-[10.5px] leading-relaxed text-[#948a6e]">
-            Fuentes: Admin OS y base operativa de xtremecr.com; Google Search Console del 11/07 al
-            16/08/2026; Vercel Analytics del 11/08 al 18/08/2026. Las sesiones internas excluyen pruebas
-            identificadas. Google Ads y Google Maps se incorporarán al tablero de atribución cuando se
-            conecten o exporten sus métricas propias.
-          </p>
-        </section>
-
-        {/* Three-phase map */}
-        <section className="mt-16">
-          <SectionLabel>Mapa completo · de plataforma a fuente única de verdad</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            El proyecto se entiende mejor cuando cada sistema ocupa su fase
-          </h2>
-          <p className="mb-7 max-w-[68ch] text-[1.03rem] text-[#585138]">
-            La Fase 1 construyó las superficies principales. La Fase 2 agrega los trackers críticos. La
-            Fase 3 conecta inventarios y subsistemas completos sobre una sola base de datos centralizada.
-          </p>
-
-          <div className="space-y-3">
-            {PHASE_MAP.map((phase, phaseIndex) => {
-              const isCurrent = phase.phase === "Fase 2";
-              const isCentralized = phase.phase === "Fase 3";
-              return (
-                <div key={phase.phase}>
-                  <article
-                    className={`border p-5 sm:p-6 ${
-                      isCurrent
-                        ? "border-[#141208] bg-[#141208] text-white ring-2 ring-[#f6c400] ring-offset-2 ring-offset-[#f4f1e6]"
-                        : "border-[#d8d2bd] bg-[#fffdf7]"
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="flex items-baseline gap-3">
-                        <span className={`font-mono text-[12px] ${isCurrent ? "text-[#f6c400]" : "text-[#8a6f00]"}`}>
-                          {phase.num}
-                        </span>
-                        <h3 className="text-[1.15rem] font-semibold">{phase.phase} · {phase.title}</h3>
-                      </div>
-                      <span className={`font-mono text-[9.5px] uppercase tracking-[0.1em] ${isCurrent ? "text-white/55" : "text-[#948a6e]"}`}>
-                        {phase.status}
-                      </span>
-                    </div>
-                    <p className={`mt-2 max-w-[68ch] text-[0.86rem] ${isCurrent ? "text-white/60" : "text-[#948a6e]"}`}>
-                      {phase.description}
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap items-center gap-2 font-mono text-[11px]">
-                      {phase.systems.map((system, index) => (
-                        <span key={system} className="flex items-center gap-2">
-                          <span
-                            className={`border px-3 py-2 font-semibold ${
-                              isCurrent
-                                ? "border-[#f6c400] bg-[#f6c400] text-[#141208]"
-                                : "border-[#d8d2bd] bg-[#efeadb] text-[#141208]"
-                            }`}
-                          >
-                            {system}
-                          </span>
-                          {!isCentralized && index < phase.systems.length - 1 ? (
-                            <span className={isCurrent ? "text-white/35" : "text-[#b2aa91]"}>→</span>
-                          ) : null}
-                        </span>
-                      ))}
-                    </div>
-
-                    {isCentralized ? (
-                      <div className="mt-5 border-t border-dashed border-[#d8d2bd] pt-4 text-center">
-                        <div className="mb-2 font-mono text-[15px] text-[#b2aa91]">↓</div>
-                        <div className="inline-flex border-2 border-[#141208] bg-[#141208] px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-[#f6c400]">
-                          Base de datos centralizada · única fuente de verdad
-                        </div>
-                      </div>
-                    ) : null}
-                  </article>
-                  {phaseIndex < PHASE_MAP.length - 1 ? (
-                    <div className="py-1 text-center font-mono text-[18px] text-[#b2aa91]">↓</div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Cost table */}
-        <section className="mt-16">
-          <SectionLabel>Lo que todavía cuesta dinero y tiempo</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Cuatro puntos ciegos que la plataforma actual no cubre
-          </h2>
-          <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            Ninguno es un capricho técnico — son cosas que hoy dependen de que alguien se acuerde,
-            anote a mano o revise físicamente.
-          </p>
-
-          <div className="border border-[#141208]/15 bg-[#fffdf7]">
-            <div className="hidden grid-cols-[1.3fr_1.7fr_1fr] gap-5 sm:grid">
-              {["Hoy", "Cuesta", "Fase 2 resuelve"].map((h) => (
-                <div key={h} className="bg-[#efeadb] px-5.5 py-3 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#948a6e]">
-                  {h}
-                </div>
-              ))}
+    <main className="min-h-screen overflow-x-hidden bg-[#f4f1e6] text-[#141208]">
+      <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
+        <header className="flex items-center justify-between gap-4 border-b border-[#141208]/80 py-6">
+          <div className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center bg-[#141208] font-mono text-sm font-black text-[#f6c400]">
+              X
+            </span>
+            <div>
+              <p className="text-sm font-bold">Xtreme Gym</p>
+              <p className="text-[11px] text-[#756d55]">
+                Propuesta de desarrollo
+              </p>
             </div>
-            {COST_ROWS.map((row) => (
-              <div
-                key={row.situation}
-                className="grid grid-cols-1 gap-1.5 border-t border-[#e7e2d3] px-5.5 py-5 first:border-t-0 sm:grid-cols-[1.3fr_1.7fr_1fr] sm:gap-5"
+          </div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#756d55]">
+            Agosto 2026
+          </p>
+        </header>
+
+        <section className="grid gap-12 py-14 sm:py-20 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-16 lg:py-28">
+          <div>
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#8a6f00]">
+              Propuesta · Fase 2
+            </p>
+            <h1 className="mt-5 max-w-[11ch] text-balance text-[clamp(3.2rem,8vw,6.7rem)] font-semibold leading-[0.9] tracking-[-0.065em]">
+              Menos trabajo manual.{" "}
+              <span className="text-[#8a6f00]">Más control.</span>
+            </h1>
+            <p className="mt-7 max-w-[42rem] text-pretty text-lg leading-relaxed text-[#585138] sm:text-xl">
+              Vamos a mejorar la facturación, los accesos, las máquinas y el
+              panel administrativo dentro de la plataforma que Xtreme ya usa.
+            </p>
+            <p className="mt-3 max-w-[40rem] text-pretty leading-relaxed text-[#756d55]">
+              El objetivo es sencillo: registrar mejor, detectar problemas
+              rápido y tener la información importante en un solo lugar.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a
+                href="#entregas"
+                className="inline-flex items-center gap-2 bg-[#141208] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#332f20] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#141208]"
               >
-                <div className="text-[0.96rem] font-bold">{row.situation}</div>
-                <div className="text-[0.9rem] text-[#585138]">{row.consequence}</div>
-                <div className="text-[0.86rem] font-semibold text-[#8a6f00]">{row.fix}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Phase 2 priorities */}
-        <section className="mt-16">
-          <SectionLabel>Fase 2 · orden de prioridad</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Hacienda es el tema principal. Los demás trackers completan la operación.
-          </h2>
-          <p className="mb-7 max-w-[68ch] text-[1.03rem] text-[#585138]">
-            El alcance se organiza por valor operativo: primero facturación electrónica; segundo,
-            Machine Tracker; tercero, acceso biométrico y QR; cuarto, la vista analítica que los une.
-          </p>
-          <div className="flex flex-col gap-px border border-[#141208] bg-[#3b382d]">
-            {PHASE2_PRIORITIES.map((priority) => (
-              <ModuleCard key={priority.num} {...priority} />
-            ))}
-          </div>
-        </section>
-
-        {/* Connected control */}
-        <section className="mt-16">
-          <SectionLabel>Control conectado en Admin OS</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Tres recorridos operativos, una sola vista administrativa
-          </h2>
-          <p className="mb-7 max-w-[68ch] text-[1.03rem] text-[#585138]">
-            Allan, Alejandro y Eileen continúan usando el Admin OS existente. La diferencia es que cada
-            cobro, ingreso y uso de máquina llega con contexto suficiente para actuar y auditar.
-          </p>
-
-          <div className="border border-[#141208]/15 bg-[#fffdf7] p-6 sm:p-8">
-            {[
-              ["Cobro", "Factura", "Firma", "Hacienda", "Estado"],
-              ["Socio", "Rostro / QR", "Ingreso", "Ocupación", "Historial"],
-              ["Máquina", "Uso", "Tiempo", "Avería", "Mantenimiento"],
-            ].map((flow, flowIndex) => (
-              <div key={flow[0]} className={`flex flex-wrap items-center gap-2 font-mono text-[11px] ${flowIndex ? "mt-3" : ""}`}>
-                {flow.map((node, index) => (
-                  <span key={node} className="flex items-center gap-2">
-                    <span
-                      className={`border px-3 py-2 font-semibold ${
-                        flowIndex === 0
-                          ? "border-[#f6c400] bg-[#f6c400] text-[#141208]"
-                          : "border-[#d8d2bd] bg-[#efeadb] text-[#141208]"
-                      }`}
-                    >
-                      {node}
-                    </span>
-                    {index < flow.length - 1 ? <span className="text-[#b2aa91]">→</span> : null}
-                  </span>
-                ))}
-              </div>
-            ))}
+                Ver qué incluye
+                <ArrowDown className="h-4 w-4" aria-hidden="true" />
+              </a>
+              <a
+                href="#inversion"
+                className="inline-flex items-center gap-2 border border-[#141208]/30 bg-[#fffdf7] px-5 py-3 text-sm font-bold transition hover:border-[#141208] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#141208]"
+              >
+                Ver inversión
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </div>
           </div>
 
-          <div className="mt-4 border border-[#e7e2d3] bg-[#fffdf7] p-7 sm:p-8">
-            <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              {ADMIN_ITEMS.map((item) => (
-                <li key={item} className="relative pl-4 text-[0.87rem] text-[#141208]">
-                  <span className="absolute left-0 top-[8px] h-[6px] w-[6px] bg-[#f6c400]" />
+          <aside className="border-2 border-[#141208] bg-[#fffdf7] p-7 shadow-[8px_8px_0_#f6c400] sm:p-9">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#8a6f00]">
+              Propuesta completa
+            </p>
+            <p className="mt-4 font-mono text-6xl font-black tracking-[-0.06em]">
+              $800
+            </p>
+            <p className="mt-1 text-sm font-semibold text-[#625b45]">
+              USD · 4 entregas
+            </p>
+            <div className="my-7 h-px bg-[#d8d2bd]" />
+            <ul className="space-y-4">
+              {[
+                "Usa la plataforma actual",
+                "Cada entrega se revisa funcionando",
+                "Sin licencia mensual por el software",
+              ].map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-3 text-sm font-semibold text-[#494431]"
+                >
+                  <CheckCircle2
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#2f6b3a]"
+                    aria-hidden="true"
+                  />
                   {item}
                 </li>
               ))}
             </ul>
-          </div>
+          </aside>
         </section>
+      </div>
 
-        {/* Pricing */}
-        <section className="mt-16">
-          <SectionLabel>Inversión</SectionLabel>
-          <h2 className="mb-3.5 text-balance text-[1.8rem] font-semibold tracking-tight">
-            Cuatro propuestas de $200. Una sola Fase 2 de $800.
-          </h2>
-          <p className="mb-7 max-w-[66ch] text-[1.03rem] text-[#585138]">
-            Cada propuesta produce una entrega verificable de $200. Hacienda ocupa la Propuesta 01 y
-            define el tema central; máquinas y biometría amplían la trazabilidad, y la Propuesta 04 cierra
-            la integración dentro del Admin OS.
-          </p>
+      <section className="border-y border-[#d8d2bd] bg-[#fffdf7] py-16 sm:py-20">
+        <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
+          <SectionIntro
+            label="En sencillo"
+            title="Una acción entra. El sistema deja una respuesta clara."
+            description="La Fase 2 no crea otro programa para el personal. Conecta el trabajo diario con el seguimiento que administración necesita."
+          />
 
-          <div className="border border-[#141208]/15 bg-[#fffdf7]">
-            <div className="flex flex-wrap items-center justify-between gap-5 bg-[#141208] px-7 py-6 text-[#f4f1e6]">
-              <div>
-                <div className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.1em] opacity-70">
-                  Total Fase 2
-                </div>
-                <div className="text-[1.3rem] font-semibold">
-                  4 propuestas conectadas · $200 cada una
-                </div>
+          <div className="mt-10 border border-[#d8d2bd]">
+            {CHANGES.map((change, index) => (
+              <div
+                key={change.area}
+                className={`grid items-center gap-4 p-5 sm:p-6 md:grid-cols-[110px_1fr_auto_1fr] ${
+                  index ? "border-t border-[#d8d2bd]" : ""
+                }`}
+              >
+                <p className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-[#8a6f00]">
+                  {change.area}
+                </p>
+                <p className="text-sm font-semibold text-[#494431]">
+                  {change.before}
+                </p>
+                <ArrowRight
+                  className="h-4 w-4 rotate-90 text-[#a79d7d] md:rotate-0"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-semibold">{change.after}</p>
               </div>
-              <div className="font-mono text-[2.4rem] font-bold tabular-nums text-[#f6c400]">$800</div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-px bg-[#e7e2d3] sm:grid-cols-2">
-              {WORK_PROPOSALS.map((proposal) => (
-                <article
-                  key={proposal.num}
-                  className={`relative bg-[#fffdf7] p-6 ${proposal.featured ? "ring-2 ring-inset ring-[#f6c400]" : ""}`}
-                >
-                  {proposal.featured ? (
-                    <span className="mb-3 inline-block bg-[#f6c400] px-2 py-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#141208]">
-                      Mayor complejidad técnica
-                    </span>
-                  ) : null}
-                  <div className="mb-2 flex items-start justify-between gap-4">
-                    <div>
-                      <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.08em] text-[#948a6e]">
-                        Propuesta {proposal.num}
-                      </div>
-                      <h3 className="text-[1rem] font-bold">{proposal.title}</h3>
-                    </div>
-                    <div className="font-mono text-[1.25rem] font-bold text-[#8a6f00]">{proposal.price}</div>
-                  </div>
-                  <p className="mb-4 text-[0.84rem] text-[#585138]">{proposal.text}</p>
-                  <ul className="grid gap-1.5">
-                    {proposal.items.map((item) => (
-                      <li key={item} className="relative pl-4 text-[0.8rem] text-[#141208]">
-                        <span className="absolute left-0 text-[#8a6f00]">•</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
-            </div>
-
-            <div className="mx-7 my-6">
-              <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#948a6e]">
-                Formas de pago
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="border-2 border-[#f6c400] bg-[#fffdf7] p-5">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[#8a6f00]">
-                      Opción recomendada
-                    </span>
-                    <span className="font-mono text-[12px] font-bold">3 pagos</span>
-                  </div>
-                  <div className="font-mono text-[1.05rem] font-bold tabular-nums">
-                    $300 + $250 + $250
-                  </div>
-                  <p className="mt-2 text-[0.78rem] text-[#948a6e]">
-                    Hacienda · trackers operativos · integración final
-                  </p>
-                </div>
-                <div className="border border-[#e7e2d3] bg-[#efeadb] p-5">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#948a6e]">
-                      Por propuesta
-                    </span>
-                    <span className="font-mono text-[12px] font-bold">4 pagos</span>
-                  </div>
-                  <div className="font-mono text-[1.05rem] font-bold tabular-nums">
-                    $200 + $200 + $200 + $200
-                  </div>
-                  <p className="mt-2 text-[0.78rem] text-[#948a6e]">
-                    Un pago al iniciar cada entrega de trabajo
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mx-7 mb-6 border border-[#bcd9bc] bg-[#eef6ee] p-4.5 text-[0.86rem] text-[#585138]">
-              <b className="text-[#141208]">Cortesía incluida — $0:</b> el sistema de inventario de
-              bebidas, registro de productos y control de ventas desarrollado previamente se mantiene
-              sin costo adicional. Su interconexión con todos los demás inventarios y subsistemas queda
-              reservada para la Fase 3.
-            </div>
-
-            <div className="mx-7 mb-7 border-t border-[#e7e2d3] pt-4.5">
-              <ul className="grid gap-2">
-                {FINE_PRINT.map((item) => (
-                  <li key={item} className="relative pl-4 text-[0.83rem] text-[#948a6e]">
-                    <span className="absolute left-0 text-[#d8d2bd]">—</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* Sign-off */}
-        <div className="mt-[4.5rem] flex flex-wrap items-end justify-between gap-6 border-t border-[#141208]/80 pt-10">
-          <div>
-            <div className="text-[1.4rem] font-semibold">Allan Rojas</div>
-            <div className="mt-1 font-mono text-[12px] text-[#948a6e]">Desarrollo de software · Xtreme Gym</div>
-          </div>
-          <div className="text-right font-mono text-[11px] leading-[1.6] text-[#948a6e]">
-            Xtreme Gym · Propuesta Fase 2
-            <br />
-            18 de agosto de 2026
+            ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      <section id="entregas" className="scroll-mt-6 py-16 sm:py-24">
+        <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
+          <SectionIntro
+            label="Qué incluye"
+            title="Cuatro entregas concretas."
+            description="Cada una resuelve una parte específica de la operación y termina con un resultado que se puede revisar."
+          />
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
+            {DELIVERABLES.map((deliverable) => (
+              <DeliverableCard key={deliverable.number} item={deliverable} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="inversion"
+        className="scroll-mt-6 bg-[#141208] py-16 text-white sm:py-24"
+      >
+        <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end lg:gap-16">
+            <SectionIntro
+              light
+              label="Inversión"
+              title="$800 USD en total."
+              description="Cuatro pagos de $200: uno por cada entrega aprobada. Se revisa el resultado antes de continuar con la siguiente."
+            />
+
+            <div className="grid grid-cols-2 gap-px border border-white/15 bg-white/15 sm:grid-cols-4">
+              {DELIVERABLES.map((deliverable) => (
+                <div key={deliverable.number} className="bg-[#141208] p-5">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">
+                    Entrega {deliverable.number}
+                  </p>
+                  <p className="mt-4 font-mono text-2xl font-black text-[#f6c400]">
+                    $200
+                  </p>
+                  <p className="mt-2 text-xs font-semibold leading-snug text-white/65">
+                    {deliverable.title}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-10 grid gap-4 border-t border-white/15 pt-8 sm:grid-cols-3">
+            <div className="flex items-start gap-3">
+              <CheckCircle2
+                className="mt-0.5 h-5 w-5 shrink-0 text-[#f6c400]"
+                aria-hidden="true"
+              />
+              <p className="text-sm leading-relaxed text-white/70">
+                Desarrollo e integración dentro de la plataforma actual.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle2
+                className="mt-0.5 h-5 w-5 shrink-0 text-[#f6c400]"
+                aria-hidden="true"
+              />
+              <p className="text-sm leading-relaxed text-white/70">
+                Verificación de cada entrega antes de aprobarla.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle2
+                className="mt-0.5 h-5 w-5 shrink-0 text-[#f6c400]"
+                aria-hidden="true"
+              />
+              <p className="text-sm leading-relaxed text-white/70">
+                Inventario ya desarrollado, sin costo adicional de software.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-[#d8d2bd] bg-[#fffdf7] py-16 sm:py-20">
+        <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
+          <SectionIntro
+            label="Antes de empezar"
+            title="Tres acuerdos para que no haya sorpresas."
+            description="Estos puntos se confirman al iniciar y dejan claro qué necesita Xtreme y qué queda fuera de la propuesta."
+          />
+
+          <div className="mt-10 grid gap-px border border-[#d8d2bd] bg-[#d8d2bd] md:grid-cols-3">
+            {CONDITIONS.map((condition, index) => (
+              <article
+                key={condition.title}
+                className="bg-[#fffdf7] p-6 sm:p-7"
+              >
+                <p className="font-mono text-xs font-bold text-[#8a6f00]">
+                  0{index + 1}
+                </p>
+                <h3 className="mt-5 text-lg font-semibold">
+                  {condition.title}
+                </h3>
+                <p className="mt-2 text-pretty text-sm leading-relaxed text-[#625b45]">
+                  {condition.text}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 sm:py-20">
+        <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
+          <div className="grid gap-8 bg-[#f6c400] p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.15em]">
+                Siguiente paso
+              </p>
+              <h2 className="mt-3 max-w-[18ch] text-balance text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">
+                Aprobar el alcance y confirmar los accesos.
+              </h2>
+              <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-[#494431]">
+                Con eso se define el orden de trabajo y el criterio de
+                aprobación de la primera entrega.
+              </p>
+            </div>
+            <a
+              href="#entregas"
+              className="inline-flex items-center justify-center gap-2 bg-[#141208] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#332f20] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#141208]"
+            >
+              Revisar alcance
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </a>
+          </div>
+
+          <footer className="mt-12 flex flex-wrap items-end justify-between gap-6 border-t border-[#141208]/80 pt-8">
+            <div>
+              <p className="text-lg font-semibold">Allan Rojas</p>
+              <p className="mt-1 text-xs text-[#756d55]">
+                Desarrollo de software · Xtreme Gym
+              </p>
+            </div>
+            <p className="text-right font-mono text-[10px] leading-relaxed text-[#756d55]">
+              Propuesta Fase 2
+              <br />
+              Agosto de 2026
+            </p>
+          </footer>
+        </div>
+      </section>
     </main>
   );
 }

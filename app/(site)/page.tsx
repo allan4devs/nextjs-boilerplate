@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import CinematicLandingFX from "../components/CinematicLandingFX";
 import HeroTrainingVideo from "../components/HeroTrainingVideo";
+import HeroGoalFinder from "../components/HeroGoalFinder";
 import ScrollSceneVideo from "../components/ScrollSceneVideo";
 import CtaBand from "../components/CtaBand";
 import CtaLink from "../components/CtaLink";
@@ -64,7 +65,7 @@ export default function ExtremeGymLandingPage() {
             </span>
           </div>
 
-          <div className="relative flex flex-1 items-center justify-center py-16 sm:py-20">
+          <div className="relative flex flex-1 items-center justify-center py-4 sm:py-20">
             <div data-cinema-reveal className="cinema-hero-copy w-full text-center">
               <p className="mb-6 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[.28em] text-white/72">
                 <span className="h-px w-8 bg-[#f6c400]" />
@@ -79,25 +80,7 @@ export default function ExtremeGymLandingPage() {
           </div>
 
           <div className="cinema-hero-dock grid overflow-hidden rounded-[1.5rem] border border-white/15 bg-black/35 backdrop-blur-2xl lg:grid-cols-[minmax(0,1.15fr)_auto_minmax(25rem,.85fr)] lg:items-stretch">
-            <div className="p-5 sm:p-6">
-                <p className="max-w-xl text-sm font-medium leading-6 text-white/78 sm:text-base sm:leading-7">
-                  {content.heroText}
-                </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2.5 border-t border-white/10 p-4 lg:border-l lg:border-t-0">
-                  <Link
-                    href={content.primaryHref}
-                    className="cinema-cta inline-flex min-h-12 items-center gap-3 rounded-full bg-[#f6c400] px-5 text-xs font-black uppercase tracking-[.08em] text-black"
-                  >
-                    {content.primaryCta} <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <Link
-                    href={content.secondaryHref}
-                    className="inline-flex min-h-12 items-center gap-3 rounded-full border border-white/25 bg-white/[.06] px-5 text-xs font-black uppercase tracking-[.08em] text-white transition hover:border-white/60 hover:bg-white/10"
-                  >
-                    {content.secondaryCta}
-                  </Link>
-            </div>
+            <HeroGoalFinder intro={content.heroText} />
             <div className="grid grid-cols-4 border-t border-white/10 lg:border-l lg:border-t-0">
               {SOCIAL_PROOF.map((item) => (
                 <div key={item.label} className="flex min-w-0 flex-col justify-center border-r border-white/10 px-2 py-4 last:border-r-0 sm:px-3">

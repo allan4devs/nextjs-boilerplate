@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Build standalone: server mínimo con solo los node_modules necesarios,
+  // pensado para la imagen de Docker (ver Dockerfile).
+  output: "standalone",
   // Oculta el indicador flotante de Next en dev (logo "N").
   devIndicators: false,
   compress: true,
