@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
     if (!body.payment) return NextResponse.json({ error: "Seleccioná cómo se pagó la venta." }, { status: 400 });
     const sale = await recordProductSale(await getDb(), body.items ?? [], session.role, body.payment);
     const products = await listProducts(await getDb());
-    return NextResponse.json({ sale, products });
+    return NextResponse.json({ sale, products, staffName: session.staffName || "Recepción" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "sale_failed";
     if (message.startsWith("insufficient_stock:")) {

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Banknote, CreditCard, Loader2, Printer, Smartphone } from "lucide-react";
 import { GameLabel } from "@/app/components/GameOS";
 import type { MemberHit } from "@/lib/xtreme/checkin/contracts";
+import { RECEIPT_HEADER, colones, fmtDateTime, fmtIsoDate, numeroALetras } from "./receipt-format";
 
 const ITEMS = [
   { id: "enrollment", label: "Matrícula", price: 5_000 },
@@ -14,7 +15,11 @@ const ITEMS = [
   { id: "senior", label: "Adultos mayores", price: 16_000 },
 ] as const;
 
-type Receipt = { id: string; date: string; createdAt: string; customerName: string; itemLabel: string; amountCrc: number; breakdown: { cash: number; sinpe: number; card: number }; nextBillingDate?: string | null; staffName: string };
+type Receipt = { id: string; date: string; createdAt: string; customerName: string; itemLabel: string; amountCrc: number; breakdown: { cash: number; sinpe: number; card: number }; nextBillingDate?: string | null; staffName: string;
+  // Campos opcionales para el comprobante estilo Latinsoft. Los fiscales
+  // (consecutivo, clave) SOLO se muestran si Latinsoft los provee; nunca se inventan.
+  memberNumber?: string | number | null; planName?: string | null; tipoCambio?: number | null;
+  consecutivo?: string | null; clave?: string | null; reprint?: { originalDate?: string | null; originalTime?: string | null } | null };
 const crc = new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 0 });
 
 export default function ReceptionBillingPanel({ member }: { member: MemberHit }) {
@@ -36,6 +41,15 @@ export default function ReceptionBillingPanel({ member }: { member: MemberHit })
     void fetch(`/api/xtreme/reception/billing?memberKey=${encodeURIComponent(member.normalizedName)}`, { cache: "no-store" })
       .then((response) => response.json()).then((data: { lastAmounts?: Record<string, number> }) => setLastAmounts(data.lastAmounts ?? {})).catch(() => undefined);
   }, [member.normalizedName]);
+
+  // Igual que Latinsoft (ModImpFactura.php): apenas se genera el comprobante,
+  // se abre solo el diálogo de impresión del navegador. El destino es la
+  // impresora por defecto de Windows (AON Printer), así el cajero solo confirma.
+  useEffect(() => {
+    if (!receipt) return;
+    const timer = window.setTimeout(() => window.print(), 350);
+    return () => window.clearTimeout(timer);
+  }, [receipt]);
 
   function chooseItem(nextId: string) {
     const item = ITEMS.find((entry) => entry.id === nextId)!;
@@ -81,6 +95,80 @@ export default function ReceptionBillingPanel({ member }: { member: MemberHit })
 }
 
 function ThermalReceipt({ receipt }: { receipt: Receipt }) {
-  const lines = useMemo(() => [{ label: "Efectivo", value: receipt.breakdown.cash }, { label: "SINPE", value: receipt.breakdown.sinpe }, { label: "Tarjeta", value: receipt.breakdown.card }].filter((line) => line.value > 0), [receipt]);
-  return <div className="thermal-receipt bg-white p-3 font-mono text-[11px] leading-4 text-black"><p className="text-center text-base font-black">XTREME GYM</p><p className="text-center">Ciudad Quesada</p><p className="my-2 border-t border-dashed border-black" /><p>Comprobante: {receipt.id}</p><p>Fecha: {receipt.date}</p><p>Cliente: {receipt.customerName}</p><p>Atendió: {receipt.staffName}</p><p className="my-2 border-t border-dashed border-black" /><div className="flex justify-between gap-2"><span>{receipt.itemLabel}</span><strong>{crc.format(receipt.amountCrc)}</strong></div>{lines.map((line) => <div key={line.label} className="flex justify-between"><span>{line.label}</span><span>{crc.format(line.value)}</span></div>)}{receipt.nextBillingDate && <p className="mt-2">Vence: {receipt.nextBillingDate}</p>}<p className="my-2 border-t border-dashed border-black" /><p className="text-center font-bold">Gracias por preferir Xtreme</p><p className="mt-1 text-center text-[9px]">Comprobante interno · facturación fiscal en Latinsoft</p></div>;
+  const payments = useMemo(() => [
+    { label: "Efectivo", value: receipt.breakdown.cash },
+    { label: "SINPE", value: receipt.breakdown.sinpe },
+    { label: "Tarjeta", value: receipt.breakdown.card },
+  ].filter((line) => line.value > 0), [receipt]);
+  const total = receipt.amountCrc;
+  const iva = Math.round((total - total / 1.13) * 100) / 100; // IVA 13% incluido en el total
+  const emitido = fmtDateTime(receipt.createdAt);
+  const proxPago = fmtIsoDate(receipt.nextBillingDate);
+  const enLetras = `${numeroALetras(total)} CON 00/100`;
+
+  return <div className="thermal-receipt mx-auto max-w-[280px] border border-black bg-white px-3 py-3 font-serif text-[11px] leading-[1.35] text-black">
+    <div className="text-center">
+      <p className="font-bold">{RECEIPT_HEADER.name1}</p>
+      <p className="font-bold">{RECEIPT_HEADER.name2}</p>
+      <p>{RECEIPT_HEADER.address}</p>
+      <p>{RECEIPT_HEADER.legalId}</p>
+      {RECEIPT_HEADER.emails.map((mail) => <p key={mail}>{mail}</p>)}
+      <p>Factura Electronica :</p>
+    </div>
+
+    {receipt.consecutivo && <div className="mt-3">
+      <p className="font-bold">Consecutivo:</p>
+      <p className="break-all">{receipt.consecutivo}</p>
+      {receipt.reprint && <div className="text-center font-bold">
+        <p>**** Reimpresión ****</p>
+        {receipt.reprint.originalDate && <p>Fecha original: {receipt.reprint.originalDate}</p>}
+        {receipt.reprint.originalTime && <p>Hora original : {receipt.reprint.originalTime}</p>}
+      </div>}
+    </div>}
+
+    <p className="mt-3"><span className="font-bold">Fecha:</span> {emitido.date} <span className="font-bold">Hora:</span> {emitido.time}</p>
+
+    <div className="mt-3">
+      <p><span className="font-bold">Cajero:</span>{receipt.staffName}</p>
+      <p className="font-bold">N° Comprobante:</p>
+      <p className="break-all">{receipt.id}</p>
+      {receipt.memberNumber != null && receipt.memberNumber !== "" && <p><span className="font-bold">Socio#:</span>{receipt.memberNumber}</p>}
+      <p><span className="font-bold">Plan:</span>{receipt.planName || receipt.itemLabel}</p>
+      <p><span className="font-bold">Cliente:</span> {receipt.customerName}</p>
+    </div>
+
+    <p className="mt-3"><span className="font-bold">Tipo Cambio:</span> {(receipt.tipoCambio ?? 1).toFixed(2)}</p>
+
+    <table className="mt-3 w-full border-collapse">
+      <thead><tr className="border-y border-black text-left font-bold">
+        <th className="py-0.5 pr-1">Cant</th><th className="py-0.5 pr-1">Descripcion</th><th className="py-0.5 text-right">Precio</th>
+      </tr></thead>
+      <tbody>
+        <tr className="align-top">
+          <td className="py-1 pr-1">1</td>
+          <td className="py-1 pr-1">{receipt.itemLabel}{proxPago && <><br />Prox pago: {proxPago}</>}</td>
+          <td className="whitespace-nowrap py-1 text-right">{colones(total)}</td>
+        </tr>
+        <tr className="border-t border-black"><td /><td className="py-0.5">13%IVA</td><td className="whitespace-nowrap py-0.5 text-right">{colones(iva)}</td></tr>
+        <tr className="border-t border-black font-bold"><td /><td className="py-0.5">TOTAL:</td><td className="whitespace-nowrap py-0.5 text-right">{colones(total)}</td></tr>
+      </tbody>
+    </table>
+
+    <table className="mt-3 w-full border-collapse">
+      <thead><tr className="border-y border-black text-left font-bold">
+        <th className="py-0.5">Tipo Documento</th><th className="py-0.5 text-right">Monto</th>
+      </tr></thead>
+      <tbody>{payments.map((line) => <tr key={line.label} className="border-b border-black">
+        <td className="py-0.5">--&nbsp;&nbsp;{line.label}</td>
+        <td className="whitespace-nowrap py-0.5 text-right">{colones(line.value)}</td>
+      </tr>)}</tbody>
+    </table>
+
+    <p className="mt-2">{enLetras}</p>
+
+    {receipt.clave && <div className="mt-3"><p className="font-bold">Clave:</p><p className="break-all">{receipt.clave}</p></div>}
+
+    <p className="mt-3 text-center font-bold">¡Gracias por elegirnos, vuelva pronto!</p>
+    {!receipt.clave && <p className="mt-2 text-center text-[9px] text-black/60">Comprobante interno · la factura fiscal se emite en Latinsoft</p>}
+  </div>;
 }
