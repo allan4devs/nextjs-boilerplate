@@ -293,10 +293,23 @@ html.xg-staff-light .xg-theme-toggle {
   background: #fff !important;
 }
 
+/*
+ * Impresión del comprobante de recepción — impresora térmica AON Printer.
+ * Especificación real del papel (driver "AON Printer", puerto USB, monocromo):
+ *   Forma en uso .......... 80 x 297 mm  (rollo térmico de 80 mm)
+ *   Ancho de rollo ........ 80 mm nominal
+ *   Ancho imprimible ...... 72.07 mm  ≈ 2.837 in  = 576 puntos @ 203 dpi
+ *   Alto .................. 297.17 mm  (fijo) — acá usamos "auto" para tiras variables
+ *   Márgenes del driver ... 0 mm (origen 0,0)  → @page margin: 0
+ *   Resolución ............ 203 x 203 dpi
+ *   Corte ................. Full Cut al final del documento
+ * Tamaños alternos del driver: 80 x 210 mm, 80 x 297 mm, 80 x 3276 mm (continuo).
+ * El ancho del contenido NO debe pasar de 72 mm o el borde derecho se recorta.
+ */
 @media print {
   @page {
-    size: 80mm auto;
-    margin: 3mm;
+    size: 80mm auto; /* rollo de 80 mm; largo variable por comprobante */
+    margin: 0; /* el driver ya imprime sin márgenes (origen 0,0) */
   }
 
   body * {
@@ -311,13 +324,17 @@ html.xg-staff-light .xg-theme-toggle {
   .thermal-receipt {
     position: absolute !important;
     inset: 0 auto auto 0 !important;
-    width: 74mm !important;
+    width: 72mm !important; /* ancho imprimible real (576 pts @ 203 dpi) */
     min-height: 0 !important;
     margin: 0 !important;
+    padding: 1mm 2mm 4mm !important; /* separación interna en vez de margen de página */
     border: 0 !important;
     background: #fff !important;
     color: #000 !important;
     box-shadow: none !important;
+    /* forzar tinta negra sólida en la térmica (líneas punteadas, texto) */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 

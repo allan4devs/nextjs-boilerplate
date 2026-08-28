@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Banknote, Check, Download, Loader2, Minus, PackageOpen, Plus, Save, Search, Smartphone, Split, ShoppingCart, Trash2, X } from "lucide-react";
+import { Banknote, Check, Download, Loader2, Minus, PackageOpen, Plus, Printer, Save, Search, Smartphone, Split, ShoppingCart, Trash2, X } from "lucide-react";
 import { GameChip, GameLabel } from "../GameOS";
 import InventoryReporterPages from "./InventoryReporterPages";
+import { RECEIPT_HEADER, colones, fmtDateTime, numeroALetras } from "./receipt-format";
 
 type Category = "bebidas" | "proteinas" | "creatinas" | "hidratantes" | "chicles";
 type Product = {
@@ -16,6 +17,17 @@ type Product = {
   cameraQuantity?: number;
   warehouseQuantity?: number;
   price: number;
+};
+
+type SaleReceipt = {
+  id: string;
+  createdAt: string;
+  items: Array<{ productId: string; name: string; quantity: number; unitPrice: number }>;
+  total: number;
+  paymentMethod: "cash" | "sinpe" | "mixed";
+  cashAmount: number;
+  sinpeAmount: number;
+  staffName: string;
 };
 
 const CATEGORY_LABEL: Record<Category, string> = {
@@ -47,6 +59,15 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "sinpe" | "mixed">("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [sinpeAmount, setSinpeAmount] = useState("");
+  const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
+
+  // Igual que la facturación de recepción: apenas se genera el comprobante, se
+  // abre solo el diálogo de impresión (impresora por defecto AON Printer).
+  useEffect(() => {
+    if (!receipt) return;
+    const timer = window.setTimeout(() => window.print(), 350);
+    return () => window.clearTimeout(timer);
+  }, [receipt]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -146,13 +167,25 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
           payment,
         }),
       });
-      const json = (await res.json()) as { products?: Product[]; sale?: { total: number }; error?: string };
+      const json = (await res.json()) as { products?: Product[]; sale?: SaleReceipt; staffName?: string; error?: string };
       if (!res.ok || !json.products) throw new Error(json.error || "No se pudo registrar la venta.");
       setProducts(json.products);
       setCart({});
       setCashAmount("");
       setSinpeAmount("");
       setPaymentMethod("cash");
+      if (json.sale) {
+        setReceipt({
+          id: json.sale.id,
+          createdAt: json.sale.createdAt,
+          items: json.sale.items,
+          total: json.sale.total,
+          paymentMethod: json.sale.paymentMethod,
+          cashAmount: json.sale.cashAmount,
+          sinpeAmount: json.sale.sinpeAmount,
+          staffName: json.staffName || "Recepción",
+        });
+      }
       const paymentLabel = payment.method === "cash" ? "efectivo" : payment.method === "sinpe" ? "SINPE" : `pago mixto (${money(payment.cashAmount)} efectivo + ${money(payment.sinpeAmount)} SINPE)`;
       setMessage({ tone: "ok", text: `Venta registrada por ${money(json.sale?.total ?? total)} en ${paymentLabel}. Inventario descontado.` });
       window.dispatchEvent(new Event("xtreme:storefront-updated"));
@@ -269,6 +302,16 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
       {mode === "sales" && (
         <aside className="border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-4 shadow-[6px_6px_0_rgba(216,255,62,.18)] sm:p-5 lg:sticky lg:top-4">
           <div className="space-y-5">
+            {receipt && (
+              <div className="border-[3px] border-white/15 bg-white/[.025] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#d8ff3e]">Comprobante</p>
+                  <button type="button" onClick={() => setReceipt(null)} aria-label="Cerrar comprobante" className="grid h-8 w-8 place-items-center text-white/35 hover:text-white"><X className="h-4 w-4" /></button>
+                </div>
+                <ProductSaleReceipt receipt={receipt} />
+                <button type="button" onClick={() => window.print()} className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 border-[3px] border-[#d8ff3e] text-xs font-black uppercase text-[#d8ff3e]"><Printer className="h-4 w-4" /> Imprimir comprobante</button>
+              </div>
+            )}
             <div>
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -336,6 +379,72 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
         </aside>
       )}
       </div>
+    </div>
+  );
+}
+
+// Comprobante térmico de la venta de inventario. Mismo formato que la
+// facturación de recepción (AON Printer, 72 mm), pero con varias líneas de
+// producto y sin campos fiscales de Latinsoft (es un comprobante interno).
+function ProductSaleReceipt({ receipt }: { receipt: SaleReceipt }) {
+  const total = receipt.total;
+  const iva = Math.round((total - total / 1.13) * 100) / 100; // IVA 13% incluido en el total
+  const emitido = fmtDateTime(receipt.createdAt);
+  const enLetras = `${numeroALetras(total)} CON 00/100`;
+  const payments = [
+    { label: "Efectivo", value: receipt.cashAmount },
+    { label: "SINPE", value: receipt.sinpeAmount },
+  ].filter((line) => line.value > 0);
+
+  return (
+    <div className="thermal-receipt mx-auto mt-3 max-w-[280px] border border-black bg-white px-3 py-3 font-serif text-[11px] leading-[1.35] text-black">
+      <div className="text-center">
+        <p className="font-bold">{RECEIPT_HEADER.name1}</p>
+        <p className="font-bold">{RECEIPT_HEADER.name2}</p>
+        <p>{RECEIPT_HEADER.address}</p>
+        <p>{RECEIPT_HEADER.legalId}</p>
+        {RECEIPT_HEADER.emails.map((mail) => <p key={mail}>{mail}</p>)}
+      </div>
+
+      <p className="mt-3"><span className="font-bold">Fecha:</span> {emitido.date} <span className="font-bold">Hora:</span> {emitido.time}</p>
+
+      <div className="mt-3">
+        <p><span className="font-bold">Cajero:</span>{receipt.staffName}</p>
+        <p className="font-bold">N° Comprobante:</p>
+        <p className="break-all">{receipt.id}</p>
+      </div>
+
+      <table className="mt-3 w-full border-collapse">
+        <thead><tr className="border-y border-black text-left font-bold">
+          <th className="py-0.5 pr-1">Cant</th><th className="py-0.5 pr-1">Descripcion</th><th className="py-0.5 text-right">Precio</th>
+        </tr></thead>
+        <tbody>
+          {receipt.items.map((item) => (
+            <tr key={item.productId} className="align-top">
+              <td className="py-1 pr-1">{item.quantity}</td>
+              <td className="py-1 pr-1">{item.name}</td>
+              <td className="whitespace-nowrap py-1 text-right">{colones(item.unitPrice * item.quantity)}</td>
+            </tr>
+          ))}
+          <tr className="border-t border-black"><td /><td className="py-0.5">13%IVA</td><td className="whitespace-nowrap py-0.5 text-right">{colones(iva)}</td></tr>
+          <tr className="border-t border-black font-bold"><td /><td className="py-0.5">TOTAL:</td><td className="whitespace-nowrap py-0.5 text-right">{colones(total)}</td></tr>
+        </tbody>
+      </table>
+
+      <table className="mt-3 w-full border-collapse">
+        <thead><tr className="border-y border-black text-left font-bold">
+          <th className="py-0.5">Tipo Documento</th><th className="py-0.5 text-right">Monto</th>
+        </tr></thead>
+        <tbody>{payments.map((line) => <tr key={line.label} className="border-b border-black">
+          <td className="py-0.5">--&nbsp;&nbsp;{line.label}</td>
+          <td className="whitespace-nowrap py-0.5 text-right">{colones(line.value)}</td>
+        </tr>)}</tbody>
+      </table>
+
+      <p className="mt-2">{enLetras}</p>
+
+      <p className="mt-3 text-center font-bold">¡Gracias por elegirnos, vuelva pronto!</p>
+      <p className="mt-2 text-center text-[9px] text-black/60">Comprobante interno · la factura fiscal se emite en Latinsoft</p>
     </div>
   );
 }
