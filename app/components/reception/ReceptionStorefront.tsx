@@ -388,7 +388,7 @@ export default function ReceptionStorefront({ mode }: { mode: "inventory" | "sal
 // producto y sin campos fiscales de Latinsoft (es un comprobante interno).
 function ProductSaleReceipt({ receipt }: { receipt: SaleReceipt }) {
   const total = receipt.total;
-  const iva = Math.round((total - total / 1.13) * 100) / 100; // IVA 13% incluido en el total
+  const units = receipt.items.reduce((sum, item) => sum + item.quantity, 0);
   const emitido = fmtDateTime(receipt.createdAt);
   const enLetras = `${numeroALetras(total)} CON 00/100`;
   const payments = [
@@ -426,8 +426,11 @@ function ProductSaleReceipt({ receipt }: { receipt: SaleReceipt }) {
               <td className="whitespace-nowrap py-1 text-right">{colones(item.unitPrice * item.quantity)}</td>
             </tr>
           ))}
-          <tr className="border-t border-black"><td /><td className="py-0.5">13%IVA</td><td className="whitespace-nowrap py-0.5 text-right">{colones(iva)}</td></tr>
-          <tr className="border-t border-black font-bold"><td /><td className="py-0.5">TOTAL:</td><td className="whitespace-nowrap py-0.5 text-right">{colones(total)}</td></tr>
+          <tr className="border-t-2 border-black text-[13px] font-bold">
+            <td className="py-1 pr-1">{units}</td>
+            <td className="py-1 pr-1">TOTAL</td>
+            <td className="whitespace-nowrap py-1 text-right">{colones(total)}</td>
+          </tr>
         </tbody>
       </table>
 

@@ -61,8 +61,10 @@ const DEFAULT_PRODUCTS: Array<Pick<ProductInventoryDoc, "id" | "name" | "categor
   { id: "monster-white", name: "Monster Energy Ultra White", category: "bebidas", image: "/xtreme/products/monster-white.jpeg" },
   { id: "barrita-mani", name: "Barrita de maní", category: "proteinas", defaultPrice: 500 },
   { id: "barrita-fresa", name: "Barrita de fresa", category: "proteinas", defaultPrice: 500 },
-  { id: "chicle-verde", name: "Chicle verde (paquete de 5)", category: "chicles", unitsPerPackage: 5 },
-  { id: "chicle-gris", name: "Chicle gris (paquete de 5)", category: "chicles", unitsPerPackage: 5 },
+  // Inventario "por unidad": los chicles se venden y cuentan individualmente,
+  // no como paquete de 5. Sin unitsPerPackage => cada existencia es una unidad.
+  { id: "chicle-verde", name: "Chicle verde", category: "chicles" },
+  { id: "chicle-gris", name: "Chicle gris", category: "chicles" },
 ];
 
 const PHYSICAL_COUNT_VERSION = "physical-count-2026-08-04";
