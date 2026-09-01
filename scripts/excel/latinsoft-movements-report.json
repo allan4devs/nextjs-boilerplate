@@ -1,0 +1,1579 @@
+{
+  "generatedAt": "2026-08-27T23:06:38.782Z",
+  "summary": {
+    "mode": "APPLY",
+    "workbook": "C:/Users/PC1/Contacts/Downloads/Total Estado Socios (9).xlsx",
+    "excelNames": 2145,
+    "mongoMembers": 2086,
+    "renewed": 114,
+    "newMembers": 11,
+    "paymentsToSeed": 0,
+    "aligned": 1936,
+    "regressed": 63,
+    "ambiguous": 2,
+    "invalidExcelRows": 19
+  },
+  "writeResult": {
+    "membersMatched": 114,
+    "membersModified": 114,
+    "membersCreated": 11,
+    "paymentsInserted": 0,
+    "paymentsAlreadyPresent": 0
+  },
+  "renewed": [
+    {
+      "name": "Luis Alonso Aguilar Rodriguez",
+      "mongoVence": "2026-08-29",
+      "excelVence": "2026-09-29",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Natalia Aguilar Rojas",
+      "mongoVence": "2026-09-02",
+      "excelVence": "2026-10-01",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Erick Aguilar Vindas",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "DAVID ALEJANDRO ALEMAN QUESADA",
+      "mongoVence": "2026-08-14",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Laura Alfaro Agúero",
+      "mongoVence": "2026-08-27",
+      "excelVence": "2026-09-27",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOSE FAURICIO ALFARO SAENZ",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 11000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Victoria Alvarado Villegas",
+      "mongoVence": "2026-09-18",
+      "excelVence": "2027-08-13",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Marvin Alvarez Salas",
+      "mongoVence": "2026-09-10",
+      "excelVence": "2026-09-26",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOHAN ANDREY ANGULO DIAZ",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 18000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Yerlin Araya Aguilar",
+      "mongoVence": "2026-08-22",
+      "excelVence": "2026-09-22",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "VALENTINA ARAYA BERROCAL",
+      "mongoVence": "2026-08-16",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 15000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Andres Felipe Araya Jimenez",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Joseph Araya Mata",
+      "mongoVence": "2026-08-24",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 15000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "CAROLINA ARAYA SOLIS",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "MARIELA ARAYA SOLORZANO",
+      "mongoVence": "2026-05-27",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "Diego Arce Torres",
+      "mongoVence": "2026-08-18",
+      "excelVence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 19000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "FRANCISCO JAVIER ARGUELLO CHACON",
+      "mongoVence": "2026-08-19",
+      "excelVence": "2026-09-19",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Fabricio Armijo",
+      "mongoVence": "2024-11-02",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "Andy Avila Davila",
+      "mongoVence": "2026-08-17",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "thomas barefoot",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-01",
+      "plan": "Xtreme Semanal",
+      "costo": 13500,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Patricia Barrientos Rial",
+      "mongoVence": "2026-09-02",
+      "excelVence": "2026-10-02",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Marcela Benavides",
+      "mongoVence": "2026-08-12",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Erick Blanco Vargas",
+      "mongoVence": "2026-08-18",
+      "excelVence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "NATHALY BONILLA FERNANDEZ",
+      "mongoVence": "2026-08-21",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Estelia Buvert",
+      "mongoVence": "2026-08-22",
+      "excelVence": "2026-08-26",
+      "plan": "Clase adultos mayores",
+      "costo": 5000,
+      "payment": false,
+      "estado": "Inactivo"
+    },
+    {
+      "name": "JENNY PATRICIA CAMACHO VARGAS",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2027-03-23",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Josue Campos Murillo",
+      "mongoVence": "2026-08-21",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Marco Carmona Torres",
+      "mongoVence": "2026-08-30",
+      "excelVence": "2026-09-30",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JULIO CESAR CASTILLO SIBAJA",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Paola Castro Bejarano",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-27",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Jerry Castro Trejos",
+      "mongoVence": "2026-08-28",
+      "excelVence": "2026-09-28",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "RAFAEL ANGEL CHACON ZUMBADO",
+      "mongoVence": "2026-08-21",
+      "excelVence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Carol Cordero Hidalgo",
+      "mongoVence": "2026-09-10",
+      "excelVence": "2026-09-17",
+      "plan": "Xtreme Mensual",
+      "costo": 18000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "ALEXANDER GERARDO CORONADO HERNANDEZ",
+      "mongoVence": "2026-08-12",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "ABIGAIL CORRALES ARAYA",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "MATEO CORRALES ARAYA",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Diego Corrales velez",
+      "mongoVence": "2026-04-17",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "Tatiana Delgado Salas",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Cliente Sesión Diaria",
+      "mongoVence": "2035-07-16",
+      "excelVence": "2037-01-16",
+      "plan": "Pase del día",
+      "costo": 2000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "David Duran Marin",
+      "mongoVence": "2025-09-15",
+      "excelVence": "2026-09-08",
+      "plan": "Xtreme Semanal",
+      "costo": 13500,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "Luis Duran Marin",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Maria Fernanda Esquivel Segura",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOHEL ALONSO FERNANDEZ MADRIGAL",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "EUCLIDES GAMBOA ALVAREZ",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 19000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Priscilla Gamboa Blanco",
+      "mongoVence": "2026-05-18",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "MAX ALBERTO GOMEZ CALDERON",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "John Gonzalez Garcia",
+      "mongoVence": "2026-06-11",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "NIEVES MARIA GONZALEZ PEREZ",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Clase adultos mayores",
+      "costo": 16000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Abel Guevara Arce",
+      "mongoVence": "2026-08-27",
+      "excelVence": "2026-09-27",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Jose Pablo Guevara Leon",
+      "mongoVence": "2026-08-18",
+      "excelVence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Daniela Hall Alfaro",
+      "mongoVence": "2026-08-24",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Gabriel Hernandez Quiros",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2027-01-23",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "amanda herrera alfaro",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "CAMILA DE LOS ANGELES HERRERA RODRIGUEZ",
+      "mongoVence": "2026-07-26",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Cesar Hidalgo Jimenez",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "SANTIAGO ANDRES JIMENEZ ESPINOZA",
+      "mongoVence": "2026-08-29",
+      "excelVence": "2026-09-29",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Mariela Jimenez Quesada",
+      "mongoVence": "2026-08-18",
+      "excelVence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 19000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Karol Maria Jimenez Salas",
+      "mongoVence": "2026-08-21",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "DANNA FABIOLA JIMENEZ VARGAS",
+      "mongoVence": "2026-08-08",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Kendall Kelly Abarca",
+      "mongoVence": "2026-09-16",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "DORALYN LARIOS MEDINA",
+      "mongoVence": "2026-07-17",
+      "excelVence": "2026-10-28",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "CRISTIAN FERNANDO LEIVA CAMPOS",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "LAUREEN SEKINE LOPEZ AGUERO",
+      "mongoVence": "2026-08-18",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "YUSLIN MARIETH LOPEZ AGUERO",
+      "mongoVence": "2026-08-18",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "DEIRI YARIT MADRIGAL RODRIGUEZ",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "SANTIAGO MARIN ARGUEDAS",
+      "mongoVence": "2026-08-15",
+      "excelVence": "2026-09-19",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "DANIS DAMIAN MATIAZ JIMENEZ",
+      "mongoVence": "2026-06-18",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "Andres Mendez Araya",
+      "mongoVence": "2026-08-22",
+      "excelVence": "2026-09-22",
+      "plan": "Xtreme Mensual",
+      "costo": 18000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "MARIA GRACIELA MENDEZ ARIAS",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Joaquin Monge Barrientos",
+      "mongoVence": "2026-09-25",
+      "excelVence": "2026-10-02",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Fiorela Montes Barboza",
+      "mongoVence": "2026-08-08",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOSE LUIS MORALES ATENCIO",
+      "mongoVence": "2026-08-24",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Johan Morera Jimenez",
+      "mongoVence": "2026-08-11",
+      "excelVence": "2026-09-19",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Samantha Olivar Manfú",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Kimberly Otoya Rojas",
+      "mongoVence": "2026-08-22",
+      "excelVence": "2026-09-26",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOSETH MATHIAS PERAZA GAMBOA",
+      "mongoVence": "2026-08-13",
+      "excelVence": "2026-09-19",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Jorge Eduardo Picado Bravo",
+      "mongoVence": "2026-08-21",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOSE PABLO Roman Solano",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "David Picado Zamora",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Cristian Pizarro Jaen",
+      "mongoVence": "2026-08-15",
+      "excelVence": "2026-09-26",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Marcos Porras Miranda",
+      "mongoVence": "2024-10-10",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "KAREN SOFIA RAMIREZ JIMENEZ",
+      "mongoVence": "(none)",
+      "excelVence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "FABIOLA RODRIGUEZ ALFARO",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Alejandro Rodriguez Amores",
+      "mongoVence": "2026-08-14",
+      "excelVence": "2026-09-19",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Isabela Rodriguez Bejarano",
+      "mongoVence": "2026-07-22",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 35000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Jose Pablo Rodriguez Rodriguez",
+      "mongoVence": "2026-08-28",
+      "excelVence": "2026-09-28",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Alejandro Rodriguez Valenciano",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOSE PABLO Roman Solano",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-09",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOSE FABIO ROMERO MOREIRA",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Jesus Rosales Diaz",
+      "mongoVence": "2026-08-21",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Tatiana Ruiz Vargas",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Christopher Salas Morales",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Greivin Salas Salas",
+      "mongoVence": "2026-08-21",
+      "excelVence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Zantiago Salazar Gonzalez",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 15000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Jimmy Salazar Miranda",
+      "mongoVence": "2024-11-17",
+      "excelVence": "2026-09-26",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "Dario Sanchez Alfaro",
+      "mongoVence": "2026-08-24",
+      "excelVence": "2026-09-01",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Jostin Esteban Sanchez Vargas",
+      "mongoVence": "2026-07-02",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Pablo Joel Sanchez Vargas",
+      "mongoVence": "2026-07-01",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Fabian Segura Rojas",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Xinia Soto Moreno",
+      "mongoVence": "2026-08-13",
+      "excelVence": "2026-09-26",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "David Soto Rojas",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Byron Torres Fernandez",
+      "mongoVence": "2026-08-31",
+      "excelVence": "2026-09-04",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "FELIPE JOSUE UMAÑA SALAS",
+      "mongoVence": "2026-04-10",
+      "excelVence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 20000,
+      "payment": false,
+      "estado": "Recuperado"
+    },
+    {
+      "name": "EMANUEL DE JESUS VARGAS GOMEZ",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "GABRIELA VARGAS SOLIS",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Jordy Josue vega alvarez",
+      "mongoVence": "2026-09-03",
+      "excelVence": "2026-09-10",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Lucy Villalobos Alfaro",
+      "mongoVence": "2026-08-22",
+      "excelVence": "2026-09-22",
+      "plan": "Clase adultos mayores",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Amelia Villalobos Porras",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "JOSELYN MARITZA VILLEGAS ESPINOZA",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Semanal",
+      "costo": 13500,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Angel Vindas Flores",
+      "mongoVence": "2026-08-20",
+      "excelVence": "2026-09-20",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Luis Pablo Viquez Corrales",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2026-09-25",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Susana María Viquez Jara",
+      "mongoVence": "2026-08-21",
+      "excelVence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "SERGIO ANTONIO ZAPATA ARROYO",
+      "mongoVence": "2026-08-22",
+      "excelVence": "2026-09-22",
+      "plan": "Xtreme Mensual",
+      "costo": 21000,
+      "payment": false,
+      "estado": "Activo"
+    },
+    {
+      "name": "Nikol Zeledon Montero",
+      "mongoVence": "2026-08-23",
+      "excelVence": "2026-09-23",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false,
+      "estado": "Activo"
+    }
+  ],
+  "created": [
+    {
+      "name": "ANN MARY ACOSTA JIMENEZ",
+      "cedula": "208990390",
+      "estado": "Activo",
+      "vence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 22000,
+      "payment": false
+    },
+    {
+      "name": "DIEGO PABLO ACOSTA JIMENEZ",
+      "cedula": "208400172",
+      "estado": "Activo",
+      "vence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false
+    },
+    {
+      "name": "SOCORRO DEL ROSARIO CHAVES GARCIA",
+      "cedula": "204420426",
+      "estado": "Activo",
+      "vence": "2026-09-29",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false
+    },
+    {
+      "name": "CRISTOPHER CHAVES RODRIGUEZ",
+      "cedula": "208200660",
+      "estado": "Activo",
+      "vence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false
+    },
+    {
+      "name": "Pablo Andres Fallas Rojas",
+      "cedula": "",
+      "estado": "Activo",
+      "vence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false
+    },
+    {
+      "name": "MARIA JESUS GONZALEZ ROJAS",
+      "cedula": "209780080",
+      "estado": "Activo",
+      "vence": "2026-09-26",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false
+    },
+    {
+      "name": "fred eloy montero orozco",
+      "cedula": "60285926",
+      "estado": "Inactivo",
+      "vence": "2026-08-21",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false
+    },
+    {
+      "name": "ALLISON MURILLO JIMENEZ",
+      "cedula": "209630747",
+      "estado": "Activo",
+      "vence": "2026-09-21",
+      "plan": "Xtreme Mensual",
+      "costo": 0,
+      "payment": false
+    },
+    {
+      "name": "ROXANA LUCIA RETANA RODRIGUEZ",
+      "cedula": "206510994",
+      "estado": "Activo",
+      "vence": "2026-09-26",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false
+    },
+    {
+      "name": "Emma Sofia Rodriguez ruiz",
+      "cedula": "",
+      "estado": "Activo",
+      "vence": "2026-09-19",
+      "plan": "Xtreme Mensual",
+      "costo": 19000,
+      "payment": false
+    },
+    {
+      "name": "jairo salas araya",
+      "cedula": "",
+      "estado": "Activo",
+      "vence": "2026-09-24",
+      "plan": "Xtreme Mensual",
+      "costo": 23000,
+      "payment": false
+    }
+  ],
+  "regressed": [
+    {
+      "name": "Vilma Chinchilla Cole",
+      "mongoVence": "2036-07-16",
+      "excelVence": "2026-09-05"
+    },
+    {
+      "name": "Zaira Esquivel Tenorio",
+      "mongoVence": "2026-09-19",
+      "excelVence": "2025-05-15"
+    },
+    {
+      "name": "Maria Angel Fernandez Solis",
+      "mongoVence": "2025-06-15",
+      "excelVence": "2025-05-15"
+    },
+    {
+      "name": "María Guadalupe Aguilar Alfaro",
+      "mongoVence": "2036-07-17",
+      "excelVence": "2025-02-03"
+    },
+    {
+      "name": "Natalia Aguilar Rojas",
+      "mongoVence": "2026-09-02",
+      "excelVence": "2025-05-30"
+    },
+    {
+      "name": "Laura Alfaro Agúero",
+      "mongoVence": "2026-08-27",
+      "excelVence": "2025-02-05"
+    },
+    {
+      "name": "Erick Alvardo Zuñiga",
+      "mongoVence": "2026-09-16",
+      "excelVence": "2025-04-30"
+    },
+    {
+      "name": "DIANA MARIA ALVAREZ QUESADA",
+      "mongoVence": "2036-02-29",
+      "excelVence": "2026-03-04"
+    },
+    {
+      "name": "excluido Arce Ruíz",
+      "mongoVence": "2026-07-01",
+      "excelVence": "2025-07-04"
+    },
+    {
+      "name": "Nulo Arce Salazar",
+      "mongoVence": "2036-07-16",
+      "excelVence": "2025-08-20"
+    },
+    {
+      "name": "NULO Arias Rocha",
+      "mongoVence": "2026-05-04",
+      "excelVence": "2025-05-11"
+    },
+    {
+      "name": "Marisol Campos Araya",
+      "mongoVence": "2026-09-13",
+      "excelVence": "2025-05-30"
+    },
+    {
+      "name": "Yensi Jimena Campos Padilla",
+      "mongoVence": "2025-09-18",
+      "excelVence": "2025-05-21"
+    },
+    {
+      "name": "Ericka Campos Torres",
+      "mongoVence": "2026-09-04",
+      "excelVence": "2025-05-23"
+    },
+    {
+      "name": "NASHAMY CASTAING MORALES",
+      "mongoVence": "2026-08-06",
+      "excelVence": "2026-08-05"
+    },
+    {
+      "name": "Kevin Castro Durán",
+      "mongoVence": "2026-09-26",
+      "excelVence": "2025-05-26"
+    },
+    {
+      "name": "Natalia Castro Hidalgo",
+      "mongoVence": "2026-08-11",
+      "excelVence": "2025-03-11"
+    },
+    {
+      "name": "Jerry Castro Trejos",
+      "mongoVence": "2026-08-28",
+      "excelVence": "2025-04-30"
+    },
+    {
+      "name": "Carol Cordero Hidalgo",
+      "mongoVence": "2026-09-10",
+      "excelVence": "2025-12-27"
+    },
+    {
+      "name": "Tatiana Delgado Salas",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2025-06-13"
+    },
+    {
+      "name": "Felipe Gadea Castro",
+      "mongoVence": "2026-09-11",
+      "excelVence": "2025-06-11"
+    },
+    {
+      "name": "Emmanuel Gonzalez Campos",
+      "mongoVence": "2026-08-19",
+      "excelVence": "2025-06-20"
+    },
+    {
+      "name": "Stephanie Gonzalez Valverde",
+      "mongoVence": "2036-07-16",
+      "excelVence": "2026-08-31"
+    },
+    {
+      "name": "Prueba Hr",
+      "mongoVence": "2025-11-14",
+      "excelVence": "2025-05-21"
+    },
+    {
+      "name": "cliente sesion inbody",
+      "mongoVence": "2035-08-07",
+      "excelVence": "2026-08-12"
+    },
+    {
+      "name": "Stephanie Jara Murillo",
+      "mongoVence": "2026-09-24",
+      "excelVence": "2025-05-30"
+    },
+    {
+      "name": "Marvin Jiménez Hernández",
+      "mongoVence": "2036-07-16",
+      "excelVence": "2026-02-09"
+    },
+    {
+      "name": "Carla Jimenez Quesada",
+      "mongoVence": "2036-07-16",
+      "excelVence": "2026-09-26"
+    },
+    {
+      "name": "Berny Jimenez Vindas",
+      "mongoVence": "2026-09-11",
+      "excelVence": "2025-05-25"
+    },
+    {
+      "name": "Johan Lobo Rodríguez",
+      "mongoVence": "2026-09-25",
+      "excelVence": "2025-05-30"
+    },
+    {
+      "name": "Javier Menchaca",
+      "mongoVence": "2026-09-25",
+      "excelVence": "2025-05-25"
+    },
+    {
+      "name": "Liliana Mendoza González",
+      "mongoVence": "2026-09-13",
+      "excelVence": "2026-09-05"
+    },
+    {
+      "name": "Joaquin Monge Barrientos",
+      "mongoVence": "2026-09-25",
+      "excelVence": "2025-05-25"
+    },
+    {
+      "name": "Fiorela Montes Barbozo",
+      "mongoVence": "2026-08-08",
+      "excelVence": "2025-03-04"
+    },
+    {
+      "name": "Jose Miguel Mora Morales",
+      "mongoVence": "2031-03-03",
+      "excelVence": "2026-08-31"
+    },
+    {
+      "name": "Sheryll Morales Bermudes",
+      "mongoVence": "2025-11-14",
+      "excelVence": "2025-05-27"
+    },
+    {
+      "name": "AMANDA MORALES HIDALGO",
+      "mongoVence": "2036-08-16",
+      "excelVence": "2026-09-20"
+    },
+    {
+      "name": "Hazziel Navarrete Rodríguez",
+      "mongoVence": "2036-07-17",
+      "excelVence": "2025-01-17"
+    },
+    {
+      "name": "nulo nulo nulo",
+      "mongoVence": "2026-08-27",
+      "excelVence": "2025-07-04"
+    },
+    {
+      "name": "Elio Francisco Omedeo Chaves",
+      "mongoVence": "2026-09-12",
+      "excelVence": "2025-06-07"
+    },
+    {
+      "name": "Huberth Paniagua",
+      "mongoVence": "2026-09-09",
+      "excelVence": "2025-06-07"
+    },
+    {
+      "name": "Giovanni Paniagua Jimenez",
+      "mongoVence": "2026-09-04",
+      "excelVence": "2025-06-17"
+    },
+    {
+      "name": "Kevin Peraza Gamboa",
+      "mongoVence": "2026-08-13",
+      "excelVence": "2026-02-10"
+    },
+    {
+      "name": "Valery Picado",
+      "mongoVence": "2027-03-26",
+      "excelVence": "2026-09-26"
+    },
+    {
+      "name": "Jeudy Rodirguez Jimenez",
+      "mongoVence": "2026-09-07",
+      "excelVence": "2025-05-22"
+    },
+    {
+      "name": "Fernanda Rodríguez Guillén",
+      "mongoVence": "2036-07-17",
+      "excelVence": "2024-10-05"
+    },
+    {
+      "name": "Fabricio Rodríguez Ramírez",
+      "mongoVence": "2026-07-30",
+      "excelVence": "2024-09-12"
+    },
+    {
+      "name": "Jose Pablo Rodriguez Rodriguez",
+      "mongoVence": "2026-08-28",
+      "excelVence": "2025-04-30"
+    },
+    {
+      "name": "Ana Lorena Rojas Elizondo",
+      "mongoVence": "2026-10-17",
+      "excelVence": "2026-09-29"
+    },
+    {
+      "name": "Cynthia Maria Salas Aguilar",
+      "mongoVence": "2026-09-11",
+      "excelVence": "2025-05-24"
+    },
+    {
+      "name": "Marco Vinicio Salazar Acosta",
+      "mongoVence": "2036-07-16",
+      "excelVence": "2026-09-03"
+    },
+    {
+      "name": "Jonathan Salazar Salas",
+      "mongoVence": "2026-09-30",
+      "excelVence": "2025-06-05"
+    },
+    {
+      "name": "Yatniel Sanchez Alfaro",
+      "mongoVence": "2026-08-24",
+      "excelVence": "2025-04-30"
+    },
+    {
+      "name": "José Lisandro Sánchez Salas",
+      "mongoVence": "2026-09-07",
+      "excelVence": "2025-04-30"
+    },
+    {
+      "name": "Joseph Santamria Brioso",
+      "mongoVence": "2026-09-16",
+      "excelVence": "2025-07-02"
+    },
+    {
+      "name": "Emmanuel Solano Arias",
+      "mongoVence": "2026-02-19",
+      "excelVence": "2025-01-16"
+    },
+    {
+      "name": "Fabian Torres Fernandez",
+      "mongoVence": "2026-08-31",
+      "excelVence": "2026-08-27"
+    },
+    {
+      "name": "Juan Daniel Ulate",
+      "mongoVence": "2026-07-01",
+      "excelVence": "2025-07-04"
+    },
+    {
+      "name": "Luis Pablo Viquez Corrales",
+      "mongoVence": "2026-08-25",
+      "excelVence": "2025-05-17"
+    },
+    {
+      "name": "Alvaro Viquez Quesada",
+      "mongoVence": "2026-09-24",
+      "excelVence": "2025-07-19"
+    },
+    {
+      "name": "Sandra Viquez Quesada",
+      "mongoVence": "2026-09-24",
+      "excelVence": "2025-05-24"
+    },
+    {
+      "name": "Natalia Zapata Herrera",
+      "mongoVence": "2026-09-24",
+      "excelVence": "2025-06-11"
+    },
+    {
+      "name": "Hugo Zeledon Montero",
+      "mongoVence": "2026-05-23",
+      "excelVence": "2025-05-20"
+    }
+  ],
+  "aligned": 1936,
+  "ambiguous": [
+    {
+      "name": "Prueba Br",
+      "row": 555,
+      "matches": 3
+    },
+    {
+      "name": "Harold Gamboa Solano",
+      "row": 1069,
+      "matches": 2
+    }
+  ],
+  "invalid": [
+    {
+      "name": "JOSE FRANCISCO ACEVEDO MIRANDA",
+      "row": 37,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "ANDREA ALFARO SALAZAR",
+      "row": 149,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "LUISA FERNANDA ARGUEDAS CHAVES",
+      "row": 346,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "SANDRA DANIELA ARGUELLO MEJIAS",
+      "row": 352,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "nulo BARRANTES JIMENEZ",
+      "row": 451,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "KIARA DILANNA BENAVIDES GUZMAN",
+      "row": 481,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "Alejandro Borbón Quirós",
+      "row": 553,
+      "estado": "Activo"
+    },
+    {
+      "name": "NULO FONSECA RIVERA",
+      "row": 1032,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "Angelina Monge Barrientos",
+      "row": 1639,
+      "estado": "Activo"
+    },
+    {
+      "name": "Joseth Montero Morera",
+      "row": 1665,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "MARIA JOSE MORERA MURILLO",
+      "row": 1768,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "GERARDO ALEJANDRO QUIROS PANIAGUA",
+      "row": 2035,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "Marjorie Quiros Paniagua",
+      "row": 2037,
+      "estado": "Activo"
+    },
+    {
+      "name": "MARIA PAULA ROJAS ARIAS",
+      "row": 2258,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "Leo Salas Soto",
+      "row": 2424,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "LUIS ENRIQUE SALAZAR CORDERO",
+      "row": 2443,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "JOSHA DANIEL SOZA CERDAS",
+      "row": 2659,
+      "estado": "Prospecto"
+    },
+    {
+      "name": "Daniela Valerio Quirós",
+      "row": 2746,
+      "estado": "Activo"
+    },
+    {
+      "name": "GUISELLE VILLALOBOS RODRIGUEZ",
+      "row": 2921,
+      "estado": "Prospecto"
+    }
+  ]
+}

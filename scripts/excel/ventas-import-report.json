@@ -1,0 +1,4371 @@
+{
+  "generatedAt": "2026-08-27T23:12:40.955Z",
+  "summary": {
+    "mode": "APPLY",
+    "workbook": "C:/Users/PC1/Desktop/CONTROLES/2026/CONTROL DE VENTAS DE PRODUCTOS/VENTAS DEL GIMNASIO(Recuperado automáticamente).xlsx",
+    "realSaleRows": 541,
+    "willUpsert": 541,
+    "newInserts": 541,
+    "updatesToPriorImport": 0,
+    "photoImportsToDelete": 27,
+    "suspectDateRows": 2,
+    "grandTotalCrc": 838600,
+    "countByMethod": {
+      "sinpe": 408,
+      "cash": 133
+    },
+    "amountByMethod": {
+      "sinpe": 655200,
+      "cash": 183400
+    }
+  },
+  "writeResult": {
+    "photoImportsDeleted": 27,
+    "upserted": 541,
+    "matched": 0,
+    "modified": 0
+  },
+  "insert": [
+    {
+      "id": "sale-xlsx-ventas-row2",
+      "iso": "2026-06-12",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row3",
+      "iso": "2026-06-12",
+      "producto": "Redcon",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 4000
+    },
+    {
+      "id": "sale-xlsx-ventas-row4",
+      "iso": "2026-06-12",
+      "producto": "USN",
+      "qty": 3,
+      "method": "sinpe",
+      "total": 6000
+    },
+    {
+      "id": "sale-xlsx-ventas-row5",
+      "iso": "2026-06-12",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row6",
+      "iso": "2026-06-13",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row7",
+      "iso": "2026-06-13",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row8",
+      "iso": "2026-06-13",
+      "producto": "usn",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row9",
+      "iso": "2026-06-13",
+      "producto": "redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row10",
+      "iso": "2026-06-13",
+      "producto": "usn",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row11",
+      "iso": "2026-06-15",
+      "producto": "paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row12",
+      "iso": "2026-06-15",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row13",
+      "iso": "2026-06-15",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row14",
+      "iso": "2026-06-15",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row15",
+      "iso": "2026-06-15",
+      "producto": "usn",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row16",
+      "iso": "2026-06-15",
+      "producto": "usn",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row17",
+      "iso": "2026-06-15",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row18",
+      "iso": "2026-06-15",
+      "producto": "USN",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 4000
+    },
+    {
+      "id": "sale-xlsx-ventas-row19",
+      "iso": "2026-06-15",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row20",
+      "iso": "2026-06-15",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row21",
+      "iso": "2026-06-15",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row22",
+      "iso": "2026-06-15",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row23",
+      "iso": "2026-06-15",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row24",
+      "iso": "2026-06-15",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row25",
+      "iso": "2026-06-16",
+      "producto": "Barra Tosh",
+      "qty": 3,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row26",
+      "iso": "2026-06-16",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row27",
+      "iso": "2026-06-16",
+      "producto": "Powerade",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 2400
+    },
+    {
+      "id": "sale-xlsx-ventas-row28",
+      "iso": "2026-06-16",
+      "producto": "Barrita Nature",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row29",
+      "iso": "2026-06-17",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row30",
+      "iso": "2026-06-17",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row31",
+      "iso": "2026-06-17",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row32",
+      "iso": "2026-06-17",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row33",
+      "iso": "2026-06-17",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row34",
+      "iso": "2026-06-17",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row35",
+      "iso": "2026-06-17",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row36",
+      "iso": "2026-06-17",
+      "producto": "Redcon",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 4000
+    },
+    {
+      "id": "sale-xlsx-ventas-row37",
+      "iso": "2026-06-17",
+      "producto": "Barra Tosh",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row38",
+      "iso": "2026-06-17",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row39",
+      "iso": "2026-06-17",
+      "producto": "Batido 2000",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row40",
+      "iso": "2026-06-17",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row41",
+      "iso": "2026-06-17",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row42",
+      "iso": "2026-06-17",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row43",
+      "iso": "2026-08-17",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row44",
+      "iso": "2026-06-18",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row45",
+      "iso": "2026-06-18",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row46",
+      "iso": "2026-06-18",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row47",
+      "iso": "2026-06-18",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row48",
+      "iso": "2026-06-18",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row49",
+      "iso": "2026-06-18",
+      "producto": "USN",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row50",
+      "iso": "2026-06-18",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row51",
+      "iso": "2026-06-18",
+      "producto": "c4 en polvo",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1700
+    },
+    {
+      "id": "sale-xlsx-ventas-row52",
+      "iso": "2026-06-19",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row53",
+      "iso": "2026-06-19",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row54",
+      "iso": "2026-06-19",
+      "producto": "Amino Energy LATA",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row55",
+      "iso": "2026-06-19",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row56",
+      "iso": "2026-06-19",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row57",
+      "iso": "2026-06-20",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row58",
+      "iso": "2026-06-22",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row59",
+      "iso": "2026-06-22",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row60",
+      "iso": "2026-06-22",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row61",
+      "iso": "2026-06-22",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row62",
+      "iso": "2026-06-22",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row63",
+      "iso": "2026-06-23",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row64",
+      "iso": "2026-06-23",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row65",
+      "iso": "2026-06-23",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row66",
+      "iso": "2026-06-23",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row67",
+      "iso": "2026-06-23",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row68",
+      "iso": "2026-06-23",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row69",
+      "iso": "2026-06-23",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row70",
+      "iso": "2026-06-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row71",
+      "iso": "2026-06-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row72",
+      "iso": "2026-06-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row73",
+      "iso": "2026-06-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row74",
+      "iso": "2026-06-24",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row75",
+      "iso": "2026-06-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row76",
+      "iso": "2026-06-24",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row77",
+      "iso": "2026-06-25",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row78",
+      "iso": "2026-06-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row79",
+      "iso": "2026-06-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row80",
+      "iso": "2026-08-25",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row81",
+      "iso": "2026-06-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row82",
+      "iso": "2026-06-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row83",
+      "iso": "2026-06-25",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row84",
+      "iso": "2026-06-25",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row85",
+      "iso": "2026-06-25",
+      "producto": "redcon",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 4000
+    },
+    {
+      "id": "sale-xlsx-ventas-row86",
+      "iso": "2026-06-25",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row87",
+      "iso": "2026-06-25",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row88",
+      "iso": "2026-06-26",
+      "producto": "Agua 1L",
+      "qty": 1,
+      "method": "cash",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row89",
+      "iso": "2026-06-26",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row90",
+      "iso": "2026-06-26",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row91",
+      "iso": "2026-06-26",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row92",
+      "iso": "2026-04-26",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row93",
+      "iso": "2026-04-26",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row94",
+      "iso": "2026-06-26",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row95",
+      "iso": "2026-06-26",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row96",
+      "iso": "2026-06-26",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row97",
+      "iso": "2026-06-26",
+      "producto": "monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row98",
+      "iso": "2026-06-26",
+      "producto": "CHICLES",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row99",
+      "iso": "2026-06-26",
+      "producto": "redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row100",
+      "iso": "2026-06-26",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row101",
+      "iso": "2026-06-26",
+      "producto": "CHICLES",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row102",
+      "iso": "2026-06-26",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row103",
+      "iso": "2026-04-26",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row104",
+      "iso": "2026-04-27",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row105",
+      "iso": "2026-06-27",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row106",
+      "iso": "2026-06-29",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row107",
+      "iso": "2026-06-29",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row108",
+      "iso": "2026-06-30",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row109",
+      "iso": "2026-06-29",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row110",
+      "iso": "2026-06-29",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row111",
+      "iso": "2026-06-29",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row112",
+      "iso": "2026-06-29",
+      "producto": "Batido 2000",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row113",
+      "iso": "2026-06-29",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row114",
+      "iso": "2026-06-30",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row115",
+      "iso": "2026-06-30",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row116",
+      "iso": "2026-06-30",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row117",
+      "iso": "2026-06-30",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row118",
+      "iso": "2026-06-30",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row119",
+      "iso": "2026-06-30",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row120",
+      "iso": "2026-06-30",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row121",
+      "iso": "2026-06-30",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "cash",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row122",
+      "iso": "2026-06-30",
+      "producto": "Batido 2000",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row123",
+      "iso": "2026-06-30",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row126",
+      "iso": "2026-07-01",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row127",
+      "iso": "2026-07-01",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row128",
+      "iso": "2026-07-01",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row129",
+      "iso": "2026-07-01",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row130",
+      "iso": "2026-07-01",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row131",
+      "iso": "2026-07-01",
+      "producto": "Agua 1L",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row132",
+      "iso": "2026-07-01",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row133",
+      "iso": "2026-07-01",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row134",
+      "iso": "2026-07-02",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row135",
+      "iso": "2026-07-02",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row136",
+      "iso": "2026-07-02",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row137",
+      "iso": "2026-07-02",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row138",
+      "iso": "2026-07-02",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row139",
+      "iso": "2026-07-02",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row140",
+      "iso": "2026-07-02",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row141",
+      "iso": "2026-07-03",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row142",
+      "iso": "2026-07-03",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row143",
+      "iso": "2026-07-03",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row144",
+      "iso": "2026-07-03",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row145",
+      "iso": "2026-07-03",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "cash",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row146",
+      "iso": "2026-07-03",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row147",
+      "iso": "2026-07-04",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row148",
+      "iso": "2026-07-04",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row149",
+      "iso": "2026-07-04",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row150",
+      "iso": "2026-07-04",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row151",
+      "iso": "2026-07-06",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row152",
+      "iso": "2026-07-06",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row153",
+      "iso": "2026-07-06",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row154",
+      "iso": "2026-07-06",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row155",
+      "iso": "2026-07-06",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row156",
+      "iso": "2026-07-06",
+      "producto": "USN",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row157",
+      "iso": "2026-07-06",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row158",
+      "iso": "2026-07-06",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row159",
+      "iso": "2026-07-06",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row160",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row161",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row162",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row163",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row164",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row165",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row166",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row167",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row168",
+      "iso": "2026-07-06",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row169",
+      "iso": "2026-07-06",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row170",
+      "iso": "2026-07-07",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row171",
+      "iso": "2026-07-07",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row172",
+      "iso": "2026-07-07",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row173",
+      "iso": "2026-07-07",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row174",
+      "iso": "2026-07-07",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row175",
+      "iso": "2026-07-07",
+      "producto": "c4",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row176",
+      "iso": "2026-07-07",
+      "producto": "USN",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row177",
+      "iso": "2026-07-07",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row178",
+      "iso": "2026-07-07",
+      "producto": "USN",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row179",
+      "iso": "2026-07-07",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row180",
+      "iso": "2026-07-07",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row181",
+      "iso": "2026-07-08",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row182",
+      "iso": "2026-07-08",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row183",
+      "iso": "2026-07-08",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row184",
+      "iso": "2026-07-08",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row185",
+      "iso": "2026-07-08",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row186",
+      "iso": "2026-07-08",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row187",
+      "iso": "2026-07-08",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row188",
+      "iso": "2026-07-08",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row189",
+      "iso": "2026-07-08",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row190",
+      "iso": "2026-07-08",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row191",
+      "iso": "2026-07-08",
+      "producto": "redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row192",
+      "iso": "2026-07-08",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row193",
+      "iso": "2026-07-08",
+      "producto": "agua 1l",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row194",
+      "iso": "2026-07-08",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row195",
+      "iso": "2026-07-08",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row196",
+      "iso": "2026-07-09",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row197",
+      "iso": "2026-07-09",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row198",
+      "iso": "2026-07-09",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row199",
+      "iso": "2026-07-09",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row200",
+      "iso": "2026-07-09",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row201",
+      "iso": "2026-07-09",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row202",
+      "iso": "2026-07-09",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row203",
+      "iso": "2026-07-09",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row204",
+      "iso": "2026-07-09",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row205",
+      "iso": "2026-07-09",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row206",
+      "iso": "2026-07-09",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row207",
+      "iso": "2026-07-09",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row208",
+      "iso": "2026-07-09",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row209",
+      "iso": "2026-07-10",
+      "producto": "Agua 1L",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row210",
+      "iso": "2026-07-10",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row211",
+      "iso": "2026-07-10",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row212",
+      "iso": "2026-07-10",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row213",
+      "iso": "2026-07-10",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row214",
+      "iso": "2026-07-10",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row215",
+      "iso": "2026-07-10",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row216",
+      "iso": "2026-07-10",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row217",
+      "iso": "2026-07-11",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row218",
+      "iso": "2026-07-11",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row219",
+      "iso": "2026-07-13",
+      "producto": "Barra Tosh",
+      "qty": 6,
+      "method": "sinpe",
+      "total": 3000
+    },
+    {
+      "id": "sale-xlsx-ventas-row220",
+      "iso": "2026-07-13",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row221",
+      "iso": "2026-07-13",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row222",
+      "iso": "2026-07-13",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row223",
+      "iso": "2026-07-13",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row224",
+      "iso": "2026-07-13",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row225",
+      "iso": "2026-07-13",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row226",
+      "iso": "2026-07-13",
+      "producto": "USN",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row227",
+      "iso": "2026-07-13",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row228",
+      "iso": "2026-07-13",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row229",
+      "iso": "2026-07-13",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row230",
+      "iso": "2026-07-14",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row231",
+      "iso": "2026-07-14",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row232",
+      "iso": "2026-07-14",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row233",
+      "iso": "2026-07-14",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row234",
+      "iso": "2026-07-14",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row235",
+      "iso": "2026-07-14",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row236",
+      "iso": "2026-07-14",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row237",
+      "iso": "2026-07-14",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row238",
+      "iso": "2026-07-14",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row239",
+      "iso": "2026-07-14",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row240",
+      "iso": "2026-07-14",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row241",
+      "iso": "2026-07-14",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row242",
+      "iso": "2026-07-14",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row243",
+      "iso": "2026-07-14",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row244",
+      "iso": "2026-07-15",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row245",
+      "iso": "2026-07-15",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row246",
+      "iso": "2026-07-15",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row247",
+      "iso": "2026-07-15",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row248",
+      "iso": "2026-07-15",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 600
+    },
+    {
+      "id": "sale-xlsx-ventas-row249",
+      "iso": "2026-07-16",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 600
+    },
+    {
+      "id": "sale-xlsx-ventas-row250",
+      "iso": "2026-07-15",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row251",
+      "iso": "2026-07-15",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row252",
+      "iso": "2026-07-15",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row253",
+      "iso": "2026-07-15",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row254",
+      "iso": "2026-07-15",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row255",
+      "iso": "2026-07-15",
+      "producto": "USN",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row256",
+      "iso": "2026-07-15",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row257",
+      "iso": "2026-07-14",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row258",
+      "iso": "2026-07-16",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row259",
+      "iso": "2026-07-16",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row260",
+      "iso": "2026-07-16",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row262",
+      "iso": "2026-07-16",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row263",
+      "iso": "2026-07-16",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row264",
+      "iso": "2026-07-16",
+      "producto": "Agua 1L",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row265",
+      "iso": "2026-07-16",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row266",
+      "iso": "2026-07-16",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row267",
+      "iso": "2026-07-16",
+      "producto": "battidos",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row268",
+      "iso": "2026-07-16",
+      "producto": "batidos",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row269",
+      "iso": "2026-07-17",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row270",
+      "iso": "2026-07-17",
+      "producto": "galletas avena",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 600
+    },
+    {
+      "id": "sale-xlsx-ventas-row271",
+      "iso": "2026-07-17",
+      "producto": "USN",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row272",
+      "iso": "2026-07-17",
+      "producto": "galleta avena",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 600
+    },
+    {
+      "id": "sale-xlsx-ventas-row273",
+      "iso": "2026-07-17",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row274",
+      "iso": "2026-07-17",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row275",
+      "iso": "2026-07-17",
+      "producto": "galleta",
+      "qty": 1,
+      "method": "cash",
+      "total": 600
+    },
+    {
+      "id": "sale-xlsx-ventas-row276",
+      "iso": "2026-07-17",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row277",
+      "iso": "2026-07-17",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 600
+    },
+    {
+      "id": "sale-xlsx-ventas-row278",
+      "iso": "2026-07-17",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row279",
+      "iso": "2026-07-17",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row280",
+      "iso": "2026-07-17",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row281",
+      "iso": "2026-07-18",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row282",
+      "iso": "2026-07-18",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row283",
+      "iso": "2026-07-18",
+      "producto": "c4",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row284",
+      "iso": "2026-07-18",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row285",
+      "iso": "2026-07-18",
+      "producto": "USN",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row286",
+      "iso": "2026-07-20",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row287",
+      "iso": "2026-07-20",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row288",
+      "iso": "2026-07-20",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row289",
+      "iso": "2026-07-20",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row290",
+      "iso": "2026-07-21",
+      "producto": "Agua 1L",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row291",
+      "iso": "2026-07-21",
+      "producto": "c4",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row292",
+      "iso": "2026-07-21",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row293",
+      "iso": "2026-07-21",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row294",
+      "iso": "2026-07-21",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row295",
+      "iso": "2026-07-21",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row296",
+      "iso": "2026-07-22",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row297",
+      "iso": "2026-07-22",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row298",
+      "iso": "2026-07-22",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row299",
+      "iso": "2026-07-22",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row300",
+      "iso": "2026-07-22",
+      "producto": "c4",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row301",
+      "iso": "2026-07-22",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row302",
+      "iso": "2026-07-22",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row303",
+      "iso": "2026-07-23",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row304",
+      "iso": "2026-07-23",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row305",
+      "iso": "2026-07-23",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row306",
+      "iso": "2026-07-23",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row307",
+      "iso": "2026-07-23",
+      "producto": "galletas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 600
+    },
+    {
+      "id": "sale-xlsx-ventas-row308",
+      "iso": "2026-07-24",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row309",
+      "iso": "2026-07-24",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row310",
+      "iso": "2026-07-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row311",
+      "iso": "2026-07-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row312",
+      "iso": "2026-07-24",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "cash",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row313",
+      "iso": "2026-07-24",
+      "producto": "c4",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row314",
+      "iso": "2026-07-25",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row315",
+      "iso": "2026-07-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row316",
+      "iso": "2026-07-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row317",
+      "iso": "2026-07-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row318",
+      "iso": "2026-07-25",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row319",
+      "iso": "2026-07-25",
+      "producto": "c4 en lata",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row320",
+      "iso": "2026-07-27",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row321",
+      "iso": "1900-01-26",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row322",
+      "iso": "2026-07-27",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row323",
+      "iso": "2026-07-27",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row324",
+      "iso": "2026-07-27",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row325",
+      "iso": "2026-07-27",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row326",
+      "iso": "2026-07-27",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row327",
+      "iso": "2026-07-28",
+      "producto": "c4",
+      "qty": 1,
+      "method": "cash",
+      "total": 2500
+    },
+    {
+      "id": "sale-xlsx-ventas-row328",
+      "iso": "2026-07-28",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row329",
+      "iso": "2026-07-28",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row330",
+      "iso": "2026-07-28",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row331",
+      "iso": "2026-07-28",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row332",
+      "iso": "2026-07-28",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row333",
+      "iso": "2026-07-28",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row334",
+      "iso": "2026-07-28",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row335",
+      "iso": "2026-07-28",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row336",
+      "iso": "2026-07-29",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row337",
+      "iso": "2026-07-29",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row338",
+      "iso": "2026-07-29",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row339",
+      "iso": "2026-07-29",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row340",
+      "iso": "2026-07-29",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row341",
+      "iso": "2026-08-29",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row342",
+      "iso": "2026-07-29",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row343",
+      "iso": "2026-07-29",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row344",
+      "iso": "2026-07-29",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row345",
+      "iso": "2026-07-29",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row346",
+      "iso": "2026-07-30",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row347",
+      "iso": "2026-07-30",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row348",
+      "iso": "2026-07-30",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row349",
+      "iso": "2026-07-30",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row350",
+      "iso": "2026-07-30",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row351",
+      "iso": "2026-07-30",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row352",
+      "iso": "2026-07-30",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row353",
+      "iso": "2026-07-30",
+      "producto": "Agua 1L",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row354",
+      "iso": "2026-07-31",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row355",
+      "iso": "2026-07-31",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row356",
+      "iso": "2026-07-31",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row357",
+      "iso": "2026-07-31",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row358",
+      "iso": "2026-08-01",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row359",
+      "iso": "2026-08-01",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row360",
+      "iso": "2026-08-01",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row361",
+      "iso": "2026-08-01",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row362",
+      "iso": "2026-08-01",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row363",
+      "iso": "2026-08-03",
+      "producto": "Agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row364",
+      "iso": "2026-08-03",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row365",
+      "iso": "2026-08-03",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row366",
+      "iso": "2026-08-03",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row367",
+      "iso": "2026-08-03",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row368",
+      "iso": "2026-08-03",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row369",
+      "iso": "2026-08-04",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row370",
+      "iso": "2026-08-04",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row371",
+      "iso": "2026-08-04",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row372",
+      "iso": "2026-01-04",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row373",
+      "iso": "2026-08-04",
+      "producto": "barra tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row374",
+      "iso": "2026-08-04",
+      "producto": "agua 600ml",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row375",
+      "iso": "2026-08-04",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row376",
+      "iso": "2026-08-04",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row377",
+      "iso": "2026-08-04",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row378",
+      "iso": "2026-08-04",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row379",
+      "iso": "2026-08-04",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row380",
+      "iso": "2026-08-04",
+      "producto": "agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row381",
+      "iso": "2026-08-05",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row382",
+      "iso": "2026-08-05",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row383",
+      "iso": "2026-08-05",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row384",
+      "iso": "2026-08-05",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row385",
+      "iso": "2026-08-05",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row386",
+      "iso": "2026-08-05",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row387",
+      "iso": "2026-08-05",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row388",
+      "iso": "2026-08-05",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row389",
+      "iso": "2026-08-05",
+      "producto": "agua 600ml",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row390",
+      "iso": "2026-08-05",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row391",
+      "iso": "2026-08-05",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row392",
+      "iso": "2026-08-05",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row393",
+      "iso": "2026-08-05",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row394",
+      "iso": "2026-08-05",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row395",
+      "iso": "2026-08-05",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row396",
+      "iso": "2026-08-06",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row397",
+      "iso": "2026-08-06",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row398",
+      "iso": "2026-08-06",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row399",
+      "iso": "2026-08-06",
+      "producto": "batido",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row400",
+      "iso": "2026-08-06",
+      "producto": "agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row401",
+      "iso": "2026-08-06",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row402",
+      "iso": "2026-08-06",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row403",
+      "iso": "2026-08-06",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row404",
+      "iso": "2026-08-07",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row405",
+      "iso": "2026-08-07",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row406",
+      "iso": "2026-08-07",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row407",
+      "iso": "2026-08-07",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row408",
+      "iso": "2026-08-07",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row409",
+      "iso": "2026-08-07",
+      "producto": "agua 600ml",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row410",
+      "iso": "2026-08-07",
+      "producto": "agua 600ml",
+      "qty": 1,
+      "method": "cash",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row411",
+      "iso": "2026-08-07",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row412",
+      "iso": "2026-08-07",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row413",
+      "iso": "2026-08-07",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row414",
+      "iso": "2026-08-07",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row415",
+      "iso": "2026-08-08",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row416",
+      "iso": "2026-08-08",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row417",
+      "iso": "2026-08-08",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row418",
+      "iso": "2026-08-08",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row419",
+      "iso": "2026-08-08",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row420",
+      "iso": "2026-08-10",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row421",
+      "iso": "2026-08-10",
+      "producto": "Piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row422",
+      "iso": "2026-08-10",
+      "producto": "piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row423",
+      "iso": "2026-08-10",
+      "producto": "piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row424",
+      "iso": "2026-08-10",
+      "producto": "Piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row425",
+      "iso": "2026-08-10",
+      "producto": "Piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row426",
+      "iso": "2026-08-10",
+      "producto": "Agua 1L",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row427",
+      "iso": "2026-08-10",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row428",
+      "iso": "2026-08-10",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row429",
+      "iso": "2026-08-10",
+      "producto": "piñas",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row430",
+      "iso": "2026-08-10",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row431",
+      "iso": "2026-08-10",
+      "producto": "batido",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row432",
+      "iso": "2026-08-10",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row433",
+      "iso": "2026-08-10",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row434",
+      "iso": "2026-08-10",
+      "producto": "Barra Tosh",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row435",
+      "iso": "2026-08-10",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row436",
+      "iso": "2026-08-10",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row437",
+      "iso": "2026-08-10",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row438",
+      "iso": "2026-08-10",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row439",
+      "iso": "2026-08-10",
+      "producto": "piñas",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row440",
+      "iso": "2026-08-11",
+      "producto": "monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row441",
+      "iso": "2026-08-11",
+      "producto": "barritas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row442",
+      "iso": "2026-08-11",
+      "producto": "barritas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row443",
+      "iso": "2026-08-11",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row444",
+      "iso": "2026-08-11",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row445",
+      "iso": "2026-08-11",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row446",
+      "iso": "2026-08-11",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row447",
+      "iso": "2026-08-11",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row448",
+      "iso": "2026-08-12",
+      "producto": "barritas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row449",
+      "iso": "2026-08-12",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row450",
+      "iso": "2026-08-12",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row451",
+      "iso": "2026-08-12",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row452",
+      "iso": "2026-08-12",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row453",
+      "iso": "2026-08-12",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row454",
+      "iso": "2026-08-13",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row455",
+      "iso": "2026-08-13",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row456",
+      "iso": "2026-08-13",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row457",
+      "iso": "2026-08-13",
+      "producto": "Piñas",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row458",
+      "iso": "2026-08-13",
+      "producto": "barritas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row459",
+      "iso": "2026-08-13",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row460",
+      "iso": "2026-08-13",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row461",
+      "iso": "2026-08-13",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row462",
+      "iso": "2026-08-14",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row463",
+      "iso": "2026-08-14",
+      "producto": "Piñas",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row464",
+      "iso": "2026-08-14",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row465",
+      "iso": "2026-08-14",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row466",
+      "iso": "2026-08-14",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row467",
+      "iso": "2026-08-14",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row468",
+      "iso": "2026-08-14",
+      "producto": "redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row469",
+      "iso": "2026-08-17",
+      "producto": "Piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row470",
+      "iso": "2026-08-17",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row471",
+      "iso": "2026-08-17",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row472",
+      "iso": "2026-08-17",
+      "producto": "monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row473",
+      "iso": "2026-08-17",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row474",
+      "iso": "",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row475",
+      "iso": "2026-08-18",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row476",
+      "iso": "2026-08-18",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row477",
+      "iso": "2026-08-18",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row478",
+      "iso": "2026-08-18",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row479",
+      "iso": "2026-08-18",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row480",
+      "iso": "2026-08-18",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row481",
+      "iso": "2026-08-18",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row482",
+      "iso": "2026-08-18",
+      "producto": "piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row483",
+      "iso": "2026-08-18",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row484",
+      "iso": "2026-08-19",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row485",
+      "iso": "2026-08-19",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row486",
+      "iso": "2026-08-19",
+      "producto": "monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row487",
+      "iso": "2026-08-19",
+      "producto": "monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row488",
+      "iso": "2026-08-19",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row489",
+      "iso": "2026-08-19",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row490",
+      "iso": "2026-08-19",
+      "producto": "piñas",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row491",
+      "iso": "2026-08-19",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row492",
+      "iso": "2026-08-20",
+      "producto": "Redcon",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 4000
+    },
+    {
+      "id": "sale-xlsx-ventas-row493",
+      "iso": "2026-08-20",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row494",
+      "iso": "2026-08-20",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row495",
+      "iso": "2026-08-20",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row496",
+      "iso": "2026-08-20",
+      "producto": "Monster",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row497",
+      "iso": "2026-08-21",
+      "producto": "Batido 2000",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row498",
+      "iso": "2026-08-21",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row499",
+      "iso": "2026-08-21",
+      "producto": "Redcon",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 4000
+    },
+    {
+      "id": "sale-xlsx-ventas-row500",
+      "iso": "2026-08-21",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row501",
+      "iso": "2026-08-21",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row502",
+      "iso": "2026-08-21",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row503",
+      "iso": "2026-08-21",
+      "producto": "Barra Tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row504",
+      "iso": "2026-08-21",
+      "producto": "Piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row505",
+      "iso": "2026-08-21",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row506",
+      "iso": "2026-08-21",
+      "producto": "Piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row507",
+      "iso": "2026-08-22",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row508",
+      "iso": "2026-08-22",
+      "producto": "Barra tosh",
+      "qty": 1,
+      "method": "cash",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row509",
+      "iso": "2026-08-22",
+      "producto": "redcon",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 4000
+    },
+    {
+      "id": "sale-xlsx-ventas-row510",
+      "iso": "2026-08-22",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row511",
+      "iso": "2026-08-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row512",
+      "iso": "2026-08-24",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row513",
+      "iso": "2026-08-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row514",
+      "iso": "2026-08-24",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row515",
+      "iso": "2026-08-24",
+      "producto": "agua",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row516",
+      "iso": "2026-08-24",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row517",
+      "iso": "2026-08-24",
+      "producto": "aguas",
+      "qty": 1,
+      "method": "cash",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row518",
+      "iso": "2026-08-24",
+      "producto": "Paños",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row519",
+      "iso": "2026-08-24",
+      "producto": "barritas",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row520",
+      "iso": "2026-08-25",
+      "producto": "Redcon",
+      "qty": 3,
+      "method": "sinpe",
+      "total": 6000
+    },
+    {
+      "id": "sale-xlsx-ventas-row521",
+      "iso": "2026-08-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row522",
+      "iso": "2026-08-25",
+      "producto": "piñas",
+      "qty": 1,
+      "method": "cash",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row523",
+      "iso": "2026-08-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row524",
+      "iso": "2026-08-25",
+      "producto": "powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row525",
+      "iso": "2026-08-25",
+      "producto": "piñas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row526",
+      "iso": "2026-08-25",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "cash",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row527",
+      "iso": "2026-08-26",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row528",
+      "iso": "2026-08-26",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row529",
+      "iso": "2026-08-26",
+      "producto": "barritas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row530",
+      "iso": "2026-08-26",
+      "producto": "barritas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row531",
+      "iso": "2026-08-26",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row532",
+      "iso": "2026-08-26",
+      "producto": "barritas",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row533",
+      "iso": "2026-08-26",
+      "producto": "Miel",
+      "qty": 1,
+      "method": "cash",
+      "total": 8000
+    },
+    {
+      "id": "sale-xlsx-ventas-row534",
+      "iso": "2026-08-26",
+      "producto": "Chicles",
+      "qty": 1,
+      "method": "cash",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row535",
+      "iso": "2026-08-26",
+      "producto": "barra tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row536",
+      "iso": "2026-08-26",
+      "producto": "barritas",
+      "qty": 3,
+      "method": "sinpe",
+      "total": 1500
+    },
+    {
+      "id": "sale-xlsx-ventas-row537",
+      "iso": "2026-08-26",
+      "producto": "agua",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1000
+    },
+    {
+      "id": "sale-xlsx-ventas-row538",
+      "iso": "2026-08-26",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row539",
+      "iso": "2026-08-27",
+      "producto": "Redcon",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 2000
+    },
+    {
+      "id": "sale-xlsx-ventas-row540",
+      "iso": "2026-08-27",
+      "producto": "Redcon",
+      "qty": 2,
+      "method": "sinpe",
+      "total": 4000
+    },
+    {
+      "id": "sale-xlsx-ventas-row541",
+      "iso": "2026-08-27",
+      "producto": "Powerade",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 1200
+    },
+    {
+      "id": "sale-xlsx-ventas-row542",
+      "iso": "2026-08-27",
+      "producto": "chicles",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 400
+    },
+    {
+      "id": "sale-xlsx-ventas-row543",
+      "iso": "2026-08-27",
+      "producto": "barra tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row544",
+      "iso": "2026-08-27",
+      "producto": "barra tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    },
+    {
+      "id": "sale-xlsx-ventas-row545",
+      "iso": "2026-08-27",
+      "producto": "barra tosh",
+      "qty": 1,
+      "method": "sinpe",
+      "total": 500
+    }
+  ],
+  "updateSameSource": [],
+  "suspectDate": [
+    {
+      "sheetRow": 321,
+      "producto": "Monster",
+      "methodRaw": "sINPE"
+    },
+    {
+      "sheetRow": 474,
+      "producto": "chicles",
+      "methodRaw": ""
+    }
+  ]
+}

@@ -316,6 +316,17 @@ html.xg-staff-light .xg-theme-toggle {
     visibility: hidden !important;
   }
 
+  /* Neutralizar cualquier ancestro posicionado o con recorte del comprobante
+   * (p. ej. el <aside> "lg:sticky" del punto de venta de inventario). Sin esto,
+   * el `position:absolute; inset:0` del recibo se ancla a esa columna en vez de
+   * a la página: se imprimía corrido al centro/derecha y recortado. `:has()`
+   * selecciona a todos los ancestros del recibo (html, body, main, aside…). */
+  :has(.thermal-receipt) {
+    position: static !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
   .thermal-receipt,
   .thermal-receipt * {
     visibility: visible !important;

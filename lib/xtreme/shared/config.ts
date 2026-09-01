@@ -31,6 +31,8 @@ export const PRODUCT_SALES_COLLECTION = "xtreme_gym_product_sales";
 export const RECEPTION_CONTROLS_COLLECTION = "xtreme_gym_reception_controls";
 export const RECEPTION_DUTIES_COLLECTION = "xtreme_gym_reception_duties";
 export const FACE_TEMPLATES_COLLECTION = "xtreme_gym_face_templates";
+/** Mapa enrollid (terminal física de la puerta) → normalizedName del socio. */
+export const FACE_TERMINAL_MAP_COLLECTION = "xtreme_gym_face_terminal_map";
 export const HABIT_LOGS_COLLECTION = "xtreme_gym_habit_logs";
 /** Bitácora de todo correo saliente (transaccional y de campaña). */
 export const EMAIL_LOG_COLLECTION = "xtreme_gym_email_log";

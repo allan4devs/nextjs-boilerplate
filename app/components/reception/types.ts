@@ -21,5 +21,5 @@ export type ActiveVisit = {
   checkedInAt: string;
 };
 
-export type ReceptionTab = "empty" | "inside" | "cedula" | "face" | "register" | "invite" | "chat" | "billing";
+export type ReceptionTab = "empty" | "inside" | "cedula" | "face" | "register" | "invite" | "chat" | "billing" | "cameras";
 

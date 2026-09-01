@@ -1,0 +1,33 @@
+# go2rtc — proxy RTSP→WebRTC para el muro de cámaras de recepción.
+#
+# Corre en la PC de RECEPCIÓN (no en Vercel: las cámaras están en la LAN y el
+# navegador no reproduce RTSP). El panel "Cámaras" descubre estas streams solas
+# vía http://localhost:1984/api/streams — no hay que repetirlas en la app.
+#
+# Uso (Windows):
+#   1. Bajá go2rtc_win64.exe de github.com/AlexxIT/go2rtc/releases
+#   2. Guardá este archivo como go2rtc.yaml al lado del .exe (y poné la contraseña)
+#   3. Doble clic al .exe (o `go2rtc_win64.exe` en una terminal)
+#   4. En recepción → pestaña Cámaras → aparecen cam1, cam2, …
+#
+# NVR Hikvision en 192.168.1.252, RTSP 554. Numeración de canales del NVR:
+#   1 0 1  →  cámara 1, stream principal (HD)
+#   1 0 2  →  cámara 1, sub-stream (liviano)  ← recomendado para el muro
+#   2 0 1  →  cámara 2 principal … y así (301, 401, …)
+#
+# Reemplazá USUARIO:CLAVE por las credenciales del NVR. Este archivo queda SOLO
+# en la PC (no en la app, no en git): las claves de cámara no viajan a Vercel.
+
+streams:
+  # Sub-streams (livianos) para las tiles del muro:
+  cam1: rtsp://USUARIO:CLAVE@192.168.1.252:554/Streaming/Channels/102
+  cam2: rtsp://USUARIO:CLAVE@192.168.1.252:554/Streaming/Channels/202
+  cam3: rtsp://USUARIO:CLAVE@192.168.1.252:554/Streaming/Channels/302
+  cam4: rtsp://USUARIO:CLAVE@192.168.1.252:554/Streaming/Channels/402
+  # Agregá o quitá cámaras según cuántas tenga el NVR.
+  # ¿Querés HD en alguna? Usá el canal principal, p.ej. …/Streaming/Channels/101
+
+api:
+  # Solo local: localhost está exento del bloqueo mixed-content del navegador,
+  # así la app en https puede embeber este proxy en http sin certificado.
+  listen: "127.0.0.1:1984"

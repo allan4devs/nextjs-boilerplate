@@ -24,6 +24,7 @@ import {
   UserPlus,
   Users,
   UsersRound,
+  Video,
   X,
   XCircle,
 } from "lucide-react";
@@ -37,7 +38,8 @@ import {
 import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import ReceptionDutiesPanel from "../../components/reception/ReceptionDutiesPanel";
 import ReceptionBillingPanel from "../../components/reception/ReceptionBillingPanel";
-import FaceRecognitionPanel from "../../components/reception/FaceRecognitionPanel";
+import FaceTerminalPanel from "../../components/reception/FaceTerminalPanel";
+import CameraWallPanel from "../../components/reception/CameraWallPanel";
 import { MemberPreview } from "../../components/reception/MemberCards";
 import StaffThemeToggle from "../../components/StaffThemeToggle";
 import {
@@ -101,7 +103,6 @@ function ReceptionConsole() {
   const [status, setStatus] = useState<GymStatus | null>(null);
   const [recent, setRecent] = useState<RecentCheckin[]>([]);
   const [inside, setInside] = useState<ActiveVisit[]>([]);
-  const [roster, setRoster] = useState<MemberHit[]>([]);
   const [checkoutQuery, setCheckoutQuery] = useState("");
   const [checkingOutId, setCheckingOutId] = useState("");
 
@@ -142,8 +143,8 @@ function ReceptionConsole() {
   const [isInviting, setIsInviting] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
 
-  // Cámara del alta en mostrador. El ingreso por rostro maneja la suya dentro
-  // de FaceRecognitionPanel, que la enciende y apaga con su propio ciclo de vida.
+  // Cámara del alta en mostrador (solo la foto de la ficha). El ingreso por
+  // rostro ya no usa webcam: lo hace la terminal física de la puerta.
   const {
     videoRef,
     cameraOn,
@@ -190,7 +191,6 @@ function ReceptionConsole() {
         if (json.status) setStatus(json.status);
         if (json.recent) setRecent(json.recent);
         if (json.inside) setInside(json.inside);
-        if (json.members) setRoster(json.members);
       } catch {
         /* poll soft-fail */
       }
@@ -571,7 +571,6 @@ function ReceptionConsole() {
     await signOut();
     setMember(null);
     setInside([]);
-    setRoster([]);
     setRecent([]);
     setTab("cedula");
   }
@@ -692,7 +691,8 @@ function ReceptionConsole() {
             <SidePanelAction active={tab === "register"} icon={UserPlus} label="Registrar persona" detail="Alta e ingreso" onClick={() => setTab("register")} />
             <SidePanelAction active={tab === "invite"} icon={Mail} label="Invitar a la app" detail="Enviar por correo" onClick={() => setTab("invite")} />
             <SidePanelAction active={tab === "chat"} icon={MessageCircle} label="Responder chat" detail={chatUnread > 0 ? `${chatUnread} pendiente${chatUnread === 1 ? "" : "s"}` : "Sin pendientes"} badge={chatUnread} onClick={() => setTab("chat")} />
-            {FACE_RECOGNITION_ENABLED && <SidePanelAction active={tab === "face"} icon={ScanFace} label="Ingreso por rostro" detail="Cámara y enrolamiento" onClick={() => setTab("face")} />}
+            {FACE_RECOGNITION_ENABLED && <SidePanelAction active={tab === "face"} icon={ScanFace} label="Ingreso por rostro" detail="Terminal de la puerta" onClick={() => setTab("face")} />}
+            <SidePanelAction active={tab === "cameras"} icon={Video} label="Cámaras" detail="Video en vivo" onClick={() => setTab("cameras")} />
           </div>
           <div className="mt-3 grid gap-2 border-t-[3px] border-white/10 pt-3">
             <Link href="/recepcion/ventas" className="flex min-h-12 items-center justify-between border-[3px] border-[#d8ff3e]/45 px-3 text-xs font-black uppercase text-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black"><span>Ventas e inventario</span><ArrowRight className="h-4 w-4" /></Link>
@@ -702,7 +702,7 @@ function ReceptionConsole() {
 
         <section className="min-w-0 border-[3px] border-white/20 bg-[#0c0c0c] shadow-[4px_4px_0_rgba(0,0,0,.55)]">
           <header className="flex min-h-14 items-center justify-between gap-3 border-b-[3px] border-white/15 px-4 py-3">
-            <div><GameLabel tone="cyan">Panel central</GameLabel><p className="mt-1 text-sm font-black uppercase">{{ cedula: "Buscar persona", inside: "Personas adentro", register: "Registrar persona", invite: "Invitar a la app", chat: "Chat de recepción", face: "Ingreso por rostro", billing: "Facturar", empty: "Panel minimizado" }[tab]}</p></div>
+            <div><GameLabel tone="cyan">Panel central</GameLabel><p className="mt-1 text-sm font-black uppercase">{{ cedula: "Buscar persona", inside: "Personas adentro", register: "Registrar persona", invite: "Invitar a la app", chat: "Chat de recepción", face: "Ingreso por rostro", billing: "Facturar", cameras: "Cámaras", empty: "Panel minimizado" }[tab]}</p></div>
             {tab !== "empty" && <button type="button" onClick={() => setTab("empty")} aria-label="Cerrar panel" className="grid h-10 w-10 place-items-center border-[3px] border-white/15 text-white/45 hover:border-red-300/60 hover:text-red-200"><X className="h-5 w-5" /></button>}
           </header>
           <div className="p-4 sm:p-6">
@@ -869,19 +869,9 @@ function ReceptionConsole() {
               </div>
             )}
 
-            {tab === "face" && FACE_RECOGNITION_ENABLED && (
-              <FaceRecognitionPanel
-                roster={roster}
-                member={member}
-                isCheckingIn={isCheckingIn}
-                onSelectMember={(selected) => {
-                  setMember(selected);
-                  setError("");
-                }}
-                onCheckin={(selected, method) => confirmCheckin(selected, method)}
-                onRosterChanged={() => void loadPanel(true)}
-              />
-            )}
+            {tab === "face" && FACE_RECOGNITION_ENABLED && <FaceTerminalPanel />}
+
+            {tab === "cameras" && <CameraWallPanel />}
 
             {tab === "register" && (
               <form onSubmit={(e) => void registerWalkin(e)} className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-2">
