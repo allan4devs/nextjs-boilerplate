@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Activity, ArrowLeft, Loader2, PackageOpen, ShoppingCart } from "lucide-react";
+import { Activity, ArrowLeft, Loader2, PackageOpen, ShoppingCart, Wallet } from "lucide-react";
 import ReceptionStorefront from "@/app/components/reception/ReceptionStorefront";
 import SalesMonitoringPanel from "@/app/components/reception/SalesMonitoringPanel";
+import CashCloseoutPanel from "@/app/components/reception/CashCloseoutPanel";
 import { GameLabel } from "@/app/components/GameOS";
 import StaffThemeToggle from "@/app/components/StaffThemeToggle";
 
-type View = "sales" | "inventory" | "monitoring";
+type View = "sales" | "inventory" | "monitoring" | "closeout";
 
 export default function ReceptionSalesPage() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -81,6 +82,7 @@ export default function ReceptionSalesPage() {
                 { id: "sales" as const, label: "Registrar venta", detail: "Cobro y carrito", icon: ShoppingCart },
                 { id: "inventory" as const, label: "Inventario", detail: "Existencias y precios", icon: PackageOpen },
                 { id: "monitoring" as const, label: "Monitoreo", detail: "Ventas y movimientos", icon: Activity },
+                { id: "closeout" as const, label: "Cierre de caja", detail: "Recaudado del día", icon: Wallet },
               ]).map((item) => {
                 const Icon = item.icon;
                 const active = view === item.id;
@@ -89,7 +91,7 @@ export default function ReceptionSalesPage() {
             </nav>
           </aside>
           <section className="min-w-0 border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:p-6">
-            {view === "monitoring" ? <SalesMonitoringPanel /> : <ReceptionStorefront mode={view} />}
+            {view === "monitoring" ? <SalesMonitoringPanel /> : view === "closeout" ? <CashCloseoutPanel /> : <ReceptionStorefront mode={view} />}
           </section>
         </div>
       </div>
