@@ -32,6 +32,12 @@ export type MachineGuide = {
   videoUrl?: string;
   /** Título corto del botón de video. */
   videoLabel?: string;
+  /** Frase de una línea: para qué sirve. Se usa en el catálogo /maquinas y en el metadata. */
+  summary?: string;
+  /** Dónde está en el piso del gym (ej. "Zona de pierna, pared norte"). */
+  location?: string;
+  /** Distingue una máquina concreta de una zona/estación. Por defecto se trata como máquina. */
+  kind?: "maquina" | "zona";
 };
 
 export type Routine = {

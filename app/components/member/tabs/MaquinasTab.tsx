@@ -6,7 +6,9 @@
  */
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
+  ArrowUpRight,
   Dumbbell,
   HeartPulse,
   LayoutGrid,
@@ -252,6 +254,13 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
                   Beneficio de socio: fotos reales del gym, ajuste, tips, errores y video de
                   referencia por equipo. Combiná con peso libre, cardio, VIP y zona funcional.
                 </p>
+                <Link
+                  href="/maquinas"
+                  className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#d8ff3e] underline-offset-2 hover:underline"
+                >
+                  Abrir catálogo en pantalla completa
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
             </div>
           </div>

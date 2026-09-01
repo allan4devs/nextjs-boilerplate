@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "./lib/seo";
+import { MACHINE_GUIDE } from "./lib/machines";
 
 const ROUTES: Array<{
   path: string;
@@ -29,6 +30,12 @@ const ROUTES: Array<{
   { path: "/en/contact", changeFrequency: "monthly", priority: 0.6 },
   { path: "/app/comunidad", changeFrequency: "monthly", priority: 0.5 },
   { path: "/dzcate", changeFrequency: "monthly", priority: 0.3 },
+  { path: "/maquinas", changeFrequency: "monthly", priority: 0.7 },
+  ...MACHINE_GUIDE.map((machine) => ({
+    path: `/maquinas/${machine.id}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.5,
+  })),
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

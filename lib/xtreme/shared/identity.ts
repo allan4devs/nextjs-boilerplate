@@ -76,6 +76,22 @@ export function memberEmailIsTrusted(member: {
   return Boolean(email && isValidEmail(email) && member?.emailVerified === true);
 }
 
+/**
+ * Correo al que se le puede mandar un código de acceso (OTP) para entrar o
+ * crear el PIN. A diferencia de `memberEmailIsTrusted`, NO exige que el correo
+ * ya esté verificado por magic link: mandar el código y que el socio lo digite
+ * correctamente ES la verificación. Así no dejamos afuera a los importados
+ * (emailVerified=false) que sí tienen un correo válido en la ficha; entran con
+ * cédula + código al correo, sin tener que pasar por recepción.
+ * Devuelve el correo normalizado listo para enviar, o "" si no hay uno usable.
+ */
+export function memberLoginEmail(
+  member: { email?: string | null } | null | undefined,
+): string {
+  const email = normalizeEmail(member?.email);
+  return email && isValidEmail(email) ? email : "";
+}
+
 export function normalizeName(value: unknown) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }

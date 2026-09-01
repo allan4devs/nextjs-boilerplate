@@ -9,6 +9,7 @@ import {
   type OtpDoc,
   hashPin,
   memberEmailIsTrusted,
+  memberLoginEmail,
   normalizeKey,
   normalizeName,
 } from "@/lib/xtreme/shared";
@@ -89,11 +90,14 @@ export async function GET(req: NextRequest) {
       db.collection(PINS_COLLECTION).findOne({ normalizedName }, { projection: { pinHash: 1 } }),
       db
         .collection<MemberContact>(MEMBERS_COLLECTION)
-        .findOne({ normalizedName }, { projection: { emailVerified: 1 } }),
+        .findOne({ normalizedName }, { projection: { email: 1, emailVerified: 1 } }),
     ]);
     const hasPinSet = Boolean(doc?.pinHash);
     const emailVerified = Boolean(member?.emailVerified);
-    const pinGate = hasPinSet ? "verify" : emailVerified ? "setup_otp" : "needs_invite";
+    // Basta un correo válido en la ficha (verificado o no) para poder mandar el
+    // código de acceso: solo cae en "needs_invite" quien no tiene correo alguno.
+    const hasLoginEmail = Boolean(memberLoginEmail(member));
+    const pinGate = hasPinSet ? "verify" : hasLoginEmail ? "setup_otp" : "needs_invite";
     return NextResponse.json({ hasPinSet, emailVerified, pinGate });
   } catch (err) {
     console.error("XTREME PIN GET", err);
@@ -209,11 +213,12 @@ export async function POST(req: NextRequest) {
         await trackAccess("otp_requested", "failed", "profile_not_found");
         return NextResponse.json({ error: "Perfil no encontrado." }, { status: 404 });
       }
-      if (!memberEmailIsTrusted(member) || !member.email) {
+      const loginEmail = memberLoginEmail(member);
+      if (!loginEmail) {
         return NextResponse.json(
           {
             error:
-              "Este perfil no tiene un correo verificado. Usá el enlace de invitación/registro o pedí ayuda en recepción.",
+              "Esta cuenta no tiene un correo en la ficha. Pedí en recepción que registren tu correo para poder mandarte el código.",
           },
           { status: 400 },
         );
@@ -224,7 +229,7 @@ export async function POST(req: NextRequest) {
 
       if (recoveryContact) {
         const contactEmail = normalizeEmail(recoveryContact);
-        if (contactEmail && contactEmail !== normalizeEmail(member.email)) {
+        if (contactEmail && contactEmail !== normalizeEmail(loginEmail)) {
           return NextResponse.json(
             { error: "El correo no coincide con el perfil." },
             { status: 401 },
@@ -251,7 +256,7 @@ export async function POST(req: NextRequest) {
       await db.collection<OtpDoc>(OTPS_COLLECTION).insertOne(otpDoc);
 
       const sent = await sendPinRecoveryOtpEmail({
-        to: member.email,
+        to: loginEmail,
         memberName: member.memberName || memberName,
         code,
         expiresMinutes: OTP_TTL_MIN,
@@ -269,7 +274,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const masked = member.email.replace(/(.{2}).+(@.+)/, "$1***$2");
+      const masked = loginEmail.replace(/(.{2}).+(@.+)/, "$1***$2");
       await recordFailedAuthAttempt(db, rate.key, {
         scope: "member_otp_request",
         maxAttempts: 3,
@@ -293,7 +298,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PIN invalido." }, { status: 400 });
     }
 
-    // --- Primer PIN (una sola vez): sesión post-enlace, OTP al correo verificado, o staff ---
+    // --- Primer PIN (una sola vez): sesión post-enlace, OTP al correo de la ficha, o staff ---
     // No se puede "reconfigurar" con set: después solo change (PIN actual) o recover (OTP).
     if (action === "set") {
       const existing = await col.findOne({ normalizedName }, { projection: { pinHash: 1 } });
@@ -333,9 +338,11 @@ export async function POST(req: NextRequest) {
           await trackAccess("pin_created", "failed", "otp_invalid");
           return NextResponse.json({ error: consumed.error }, { status: consumed.status });
         }
-        if (!memberEmailIsTrusted(member)) {
+        // El código llegó al correo de la ficha y el socio lo digitó bien:
+        // eso prueba que controla ese correo. Basta un correo válido.
+        if (!memberLoginEmail(member)) {
           return NextResponse.json(
-            { error: "El correo del perfil no está verificado." },
+            { error: "El correo del perfil no es válido. Pedí ayuda en recepción." },
             { status: 403 },
           );
         }
@@ -344,11 +351,11 @@ export async function POST(req: NextRequest) {
 
       if (!sessionOk && !otpOk && !staffOk) {
         await trackAccess("pin_created", "failed", "token_required");
-        if (memberEmailIsTrusted(member)) {
+        if (memberLoginEmail(member)) {
           return NextResponse.json(
             {
               error:
-                "Para crear el PIN pedí un código al correo verificado de la cuenta (botón Enviar código), o abrí el enlace de invitación.",
+                "Para crear el PIN pedí un código al correo de la cuenta (botón Enviar código al correo).",
               code: "pin_setup_otp_required",
               pinGate: "setup_otp",
             },
@@ -358,7 +365,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "No se puede crear el PIN solo con la cédula. Usá el enlace de invitación/registro del correo o pedí el alta en recepción.",
+              "Esta cuenta no tiene un correo en la ficha. Pedí en recepción que registren tu correo para poder mandarte el código.",
             code: "pin_setup_invite_required",
             pinGate: "needs_invite",
           },
@@ -425,6 +432,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "No se pudo crear el PIN. Intentá de nuevo." }, { status: 500 });
       }
 
+      // El OTP viajó al correo de la ficha y volvió correcto: el correo queda
+      // verificado (habilita recuperación por OTP y avisos sensibles después).
+      if (otpOk && !member.emailVerified) {
+        await db
+          .collection(MEMBERS_COLLECTION)
+          .updateOne({ normalizedName }, { $set: { emailVerified: true, updatedAt: now } });
+      }
       await notifyPinEvent("set");
       await trackAccess("pin_created", "success", setBy);
       return withMemberSession(
@@ -484,11 +498,11 @@ export async function POST(req: NextRequest) {
         );
       }
       const member = await db.collection<MemberContact>(MEMBERS_COLLECTION).findOne({ normalizedName });
-      if (!memberEmailIsTrusted(member)) {
+      if (!memberLoginEmail(member)) {
         return NextResponse.json(
           {
             error:
-              "Este perfil no tiene correo verificado. Pedí una invitación en recepción o al super admin.",
+              "Esta cuenta no tiene un correo en la ficha. Pedí en recepción que registren tu correo para poder recuperar el PIN.",
           },
           { status: 403 },
         );
@@ -498,10 +512,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: consumed.error }, { status: consumed.status });
       }
 
+      const recoverNow = new Date();
       await col.updateOne(
         { normalizedName },
-        { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: new Date() } },
+        { $set: { pinHash: hashPin(pin, normalizedName), updatedAt: recoverNow } },
       );
+      // El OTP volvió correcto: el correo de la ficha queda verificado.
+      if (!member?.emailVerified) {
+        await db
+          .collection(MEMBERS_COLLECTION)
+          .updateOne({ normalizedName }, { $set: { emailVerified: true, updatedAt: recoverNow } });
+      }
       await notifyPinEvent("recovered");
       await trackAccess("pin_recovered", "success", "otp");
       return withMemberSession(

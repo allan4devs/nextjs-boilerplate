@@ -11,6 +11,7 @@ import {
   formatAccessCode,
   matchCedula,
   memberAccessCode,
+  memberLoginEmail,
   MEMBERS_COLLECTION,
   mergeNotificationPrefs,
   normalizeCedula,
@@ -143,7 +144,7 @@ async function bootstrapLookup(
 ) {
   const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne(
     { normalizedName },
-    { projection: { memberName: 1, normalizedName: 1, cedula: 1, emailVerified: 1 } },
+    { projection: { memberName: 1, normalizedName: 1, cedula: 1, email: 1, emailVerified: 1 } },
   );
   if (!doc) {
     return {
@@ -165,9 +166,13 @@ async function bootstrapLookup(
   const hasPinSet = Boolean(pinDoc?.pinHash);
   const emailVerified = Boolean(doc.emailVerified);
   // Cómo puede autenticarse el socio sin regalar acceso a cualquiera con la cédula.
+  // Con un correo válido en la ficha (verificado o no) se manda un código y con
+  // eso entra: "needs_invite" (ir a recepción) queda solo para quien no tiene
+  // ningún correo al que mandarle el código.
+  const hasLoginEmail = Boolean(memberLoginEmail(doc));
   const pinGate = hasPinSet
     ? ("verify" as const)
-    : emailVerified
+    : hasLoginEmail
       ? ("setup_otp" as const)
       : ("needs_invite" as const);
   return {

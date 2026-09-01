@@ -63,6 +63,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=vCQAIWHIdXE",
     videoLabel: "Técnica de prensa",
+    summary: "Fuerza de pierna completa con la espalda apoyada y sin cargar la zona lumbar.",
+    location: "Zona de pierna",
+    kind: "maquina",
   },
   {
     id: "leg-extension",
@@ -87,6 +90,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=YyvSfVjQeL0",
     videoLabel: "Extensión de pierna",
+    summary: "Aísla el cuádriceps al final del día de pierna con tempo lento y control.",
+    location: "Zona de pierna",
+    kind: "maquina",
   },
   {
     id: "leg-curl",
@@ -106,6 +112,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=1Tq3QdYUuHs",
     videoLabel: "Curl femoral",
+    summary: "Trabaja el femoral y cierra la pierna sin arquear la espalda baja.",
+    location: "Zona de pierna",
+    kind: "maquina",
   },
   {
     id: "hip-abductor",
@@ -130,6 +139,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=jgh6sGwtTwk",
     videoLabel: "Abductor de cadera",
+    summary: "Activa glúteo medio y estabilizadores de cadera con apertura controlada.",
+    location: "Zona de pierna",
+    kind: "maquina",
   },
   {
     id: "chest-press",
@@ -154,6 +166,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=xUm0BiZCWlQ",
     videoLabel: "Press de pecho en máquina",
+    summary: "Empuje horizontal guiado para pecho, con trayectoria fija y segura.",
+    location: "Zona de máquinas de fuerza",
+    kind: "maquina",
   },
   {
     id: "pec-deck",
@@ -178,6 +193,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=eozdVDA78K0",
     videoLabel: "Pec deck / fly máquina",
+    summary: "Aísla el pecho con un recorrido de apertura y cierre tipo abrazo.",
+    location: "Zona de máquinas de fuerza",
+    kind: "maquina",
   },
   {
     id: "lat-pulldown",
@@ -201,6 +219,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=CAwf7n6Luuc",
     videoLabel: "Jalón al pecho",
+    summary: "Construye espalda ancha con jalón vertical hacia la parte alta del pecho.",
+    location: "Zona de poleas",
+    kind: "maquina",
   },
   {
     id: "seated-row",
@@ -220,6 +241,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=GZbfZ033f74",
     videoLabel: "Remo en polea sentado",
+    summary: "Grosor de espalda media con tirón horizontal y columna neutral.",
+    location: "Zona de poleas",
+    kind: "maquina",
   },
   {
     id: "shoulder-press",
@@ -244,6 +268,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=Wqq43dKW1TU",
     videoLabel: "Press de hombro en máquina",
+    summary: "Empuje vertical guiado para hombro sin comprometer la zona lumbar.",
+    location: "Zona de máquinas de fuerza",
+    kind: "maquina",
   },
   {
     id: "cable-station",
@@ -268,6 +295,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=rep-qVOkqgk",
     videoLabel: "Face pulls y trabajo en polea",
+    summary: "Estación versátil: ajustás la altura de la polea y trabajás casi cualquier grupo.",
+    location: "Zona de poleas",
+    kind: "zona",
   },
   {
     id: "free-weights",
@@ -297,6 +327,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=ultWZbUMPL8",
     videoLabel: "Sentadilla con barra (base)",
+    summary: "Mancuernas, barras y racks para movimientos compuestos con peso libre.",
+    location: "Zona de peso libre",
+    kind: "zona",
   },
   {
     id: "cardio-zone",
@@ -321,6 +354,9 @@ export const MACHINE_GUIDE: MachineGuide[] = [
     ],
     videoUrl: "https://www.youtube.com/watch?v=ml6cT4AZdqI",
     videoLabel: "Intervalos en cinta (idea)",
+    summary: "Cintas, bicis y elípticas para calentar, hacer intervalos o cerrar la sesión.",
+    location: "Zona de cardio",
+    kind: "zona",
   },
 ];
 
