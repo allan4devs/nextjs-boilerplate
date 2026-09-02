@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { adminHref } from "../constants";
 import { useAdmin } from "../context/AdminProvider";
 import { ResumenTab } from "../tabs/ResumenTab";
+import { ReceptionPinAdminCard } from "./ReceptionPinAdminCard";
 import type { AdminData } from "../types";
 
 export function AdminOverviewPage() {
@@ -107,16 +108,19 @@ export function AdminOverviewPage() {
   }
 
   return (
-    <ResumenTab
-      data={data}
-      isSuper={data.role === "super"}
-      busy={busy}
-      onNotifyExpiring={() => void notifyExpiring()}
-      onResolveAlert={(fingerprint) => void resolveOperationalAlert(fingerprint)}
-      onRevokeStaffSessions={(includeSelf) => void revokeAllStaffSessions(includeSelf)}
-      onOpenTab={(tab) => router.push(adminHref(tab))}
-      onReload={() => void load()}
-      isLoading={isLoading}
-    />
+    <>
+      <ResumenTab
+        data={data}
+        isSuper={data.role === "super"}
+        busy={busy}
+        onNotifyExpiring={() => void notifyExpiring()}
+        onResolveAlert={(fingerprint) => void resolveOperationalAlert(fingerprint)}
+        onRevokeStaffSessions={(includeSelf) => void revokeAllStaffSessions(includeSelf)}
+        onOpenTab={(tab) => router.push(adminHref(tab))}
+        onReload={() => void load()}
+        isLoading={isLoading}
+      />
+      <ReceptionPinAdminCard />
+    </>
   );
 }

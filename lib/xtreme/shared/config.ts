@@ -30,6 +30,10 @@ export const PRODUCT_INVENTORY_COLLECTION = "xtreme_gym_product_inventory";
 export const PRODUCT_SALES_COLLECTION = "xtreme_gym_product_sales";
 export const RECEPTION_CONTROLS_COLLECTION = "xtreme_gym_reception_controls";
 export const RECEPTION_DUTIES_COLLECTION = "xtreme_gym_reception_duties";
+/** Cierres de caja de recepción: cada doc es un turno cerrado [from, to). */
+export const CASH_CLOSEOUTS_COLLECTION = "xtreme_gym_cash_closeouts";
+/** PIN de mostrador por operador (hash), aparte de los códigos de admin/env. */
+export const STAFF_RECEPTION_PINS_COLLECTION = "xtreme_gym_staff_reception_pins";
 export const FACE_TEMPLATES_COLLECTION = "xtreme_gym_face_templates";
 /** Mapa enrollid (terminal física de la puerta) → normalizedName del socio. */
 export const FACE_TERMINAL_MAP_COLLECTION = "xtreme_gym_face_terminal_map";
@@ -47,6 +51,8 @@ export const FREE_FIRST_DAY_PLAN_LABEL = "Primer día gratis";
 export const DAY_PASS_HOLD_DAYS = 3650;
 export const GYM_CAPACITY = 85;
 export const PIN_PEPPER = "xtreme-gym-member-pin-v1";
+/** Pepper propio del PIN de mostrador: no comparte hash con el PIN de socio. */
+export const STAFF_RECEPTION_PIN_PEPPER = "xtreme-gym-staff-reception-pin-v1";
 
 export type AdminRole = "admin" | "super";
 export type StaffRole = "reception" | "trainer" | AdminRole;
@@ -70,12 +76,16 @@ export const TRAINER_CODE = adminEnv("XTREME_TRAINER_CODE", "xtreme-trainer");
 export const ADMIN_CODE = adminEnv("XTREME_ADMIN_CODE", "xtreme-admin");
 export const SUPER_ADMIN_CODE = adminEnv("XTREME_SUPER_ADMIN_CODE", "xtreme-super");
 
-/** PIN individuales de staff. Sin fallback: en producción se configuran como secretos. */
+/**
+ * PIN individuales de staff para códigos legacy (admin/trainer/VIP) vía env.
+ * Sin fallback: en producción se configuran como secretos. El PIN de mostrador
+ * es aparte y se guarda en Mongo (`STAFF_RECEPTION_PINS_COLLECTION`).
+ */
 export const STAFF_PINS = {
   allan: process.env.XTREME_ALLAN_PIN?.trim() ?? "",
   alejandro: process.env.XTREME_ALEJANDRO_PIN?.trim() ?? "",
   eileen: process.env.XTREME_EILEEN_PIN?.trim() ?? "",
-  veronica: process.env.XTREME_VERONICA_PIN?.trim() ?? "",
+  victoria: process.env.XTREME_VICTORIA_PIN?.trim() ?? "",
   valeska: process.env.XTREME_VALESKA_PIN?.trim() ?? "",
   kengie: process.env.XTREME_KENGIE_PIN?.trim() ?? "",
   josue: process.env.XTREME_JOSUE_PIN?.trim() ?? "",

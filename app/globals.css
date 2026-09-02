@@ -593,6 +593,55 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
   display: none;
 }
 
+/*
+ * Punto de venta de recepción (ReceptionStorefront, modo ventas).
+ * Escala de tipografía y alto contraste opcionales, acotados a `.xg-pos`
+ * para no afectar el resto de recepción. Mismo enfoque de selectores por
+ * substring de clase que `html.xg-staff-light`.
+ */
+.xg-pos {
+  --pos-name: 1rem;
+  --pos-price: 1.25rem;
+  --pos-total: 1.875rem;
+  --pos-cobrar: 1.25rem;
+  --pos-step: 1.5rem;
+}
+
+.xg-pos[data-size="grande"] {
+  --pos-name: 1.25rem;
+  --pos-price: 1.625rem;
+  --pos-total: 2.25rem;
+  --pos-cobrar: 1.625rem;
+  --pos-step: 2rem;
+}
+
+.xg-pos[data-contrast="alto"] {
+  --pos-name: 1.0625rem;
+}
+
+/* Los ajustes de color del alto contraste solo aplican en tema oscuro; el
+ * tema claro ya trae su propio tratamiento de contraste. */
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-white/3"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-white/4"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-white/5"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-white/6"] {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="border-white/1"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="border-white/2"] {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-[#d8ff3e]"] {
+  color: #e9ff7a !important;
+}
+
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="bg-black/3"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="bg-black/4"] {
+  background-color: #000 !important;
+}
+
 .xg-keyboard-panel {
   max-height: calc(var(--xg-viewport-height) - 6rem - env(safe-area-inset-top, 0px));
 }
