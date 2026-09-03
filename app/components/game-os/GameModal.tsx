@@ -30,6 +30,13 @@ export function GameModal({
   const titleId   = useId();
   const panelRef  = useRef<HTMLDivElement>(null);
 
+  /* `onClose` casi siempre llega como arrow inline: identidad nueva en cada
+     render del padre. Guardarla en un ref para que el efecto de abajo dependa
+     solo de `open` — si no, cada render del padre reejecutaba el efecto y
+     `panelRef.focus()` le robaba el foco a un input del modal en cada tecla. */
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   /* Animación de entrada/salida */
   const [visible, setVisible]     = useState(false); // controla la clase CSS
   const [rendered, setRendered]   = useState(false); // si el DOM existe
@@ -60,14 +67,21 @@ export function GameModal({
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
     window.addEventListener("keydown", onKey);
-    panelRef.current?.focus();
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open]);
+
+  /* Mover el foco al panel una sola vez, cuando el modal aparece — pero sin
+     pisar un campo propio del contenido (p. ej. un input con autoFocus). */
+  useEffect(() => {
+    if (!rendered) return;
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
+  }, [rendered]);
 
   if (!rendered) return null;
 
