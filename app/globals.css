@@ -193,6 +193,11 @@ html.xg-staff-light [class*="bg-[#0a0a0a]"],
 html.xg-staff-light [class*="bg-[#0b0b0b]"],
 html.xg-staff-light [class*="bg-[#0c0c0c]"],
 html.xg-staff-light [class*="bg-[#0d0d0d]"],
+html.xg-staff-light [class*="bg-[#0e0e0e]"],
+html.xg-staff-light [class*="bg-[#0f0f0f]"],
+html.xg-staff-light [class*="bg-[#101010]"],
+html.xg-staff-light [class*="bg-[#111111]"],
+html.xg-staff-light [class*="bg-[#121212]"],
 html.xg-staff-light [class*="bg-black"] {
   background-color: #fbfcf8 !important;
 }

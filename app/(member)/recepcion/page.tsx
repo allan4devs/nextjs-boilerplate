@@ -1276,7 +1276,7 @@ function ReceptionConsole() {
         </section>
 
         <aside className="space-y-4 sm:space-y-5">
-          <div className="border-[3px] border-[#d8ff3e] bg-gradient-to-br from-[#d8ff3e]/[0.10] via-[#0c0c0c] to-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(216,255,62,.28)]">
+          <div className="border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(216,255,62,.28)]">
             <GameLabel tone="lime">Ventas del mostrador</GameLabel>
             <h2 className="mt-2 text-xl font-black uppercase tracking-tight [text-wrap:balance]">Punto de venta</h2>
             <p className="mt-2 text-xs font-bold leading-relaxed text-white/50 [text-wrap:pretty]">
