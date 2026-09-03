@@ -26,6 +26,7 @@ const TOOL_ITEMS = [
 
 export default function ReceptionSalesPage() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [operatorName, setOperatorName] = useState("");
   const [view, setView] = useState<View>("sales");
   const [toolsOpen, setToolsOpen] = useState(false);
 
@@ -36,8 +37,11 @@ export default function ReceptionSalesPage() {
         const response = await fetch("/api/xtreme/staff-session?surface=reception", {
           cache: "no-store",
         });
-        const session = (await response.json()) as { authenticated?: boolean };
-        if (!cancelled) setAuthenticated(response.ok && session.authenticated === true);
+        const session = (await response.json()) as { authenticated?: boolean; staffName?: string };
+        if (!cancelled) {
+          setAuthenticated(response.ok && session.authenticated === true);
+          setOperatorName(session.staffName ?? "");
+        }
       } catch {
         if (!cancelled) setAuthenticated(false);
       }
@@ -90,7 +94,7 @@ export default function ReceptionSalesPage() {
 
   return (
     <main className="min-h-screen bg-[#050505] px-3 py-4 text-white sm:px-6 sm:py-6">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[1600px]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
           <div>
             <GameLabel tone="lime">Sesión de recepción activa</GameLabel>
@@ -148,8 +152,8 @@ export default function ReceptionSalesPage() {
           </button>
         )}
 
-        <section className="mt-4 min-w-0 border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:p-6">
-          {view === "monitoring" ? <SalesMonitoringPanel /> : view === "closeout" ? <CashCloseoutPanel /> : <ReceptionStorefront mode={view} />}
+        <section className="mt-4 min-w-0 border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)] sm:p-6 xl:p-8">
+          {view === "monitoring" ? <SalesMonitoringPanel /> : view === "closeout" ? <CashCloseoutPanel /> : <ReceptionStorefront mode={view} operatorName={operatorName} />}
         </section>
       </div>
     </main>

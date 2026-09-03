@@ -21,6 +21,7 @@ import {
   ScanFace,
   Search,
   ShieldAlert,
+  ShoppingCart,
   Sparkles,
   Sun,
   Send,
@@ -113,6 +114,7 @@ function ReceptionConsole() {
 
   const [tab, setTab] = useState<ReceptionTab>("cedula");
   const [dutiesCollapsed, setDutiesCollapsed] = useState(false);
+  const [controlsCollapsed, setControlsCollapsed] = useState(true);
   const [status, setStatus] = useState<GymStatus | null>(null);
   const [recent, setRecent] = useState<RecentCheckin[]>([]);
   const [inside, setInside] = useState<ActiveVisit[]>([]);
@@ -913,8 +915,8 @@ function ReceptionConsole() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1600px] items-start gap-3 p-3 sm:gap-4 sm:p-4 xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:p-6">
-        <aside className="border-[3px] border-white/20 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] xl:sticky xl:top-24">
+      <div className="mx-auto grid max-w-[1600px] items-start gap-4 p-3 sm:gap-5 sm:p-5 xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:gap-6 xl:p-6">
+        <aside className="border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)] xl:sticky xl:top-24">
           <GameLabel tone="lime">Personas y accesos</GameLabel>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
             <SidePanelAction active={tab === "cedula"} icon={Search} label="Buscar persona" detail="Nombre y apellido" onClick={() => setTab("cedula")} />
@@ -925,18 +927,17 @@ function ReceptionConsole() {
             {FACE_RECOGNITION_ENABLED && <SidePanelAction active={tab === "face"} icon={ScanFace} label="Ingreso por rostro" detail="Terminal de la puerta" onClick={() => setTab("face")} />}
             <SidePanelAction active={tab === "cameras"} icon={Video} label="Cámaras" detail="Video en vivo" onClick={() => setTab("cameras")} />
           </div>
-          <div className="mt-3 grid gap-2 border-t-[3px] border-white/10 pt-3">
-            <Link href="/recepcion/ventas" className="flex min-h-12 items-center justify-between border-[3px] border-[#d8ff3e]/45 px-3 text-xs font-black uppercase text-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black"><span>Ventas e inventario</span><ArrowRight className="h-4 w-4" /></Link>
+          <div className="mt-3 border-t-[3px] border-white/10 pt-3">
             <Link href="/admin" className="flex min-h-12 items-center justify-between border-[3px] border-white/15 px-3 text-xs font-black uppercase text-white/50 hover:border-white/35 hover:text-white"><span>Administración</span><ArrowRight className="h-4 w-4" /></Link>
           </div>
         </aside>
 
         <section className="min-w-0 border-[3px] border-white/20 bg-[#0c0c0c] shadow-[4px_4px_0_rgba(0,0,0,.55)]">
-          <header className="flex min-h-14 items-center justify-between gap-3 border-b-[3px] border-white/15 px-4 py-3">
+          <header className="flex min-h-16 items-center justify-between gap-3 border-b-[3px] border-white/15 px-5 py-4">
             <div><GameLabel tone="cyan">Panel central</GameLabel><p className="mt-1 text-sm font-black uppercase">{{ cedula: "Buscar persona", inside: "Personas adentro", register: "Registrar persona", invite: "Invitar a la app", chat: "Chat de recepción", face: "Ingreso por rostro", billing: "Facturar", cameras: "Cámaras", empty: "Panel minimizado" }[tab]}</p></div>
             {tab !== "empty" && <button type="button" onClick={() => setTab("empty")} aria-label="Cerrar panel" className="grid h-10 w-10 place-items-center border-[3px] border-white/15 text-white/45 hover:border-red-300/60 hover:text-red-200"><X className="h-5 w-5" /></button>}
           </header>
-          <div className="p-4 sm:p-6">
+          <div className="p-5 sm:p-7">
             {tab === "empty" && <div className="grid min-h-[28rem] place-items-center text-center"><div><LayoutDashboard className="mx-auto h-12 w-12 text-white/15" /><h2 className="mt-4 text-2xl font-black uppercase">Panel minimizado</h2><p className="mt-2 text-sm font-bold text-white/40">Elegí una herramienta en el sidebar izquierdo.</p><button type="button" onClick={() => setTab("cedula")} className="mt-5 min-h-12 bg-[#d8ff3e] px-5 text-sm font-black uppercase text-black">Buscar persona</button></div></div>}
             {tab === "inside" && (
               <InsideRoster
@@ -1274,7 +1275,20 @@ function ReceptionConsole() {
           </div>
         </section>
 
-        <aside className="space-y-3 sm:space-y-4">
+        <aside className="space-y-4 sm:space-y-5">
+          <div className="border-[3px] border-[#d8ff3e] bg-gradient-to-br from-[#d8ff3e]/[0.10] via-[#0c0c0c] to-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(216,255,62,.28)]">
+            <GameLabel tone="lime">Ventas del mostrador</GameLabel>
+            <h2 className="mt-2 text-xl font-black uppercase tracking-tight [text-wrap:balance]">Punto de venta</h2>
+            <p className="mt-2 text-xs font-bold leading-relaxed text-white/50 [text-wrap:pretty]">
+              Cobrá productos, revisá inventario y cerrá caja sin salir del mostrador.
+            </p>
+            <Link
+              href="/recepcion/ventas"
+              className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 bg-[#d8ff3e] px-4 text-sm font-black uppercase text-black transition hover:bg-white"
+            >
+              <ShoppingCart className="h-4 w-4" /> Abrir POS de ventas
+            </Link>
+          </div>
           <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
             <div className="flex items-center justify-between gap-3">
               <GameLabel tone="cyan">Checklist del turno</GameLabel>
@@ -1284,18 +1298,24 @@ function ReceptionConsole() {
             {dutiesCollapsed && <p className="mt-2 text-xs font-bold text-white/35">Minimizado · tocá para abrir</p>}
           </div>
           <div className="border-[3px] border-amber-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
-            <GameLabel tone="orange">Controles independientes</GameLabel>
-            <div className="mt-3 grid gap-2">
-              {([
-                { href: "/recepcion/vip", label: "Área VIP", detail: "Clientes y cobros", icon: Crown, color: "text-amber-300" },
-                { href: "/recepcion/adultos-mayores", label: "Adultos mayores", detail: "Clases y asistencia", icon: UsersRound, color: "text-cyan-300" },
-                { href: "/recepcion/bronceado", label: "Bronceado", detail: "Sesiones y paquetes", icon: Sun, color: "text-orange-300" },
-                { href: "/recepcion/pagos-luz", label: "Pagos de luz", detail: "Recibos y pendientes", icon: Bolt, color: "text-yellow-300" },
-              ] as const).map((control) => {
-                const Icon = control.icon;
-                return <Link key={control.href} href={control.href} className="group flex min-h-16 items-center gap-3 border-[3px] border-white/15 bg-black/45 p-3 transition hover:border-amber-300/60"><span className={`grid h-10 w-10 shrink-0 place-items-center bg-white/5 ${control.color}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black uppercase leading-tight">{control.label}</span><span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-white/35">{control.detail}</span></span><ArrowRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-amber-300" /></Link>;
-              })}
+            <div className="flex items-center justify-between gap-3">
+              <GameLabel tone="orange">Controles independientes</GameLabel>
+              <button type="button" onClick={() => setControlsCollapsed((current) => !current)} aria-label={controlsCollapsed ? "Expandir controles" : "Minimizar controles"} className="grid h-9 w-9 place-items-center border-[3px] border-white/15 text-white/45 hover:border-amber-300 hover:text-amber-300">{controlsCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}</button>
             </div>
+            {!controlsCollapsed && (
+              <div className="mt-3 grid gap-2">
+                {([
+                  { href: "/recepcion/vip", label: "Área VIP", detail: "Clientes y cobros", icon: Crown, color: "text-amber-300" },
+                  { href: "/recepcion/adultos-mayores", label: "Adultos mayores", detail: "Clases y asistencia", icon: UsersRound, color: "text-cyan-300" },
+                  { href: "/recepcion/bronceado", label: "Bronceado", detail: "Sesiones y paquetes", icon: Sun, color: "text-orange-300" },
+                  { href: "/recepcion/pagos-luz", label: "Pagos de luz", detail: "Recibos y pendientes", icon: Bolt, color: "text-yellow-300" },
+                ] as const).map((control) => {
+                  const Icon = control.icon;
+                  return <Link key={control.href} href={control.href} className="group flex min-h-16 items-center gap-3 border-[3px] border-white/15 bg-black/45 p-3 transition hover:border-amber-300/60"><span className={`grid h-10 w-10 shrink-0 place-items-center bg-white/5 ${control.color}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black uppercase leading-tight">{control.label}</span><span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-white/35">{control.detail}</span></span><ArrowRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-amber-300" /></Link>;
+                })}
+              </div>
+            )}
+            {controlsCollapsed && <p className="mt-2 text-xs font-bold text-white/35">VIP · adultos mayores · bronceado · pagos de luz</p>}
           </div>
           <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
             <GameLabel tone="cyan" className="flex items-center gap-2">
