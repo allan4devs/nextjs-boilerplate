@@ -1,19 +1,45 @@
+.editorPage {
+  display: flex;
+  height: calc(100dvh - 64px);
+  min-height: 480px;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .workbench {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 286px;
-  align-items: start;
-  gap: 12px;
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .inventoryPanel,
 .inspectorPanel {
-  position: sticky;
-  top: 82px;
+  position: fixed;
+  top: 64px;
+  bottom: 0;
+  z-index: 70;
   display: flex;
-  max-height: calc(100dvh - 98px);
-  min-height: 620px;
+  width: min(320px, 92vw);
   flex-direction: column;
   overflow: hidden;
+  transition: transform 0.22s ease;
+}
+
+.inventoryPanel {
+  left: 0;
+  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.55);
+  transform: translateX(-100%);
+}
+
+.inspectorPanel {
+  right: 0;
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.55);
+  transform: translateX(100%);
+}
+
+.inventoryPanel.panelOpen,
+.inspectorPanel.panelOpen {
+  transform: translateX(0);
 }
 
 .inventoryList,
@@ -31,12 +57,16 @@
 }
 
 .canvasPanel {
+  display: flex;
+  height: 100%;
   min-width: 0;
+  flex-direction: column;
   overflow: hidden;
 }
 
 .canvasViewport {
-  height: clamp(620px, 76dvh, 980px);
+  min-height: 0;
+  flex: 1 1 auto;
   overflow: auto;
   overscroll-behavior: contain;
   background:
@@ -47,6 +77,14 @@
   background-size: 24px 24px;
   scrollbar-color: rgba(216, 255, 62, 0.6) rgba(255, 255, 255, 0.05);
   scrollbar-width: thin;
+}
+
+.canvasViewport.panReady {
+  cursor: grab;
+}
+
+.canvasViewport.panning {
+  cursor: grabbing;
 }
 
 .canvasScaleFrame {
@@ -337,74 +375,7 @@
   display: none;
 }
 
-@media (min-width: 800px) and (max-width: 1199px) {
-  .workbench {
-    grid-template-columns: minmax(0, 1fr) 280px;
-  }
-
-  .canvasPanel {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .inventoryPanel {
-    position: static;
-    grid-column: 1 / -1;
-    grid-row: 2;
-    max-height: none;
-    min-height: 0;
-  }
-
-  .inventoryList {
-    max-height: 360px;
-  }
-
-  .inspectorPanel {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .inspectorScroll {
-    max-height: calc(100dvh - 210px);
-  }
-}
-
 @media (max-width: 799px) {
-  .workbench {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .inventoryPanel,
-  .inspectorPanel {
-    position: static;
-    grid-column: 1;
-    min-height: 0;
-    max-height: none;
-  }
-
-  .inventoryList {
-    max-height: 360px;
-  }
-
-  .canvasPanel {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .inspectorPanel {
-    grid-row: 2;
-  }
-
-  .inventoryPanel {
-    grid-row: 3;
-  }
-
-  .canvasViewport {
-    height: 68dvh;
-    min-height: 480px;
-    overscroll-behavior: auto;
-  }
-
   .canvasScaleFrame {
     margin: 12px;
   }
@@ -437,8 +408,10 @@
   }
 
   .editorPage {
+    height: auto !important;
     max-width: none !important;
     padding: 0 !important;
+    overflow: visible !important;
   }
 
   .workbench {

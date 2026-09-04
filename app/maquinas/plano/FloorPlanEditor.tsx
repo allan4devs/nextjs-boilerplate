@@ -3,12 +3,14 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  Boxes,
   Check,
   CircleAlert,
   Copy,
   DoorOpen,
   Download,
   Grid3X3,
+  Hand,
   Lock,
   LockOpen,
   Minus,
@@ -19,6 +21,7 @@ import {
   RotateCw,
   Save,
   Search,
+  Settings2,
   Square,
   Trash2,
   Undo2,
@@ -232,12 +235,23 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState("");
+  const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [spacePressed, setSpacePressed] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageTimerRef = useRef<number | null>(null);
   const interactionRef = useRef<PointerInteraction | null>(null);
   const marqueeRef = useRef<MarqueeInteraction | null>(null);
+  const panRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>(null);
   const presentRef = useRef(history.present);
   const historyRef = useRef(history);
   const hydratedRef = useRef(false);
@@ -423,6 +437,11 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       const modifier = event.ctrlKey || event.metaKey;
 
       if (editingText) return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        if (!event.repeat) setSpacePressed(true);
+        return;
+      }
       if (modifier && event.key.toLowerCase() === "z") {
         event.preventDefault();
         if (event.shiftKey) redo();
@@ -436,6 +455,8 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       }
       if (event.key === "Escape") {
         setSelectedKeys(new Set());
+        setInspectorOpen(false);
+        setInventoryOpen(false);
         return;
       }
       if ((event.key === "Delete" || event.key === "Backspace") && selectedTargets.length) {
@@ -443,10 +464,24 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
         removeTargets(selectedTargets);
       }
     };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.code === "Space") setSpacePressed(false);
+    };
+    const onBlur = () => setSpacePressed(false);
 
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
   }, [redo, removeTargets, selectedTargets, undo]);
+
+  useEffect(() => {
+    if (selectedTargets.length) setInspectorOpen(true);
+  }, [selectedTargets.length]);
 
   useEffect(() => {
     let plan = initialPlan;
@@ -619,6 +654,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     mode: PointerInteraction["mode"],
   ) => {
     if (event.button !== 0) return;
+    if (spacePressed) return;
     event.stopPropagation();
     const plan = presentRef.current;
     const key = targetKey(target);
@@ -789,7 +825,10 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     }
     const dragged = active.width > MARQUEE_DRAG_THRESHOLD || active.height > MARQUEE_DRAG_THRESHOLD;
     if (!dragged) {
-      if (!active.additive) setSelectedKeys(new Set());
+      if (!active.additive) {
+        setSelectedKeys(new Set());
+        setInspectorOpen(false);
+      }
       return;
     }
     const box: Geometry = { x: active.x, y: active.y, width: active.width, height: active.height };
@@ -809,6 +848,72 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     if (!active || active.pointerId !== event.pointerId) return;
     marqueeRef.current = null;
     setMarqueeRect(null);
+  };
+
+  const beginPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    panRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: viewport.scrollLeft,
+      scrollTop: viewport.scrollTop,
+    };
+    setIsPanning(true);
+  };
+
+  const movePan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const active = panRef.current;
+    const viewport = viewportRef.current;
+    if (!active || !viewport || active.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    viewport.scrollLeft = active.scrollLeft - (event.clientX - active.startX);
+    viewport.scrollTop = active.scrollTop - (event.clientY - active.startY);
+  };
+
+  const endPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const active = panRef.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    panRef.current = null;
+    setIsPanning(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const onCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button === 1 || (event.button === 0 && spacePressed)) {
+      beginPan(event);
+      return;
+    }
+    beginMarquee(event);
+  };
+
+  const onCanvasPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (panRef.current) {
+      movePan(event);
+      return;
+    }
+    updateMarquee(event);
+  };
+
+  const onCanvasPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (panRef.current) {
+      endPan(event);
+      return;
+    }
+    finishMarquee(event);
+  };
+
+  const onCanvasPointerCancel = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (panRef.current) {
+      endPan(event);
+      return;
+    }
+    cancelMarquee(event);
   };
 
   const nudgeTarget = (target: PlanTarget, dx: number, dy: number) => {
@@ -1056,55 +1161,56 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
   } as CSSProperties;
 
   return (
-    <section className={`${styles.editorPage} mx-auto w-full max-w-[1900px] px-3 py-6 sm:px-5 lg:px-7`}>
-      <header className={`${styles.pageHeader} mb-5`}>
-        <Link
-          href="/maquinas"
-          className="inline-flex min-h-10 items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/50 transition hover:text-[#d8ff3e] focus-visible:text-[#d8ff3e] focus-visible:outline-none"
-        >
-          <ArrowLeft className="h-4 w-4" /> Catálogo de máquinas
-        </Link>
-        <div className="mt-3 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="border-2 border-[#d8ff3e]/45 bg-[#d8ff3e]/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-[#eaff93]">
-                Piso 1
-              </span>
-              <span className="border-2 border-white/15 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-white/45">
-                Borrador esquemático
-              </span>
-            </div>
-            <h1 className="mt-4 max-w-4xl text-[clamp(2.2rem,5vw,4.8rem)] font-black uppercase leading-[0.84] tracking-[-0.04em]">
-              Plano editable del gimnasio
-            </h1>
-            <p className="mt-4 max-w-3xl text-sm font-semibold leading-6 text-white/58 sm:text-base">
-              Los {inventory.length} activos de la auditoría ya están agrupados por área. Arrastrá, cambiá el tamaño
-              y acomodá cada bloque según el piso real; las unidades son visuales, no metros.
-            </p>
-          </div>
-          <dl className="grid shrink-0 grid-cols-3 border-[3px] border-white/15 bg-black/30">
-            {[
-              { value: inventory.length, label: "inventario" },
-              { value: placedCount, label: "ubicados" },
-              { value: missingCount, label: "sin ubicar" },
-            ].map((stat, index) => (
-              <div key={stat.label} className={`min-w-24 px-3 py-3 ${index < 2 ? "border-r border-white/12" : ""}`}>
-                <dt className="text-[8px] font-black uppercase tracking-[0.14em] text-white/35">{stat.label}</dt>
-                <dd className="mt-1 text-2xl font-black text-white">{stat.value}</dd>
-              </div>
-            ))}
-          </dl>
+    <section className={`${styles.editorPage} w-full px-3 py-2.5 sm:px-4`}>
+      <header className={`${styles.pageHeader} mb-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/maquinas"
+            className="inline-flex min-h-9 items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/50 transition hover:text-[#d8ff3e] focus-visible:text-[#d8ff3e] focus-visible:outline-none"
+          >
+            <ArrowLeft className="h-4 w-4" /> Catálogo
+          </Link>
+          <span className="hidden h-5 w-px bg-white/15 sm:block" />
+          <h1 className="text-sm font-black uppercase leading-none tracking-[-0.01em] text-white sm:text-base">
+            Plano editable del gimnasio
+          </h1>
+          <span className="border-2 border-[#d8ff3e]/45 bg-[#d8ff3e]/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-[#eaff93]">
+            Piso 1
+          </span>
         </div>
-        <div className="mt-5 flex items-start gap-3 border-l-4 border-amber-300 bg-amber-300/[0.07] px-4 py-3 text-xs font-bold leading-5 text-amber-50/75">
-          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-          <p>
-            La agrupación inicial viene del inventario, pero no hay medidas ni coordenadas físicas
-            confirmadas. Guardá una copia JSON cuando terminés: el autoguardado vive solo en este navegador.
-          </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-black uppercase tracking-[0.14em] text-white/45">
+          <span>{inventory.length} inventario</span>
+          <span className="text-emerald-300">{placedCount} ubicados</span>
+          {missingCount > 0 && <span className="text-amber-300">{missingCount} sin ubicar</span>}
+          <span className="hidden items-center gap-1.5 text-amber-200/70 md:flex" title="El autoguardado vive solo en este navegador; exportá un JSON cuando termines.">
+            <CircleAlert className="h-3.5 w-3.5 text-amber-300" /> Solo local
+          </span>
         </div>
       </header>
 
-      <div className={`${styles.toolbar} ${PANEL_CLASS} mb-4 flex flex-wrap items-center gap-2 p-2.5`}>
+      <div className={`${styles.toolbar} ${PANEL_CLASS} mb-2.5 flex flex-wrap items-center gap-2 p-2.5`}>
+        <button
+          type="button"
+          onClick={() => setInventoryOpen((value) => !value)}
+          className={`${TOOL_BUTTON} ${inventoryOpen ? "border-[#d8ff3e]/55 bg-[#d8ff3e]/10 text-[#eaff93]" : ""}`}
+          aria-pressed={inventoryOpen}
+        >
+          <Boxes className="h-4 w-4" /> Inventario
+          {missingCount > 0 && (
+            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[#d8ff3e] px-1 text-[8px] font-black text-black">
+              {missingCount}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setInspectorOpen((value) => !value)}
+          className={`${TOOL_BUTTON} ${inspectorOpen ? "border-[#d8ff3e]/55 bg-[#d8ff3e]/10 text-[#eaff93]" : ""}`}
+          aria-pressed={inspectorOpen}
+        >
+          <Settings2 className="h-4 w-4" /> {selected || isMultiSelected ? "Inspector" : "Lienzo"}
+        </button>
+        <span className="mx-1 hidden h-7 w-px bg-white/12 sm:block" />
         <button type="button" onClick={undo} disabled={!history.past.length} className={TOOL_BUTTON} title="Deshacer (Ctrl+Z)">
           <Undo2 className="h-4 w-4" /> <span className="hidden sm:inline">Deshacer</span>
         </button>
@@ -1161,18 +1267,26 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       </div>
 
       <div className={styles.workbench}>
-        <aside className={`${styles.inventoryPanel} ${PANEL_CLASS}`} aria-label="Inventario de activos">
+        <aside
+          className={`${styles.inventoryPanel} ${inventoryOpen ? styles.panelOpen : ""} ${PANEL_CLASS}`}
+          aria-label="Inventario de activos"
+          aria-hidden={!inventoryOpen}
+          inert={!inventoryOpen}
+        >
           <div className="border-b-2 border-white/10 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Bandeja</p>
                 <h2 className="mt-1 text-lg font-black uppercase">Inventario</h2>
               </div>
-              {missingCount > 0 && (
-                <button type="button" onClick={addAllMissing} className="border-2 border-[#d8ff3e]/40 px-2 py-1.5 text-[9px] font-black uppercase text-[#eaff93] hover:border-[#d8ff3e]">
-                  Ubicar {missingCount}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {missingCount > 0 && (
+                  <button type="button" onClick={addAllMissing} className="border-2 border-[#d8ff3e]/40 px-2 py-1.5 text-[9px] font-black uppercase text-[#eaff93] hover:border-[#d8ff3e]">
+                    Ubicar {missingCount}
+                  </button>
+                )}
+                <button type="button" onClick={() => setInventoryOpen(false)} className="text-xl leading-none text-white/35 hover:text-white" aria-label="Cerrar inventario">×</button>
+              </div>
             </div>
             <label className="relative mt-4 block">
               <span className="sr-only">Buscar en el inventario</span>
@@ -1234,20 +1348,28 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
               <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">Lienzo · Piso 1</p>
               <p className="mt-0.5 text-xs font-bold text-white/42">Arrastrá el bloque; usá la esquina inferior derecha para redimensionar.</p>
             </div>
-            <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
-              <MousePointer2 className="h-4 w-4" /> Arrastrá sobre el lienzo para seleccionar varios · Shift suma
-            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
+              <p className="flex items-center gap-2">
+                <MousePointer2 className="h-4 w-4" /> Arrastrá para seleccionar varios · Shift suma
+              </p>
+              <p className="flex items-center gap-2">
+                <Hand className="h-4 w-4" /> Espacio + arrastrar o clic central para desplazarte
+              </p>
+            </div>
           </div>
-          <div ref={viewportRef} className={styles.canvasViewport}>
+          <div
+            ref={viewportRef}
+            className={`${styles.canvasViewport} ${spacePressed ? styles.panReady : ""} ${isPanning ? styles.panning : ""}`}
+          >
             <div className={styles.canvasScaleFrame} style={canvasFrameStyle}>
               <div
                 ref={canvasRef}
                 className={styles.canvas}
                 style={canvasStyle}
-                onPointerDown={beginMarquee}
-                onPointerMove={updateMarquee}
-                onPointerUp={finishMarquee}
-                onPointerCancel={cancelMarquee}
+                onPointerDown={onCanvasPointerDown}
+                onPointerMove={onCanvasPointerMove}
+                onPointerUp={onCanvasPointerUp}
+                onPointerCancel={onCanvasPointerCancel}
                 aria-label="Plano editable del piso 1"
               >
                 <div className={styles.floorStamp}>
@@ -1368,15 +1490,23 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
           </div>
         </section>
 
-        <aside className={`${styles.inspectorPanel} ${PANEL_CLASS}`} aria-label="Inspector del plano">
-          <section className="border-b-2 border-white/10 p-4">
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Agregar al lienzo</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => addCustomElement("area")} className={TOOL_BUTTON}><Square className="h-4 w-4" /> Área</button>
-              <button type="button" onClick={() => addCustomElement("obstacle")} className={TOOL_BUTTON}><Grid3X3 className="h-4 w-4" /> Columna</button>
-              <button type="button" onClick={() => addCustomElement("access")} className={TOOL_BUTTON}><DoorOpen className="h-4 w-4" /> Acceso</button>
-              <button type="button" onClick={() => addCustomElement("equipment")} className={TOOL_BUTTON}><Plus className="h-4 w-4" /> Equipo</button>
+        <aside
+          className={`${styles.inspectorPanel} ${inspectorOpen ? styles.panelOpen : ""} ${PANEL_CLASS}`}
+          aria-label="Inspector del plano"
+          aria-hidden={!inspectorOpen}
+          inert={!inspectorOpen}
+        >
+          <section className="flex items-start justify-between gap-3 border-b-2 border-white/10 p-4">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Agregar al lienzo</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => addCustomElement("area")} className={TOOL_BUTTON}><Square className="h-4 w-4" /> Área</button>
+                <button type="button" onClick={() => addCustomElement("obstacle")} className={TOOL_BUTTON}><Grid3X3 className="h-4 w-4" /> Columna</button>
+                <button type="button" onClick={() => addCustomElement("access")} className={TOOL_BUTTON}><DoorOpen className="h-4 w-4" /> Acceso</button>
+                <button type="button" onClick={() => addCustomElement("equipment")} className={TOOL_BUTTON}><Plus className="h-4 w-4" /> Equipo</button>
+              </div>
             </div>
+            <button type="button" onClick={() => setInspectorOpen(false)} className="text-xl leading-none text-white/35 hover:text-white" aria-label="Cerrar inspector">×</button>
           </section>
 
           {isMultiSelected ? (
@@ -1387,7 +1517,17 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                     <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">Selección múltiple</p>
                     <h2 className="mt-1 text-lg font-black uppercase leading-5">{selectedTargets.length} elementos</h2>
                   </div>
-                  <button type="button" onClick={() => setSelectedKeys(new Set())} className="text-xl leading-none text-white/35 hover:text-white" aria-label="Vaciar selección">×</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedKeys(new Set());
+                      setInspectorOpen(false);
+                    }}
+                    className="text-xl leading-none text-white/35 hover:text-white"
+                    aria-label="Vaciar selección"
+                  >
+                    ×
+                  </button>
                 </div>
                 <p className="mt-3 text-xs font-semibold leading-5 text-white/42">
                   Arrastrá cualquiera de los bloques seleccionados para moverlos juntos. Shift+clic suma o quita un bloque del grupo.
@@ -1421,7 +1561,17 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                       {selectedAsset ? selectedPlacement?.label || selectedAsset.name : selectedCustom?.label}
                     </h2>
                   </div>
-                  <button type="button" onClick={() => setSelectedKeys(new Set())} className="text-xl leading-none text-white/35 hover:text-white" aria-label="Cerrar inspector">×</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedKeys(new Set());
+                      setInspectorOpen(false);
+                    }}
+                    className="text-xl leading-none text-white/35 hover:text-white"
+                    aria-label="Cerrar inspector"
+                  >
+                    ×
+                  </button>
                 </div>
 
                 {selectedAsset && (

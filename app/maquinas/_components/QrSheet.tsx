@@ -15,8 +15,22 @@ const LOGO_SRC = "/xtreme/logo.webp";
 // Etiqueta rectangular (16:9) en alta resolución para imprimir en sala.
 const LABEL_WIDTH = 1600;
 const LABEL_HEIGHT = 900;
-const LABEL_PADDING = 64;
-const LABEL_BORDER = 16;
+
+// Paleta del rótulo físico: negro + dorado + acento morado (sigue el diseño
+// de señalización ya impreso en sala, distinto del lima del Member OS).
+const INK_BLACK = "#0a0a0c";
+const PAPER = "#fbf9f4";
+const GOLD = "#f0b429";
+const GOLD_SOFT = "#ffe08a";
+const GOLD_DEEP = "#a9741c";
+const PURPLE = "#5b2a86";
+const PURPLE_DEEP = "#33144d";
+
+const PAD_X = 70;
+const PAD_TOP = 56;
+const PAD_BOTTOM = 56;
+const SPLIT_TOP_X = 985;
+const SPLIT_BOTTOM_X = 1052;
 
 const ACCENTS: Array<[RegExp, string]> = [
   [/[áàä]/g, "a"],
@@ -111,28 +125,227 @@ function fitLines(
   return { size: minFont, lines };
 }
 
-/** Rectángulo sólido, con una copia offset detrás para el efecto "hard shadow" de la marca. */
-function hardBox(
+function roundedRectPath(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   w: number,
   h: number,
-  offset: number,
-  color = "#000000",
+  r: number,
 ) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** Insignia tipo "boleto": esquina superior derecha cortada a 45°. */
+function cutCornerPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  cut: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w - cut, y);
+  ctx.lineTo(x + w, y + cut);
+  ctx.lineTo(x + w, y + h);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+}
+
+type IconOp =
+  | { k: "path"; d: string }
+  | { k: "rect"; x: number; y: number; w: number; h: number; r: number }
+  | { k: "circle"; x: number; y: number; r: number };
+
+/** Dibuja un ícono de 24x24 (paths de lucide) centrado en (cx, cy) a `size`px. */
+function drawIcon(
+  ctx: CanvasRenderingContext2D,
+  ops: IconOp[],
+  cx: number,
+  cy: number,
+  size: number,
+  color: string,
+  weight = 2,
+) {
+  const scale = size / 24;
+  ctx.save();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(scale, scale);
+  ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.fillRect(x + offset, y + offset, w, h);
+  ctx.lineWidth = weight;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const op of ops) {
+    if (op.k === "path") {
+      ctx.stroke(new Path2D(op.d));
+    } else if (op.k === "circle") {
+      ctx.beginPath();
+      ctx.arc(op.x, op.y, op.r, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      roundedRectPath(ctx, op.x, op.y, op.w, op.h, op.r);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+const DUMBBELL: IconOp[] = [
+  {
+    k: "path",
+    d: "M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z",
+  },
+  { k: "path", d: "m2.5 21.5 1.4-1.4" },
+  { k: "path", d: "m20.1 3.9 1.4-1.4" },
+  {
+    k: "path",
+    d: "M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z",
+  },
+  { k: "path", d: "m9.6 14.4 4.8-4.8" },
+];
+const TARGET: IconOp[] = [
+  { k: "circle", x: 12, y: 12, r: 10 },
+  { k: "circle", x: 12, y: 12, r: 6 },
+  { k: "circle", x: 12, y: 12, r: 2 },
+];
+const LAYOUT_GRID: IconOp[] = [
+  { k: "rect", x: 3, y: 3, w: 7, h: 7, r: 1 },
+  { k: "rect", x: 14, y: 3, w: 7, h: 7, r: 1 },
+  { k: "rect", x: 14, y: 14, w: 7, h: 7, r: 1 },
+  { k: "rect", x: 3, y: 14, w: 7, h: 7, r: 1 },
+];
+const SHIELD_CHECK: IconOp[] = [
+  {
+    k: "path",
+    d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
+  },
+  { k: "path", d: "m9 12 2 2 4-4" },
+];
+const HEART_PULSE: IconOp[] = [
+  {
+    k: "path",
+    d: "M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5",
+  },
+  { k: "path", d: "M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" },
+];
+const ZAP: IconOp[] = [
+  {
+    k: "path",
+    d: "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z",
+  },
+];
+const FLAME: IconOp[] = [
+  {
+    k: "path",
+    d: "M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4",
+  },
+];
+const SCAN_LINE: IconOp[] = [
+  { k: "path", d: "M3 7V5a2 2 0 0 1 2-2h2" },
+  { k: "path", d: "M17 3h2a2 2 0 0 1 2 2v2" },
+  { k: "path", d: "M21 17v2a2 2 0 0 1-2 2h-2" },
+  { k: "path", d: "M7 21H5a2 2 0 0 1-2-2v-2" },
+  { k: "path", d: "M7 12h10" },
+];
+const BOOK_OPEN: IconOp[] = [
+  { k: "path", d: "M12 7v14" },
+  {
+    k: "path",
+    d: "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",
+  },
+];
+
+/** Espejo de ZONE_ICONS (app/components/member/tabs/MaquinasTab.tsx) para el rótulo impreso. */
+const ZONE_ICON_OPS: Record<string, IconOp[]> = {
+  Pierna: DUMBBELL,
+  Pecho: TARGET,
+  Espalda: LAYOUT_GRID,
+  Hombro: SHIELD_CHECK,
+  Brazo: ZAP,
+  Core: FLAME,
+  "Full body": SHIELD_CHECK,
+  Cardio: HEART_PULSE,
+};
+
+/** Trama de puntos dorados, recortada a una caja (esquinas del panel claro). */
+function drawDotGrid(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: string,
+) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.fillStyle = color;
+  const step = 26;
+  const dotR = 2.6;
+  for (let py = y - step; py < y + h + step; py += step) {
+    for (let px = x - step; px < x + w + step; px += step) {
+      ctx.beginPath();
+      ctx.arc(px, py, dotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+/** Trama de hexágonos, muy sutil, recortada a una caja (esquina del panel oscuro). */
+function drawHexPattern(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: string,
+) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  const size = 26;
+  const hexH = Math.sqrt(3) * size;
+  const stepX = size * 1.5;
+  for (let col = 0, cx = x; cx < x + w + stepX; col += 1, cx = x + col * stepX) {
+    const offsetY = col % 2 === 0 ? 0 : hexH / 2;
+    for (let cy = y - hexH + offsetY; cy < y + h + hexH; cy += hexH) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i += 1) {
+        const angle = (Math.PI / 3) * i;
+        const px = cx + size * Math.cos(angle);
+        const py = cy + size * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 /**
- * Compone la etiqueta física de una máquina: logo + código arriba a la
- * izquierda, nombre centrado debajo, separados del QR (que respira solo
- * sobre blanco, sin marco) por una línea lima vertical que recorre toda la
- * tarjeta. Lista para imprimir y pegar en sala.
+ * Compone la etiqueta física de una máquina siguiendo el rótulo de señalización
+ * ya impreso en sala: panel negro con el logo, el nombre y la zona a la
+ * izquierda, cortado en diagonal (con costura dorada) contra un panel claro
+ * a la derecha donde respira el QR. Lista para imprimir y pegar en sala.
  */
 async function composeLabel(item: MachineLabel): Promise<Blob> {
-  const qrSize = 600;
+  const qrSize = 380;
   const [logo, qrCanvas] = await Promise.all([
     getLogo(),
     QRCode.toCanvas(item.url, {
@@ -149,147 +362,230 @@ async function composeLabel(item: MachineLabel): Promise<Blob> {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Este navegador no soporta canvas.");
 
-  ctx.fillStyle = "#ffffff";
+  // ── Fondo: panel claro completo, panel negro recortado en diagonal encima. ──
+  ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, LABEL_WIDTH, LABEL_HEIGHT);
-  ctx.strokeStyle = "#000000";
-  ctx.lineWidth = LABEL_BORDER;
-  ctx.strokeRect(
-    LABEL_BORDER / 2,
-    LABEL_BORDER / 2,
-    LABEL_WIDTH - LABEL_BORDER,
-    LABEL_HEIGHT - LABEL_BORDER,
-  );
 
-  const contentX = LABEL_PADDING;
-  const contentY = LABEL_PADDING;
-  const contentW = LABEL_WIDTH - LABEL_PADDING * 2;
-  const contentH = LABEL_HEIGHT - LABEL_PADDING * 2;
+  ctx.fillStyle = INK_BLACK;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(SPLIT_TOP_X, 0);
+  ctx.lineTo(SPLIT_BOTTOM_X, LABEL_HEIGHT);
+  ctx.lineTo(0, LABEL_HEIGHT);
+  ctx.closePath();
+  ctx.fill();
 
-  // ── Retícula: columna izquierda | línea divisoria lima | columna QR. ──
-  const dividerW = 6;
-  const colGap = 48;
-  const leftColW = contentW - qrSize - colGap * 2 - dividerW;
-  const leftX = contentX;
-  const dividerX = leftX + leftColW + colGap;
-  const rightX = dividerX + dividerW + colGap;
-  const qrY = contentY;
+  // Costura dorada sobre la diagonal (mitad en negro, mitad en claro).
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 12;
+  ctx.beginPath();
+  ctx.moveTo(SPLIT_TOP_X, 0);
+  ctx.lineTo(SPLIT_BOTTOM_X, LABEL_HEIGHT);
+  ctx.stroke();
 
-  ctx.fillStyle = "#d8ff3e";
-  ctx.fillRect(dividerX, contentY, dividerW, contentH);
+  // Tramas decorativas, muy sutiles: hexágonos en la esquina negra, puntos dorados en la clara.
+  drawHexPattern(ctx, 0, 0, 460, 300, "rgba(255,255,255,0.05)");
+  drawDotGrid(ctx, LABEL_WIDTH - 260, 0, 260, 210, "rgba(240,180,41,0.35)");
+  drawDotGrid(ctx, LABEL_WIDTH - 260, LABEL_HEIGHT - 210, 260, 210, "rgba(240,180,41,0.3)");
 
-  // ── Columna izquierda: logo + código, mismo borde superior que el QR. ──
-  const badgeH = 260;
-  const logoSize = badgeH;
-  hardBox(ctx, leftX, contentY, logoSize, logoSize, 12);
-  ctx.drawImage(logo, leftX, contentY, logoSize, logoSize);
-  ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 2.5;
-  ctx.strokeRect(leftX + 1.25, contentY + 1.25, logoSize - 2.5, logoSize - 2.5);
+  // Marco dorado de cierre.
+  ctx.strokeStyle = GOLD_DEEP;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(5, 5, LABEL_WIDTH - 10, LABEL_HEIGHT - 10);
 
+  const leftColRight = SPLIT_TOP_X - 44;
+  const leftColW = leftColRight - PAD_X;
+
+  // ── Logo + tagline, arriba a la izquierda sobre el panel negro. ──
+  const logoSize = 148;
+  ctx.drawImage(logo, PAD_X, PAD_TOP, logoSize, logoSize);
+
+  const taglineY = PAD_TOP + logoSize + 32;
+  ctx.font = "700 15px Arial";
+  ctx.fillStyle = "rgba(255,255,255,0.75)";
+  const tagline = "CIUDAD QUESADA";
+  const taglineW = ctx.measureText(tagline).width;
+  const taglineCx = PAD_X + logoSize / 2;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(tagline, taglineCx, taglineY);
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(taglineCx - taglineW / 2 - 34, taglineY);
+  ctx.lineTo(taglineCx - taglineW / 2 - 10, taglineY);
+  ctx.moveTo(taglineCx + taglineW / 2 + 10, taglineY);
+  ctx.lineTo(taglineCx + taglineW / 2 + 34, taglineY);
+  ctx.stroke();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+
+  // ── Insignia dorada con el código: "boleto" cruzando la costura. ──
   if (item.code) {
-    const codeX = leftX + logoSize + 32;
-    const codeMaxW = leftColW - logoSize - 32;
-    // Arranca cerca de la altura del badge (no de un tamaño fijo chico) para
-    // que un código corto ("18") pese tanto como el logo, no menos.
-    let codeFont = Math.round(badgeH * 0.74);
+    const badgeH = 176;
+    const badgeCut = 32;
+    const maxBadgeW = 340;
+    let codeFont = 132;
     ctx.font = `900 ${codeFont}px Arial`;
-    while (codeFont > 70 && ctx.measureText(item.code).width > codeMaxW - 56) {
+    while (codeFont > 56 && ctx.measureText(item.code).width > maxBadgeW - 64) {
       codeFont -= 4;
       ctx.font = `900 ${codeFont}px Arial`;
     }
-    const codePadX = 28;
-    const codeW = Math.min(codeMaxW, ctx.measureText(item.code).width + codePadX * 2);
-    hardBox(ctx, codeX, contentY, codeW, badgeH, 12);
-    ctx.fillStyle = "#d8ff3e";
-    ctx.fillRect(codeX, contentY, codeW, badgeH);
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 5;
-    ctx.strokeRect(codeX + 3, contentY + 3, codeW - 6, badgeH - 6);
-    ctx.fillStyle = "#000000";
+    const badgePadX = 32;
+    const badgeW = Math.min(maxBadgeW, ctx.measureText(item.code).width + badgePadX * 2);
+    const badgeX2 = SPLIT_TOP_X + 56;
+    const badgeX1 = badgeX2 - badgeW;
+    const badgeY1 = PAD_TOP - 6;
+
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    cutCornerPath(ctx, badgeX1 + 10, badgeY1 + 10, badgeW, badgeH, badgeCut);
+    ctx.fill();
+
+    const gradient = ctx.createLinearGradient(badgeX1, badgeY1, badgeX1 + badgeW, badgeY1 + badgeH);
+    gradient.addColorStop(0, GOLD_SOFT);
+    gradient.addColorStop(1, GOLD_DEEP);
+    ctx.fillStyle = gradient;
+    cutCornerPath(ctx, badgeX1, badgeY1, badgeW, badgeH, badgeCut);
+    ctx.fill();
+    ctx.strokeStyle = GOLD_DEEP;
+    ctx.lineWidth = 3;
+    cutCornerPath(ctx, badgeX1 + 1.5, badgeY1 + 1.5, badgeW - 3, badgeH - 3, badgeCut);
+    ctx.stroke();
+
+    ctx.fillStyle = PURPLE_DEEP;
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.fillText(item.code, codeX + codeW / 2, contentY + badgeH / 2 + 6);
+    ctx.fillText(item.code, badgeX1 + badgeW / 2 - badgeCut / 4, badgeY1 + badgeH / 2 + 6);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
   }
 
-  // ── Columna derecha: QR directo sobre blanco, con un hairline de contención. ──
-  ctx.drawImage(qrCanvas, rightX, qrY, qrSize, qrSize);
-  ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 2.5;
-  ctx.strokeRect(rightX + 1.25, qrY + 1.25, qrSize - 2.5, qrSize - 2.5);
-
-  ctx.font = "900 34px Arial";
-  const scanText = "ESCANEÁ AQUÍ";
-  const scanPadX = 30;
-  const scanW = ctx.measureText(scanText).width + scanPadX * 2;
-  const scanH = 62;
-  const scanX = rightX + (qrSize - scanW) / 2;
-  const scanY = qrY + qrSize + 30;
-  hardBox(ctx, scanX, scanY, scanW, scanH, 8, "#d8ff3e");
-  ctx.fillStyle = "#000000";
-  ctx.fillRect(scanX, scanY, scanW, scanH);
-  ctx.strokeStyle = "#d8ff3e";
-  ctx.lineWidth = dividerW;
-  ctx.strokeRect(scanX + dividerW / 2, scanY + dividerW / 2, scanW - dividerW, scanH - dividerW);
-  ctx.fillStyle = "#d8ff3e";
-  ctx.textBaseline = "middle";
-  ctx.textAlign = "center";
-  ctx.fillText(scanText, scanX + scanW / 2, scanY + scanH / 2 + 2);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-  const qrColumnBottom = scanY + scanH;
-
-  // Nombre + categoría: el bloque completo (y el footer) se centra contra la
-  // altura real del QR+CTA, no contra todo el alto de la tarjeta — para que
-  // ambas columnas terminen a la misma altura en vez de dejar aire abajo a
-  // la izquierda.
-  const footerBaselineY = qrColumnBottom - 4;
-  const regionTop = contentY + badgeH + 50;
-  const regionBottom = footerBaselineY - 50;
-
-  ctx.letterSpacing = "2px";
+  // ── Nombre de la máquina, grande y en blanco. ──
+  const nameTop = taglineY + 56;
+  ctx.letterSpacing = "1px";
   const { size: nameSize, lines: nameLines } = fitLines(
     ctx,
     item.name.toUpperCase(),
     leftColW,
-    86,
-    36,
+    84,
+    40,
     3,
   );
-  const nameLineHeight = nameSize * 1.1;
-  const zoneGap = 30;
-  const zoneTagH = 58;
-  const textBlockH = nameLines.length * nameLineHeight + zoneGap + zoneTagH;
-  const startY = regionTop + Math.max(0, (regionBottom - regionTop - textBlockH) / 2);
-
+  const nameLineHeight = nameSize * 1.08;
   ctx.font = `900 ${nameSize}px Arial`;
-  ctx.fillStyle = "#000000";
+  ctx.fillStyle = "#ffffff";
   nameLines.forEach((line, i) => {
-    ctx.fillText(line, leftX, startY + nameSize * 0.85 + i * nameLineHeight);
+    ctx.fillText(line, PAD_X, nameTop + nameSize * 0.85 + i * nameLineHeight);
   });
   ctx.letterSpacing = "0px";
 
-  // Categoría como tag (no texto suelto): más jerarquía que una línea gris chica.
-  const zoneY = startY + nameLines.length * nameLineHeight + zoneGap;
-  ctx.font = "900 32px Arial";
+  // ── Línea divisoria + zona con ícono en círculo morado. ──
+  const dividerY = nameTop + nameLines.length * nameLineHeight + 30;
+  ctx.strokeStyle = "rgba(255,255,255,0.25)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(PAD_X, dividerY);
+  ctx.lineTo(PAD_X + leftColW, dividerY);
+  ctx.stroke();
+
+  const circleR = 38;
+  const circleCx = PAD_X + circleR;
+  const circleCy = dividerY + 26 + circleR;
+  ctx.fillStyle = PURPLE;
+  ctx.beginPath();
+  ctx.arc(circleCx, circleCy, circleR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.4)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  drawIcon(ctx, ZONE_ICON_OPS[item.zone] ?? DUMBBELL, circleCx, circleCy, 40, "#ffffff", 2);
+
   const zoneText = item.units > 1 ? `${item.zone} · Unidad ${item.unit}/${item.units}` : item.zone;
-  const zoneLabel = zoneText.toUpperCase();
-  const zoneTagPadX = 22;
-  const zoneTagW = ctx.measureText(zoneLabel).width + zoneTagPadX * 2;
-  ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(leftX + 1.5, zoneY + 1.5, zoneTagW - 3, zoneTagH - 3);
-  ctx.fillStyle = "#000000";
+  ctx.font = "900 30px Arial";
+  ctx.fillStyle = "#ffffff";
   ctx.textBaseline = "middle";
-  ctx.textAlign = "center";
-  ctx.fillText(zoneLabel, leftX + zoneTagW / 2, zoneY + zoneTagH / 2 + 2);
-  ctx.textAlign = "left";
+  ctx.fillText(zoneText.toUpperCase(), circleCx + circleR + 22, circleCy + 2);
   ctx.textBaseline = "alphabetic";
 
-  ctx.font = "800 24px Arial";
-  ctx.fillStyle = "#000000";
-  ctx.fillText("XTREME GYM · GUÍA DE MÁQUINAS", leftX, footerBaselineY);
+  // ── Pastilla de pie de página, abajo a la izquierda. ──
+  const pillH = 54;
+  const pillIconSize = 22;
+  const pillPadX = 22;
+  const pillGap = 12;
+  const footerText = "XTREME GYM · GUÍA DE MÁQUINAS";
+  ctx.font = "800 16px Arial";
+  const footerTextW = ctx.measureText(footerText).width;
+  const pillW = pillPadX * 2 + pillIconSize + pillGap + footerTextW;
+  const pillX = PAD_X;
+  const pillY = LABEL_HEIGHT - PAD_BOTTOM - pillH;
+  ctx.fillStyle = INK_BLACK;
+  roundedRectPath(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+  ctx.fill();
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 2.5;
+  roundedRectPath(ctx, pillX + 1.25, pillY + 1.25, pillW - 2.5, pillH - 2.5, pillH / 2 - 1);
+  ctx.stroke();
+  drawIcon(
+    ctx,
+    BOOK_OPEN,
+    pillX + pillPadX + pillIconSize / 2,
+    pillY + pillH / 2,
+    pillIconSize,
+    GOLD,
+    2.2,
+  );
+  ctx.font = "800 16px Arial";
+  ctx.fillStyle = GOLD;
+  ctx.textBaseline = "middle";
+  ctx.fillText(footerText, pillX + pillPadX + pillIconSize + pillGap, pillY + pillH / 2 + 1);
+  ctx.textBaseline = "alphabetic";
+
+  // ── Columna derecha: tarjeta blanca con el QR + CTA "Escaneá aquí". ──
+  const rcLeft = SPLIT_BOTTOM_X + 40;
+  const rcRight = LABEL_WIDTH - PAD_X;
+  const rcCenterX = (rcLeft + rcRight) / 2;
+  const cardPad = 22;
+  const cardSize = qrSize + cardPad * 2;
+  const cardX = rcCenterX - cardSize / 2;
+  const cardY = PAD_TOP + 6;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.2)";
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetY = 10;
+  ctx.fillStyle = "#ffffff";
+  roundedRectPath(ctx, cardX, cardY, cardSize, cardSize, 20);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = "rgba(0,0,0,0.08)";
+  ctx.lineWidth = 1.5;
+  roundedRectPath(ctx, cardX + 0.75, cardY + 0.75, cardSize - 1.5, cardSize - 1.5, 20);
+  ctx.stroke();
+  ctx.drawImage(qrCanvas, cardX + cardPad, cardY + cardPad, qrSize, qrSize);
+
+  const ctaText = "ESCANEÁ AQUÍ";
+  const ctaIconSize = 26;
+  const ctaGap = 14;
+  const ctaPadX = 28;
+  ctx.font = "900 30px Arial";
+  const ctaTextW = ctx.measureText(ctaText).width;
+  const ctaH = 60;
+  const ctaW = ctaPadX * 2 + ctaIconSize + ctaGap + ctaTextW;
+  const ctaX = rcCenterX - ctaW / 2;
+  const ctaY = cardY + cardSize + 30;
+  ctx.fillStyle = INK_BLACK;
+  roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, ctaH / 2);
+  ctx.fill();
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 3;
+  roundedRectPath(ctx, ctaX + 1.5, ctaY + 1.5, ctaW - 3, ctaH - 3, ctaH / 2 - 1.5);
+  ctx.stroke();
+  drawIcon(ctx, SCAN_LINE, ctaX + ctaPadX + ctaIconSize / 2, ctaY + ctaH / 2, ctaIconSize, GOLD, 2.2);
+  ctx.font = "900 30px Arial";
+  ctx.fillStyle = GOLD;
+  ctx.textBaseline = "middle";
+  ctx.fillText(ctaText, ctaX + ctaPadX + ctaIconSize + ctaGap, ctaY + ctaH / 2 + 2);
+  ctx.textBaseline = "alphabetic";
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
