@@ -129,7 +129,7 @@ function ThermalReceipt({ receipt }: { receipt: Receipt }) {
     <p className="mt-3"><span className="font-bold">Fecha:</span> {emitido.date} <span className="font-bold">Hora:</span> {emitido.time}</p>
 
     <div className="mt-3">
-      <p><span className="font-bold">Cajero:</span>{receipt.staffName}</p>
+      <p><span className="font-bold">Cajero:</span> {receipt.staffName}</p>
       <p className="font-bold">N° Comprobante:</p>
       <p className="break-all">{receipt.id}</p>
       {receipt.memberNumber != null && receipt.memberNumber !== "" && <p><span className="font-bold">Socio#:</span>{receipt.memberNumber}</p>}

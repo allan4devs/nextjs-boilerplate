@@ -9,6 +9,8 @@ import {
 
 export type ProductCategory = "bebidas" | "proteinas" | "creatinas" | "hidratantes" | "chicles";
 
+export const PRODUCT_CATEGORIES: ProductCategory[] = ["bebidas", "proteinas", "creatinas", "hidratantes", "chicles"];
+
 export type ProductInventoryDoc = {
   id: string;
   name: string;
@@ -61,8 +63,17 @@ const DEFAULT_PRODUCTS: Array<Pick<ProductInventoryDoc, "id" | "name" | "categor
   { id: "monster-white", name: "Monster Energy Ultra White", category: "bebidas", image: "/xtreme/products/monster-white.jpeg" },
   { id: "barrita-mani", name: "Barrita de maní", category: "proteinas", defaultPrice: 500 },
   { id: "barrita-fresa", name: "Barrita de fresa", category: "proteinas", defaultPrice: 500 },
-  { id: "chicle-verde", name: "Chicle verde (paquete de 5)", category: "chicles", unitsPerPackage: 5 },
-  { id: "chicle-gris", name: "Chicle gris (paquete de 5)", category: "chicles", unitsPerPackage: 5 },
+  // Inventario "por unidad": los chicles se venden y cuentan individualmente,
+  // no como paquete de 5. Sin unitsPerPackage => cada existencia es una unidad.
+  { id: "chicle-verde", name: "Chicle verde", category: "chicles" },
+  // Precio real ₡400 confirmado en el conteo físico del 28/08/2026 (antes solo
+  // vivía en Mongo vía script suelto); se codifica acá para no perderlo si el
+  // documento se recrea.
+  { id: "chicle-gris", name: "Chicle gris", category: "chicles", defaultPrice: 400 },
+  // Se vendía desde el 28/08/2026 (script suelto que la creó directo en Mongo,
+  // sin quedar en este catálogo). Se agrega acá para que el seed la reconozca
+  // y quede disponible aunque el documento se recree.
+  { id: "pinas", name: "Piñas", category: "chicles", defaultPrice: 1200 },
 ];
 
 const PHYSICAL_COUNT_VERSION = "physical-count-2026-08-04";
@@ -85,6 +96,10 @@ export async function ensureDefaultProducts(db: Db) {
           $set: {
             name: product.name,
             ...(product.image ? { image: product.image } : {}),
+            // Todo producto del catálogo debe quedar disponible para la venta.
+            // No hay UI para desactivar productos hoy, así que forzarlo acá
+            // reactiva cualquiera que se haya desactivado por otra vía.
+            active: true,
           },
           $setOnInsert: {
             id: product.id,
@@ -92,7 +107,6 @@ export async function ensureDefaultProducts(db: Db) {
             quantity: 0,
             price: product.defaultPrice ?? 0,
             ...(product.unitsPerPackage ? { unitsPerPackage: product.unitsPerPackage } : {}),
-            active: true,
             createdAt: now,
             updatedAt: now,
           },
@@ -176,7 +190,7 @@ export async function ensureDefaultProducts(db: Db) {
   }
 }
 
-export async function listProducts(db: Db) {
+export async function listProducts(db: Db, opts: { includeInactive?: boolean } = {}) {
   await ensureDefaultProducts(db);
   const collection = db.collection<ProductInventoryDoc>(PRODUCT_INVENTORY_COLLECTION);
   const missingLocations = await collection
@@ -198,7 +212,7 @@ export async function listProducts(db: Db) {
     );
   }
   return collection
-    .find({ active: true })
+    .find(opts.includeInactive ? {} : { active: true })
     .sort({ category: 1, name: 1 })
     .toArray();
 }
@@ -206,7 +220,15 @@ export async function listProducts(db: Db) {
 export async function updateProductInventory(
   db: Db,
   id: string,
-  values: { quantity?: number; cameraQuantity?: number; warehouseQuantity?: number; price: number },
+  values: {
+    quantity?: number;
+    cameraQuantity?: number;
+    warehouseQuantity?: number;
+    price: number;
+    name?: string;
+    category?: ProductCategory;
+    image?: string;
+  },
 ) {
   const hasLocations = values.cameraQuantity !== undefined && values.warehouseQuantity !== undefined;
   const safeCameraQuantity = hasLocations
@@ -215,11 +237,101 @@ export async function updateProductInventory(
   const safeWarehouseQuantity = hasLocations ? Math.max(0, Math.floor(values.warehouseQuantity ?? 0)) : 0;
   const safeQuantity = safeCameraQuantity + safeWarehouseQuantity;
   const safePrice = Math.max(0, Math.round(values.price));
+  const name = values.name?.trim();
+  const trimmedImage = values.image?.trim();
+  const clearImage = values.image !== undefined && !trimmedImage;
+  // Sin filtro por active: un producto inactivo también se puede editar (por
+  // ejemplo corregir el precio antes de reactivarlo).
   return db.collection<ProductInventoryDoc>(PRODUCT_INVENTORY_COLLECTION).findOneAndUpdate(
-    { id, active: true },
-    { $set: { quantity: safeQuantity, cameraQuantity: safeCameraQuantity, warehouseQuantity: safeWarehouseQuantity, price: safePrice, updatedAt: new Date() } },
+    { id },
+    {
+      $set: {
+        quantity: safeQuantity,
+        cameraQuantity: safeCameraQuantity,
+        warehouseQuantity: safeWarehouseQuantity,
+        price: safePrice,
+        updatedAt: new Date(),
+        ...(name ? { name } : {}),
+        ...(values.category ? { category: values.category } : {}),
+        ...(trimmedImage ? { image: trimmedImage } : {}),
+      },
+      ...(clearImage ? { $unset: { image: "" as const } } : {}),
+    },
     { returnDocument: "after" },
   );
+}
+
+// Activar/desactivar sin tocar existencias, precio ni nombre. Un producto
+// desactivado no aparece en Ventas ni en el Inventario por defecto, pero
+// sigue existiendo (y se puede reactivar) — no es un borrado.
+export async function setProductActive(db: Db, id: string, active: boolean) {
+  return db.collection<ProductInventoryDoc>(PRODUCT_INVENTORY_COLLECTION).findOneAndUpdate(
+    { id },
+    { $set: { active, updatedAt: new Date() } },
+    { returnDocument: "after" },
+  );
+}
+
+// id legible y estable a partir del nombre: minúsculas, sin acentos, guiones.
+function slugify(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+export async function createProduct(
+  db: Db,
+  input: {
+    name: string;
+    category: ProductCategory;
+    price: number;
+    quantity?: number;
+    cameraQuantity?: number;
+    warehouseQuantity?: number;
+    image?: string;
+  },
+) {
+  const name = input.name.trim();
+  if (!name) throw new Error("product_name_required");
+  if (!PRODUCT_CATEGORIES.includes(input.category)) throw new Error("product_category_required");
+
+  const collection = db.collection<ProductInventoryDoc>(PRODUCT_INVENTORY_COLLECTION);
+  const base = slugify(name) || "producto";
+  let id = base;
+  let attempt = 1;
+  // Evita chocar con un id ya usado (incluye productos desactivados: el id
+  // debe seguir siendo único aunque ya no estén a la venta).
+  while (await collection.findOne({ id })) {
+    attempt += 1;
+    id = `${base}-${attempt}`;
+  }
+
+  const hasLocations = input.cameraQuantity !== undefined && input.warehouseQuantity !== undefined;
+  const cameraQuantity = hasLocations
+    ? Math.max(0, Math.floor(input.cameraQuantity ?? 0))
+    : Math.max(0, Math.floor(input.quantity ?? 0));
+  const warehouseQuantity = hasLocations ? Math.max(0, Math.floor(input.warehouseQuantity ?? 0)) : 0;
+  const now = new Date();
+  const doc: ProductInventoryDoc = {
+    id,
+    name,
+    category: input.category,
+    ...(input.image?.trim() ? { image: input.image.trim() } : {}),
+    quantity: cameraQuantity + warehouseQuantity,
+    cameraQuantity,
+    warehouseQuantity,
+    price: Math.max(0, Math.round(input.price)),
+    active: true,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await collection.insertOne(doc);
+  return doc;
 }
 
 export async function recordProductSale(

@@ -48,11 +48,11 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 | Variable | Notas |
 |----------|--------|
 | `MONGODB_URI` / `MONGODB_DB` | Base de datos |
-| `XTREME_RECEPTION_CODE` | Código exclusivo para recepción e ingreso; largo y aleatorio |
+| `XTREME_RECEPTION_CODE` | Código compartido de respaldo para recepción e ingreso; el mostrador normal entra por operador + PIN propio (se crea en el acto, se guarda en Mongo). Largo y aleatorio |
 | `XTREME_TRAINER_CODE` | Código exclusivo de Trainer OS; solo permite planes y seguimiento técnico |
 | `XTREME_ADMIN_CODE` / `XTREME_SUPER_ADMIN_CODE` | Códigos separados por rol; largos y aleatorios; sin defaults en prod |
 | `XTREME_ALLAN_PIN`, `XTREME_ALEJANDRO_PIN`, `XTREME_EILEEN_PIN` | PIN individual de cada super admin; configurar valores distintos y seguros |
-| `XTREME_VERONICA_PIN`, `XTREME_VALESKA_PIN` | PIN individual de recepción |
+| `XTREME_VICTORIA_PIN`, `XTREME_VALESKA_PIN` | PIN legacy opcional; el PIN de mostrador real se crea desde `/recepcion` y vive en Mongo (`xtreme_gym_staff_reception_pins`) |
 | `XTREME_KENGIE_PIN`, `XTREME_JOSUE_PIN` | PIN individual de Trainer OS |
 | `XTREME_ALBERTO_VIP_PIN` | PIN reservado para el futuro panel VIP limitado; no abre Admin OS general |
 | `CRON_SECRET` | Auth del job lifecycle (Bearer) |

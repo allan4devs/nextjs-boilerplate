@@ -193,6 +193,11 @@ html.xg-staff-light [class*="bg-[#0a0a0a]"],
 html.xg-staff-light [class*="bg-[#0b0b0b]"],
 html.xg-staff-light [class*="bg-[#0c0c0c]"],
 html.xg-staff-light [class*="bg-[#0d0d0d]"],
+html.xg-staff-light [class*="bg-[#0e0e0e]"],
+html.xg-staff-light [class*="bg-[#0f0f0f]"],
+html.xg-staff-light [class*="bg-[#101010]"],
+html.xg-staff-light [class*="bg-[#111111]"],
+html.xg-staff-light [class*="bg-[#121212]"],
 html.xg-staff-light [class*="bg-black"] {
   background-color: #fbfcf8 !important;
 }
@@ -307,17 +312,40 @@ html.xg-staff-light .xg-theme-toggle {
  * El ancho del contenido NO debe pasar de 72 mm o el borde derecho se recorta.
  */
 @media print {
-  @page {
+  /* Página propia de 80 mm SOLO para el comprobante térmico. Va como página
+   * nombrada (`page: xg-thermal`) para no forzar 80 mm en el resto de páginas
+   * imprimibles (etiquetas QR de máquinas, plano de sala, flyers…), que
+   * conservan su propio @page / tamaño de papel. */
+  @page xg-thermal {
     size: 80mm auto; /* rollo de 80 mm; largo variable por comprobante */
     margin: 0; /* el driver ya imprime sin márgenes (origen 0,0) */
   }
 
-  body * {
+  /* Todo lo de abajo aplica SOLO cuando hay un comprobante en la página: se
+   * usa el rollo de 80 mm y se oculta el resto del contenido. En cualquier otra
+   * superficie imprimible (etiquetas QR, plano, flyers) estas reglas no aplican
+   * y la página se imprime completa con su propio tamaño de papel. */
+  body:has(.thermal-receipt) {
+    page: xg-thermal;
+  }
+
+  body:has(.thermal-receipt) * {
     visibility: hidden !important;
   }
 
-  .thermal-receipt,
-  .thermal-receipt * {
+  /* Neutralizar cualquier ancestro posicionado o con recorte del comprobante
+   * (p. ej. el <aside> "lg:sticky" del punto de venta de inventario). Sin esto,
+   * el `position:absolute; inset:0` del recibo se ancla a esa columna en vez de
+   * a la página: se imprimía corrido al centro/derecha y recortado. `:has()`
+   * selecciona a todos los ancestros del recibo (html, body, main, aside…). */
+  :has(.thermal-receipt) {
+    position: static !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  body:has(.thermal-receipt) .thermal-receipt,
+  body:has(.thermal-receipt) .thermal-receipt * {
     visibility: visible !important;
   }
 
@@ -580,6 +608,55 @@ html[data-xg-keyboard="open"] .xg-os-login-shell > :not(.xg-atmosphere) {
 
 .xg-mobile-scroll::-webkit-scrollbar {
   display: none;
+}
+
+/*
+ * Punto de venta de recepción (ReceptionStorefront, modo ventas).
+ * Escala de tipografía y alto contraste opcionales, acotados a `.xg-pos`
+ * para no afectar el resto de recepción. Mismo enfoque de selectores por
+ * substring de clase que `html.xg-staff-light`.
+ */
+.xg-pos {
+  --pos-name: 1rem;
+  --pos-price: 1.25rem;
+  --pos-total: 1.875rem;
+  --pos-cobrar: 1.25rem;
+  --pos-step: 1.5rem;
+}
+
+.xg-pos[data-size="grande"] {
+  --pos-name: 1.25rem;
+  --pos-price: 1.625rem;
+  --pos-total: 2.25rem;
+  --pos-cobrar: 1.625rem;
+  --pos-step: 2rem;
+}
+
+.xg-pos[data-contrast="alto"] {
+  --pos-name: 1.0625rem;
+}
+
+/* Los ajustes de color del alto contraste solo aplican en tema oscuro; el
+ * tema claro ya trae su propio tratamiento de contraste. */
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-white/3"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-white/4"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-white/5"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-white/6"] {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="border-white/1"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="border-white/2"] {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="text-[#d8ff3e]"] {
+  color: #e9ff7a !important;
+}
+
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="bg-black/3"],
+html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="bg-black/4"] {
+  background-color: #000 !important;
 }
 
 .xg-keyboard-panel {

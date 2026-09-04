@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   ArrowRight,
   Bolt,
   CheckCircle2,
@@ -10,6 +11,7 @@ import {
   ChevronUp,
   Crown,
   DoorOpen,
+  KeyRound,
   LayoutDashboard,
   Loader2,
   Lock,
@@ -19,11 +21,14 @@ import {
   ScanFace,
   Search,
   ShieldAlert,
+  ShoppingCart,
+  Sparkles,
   Sun,
   Send,
   UserPlus,
   Users,
   UsersRound,
+  Video,
   X,
   XCircle,
 } from "lucide-react";
@@ -37,7 +42,8 @@ import {
 import ReceptionChatInbox from "../../components/reception/ReceptionChatInbox";
 import ReceptionDutiesPanel from "../../components/reception/ReceptionDutiesPanel";
 import ReceptionBillingPanel from "../../components/reception/ReceptionBillingPanel";
-import FaceRecognitionPanel from "../../components/reception/FaceRecognitionPanel";
+import FaceTerminalPanel from "../../components/reception/FaceTerminalPanel";
+import CameraWallPanel from "../../components/reception/CameraWallPanel";
 import { MemberPreview } from "../../components/reception/MemberCards";
 import StaffThemeToggle from "../../components/StaffThemeToggle";
 import {
@@ -89,19 +95,29 @@ function ReceptionConsole() {
       setUnlockError,
       isUnlocking,
       setIsUnlocking,
+      operators,
+      operatorsLoaded,
+      loadOperators,
       signIn,
+      submitPin,
       acceptSession,
       signOut,
     },
     feedback: { error, setError, flash, setFlash },
   } = useReception();
 
+  // Acceso: selector de operador → PIN. `code` es el fallback legacy.
+  const [authStep, setAuthStep] = useState<"pick" | "pin" | "code">("pick");
+  const [pickedId, setPickedId] = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+
   const [tab, setTab] = useState<ReceptionTab>("cedula");
   const [dutiesCollapsed, setDutiesCollapsed] = useState(false);
+  const [controlsCollapsed, setControlsCollapsed] = useState(true);
   const [status, setStatus] = useState<GymStatus | null>(null);
   const [recent, setRecent] = useState<RecentCheckin[]>([]);
   const [inside, setInside] = useState<ActiveVisit[]>([]);
-  const [roster, setRoster] = useState<MemberHit[]>([]);
   const [checkoutQuery, setCheckoutQuery] = useState("");
   const [checkingOutId, setCheckingOutId] = useState("");
 
@@ -142,8 +158,8 @@ function ReceptionConsole() {
   const [isInviting, setIsInviting] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
 
-  // Cámara del alta en mostrador. El ingreso por rostro maneja la suya dentro
-  // de FaceRecognitionPanel, que la enciende y apaga con su propio ciclo de vida.
+  // Cámara del alta en mostrador (solo la foto de la ficha). El ingreso por
+  // rostro ya no usa webcam: lo hace la terminal física de la puerta.
   const {
     videoRef,
     cameraOn,
@@ -190,7 +206,6 @@ function ReceptionConsole() {
         if (json.status) setStatus(json.status);
         if (json.recent) setRecent(json.recent);
         if (json.inside) setInside(json.inside);
-        if (json.members) setRoster(json.members);
       } catch {
         /* poll soft-fail */
       }
@@ -198,34 +213,82 @@ function ReceptionConsole() {
     [unlocked, setAdminCode, setUnlocked],
   );
 
-  async function unlock(e?: React.FormEvent) {
+  /** Trae el panel y abre la sesión en pantalla tras un acceso correcto. */
+  const finishSignIn = useCallback(
+    async (role: string, name: string): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/xtreme/reception", { cache: "no-store" });
+        const json = (await res.json()) as {
+          status?: GymStatus;
+          recent?: RecentCheckin[];
+          inside?: ActiveVisit[];
+          error?: string;
+        };
+        if (!res.ok) {
+          setUnlockError(json.error || "No se pudo abrir el mostrador.");
+          return false;
+        }
+        acceptSession(role, name);
+        if (json.status) setStatus(json.status);
+        if (json.recent) setRecent(json.recent);
+        if (json.inside) setInside(json.inside);
+        return true;
+      } catch {
+        setUnlockError("Error de conexión.");
+        return false;
+      }
+    },
+    [acceptSession, setUnlockError],
+  );
+
+  const pickedOperator = operators.find((op) => op.id === pickedId) ?? null;
+  const pinMode: "verify" | "set" = pickedOperator?.hasPin ? "verify" : "set";
+  const pinReady =
+    /^\d{4}$/.test(pinInput) && (pinMode === "verify" || pinInput === pinConfirm);
+
+  function goToPin(id: string) {
+    setPickedId(id);
+    setPinInput("");
+    setPinConfirm("");
+    setUnlockError("");
+    setAuthStep("pin");
+  }
+
+  function backToPick() {
+    setAuthStep("pick");
+    setPickedId("");
+    setPinInput("");
+    setPinConfirm("");
+    setUnlockError("");
+    void loadOperators();
+  }
+
+  async function submitPinFlow(e?: React.FormEvent) {
     e?.preventDefault();
-    const code = adminCode.trim();
-    if (!code) return;
+    if (!pickedOperator || !pinReady) return;
+    const result = await submitPin(pinMode, pickedOperator.id, pinInput);
+    if (!result.ok) {
+      setUnlockError(result.error);
+      // El PIN cambió de estado entre pantallas: recargar y reubicar.
+      if (result.code === "pin_not_set" || result.code === "pin_already_set") {
+        setPinInput("");
+        setPinConfirm("");
+        void loadOperators();
+      }
+      return;
+    }
+    await finishSignIn(result.role, result.staffName);
+  }
+
+  async function unlockWithCode(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!adminCode.trim()) return;
     const session = await signIn();
     if (!session.ok) {
       setUnlockError(session.error);
       return;
     }
-    try {
-      const res = await fetch("/api/xtreme/reception", { cache: "no-store" });
-      const json = (await res.json()) as {
-        status?: GymStatus;
-        recent?: RecentCheckin[];
-        inside?: ActiveVisit[];
-        error?: string;
-      };
-      if (!res.ok) {
-        setUnlockError(json.error || "Codigo incorrecto.");
-        return;
-      }
-      acceptSession(session.role, session.staffName);
-      if (json.status) setStatus(json.status);
-      if (json.recent) setRecent(json.recent);
-      if (json.inside) setInside(json.inside);
-    } catch {
-      setUnlockError("Error de conexion.");
-    }
+    await finishSignIn(session.role, session.staffName);
   }
 
   useEffect(() => {
@@ -262,6 +325,12 @@ function ReceptionConsole() {
     // son estables, así que no hacen falta en las dependencias.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Selector de operadores: cargar mientras no haya sesión abierta.
+  useEffect(() => {
+    if (unlocked) return;
+    void loadOperators();
+  }, [unlocked, loadOperators]);
 
   useEffect(() => {
     if (!unlocked) return;
@@ -571,64 +640,227 @@ function ReceptionConsole() {
     await signOut();
     setMember(null);
     setInside([]);
-    setRoster([]);
     setRecent([]);
     setTab("cedula");
+    setAuthStep("pick");
+    setPickedId("");
+    setPinInput("");
+    setPinConfirm("");
+    setUnlockError("");
   }
 
   if (!unlocked) {
     return (
       <main className="xg-os-login-shell grid bg-[#050505] text-white">
         <div className="w-full max-w-md">
-            <form
-              onSubmit={(e) => void unlock(e)}
-              className="w-full max-w-md border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 text-white shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-8"
-            >
-              <div className="grid h-14 w-14 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
-                <DoorOpen className="h-7 w-7" />
-              </div>
-              <GameLabel tone="lime" className="mt-4">
-                Reception OS
-              </GameLabel>
-              <h1 className="mt-2 text-3xl font-black uppercase tracking-tight">Mostrador</h1>
-              <p className="mt-2 text-sm font-bold text-white/50">
-                Cedula, registro, chat y herramientas de recepcion. Esta sesion es independiente
-                del modo ingreso y de administracion.
-              </p>
-              <label className="mt-6 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
-                Codigo de staff
-              </label>
-              <div className="relative mt-2">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  value={adminCode}
-                  onChange={(e) => setAdminCode(e.target.value)}
-                  autoFocus
-                  placeholder="Codigo de recepcion"
-                  className="min-h-12 w-full border-[3px] border-white/20 bg-black/40 py-3.5 pl-10 pr-4 text-base font-bold outline-none focus:border-[#d8ff3e]"
-                />
-              </div>
-              {unlockError && (
-                <div className="mt-3 flex items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
-                  <XCircle className="h-4 w-4" /> {unlockError}
+          <div className="w-full border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-6 text-white shadow-[6px_6px_0_rgba(216,255,62,0.25)] sm:p-8">
+            <div className="grid h-14 w-14 place-items-center border-[3px] border-black/30 bg-[#d8ff3e] text-black">
+              <DoorOpen className="h-7 w-7" />
+            </div>
+            <GameLabel tone="lime" className="mt-4">
+              Reception OS
+            </GameLabel>
+            <h1 className="mt-2 text-[clamp(1.75rem,6vw,2.25rem)] font-black uppercase leading-none tracking-tight [text-wrap:balance]">
+              Mostrador
+            </h1>
+
+            {authStep === "pick" && (
+              <>
+                <p className="mt-2 text-sm font-bold leading-relaxed text-white/50 [text-wrap:pretty]">
+                  Elegí quién está en recepción. Cada quien entra con su PIN de mostrador, aparte
+                  del modo ingreso y de administración.
+                </p>
+                <p className="mt-6 text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
+                  ¿Quién está en el mostrador?
+                </p>
+                <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                  {!operatorsLoaded && (
+                    <div className="col-span-full flex min-h-16 items-center justify-center border-[3px] border-white/15 bg-black/40 text-white/40">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  )}
+                  {operatorsLoaded &&
+                    operators.map((op) => (
+                      <button
+                        key={op.id}
+                        type="button"
+                        onClick={() => goToPin(op.id)}
+                        className="group flex min-h-16 flex-col justify-center gap-1 border-[3px] border-white/20 bg-black/40 px-3.5 py-3 text-left transition hover:border-[#d8ff3e] focus-visible:border-[#d8ff3e] focus-visible:outline-none"
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="text-base font-black uppercase tracking-tight">
+                            {op.name}
+                          </span>
+                          <ArrowRight className="h-4 w-4 shrink-0 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-[#d8ff3e]" />
+                        </span>
+                        <span
+                          className={`text-[10px] font-black uppercase tracking-[0.14em] ${
+                            op.hasPin ? "text-white/35" : "text-[#d8ff3e]"
+                          }`}
+                        >
+                          {op.hasPin ? op.title : "Primera vez · creá tu PIN"}
+                        </span>
+                      </button>
+                    ))}
                 </div>
-              )}
-              <GameButton
-                type="submit"
-                full
-                className="mt-5"
-                disabled={isUnlocking || !adminCode.trim()}
-              >
-                {isUnlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar al mostrador"}
-              </GameButton>
-              <p className="mt-4 flex justify-center gap-4 text-center text-xs font-bold text-white/35">
-                <Link href="/admin" className="hover:text-white/70">
-                  Panel admin
-                </Link>
-              </p>
-            </form>
+                {unlockError && (
+                  <div className="mt-3 flex items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
+                    <XCircle className="h-4 w-4 shrink-0" /> {unlockError}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthStep("code");
+                    setUnlockError("");
+                  }}
+                  className="mt-5 min-h-11 text-xs font-black uppercase tracking-wide text-white/35 underline underline-offset-4 hover:text-white/70"
+                >
+                  Entrar con código de recepción
+                </button>
+              </>
+            )}
+
+            {authStep === "pin" && pickedOperator && (
+              <form onSubmit={(e) => void submitPinFlow(e)}>
+                <button
+                  type="button"
+                  onClick={backToPick}
+                  className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-white/40 hover:text-[#d8ff3e]"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Cambiar de persona
+                </button>
+                <p className="mt-3 text-sm font-black uppercase tracking-[0.14em] text-[#d8ff3e]">
+                  {pinMode === "set" ? "Primera vez" : "Ingreso"}
+                </p>
+                <h2 className="mt-1 text-2xl font-black uppercase tracking-tight [text-wrap:balance]">
+                  {pickedOperator.name}
+                </h2>
+
+                {pinMode === "set" && (
+                  <div className="mt-3 flex gap-2 border-[3px] border-[#d8ff3e]/40 bg-[#d8ff3e]/[0.06] p-3 text-xs font-bold leading-relaxed text-[#eaff93] [text-wrap:pretty]">
+                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
+                    Elegí un PIN de 4 dígitos solo para el mostrador. No es el código de admin; si lo
+                    olvidás, un administrador lo restablece.
+                  </div>
+                )}
+
+                <label className="mt-5 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
+                  {pinMode === "set" ? "PIN nuevo (4 dígitos)" : "Tu PIN (4 dígitos)"}
+                </label>
+                <div className="relative mt-2">
+                  <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={4}
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    autoFocus
+                    placeholder="••••"
+                    className="min-h-12 w-full border-[3px] border-white/20 bg-black/40 py-3.5 pl-10 pr-4 text-lg font-black tracking-[0.4em] outline-none focus:border-[#d8ff3e]"
+                  />
+                </div>
+
+                {pinMode === "set" && (
+                  <>
+                    <label className="mt-3 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
+                      Repetir PIN
+                    </label>
+                    <div className="relative mt-2">
+                      <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={4}
+                        value={pinConfirm}
+                        onChange={(e) =>
+                          setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))
+                        }
+                        placeholder="••••"
+                        className="min-h-12 w-full border-[3px] border-white/20 bg-black/40 py-3.5 pl-10 pr-4 text-lg font-black tracking-[0.4em] outline-none focus:border-[#d8ff3e]"
+                      />
+                    </div>
+                    {pinConfirm.length === 4 && pinInput !== pinConfirm && (
+                      <p className="mt-2 text-xs font-bold text-orange-300">
+                        Los dos PIN no coinciden.
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {unlockError && (
+                  <div className="mt-3 flex items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
+                    <XCircle className="h-4 w-4 shrink-0" /> {unlockError}
+                  </div>
+                )}
+
+                <GameButton type="submit" full className="mt-5" disabled={isUnlocking || !pinReady}>
+                  {isUnlocking ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : pinMode === "set" ? (
+                    "Crear PIN y entrar"
+                  ) : (
+                    "Entrar al mostrador"
+                  )}
+                </GameButton>
+              </form>
+            )}
+
+            {authStep === "code" && (
+              <form onSubmit={(e) => void unlockWithCode(e)}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthStep("pick");
+                    setUnlockError("");
+                  }}
+                  className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-white/40 hover:text-[#d8ff3e]"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Volver al selector
+                </button>
+                <p className="mt-3 text-sm font-bold leading-relaxed text-white/50 [text-wrap:pretty]">
+                  Código de recepción compartido. Usalo solo si tu PIN no está disponible.
+                </p>
+                <label className="mt-5 block text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
+                  Código de recepción
+                </label>
+                <div className="relative mt-2">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={adminCode}
+                    onChange={(e) => setAdminCode(e.target.value)}
+                    autoFocus
+                    placeholder="Código de recepción"
+                    className="min-h-12 w-full border-[3px] border-white/20 bg-black/40 py-3.5 pl-10 pr-4 text-base font-bold outline-none focus:border-[#d8ff3e]"
+                  />
+                </div>
+                {unlockError && (
+                  <div className="mt-3 flex items-center gap-2 border-[3px] border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">
+                    <XCircle className="h-4 w-4 shrink-0" /> {unlockError}
+                  </div>
+                )}
+                <GameButton
+                  type="submit"
+                  full
+                  className="mt-5"
+                  disabled={isUnlocking || !adminCode.trim()}
+                >
+                  {isUnlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar al mostrador"}
+                </GameButton>
+              </form>
+            )}
+
+            <p className="mt-5 flex justify-center gap-4 text-center text-xs font-bold text-white/35">
+              <Link href="/admin" className="hover:text-white/70">
+                Panel admin
+              </Link>
+            </p>
+          </div>
         </div>
       </main>
     );
@@ -683,8 +915,8 @@ function ReceptionConsole() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1600px] items-start gap-3 p-3 sm:gap-4 sm:p-4 xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:p-6">
-        <aside className="border-[3px] border-white/20 bg-[#0c0c0c] p-3 shadow-[4px_4px_0_rgba(0,0,0,.55)] xl:sticky xl:top-24">
+      <div className="mx-auto grid max-w-[1600px] items-start gap-4 p-3 sm:gap-5 sm:p-5 xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:gap-6 xl:p-6">
+        <aside className="border-[3px] border-white/20 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)] xl:sticky xl:top-24">
           <GameLabel tone="lime">Personas y accesos</GameLabel>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
             <SidePanelAction active={tab === "cedula"} icon={Search} label="Buscar persona" detail="Nombre y apellido" onClick={() => setTab("cedula")} />
@@ -692,20 +924,20 @@ function ReceptionConsole() {
             <SidePanelAction active={tab === "register"} icon={UserPlus} label="Registrar persona" detail="Alta e ingreso" onClick={() => setTab("register")} />
             <SidePanelAction active={tab === "invite"} icon={Mail} label="Invitar a la app" detail="Enviar por correo" onClick={() => setTab("invite")} />
             <SidePanelAction active={tab === "chat"} icon={MessageCircle} label="Responder chat" detail={chatUnread > 0 ? `${chatUnread} pendiente${chatUnread === 1 ? "" : "s"}` : "Sin pendientes"} badge={chatUnread} onClick={() => setTab("chat")} />
-            {FACE_RECOGNITION_ENABLED && <SidePanelAction active={tab === "face"} icon={ScanFace} label="Ingreso por rostro" detail="Cámara y enrolamiento" onClick={() => setTab("face")} />}
+            {FACE_RECOGNITION_ENABLED && <SidePanelAction active={tab === "face"} icon={ScanFace} label="Ingreso por rostro" detail="Terminal de la puerta" onClick={() => setTab("face")} />}
+            <SidePanelAction active={tab === "cameras"} icon={Video} label="Cámaras" detail="Video en vivo" onClick={() => setTab("cameras")} />
           </div>
-          <div className="mt-3 grid gap-2 border-t-[3px] border-white/10 pt-3">
-            <Link href="/recepcion/ventas" className="flex min-h-12 items-center justify-between border-[3px] border-[#d8ff3e]/45 px-3 text-xs font-black uppercase text-[#d8ff3e] hover:bg-[#d8ff3e] hover:text-black"><span>Ventas e inventario</span><ArrowRight className="h-4 w-4" /></Link>
+          <div className="mt-3 border-t-[3px] border-white/10 pt-3">
             <Link href="/admin" className="flex min-h-12 items-center justify-between border-[3px] border-white/15 px-3 text-xs font-black uppercase text-white/50 hover:border-white/35 hover:text-white"><span>Administración</span><ArrowRight className="h-4 w-4" /></Link>
           </div>
         </aside>
 
         <section className="min-w-0 border-[3px] border-white/20 bg-[#0c0c0c] shadow-[4px_4px_0_rgba(0,0,0,.55)]">
-          <header className="flex min-h-14 items-center justify-between gap-3 border-b-[3px] border-white/15 px-4 py-3">
-            <div><GameLabel tone="cyan">Panel central</GameLabel><p className="mt-1 text-sm font-black uppercase">{{ cedula: "Buscar persona", inside: "Personas adentro", register: "Registrar persona", invite: "Invitar a la app", chat: "Chat de recepción", face: "Ingreso por rostro", billing: "Facturar", empty: "Panel minimizado" }[tab]}</p></div>
+          <header className="flex min-h-16 items-center justify-between gap-3 border-b-[3px] border-white/15 px-5 py-4">
+            <div><GameLabel tone="cyan">Panel central</GameLabel><p className="mt-1 text-sm font-black uppercase">{{ cedula: "Buscar persona", inside: "Personas adentro", register: "Registrar persona", invite: "Invitar a la app", chat: "Chat de recepción", face: "Ingreso por rostro", billing: "Facturar", cameras: "Cámaras", empty: "Panel minimizado" }[tab]}</p></div>
             {tab !== "empty" && <button type="button" onClick={() => setTab("empty")} aria-label="Cerrar panel" className="grid h-10 w-10 place-items-center border-[3px] border-white/15 text-white/45 hover:border-red-300/60 hover:text-red-200"><X className="h-5 w-5" /></button>}
           </header>
-          <div className="p-4 sm:p-6">
+          <div className="p-5 sm:p-7">
             {tab === "empty" && <div className="grid min-h-[28rem] place-items-center text-center"><div><LayoutDashboard className="mx-auto h-12 w-12 text-white/15" /><h2 className="mt-4 text-2xl font-black uppercase">Panel minimizado</h2><p className="mt-2 text-sm font-bold text-white/40">Elegí una herramienta en el sidebar izquierdo.</p><button type="button" onClick={() => setTab("cedula")} className="mt-5 min-h-12 bg-[#d8ff3e] px-5 text-sm font-black uppercase text-black">Buscar persona</button></div></div>}
             {tab === "inside" && (
               <InsideRoster
@@ -869,19 +1101,9 @@ function ReceptionConsole() {
               </div>
             )}
 
-            {tab === "face" && FACE_RECOGNITION_ENABLED && (
-              <FaceRecognitionPanel
-                roster={roster}
-                member={member}
-                isCheckingIn={isCheckingIn}
-                onSelectMember={(selected) => {
-                  setMember(selected);
-                  setError("");
-                }}
-                onCheckin={(selected, method) => confirmCheckin(selected, method)}
-                onRosterChanged={() => void loadPanel(true)}
-              />
-            )}
+            {tab === "face" && FACE_RECOGNITION_ENABLED && <FaceTerminalPanel />}
+
+            {tab === "cameras" && <CameraWallPanel />}
 
             {tab === "register" && (
               <form onSubmit={(e) => void registerWalkin(e)} className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-2">
@@ -1053,7 +1275,20 @@ function ReceptionConsole() {
           </div>
         </section>
 
-        <aside className="space-y-3 sm:space-y-4">
+        <aside className="space-y-4 sm:space-y-5">
+          <div className="border-[3px] border-[#d8ff3e] bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(216,255,62,.28)]">
+            <GameLabel tone="lime">Ventas del mostrador</GameLabel>
+            <h2 className="mt-2 text-xl font-black uppercase tracking-tight [text-wrap:balance]">Punto de venta</h2>
+            <p className="mt-2 text-xs font-bold leading-relaxed text-white/50 [text-wrap:pretty]">
+              Cobrá productos, revisá inventario y cerrá caja sin salir del mostrador.
+            </p>
+            <Link
+              href="/recepcion/ventas"
+              className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 bg-[#d8ff3e] px-4 text-sm font-black uppercase text-black transition hover:bg-white"
+            >
+              <ShoppingCart className="h-4 w-4" /> Abrir POS de ventas
+            </Link>
+          </div>
           <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
             <div className="flex items-center justify-between gap-3">
               <GameLabel tone="cyan">Checklist del turno</GameLabel>
@@ -1063,18 +1298,24 @@ function ReceptionConsole() {
             {dutiesCollapsed && <p className="mt-2 text-xs font-bold text-white/35">Minimizado · tocá para abrir</p>}
           </div>
           <div className="border-[3px] border-amber-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
-            <GameLabel tone="orange">Controles independientes</GameLabel>
-            <div className="mt-3 grid gap-2">
-              {([
-                { href: "/recepcion/vip", label: "Área VIP", detail: "Clientes y cobros", icon: Crown, color: "text-amber-300" },
-                { href: "/recepcion/adultos-mayores", label: "Adultos mayores", detail: "Clases y asistencia", icon: UsersRound, color: "text-cyan-300" },
-                { href: "/recepcion/bronceado", label: "Bronceado", detail: "Sesiones y paquetes", icon: Sun, color: "text-orange-300" },
-                { href: "/recepcion/pagos-luz", label: "Pagos de luz", detail: "Recibos y pendientes", icon: Bolt, color: "text-yellow-300" },
-              ] as const).map((control) => {
-                const Icon = control.icon;
-                return <Link key={control.href} href={control.href} className="group flex min-h-16 items-center gap-3 border-[3px] border-white/15 bg-black/45 p-3 transition hover:border-amber-300/60"><span className={`grid h-10 w-10 shrink-0 place-items-center bg-white/5 ${control.color}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black uppercase leading-tight">{control.label}</span><span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-white/35">{control.detail}</span></span><ArrowRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-amber-300" /></Link>;
-              })}
+            <div className="flex items-center justify-between gap-3">
+              <GameLabel tone="orange">Controles independientes</GameLabel>
+              <button type="button" onClick={() => setControlsCollapsed((current) => !current)} aria-label={controlsCollapsed ? "Expandir controles" : "Minimizar controles"} className="grid h-9 w-9 place-items-center border-[3px] border-white/15 text-white/45 hover:border-amber-300 hover:text-amber-300">{controlsCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}</button>
             </div>
+            {!controlsCollapsed && (
+              <div className="mt-3 grid gap-2">
+                {([
+                  { href: "/recepcion/vip", label: "Área VIP", detail: "Clientes y cobros", icon: Crown, color: "text-amber-300" },
+                  { href: "/recepcion/adultos-mayores", label: "Adultos mayores", detail: "Clases y asistencia", icon: UsersRound, color: "text-cyan-300" },
+                  { href: "/recepcion/bronceado", label: "Bronceado", detail: "Sesiones y paquetes", icon: Sun, color: "text-orange-300" },
+                  { href: "/recepcion/pagos-luz", label: "Pagos de luz", detail: "Recibos y pendientes", icon: Bolt, color: "text-yellow-300" },
+                ] as const).map((control) => {
+                  const Icon = control.icon;
+                  return <Link key={control.href} href={control.href} className="group flex min-h-16 items-center gap-3 border-[3px] border-white/15 bg-black/45 p-3 transition hover:border-amber-300/60"><span className={`grid h-10 w-10 shrink-0 place-items-center bg-white/5 ${control.color}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black uppercase leading-tight">{control.label}</span><span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-white/35">{control.detail}</span></span><ArrowRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-amber-300" /></Link>;
+                })}
+              </div>
+            )}
+            {controlsCollapsed && <p className="mt-2 text-xs font-bold text-white/35">VIP · adultos mayores · bronceado · pagos de luz</p>}
           </div>
           <div className="border-[3px] border-cyan-300/45 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,.55)]">
             <GameLabel tone="cyan" className="flex items-center gap-2">

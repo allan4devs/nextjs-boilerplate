@@ -112,6 +112,29 @@ export function memberDraftFrom(member: AdminMember): MemberDraft {
   };
 }
 
+/** Reduce una foto a JPEG conservando su proporción, para las fotos de piso de una máquina. */
+export async function resizeGalleryPhoto(
+  file: File,
+  maxDim = 1024,
+  quality = 0.75,
+): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Este navegador no puede procesar la imagen.");
+    context.drawImage(bitmap, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", quality);
+  } finally {
+    bitmap.close();
+  }
+}
+
 export function formatDurationMs(ms: number) {
   if (!ms || ms < 0) return "0s";
   const totalSec = Math.round(ms / 1000);

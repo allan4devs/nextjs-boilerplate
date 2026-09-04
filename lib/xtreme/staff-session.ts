@@ -214,6 +214,23 @@ export async function revokeStaffSession(req: NextRequest, surface: StaffSurface
 }
 
 /**
+ * Revoca todas las sesiones abiertas de un colaborador en una superficie.
+ * Se usa cuando un admin restablece su PIN o lo saca del mostrador: la próxima
+ * petición cae en la pantalla de acceso.
+ */
+export async function revokeStaffSessionsForStaff(
+  db: Db,
+  surface: StaffSurface,
+  staffId: string,
+): Promise<number> {
+  const result = await db.collection<StaffSessionDoc>(STAFF_SESSIONS_COLLECTION).updateMany(
+    { surface, staffId, revokedAt: null },
+    { $set: { revokedAt: new Date() } },
+  );
+  return result.modifiedCount;
+}
+
+/**
  * Revoca SOLO sesiones de staff (admin / recepción / ingreso / trainer).
  * Nunca toca sesiones de socios (Member OS / cookie xtreme_member_session).
  * Por defecto conserva la sesión actual del super admin (exceptTokenHash).

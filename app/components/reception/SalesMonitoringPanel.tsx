@@ -1,13 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Clock3, Loader2, RefreshCw, ReceiptText, SlidersHorizontal } from "lucide-react";
+import { ArrowDown, ArrowUp, Clock3, Loader2, Printer, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { GameChip, GameLabel } from "../GameOS";
+import ProductSaleReceipt from "./ProductSaleReceipt";
 
 type Sale = {
   id: string;
   items: Array<{ productId: string; name: string; quantity: number; unitPrice: number }>;
   total: number;
+  paymentMethod: "cash" | "sinpe" | "mixed";
+  cashAmount: number;
+  sinpeAmount: number;
   soldBy: string;
   createdAt: string;
 };
@@ -52,6 +56,15 @@ export default function SalesMonitoringPanel() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Reimpresión de una venta pasada: mismo comprobante que el POS, generado
+  // al vuelo desde los datos ya cargados (no vuelve a pedirle nada al servidor).
+  const [printSale, setPrintSale] = useState<Sale | null>(null);
+
+  useEffect(() => {
+    if (!printSale) return;
+    const timer = window.setTimeout(() => window.print(), 350);
+    return () => window.clearTimeout(timer);
+  }, [printSale]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -128,7 +141,12 @@ export default function SalesMonitoringPanel() {
             <div className="mt-3 space-y-3">
               {data.sales.length === 0 && <Empty text="No hay ventas en este período." />}
               {data.sales.map((sale) => <article key={sale.id} className="border-[3px] border-white/15 bg-black/35 p-4">
-                <div className="flex items-start justify-between gap-4"><div><p className="text-lg font-black text-[#d8ff3e]">{crc.format(sale.total)}</p><p className="mt-1 text-xs font-bold text-white/40">{dateTime.format(new Date(sale.createdAt))} · {sale.soldBy}</p></div><ReceiptText className="h-5 w-5 text-white/35" /></div>
+                <div className="flex items-start justify-between gap-4">
+                  <div><p className="text-lg font-black text-[#d8ff3e]">{crc.format(sale.total)}</p><p className="mt-1 text-xs font-bold text-white/40">{dateTime.format(new Date(sale.createdAt))} · {sale.soldBy}</p></div>
+                  <button type="button" onClick={() => setPrintSale(sale)} aria-label="Reimprimir comprobante" title="Reimprimir comprobante" className="grid h-9 w-9 shrink-0 place-items-center border-2 border-white/15 text-white/40 hover:border-[#d8ff3e]/60 hover:text-[#d8ff3e]">
+                    <Printer className="h-4 w-4" />
+                  </button>
+                </div>
                 <div className="mt-3 space-y-1">{sale.items.map((item) => <div key={item.productId} className="flex justify-between gap-3 text-sm font-bold text-white/65"><span>{item.quantity} × {item.name}</span><span className="shrink-0">{crc.format(item.quantity * item.unitPrice)}</span></div>)}</div>
               </article>)}
             </div>
@@ -155,6 +173,23 @@ export default function SalesMonitoringPanel() {
           </section>
         </div>
       </>}
+
+      {printSale && (
+        <div className="pointer-events-none absolute left-[-9999px] top-0" aria-hidden="true">
+          <ProductSaleReceipt
+            receipt={{
+              id: printSale.id,
+              createdAt: printSale.createdAt,
+              items: printSale.items,
+              total: printSale.total,
+              paymentMethod: printSale.paymentMethod,
+              cashAmount: printSale.cashAmount,
+              sinpeAmount: printSale.sinpeAmount,
+              staffName: printSale.soldBy,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

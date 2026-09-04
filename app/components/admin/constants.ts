@@ -7,6 +7,7 @@ import {
   Activity,
   Banknote,
   ClipboardList,
+  Dumbbell,
   DoorOpen,
   Mail,
   ReceiptText,
@@ -152,6 +153,13 @@ export const ADMIN_TABS: AdminTabDefinition[] = [
     href: "/admin/herramientas",
     icon: Wrench,
     superOnly: true,
+    hiddenFromNav: true,
+  },
+  {
+    id: "equipo",
+    label: "Equipo",
+    href: "/admin/equipo",
+    icon: Dumbbell,
     hiddenFromNav: true,
   },
 ];

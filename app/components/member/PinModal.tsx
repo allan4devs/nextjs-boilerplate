@@ -236,7 +236,7 @@ export default function PinModal({
           : "Ingresá tu PIN";
   const subtitle =
     mode === "set"
-      ? "Solo se configura una vez · enlace del correo o código OTP"
+      ? "Solo una vez · con el código que te llega al correo"
       : mode === "change"
         ? "Primero el PIN actual"
         : mode === "recover"
@@ -271,7 +271,7 @@ export default function PinModal({
             ) : (
               <p className="text-center text-[11px] font-semibold text-white/45">
                 {mode === "set"
-                  ? "Si abriste el enlace del correo, podés crear el PIN sin código. Si no, pedí el OTP."
+                  ? "Tocá «Enviar código al correo», digitá el código y creá tu PIN."
                   : "Requerido para recuperar."}
               </p>
             )}

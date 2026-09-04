@@ -139,6 +139,10 @@ export async function GET(req: NextRequest) {
           email: 1,
           photoUrl: 1,
           faceHash: 1,
+          // Sin esto, toAdminMember calcula faceEnrolled=false para todos y el
+          // panel de rostro nunca muestra a los enrolados ni actualiza el contador.
+          faceEnrolledAt: 1,
+          faceEngine: 1,
           membership: 1,
           goal: 1,
           coach: 1,
@@ -197,6 +201,10 @@ export async function GET(req: NextRequest) {
           email: 1,
           photoUrl: 1,
           faceHash: 1,
+          // Sin esto, toAdminMember calcula faceEnrolled=false para todos y el
+          // panel de rostro nunca muestra a los enrolados ni actualiza el contador.
+          faceEnrolledAt: 1,
+          faceEngine: 1,
           membership: 1,
           goal: 1,
           coach: 1,
@@ -231,7 +239,7 @@ export async function GET(req: NextRequest) {
         by: c.by,
       })),
       members,
-      faceEnrolled: members.filter((m) => m.hasFace).length,
+      faceEnrolled: members.filter((m) => m.faceEnrolled).length,
     });
   } catch (err) {
     console.error("XTREME RECEPTION GET", err);
