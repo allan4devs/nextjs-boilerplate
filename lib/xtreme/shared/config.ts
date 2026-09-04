@@ -44,6 +44,10 @@ export const EMAIL_LOG_COLLECTION = "xtreme_gym_email_log";
 export const PAYMENT_REMINDERS_COLLECTION = "xtreme_gym_payment_reminders";
 /** Notas internas de staff sobre un socio, con autor y fecha. */
 export const MEMBER_NOTES_COLLECTION = "xtreme_gym_member_notes";
+/** Inventario de activos fijos (máquinas, bancos, discos) del piso. */
+export const EQUIPMENT_ASSETS_COLLECTION = "xtreme_gym_equipment_assets";
+/** Video y fotos de piso por máquina del catálogo (`MACHINE_GUIDE`), editables desde el admin. */
+export const MACHINE_MEDIA_COLLECTION = "xtreme_gym_machine_media";
 
 export const FREE_FIRST_DAY_OFFER_ID = "free-first-day";
 export const FREE_FIRST_DAY_PLAN_LABEL = "Primer día gratis";

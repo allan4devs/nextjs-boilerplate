@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Dumbbell, PlayCircle, QrCode } from "lucide-react";
+import { ArrowRight, Dumbbell, MapPinned, PlayCircle, QrCode } from "lucide-react";
 import {
   MACHINE_GUIDE,
   machinePath,
@@ -185,9 +185,9 @@ export default function MaquinasIndexPage() {
               <QrCode className="h-6 w-6" />
             </span>
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.08em]">Staff · hoja de QR</p>
+              <p className="text-sm font-black uppercase tracking-[0.08em]">Staff · códigos y QR</p>
               <p className="mt-1 text-xs font-bold text-white/45">
-                Descargá o imprimí el QR de cada máquina para pegarlo en sala.
+                Tabla con el código de cada máquina y su QR para imprimir y pegar en sala.
               </p>
             </div>
           </div>
@@ -195,7 +195,27 @@ export default function MaquinasIndexPage() {
             href="/maquinas/qr"
             className="inline-flex min-h-11 shrink-0 items-center gap-2 border-2 border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-4 text-[11px] font-black uppercase tracking-[0.1em] text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/20 focus-visible:border-[#d8ff3e] focus-visible:outline-none"
           >
-            Abrir hoja de QR <ArrowRight className="h-3.5 w-3.5" />
+            Abrir códigos y QR <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </aside>
+
+        <aside className="flex flex-col items-start justify-between gap-4 border-[3px] border-[#d8ff3e]/35 bg-[#0c0c0c] p-5 shadow-[4px_4px_0_rgba(0,0,0,0.6)] sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center border-2 border-black/40 bg-[#d8ff3e] text-black">
+              <MapPinned className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.08em]">Staff · plano editable</p>
+              <p className="mt-1 text-xs font-bold text-white/45">
+                Un piso en cuadrícula para ubicar, mover y dimensionar los 131 activos físicos.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/maquinas/plano"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 border-2 border-[#d8ff3e]/50 bg-[#d8ff3e]/10 px-4 text-[11px] font-black uppercase tracking-[0.1em] text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/20 focus-visible:border-[#d8ff3e] focus-visible:outline-none"
+          >
+            Abrir plano <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </aside>
       </div>

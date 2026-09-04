@@ -2,7 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { youtubeVideoId } from "@/app/lib/machines";
 
 type MachineVideoProps = {
-  /** URL original del video (YouTube). */
+  /** URL original del video (YouTube, o un archivo propio como /videos/algo.mp4). */
   url: string;
   /** Nombre de la máquina para el título accesible del reproductor. */
   name: string;
@@ -10,9 +10,12 @@ type MachineVideoProps = {
   label?: string;
 };
 
-/** Reproductor de video de técnica embebido (youtube-nocookie) con enlace de respaldo. */
+const DIRECT_VIDEO_FILE = /\.(mp4|webm|mov|m4v|ogv|ogg)(\?.*)?$/i;
+
+/** Reproductor de video de técnica: YouTube embebido, o archivo propio (ej. subido a public/videos) con <video> nativo. */
 export default function MachineVideo({ url, name, label }: MachineVideoProps) {
   const videoId = youtubeVideoId(url);
+  const isDirectVideo = !videoId && DIRECT_VIDEO_FILE.test(url);
 
   return (
     <div className="space-y-2">
@@ -28,6 +31,18 @@ export default function MachineVideo({ url, name, label }: MachineVideoProps) {
             allowFullScreen
           />
         </div>
+      ) : isDirectVideo ? (
+        <div className="relative aspect-video overflow-hidden border-[3px] border-[#d8ff3e]/45 bg-black">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video
+            className="absolute inset-0 h-full w-full object-contain"
+            src={url}
+            controls
+            playsInline
+            preload="metadata"
+            aria-label={`Video de técnica: ${name}`}
+          />
+        </div>
       ) : null}
 
       <a
@@ -37,7 +52,7 @@ export default function MachineVideo({ url, name, label }: MachineVideoProps) {
         className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-white/45 transition hover:text-[#d8ff3e] focus-visible:text-[#d8ff3e] focus-visible:outline-none"
       >
         <ExternalLink className="h-3.5 w-3.5" />
-        {label ?? "Ver en YouTube"}
+        {label ?? (isDirectVideo ? "Abrir video" : "Ver en YouTube")}
       </a>
     </div>
   );

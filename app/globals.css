@@ -312,12 +312,24 @@ html.xg-staff-light .xg-theme-toggle {
  * El ancho del contenido NO debe pasar de 72 mm o el borde derecho se recorta.
  */
 @media print {
-  @page {
+  /* Página propia de 80 mm SOLO para el comprobante térmico. Va como página
+   * nombrada (`page: xg-thermal`) para no forzar 80 mm en el resto de páginas
+   * imprimibles (etiquetas QR de máquinas, plano de sala, flyers…), que
+   * conservan su propio @page / tamaño de papel. */
+  @page xg-thermal {
     size: 80mm auto; /* rollo de 80 mm; largo variable por comprobante */
     margin: 0; /* el driver ya imprime sin márgenes (origen 0,0) */
   }
 
-  body * {
+  /* Todo lo de abajo aplica SOLO cuando hay un comprobante en la página: se
+   * usa el rollo de 80 mm y se oculta el resto del contenido. En cualquier otra
+   * superficie imprimible (etiquetas QR, plano, flyers) estas reglas no aplican
+   * y la página se imprime completa con su propio tamaño de papel. */
+  body:has(.thermal-receipt) {
+    page: xg-thermal;
+  }
+
+  body:has(.thermal-receipt) * {
     visibility: hidden !important;
   }
 
@@ -332,8 +344,8 @@ html.xg-staff-light .xg-theme-toggle {
     transform: none !important;
   }
 
-  .thermal-receipt,
-  .thermal-receipt * {
+  body:has(.thermal-receipt) .thermal-receipt,
+  body:has(.thermal-receipt) .thermal-receipt * {
     visibility: visible !important;
   }
 

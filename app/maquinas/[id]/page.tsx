@@ -20,11 +20,17 @@ import {
   machinePath,
   machineQrValue,
 } from "@/app/lib/machines";
+import { getDb } from "@/lib/helpers/mongodb";
+import { getMachineMedia } from "@/lib/xtreme/machine-media";
 import MachineGallery from "../_components/MachineGallery";
 import MachineQr from "../_components/MachineQr";
 import MachineVideo from "../_components/MachineVideo";
 
 type Params = { params: Promise<{ id: string }> };
+
+// El video/fotos de cada máquina se puede editar desde /admin/equipo, así que
+// esta ficha se renderiza por request en vez de quedar fija del build estático.
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   return MACHINE_GUIDE.map((machine) => ({ id: machine.id }));
@@ -58,6 +64,13 @@ export default async function MachineDetailPage({ params }: Params) {
   const { prev, next } = machineNeighbors(machine.id);
   const qrValue = machineQrValue(machine.id);
 
+  const db = await getDb();
+  const media = await getMachineMedia(db, machine.id);
+  const images = media?.images?.length ? media.images : machine.images;
+  const image = images?.[0] ?? machine.image;
+  const videoUrl = media?.videoUrl || machine.videoUrl;
+  const videoLabel = media?.videoLabel || machine.videoLabel;
+
   return (
     <article className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <Link
@@ -90,7 +103,7 @@ export default async function MachineDetailPage({ params }: Params) {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
-          <MachineGallery name={machine.name} image={machine.image} images={machine.images} />
+          <MachineGallery name={machine.name} image={image} images={images} />
 
           <div className="flex flex-wrap gap-1.5">
             {machine.muscles.map((muscle) => (
@@ -100,15 +113,15 @@ export default async function MachineDetailPage({ params }: Params) {
             ))}
           </div>
 
-          {machine.videoUrl && (
+          {videoUrl && (
             <section>
               <h2 className="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
                 Video de técnica
               </h2>
               <MachineVideo
-                url={machine.videoUrl}
+                url={videoUrl}
                 name={machine.name}
-                label={machine.videoLabel ? `${machine.videoLabel} · YouTube` : "Ver en YouTube"}
+                label={videoLabel ? `${videoLabel} · YouTube` : "Ver en YouTube"}
               />
             </section>
           )}
@@ -198,7 +211,7 @@ export default async function MachineDetailPage({ params }: Params) {
         href="/maquinas/qr"
         className="mt-6 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white/35 transition hover:text-[#d8ff3e] focus-visible:text-[#d8ff3e] focus-visible:outline-none"
       >
-        Staff: hoja con todos los QR <ArrowRight className="h-3.5 w-3.5" />
+        Staff: códigos y QR de todas <ArrowRight className="h-3.5 w-3.5" />
       </Link>
     </article>
   );

@@ -353,7 +353,8 @@ export type AdminTabId =
   | "gamificacion"
   | "correos"
   | "bitacora"
-  | "herramientas";
+  | "herramientas"
+  | "equipo";
 
 export type GamiBadge = {
   id: string;
