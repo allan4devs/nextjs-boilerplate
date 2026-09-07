@@ -63,9 +63,15 @@ export default function QrSheetPage() {
           Códigos y QR de máquinas
         </h1>
         <p className="mt-4 max-w-3xl text-sm font-semibold leading-6 text-white/65 text-pretty">
-          La hoja ahora sale del inventario físico: {items.length} equipos registrados, una etiqueta por máquina.
-          Podés ordenar las etiquetas y editar el código de máquina o el nombre. El código QR no se
-          edita y siempre continúa apuntando a la ficha pública correspondiente.
+          La hoja sale del inventario físico: {items.length} equipos registrados, una etiqueta por máquina.
+          Cada etiqueta se descarga en formato vertical de 1200×1800 px, para imprimir a 10×15 cm, pensada
+          para pegarla en el costado del aparato. Podés ordenar las etiquetas y editar el código de
+          máquina o el nombre; el código QR no se edita y siempre apunta a la ficha pública.
+        </p>
+        <p className="mt-3 max-w-3xl text-xs leading-5 text-white/50">
+          Para la impresión final: solicitá laminado mate, esquinas redondeadas y adhesivo apto
+          para humedad y limpieza frecuente. Probá el escaneo de una muestra con la iluminación
+          del gimnasio antes de imprimir el lote.
         </p>
       </header>
 

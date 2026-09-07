@@ -54,6 +54,9 @@ skills/
 public/*
 !public/ruleta/
 !public/ruleta/*.webp
+!public/xtreme/
+public/xtreme/*
+!public/xtreme/qr-monogram.svg
 
 .vercel
 .env*.local

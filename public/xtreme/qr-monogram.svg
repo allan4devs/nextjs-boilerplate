@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <title>Xtreme Gym</title>
+  <!-- Two solid, opposing chevrons form an athletic X with an open center. -->
+  <path d="M10 14H32L46 42V58L32 86H10L29 50L10 14Z" fill="#fff"/>
+  <path d="M90 14H68L54 42V58L68 86H90L71 50L90 14Z" fill="#f0b429"/>
+</svg>

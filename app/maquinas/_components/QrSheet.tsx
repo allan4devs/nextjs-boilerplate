@@ -2,35 +2,35 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import QRCode from "qrcode";
+import { createMachineQrImage, MACHINE_QR_BACKGROUND } from "./machine-qr-style";
 import { Download, Eye, Loader2, Pencil, Printer } from "lucide-react";
 import type { MachineLabel } from "@/app/lib/machines";
 import { GameButton, GameModal } from "@/app/components/GameOS";
 import MachineQr from "./MachineQr";
+import { getMachineLabelContent } from "./machine-label-content";
+import { getMachineShortUrl } from "@/app/lib/machine-short-links";
 
-const QR_DARK = "#0a0a0a";
-const QR_LIGHT = "#ffffff";
 const LOGO_SRC = "/xtreme/logo.webp";
 
-// Etiqueta rectangular (16:9) en alta resolución para imprimir en sala.
-const LABEL_WIDTH = 1600;
-const LABEL_HEIGHT = 900;
+// Etiqueta vertical (2:3) en alta resolución: 1200×1800 px = 10×15 cm a 300 ppp,
+// el formato de impresión más común para pegar en la máquina.
+const LABEL_WIDTH = 1200;
+const LABEL_HEIGHT = 1800;
 
-// Paleta del rótulo físico: negro + dorado + acento morado (sigue el diseño
-// de señalización ya impreso en sala, distinto del lima del Member OS).
+// Paleta uniforme para todas las zonas: negro, blanco y dorado.
 const INK_BLACK = "#0a0a0c";
 const PAPER = "#fbf9f4";
 const GOLD = "#f0b429";
 const GOLD_SOFT = "#ffe08a";
 const GOLD_DEEP = "#a9741c";
-const PURPLE = "#5b2a86";
-const PURPLE_DEEP = "#33144d";
 
-const PAD_X = 70;
-const PAD_TOP = 56;
-const PAD_BOTTOM = 56;
-const SPLIT_TOP_X = 985;
-const SPLIT_BOTTOM_X = 1052;
+const PAD_X = 76;
+const PAD_TOP = 62;
+// Barra negra de pie que cierra la composición.
+const FOOTER_H = 96;
+// Costura diagonal que separa el panel negro (arriba) del panel de papel (abajo).
+const SEAM_LEFT_Y = 940;
+const SEAM_RIGHT_Y = 870;
 
 const ACCENTS: Array<[RegExp, string]> = [
   [/[áàä]/g, "a"],
@@ -65,6 +65,24 @@ function fileStem(item: MachineLabel & { assetId?: string }) {
 /** Etiqueta accesible del QR (el código puede venir vacío). */
 function qrLabel(item: MachineLabel) {
   return item.code ? `${item.code} ${item.name}` : item.name;
+}
+
+function LabelName({ item }: { item: MachineLabel }) {
+  const { title, subtitle } = getMachineLabelContent(item);
+  return (
+    <>
+      <p className="text-pretty text-base font-black uppercase leading-[1.1]">{title}</p>
+      {subtitle && <p className="mt-1 text-xs font-medium leading-snug opacity-70">{subtitle}</p>}
+    </>
+  );
+}
+
+/** URL sin protocolo ni `www.`, para imprimirla legible bajo el QR. */
+function readableUrl(url: string) {
+  return url
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .replace(/\/+$/, "");
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -339,21 +357,18 @@ function drawHexPattern(
 }
 
 /**
- * Compone la etiqueta física de una máquina siguiendo el rótulo de señalización
- * ya impreso en sala: panel negro con el logo, el nombre y la zona a la
- * izquierda, cortado en diagonal (con costura dorada) contra un panel claro
- * a la derecha donde respira el QR. Lista para imprimir y pegar en sala.
+ * Compone la etiqueta física de una máquina en formato vertical: se lee de
+ * arriba hacia abajo (marca → código → nombre → zona sobre el panel negro, y
+ * luego el QR sobre papel), que es como se mira una etiqueta pegada en el
+ * costado de un aparato. La costura dorada en diagonal separa los dos mundos y
+ * sigue el rótulo de señalización ya impreso en sala.
  */
 async function composeLabel(item: MachineLabel): Promise<Blob> {
-  const qrSize = 380;
+  const content = getMachineLabelContent(item);
+  const qrSize = 500;
   const [logo, qrCanvas] = await Promise.all([
     getLogo(),
-    QRCode.toCanvas(item.url, {
-      errorCorrectionLevel: "M",
-      margin: 2,
-      width: qrSize,
-      color: { dark: QR_DARK, light: QR_LIGHT },
-    }),
+    createMachineQrImage(item.url, qrSize).then(loadImage),
   ]);
 
   const canvas = document.createElement("canvas");
@@ -362,217 +377,210 @@ async function composeLabel(item: MachineLabel): Promise<Blob> {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Este navegador no soporta canvas.");
 
-  // ── Fondo: panel claro completo, panel negro recortado en diagonal encima. ──
+  const footerY = LABEL_HEIGHT - FOOTER_H;
+  const contentRight = LABEL_WIDTH - PAD_X;
+
+  // ── Fondo: papel completo, panel negro superior recortado en diagonal. ──
   ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, LABEL_WIDTH, LABEL_HEIGHT);
 
   ctx.fillStyle = INK_BLACK;
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.lineTo(SPLIT_TOP_X, 0);
-  ctx.lineTo(SPLIT_BOTTOM_X, LABEL_HEIGHT);
-  ctx.lineTo(0, LABEL_HEIGHT);
+  ctx.lineTo(LABEL_WIDTH, 0);
+  ctx.lineTo(LABEL_WIDTH, SEAM_RIGHT_Y);
+  ctx.lineTo(0, SEAM_LEFT_Y);
   ctx.closePath();
   ctx.fill();
 
-  // Costura dorada sobre la diagonal (mitad en negro, mitad en claro).
+  // Tramas decorativas, muy sutiles: hexágonos en el negro, puntos dorados en el papel.
+  drawHexPattern(ctx, 0, 0, 420, 300, "rgba(255,255,255,0.05)");
+  drawDotGrid(ctx, 0, 968, 210, 200, "rgba(240,180,41,0.32)");
+  drawDotGrid(ctx, LABEL_WIDTH - 210, footerY - 200, 210, 200, "rgba(240,180,41,0.28)");
+
+  // Costura dorada sobre la diagonal.
   ctx.strokeStyle = GOLD;
   ctx.lineWidth = 12;
   ctx.beginPath();
-  ctx.moveTo(SPLIT_TOP_X, 0);
-  ctx.lineTo(SPLIT_BOTTOM_X, LABEL_HEIGHT);
+  ctx.moveTo(0, SEAM_LEFT_Y);
+  ctx.lineTo(LABEL_WIDTH, SEAM_RIGHT_Y);
   ctx.stroke();
 
-  // Tramas decorativas, muy sutiles: hexágonos en la esquina negra, puntos dorados en la clara.
-  drawHexPattern(ctx, 0, 0, 460, 300, "rgba(255,255,255,0.05)");
-  drawDotGrid(ctx, LABEL_WIDTH - 260, 0, 260, 210, "rgba(240,180,41,0.35)");
-  drawDotGrid(ctx, LABEL_WIDTH - 260, LABEL_HEIGHT - 210, 260, 210, "rgba(240,180,41,0.3)");
+  // Barra de pie negra con filo dorado.
+  ctx.fillStyle = INK_BLACK;
+  ctx.fillRect(0, footerY, LABEL_WIDTH, FOOTER_H);
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(0, footerY + 2.5);
+  ctx.lineTo(LABEL_WIDTH, footerY + 2.5);
+  ctx.stroke();
 
-  // Marco dorado de cierre.
-  ctx.strokeStyle = GOLD_DEEP;
-  ctx.lineWidth = 6;
-  ctx.strokeRect(5, 5, LABEL_WIDTH - 10, LABEL_HEIGHT - 10);
-
-  const leftColRight = SPLIT_TOP_X - 44;
-  const leftColW = leftColRight - PAD_X;
-
-  // ── Logo + tagline, arriba a la izquierda sobre el panel negro. ──
-  const logoSize = 148;
+  // ── Cabecera: logo + lockup de marca en una sola línea. ──
+  const logoSize = 108;
   ctx.drawImage(logo, PAD_X, PAD_TOP, logoSize, logoSize);
 
-  const taglineY = PAD_TOP + logoSize + 32;
-  ctx.font = "700 15px Arial";
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
-  const tagline = "CIUDAD QUESADA";
-  const taglineW = ctx.measureText(tagline).width;
-  const taglineCx = PAD_X + logoSize / 2;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(tagline, taglineCx, taglineY);
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(taglineCx - taglineW / 2 - 34, taglineY);
-  ctx.lineTo(taglineCx - taglineW / 2 - 10, taglineY);
-  ctx.moveTo(taglineCx + taglineW / 2 + 10, taglineY);
-  ctx.lineTo(taglineCx + taglineW / 2 + 34, taglineY);
-  ctx.stroke();
+  const lockupX = PAD_X + logoSize + 26;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
+  ctx.letterSpacing = "3px";
+  ctx.font = "900 40px Arial";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText("XTREME GYM", lockupX, PAD_TOP + 50);
+  ctx.letterSpacing = "6px";
+  ctx.font = "700 18px Arial";
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillText("CIUDAD QUESADA", lockupX, PAD_TOP + 88);
+  ctx.letterSpacing = "0px";
 
-  // ── Insignia dorada con el código: "boleto" cruzando la costura. ──
+  // Hairline de cierre de cabecera, con acento dorado a la izquierda.
+  const ruleY = PAD_TOP + logoSize + 42;
+  ctx.strokeStyle = "rgba(255,255,255,0.18)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(PAD_X, ruleY);
+  ctx.lineTo(contentRight, ruleY);
+  ctx.stroke();
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(PAD_X, ruleY);
+  ctx.lineTo(PAD_X + 132, ruleY);
+  ctx.stroke();
+
+  // Código físico, sin leyendas que compitan con el identificador.
+  const badgeY = 246;
+  const badgeH = 162;
   if (item.code) {
-    const badgeH = 176;
-    const badgeCut = 32;
-    const maxBadgeW = 340;
-    let codeFont = 132;
+    const badgeCut = 30;
+    const maxBadgeW = 400;
+    let codeFont = 122;
     ctx.font = `900 ${codeFont}px Arial`;
-    while (codeFont > 56 && ctx.measureText(item.code).width > maxBadgeW - 64) {
+    while (codeFont > 54 && ctx.measureText(item.code).width > maxBadgeW - 68) {
       codeFont -= 4;
       ctx.font = `900 ${codeFont}px Arial`;
     }
-    const badgePadX = 32;
-    const badgeW = Math.min(maxBadgeW, ctx.measureText(item.code).width + badgePadX * 2);
-    const badgeX2 = SPLIT_TOP_X + 56;
-    const badgeX1 = badgeX2 - badgeW;
-    const badgeY1 = PAD_TOP - 6;
+    const badgePadX = 34;
+    const badgeW = Math.max(
+      226,
+      Math.min(maxBadgeW, ctx.measureText(item.code).width + badgePadX * 2),
+    );
 
     ctx.fillStyle = "rgba(0,0,0,0.55)";
-    cutCornerPath(ctx, badgeX1 + 10, badgeY1 + 10, badgeW, badgeH, badgeCut);
+    cutCornerPath(ctx, PAD_X + 10, badgeY + 10, badgeW, badgeH, badgeCut);
     ctx.fill();
 
-    const gradient = ctx.createLinearGradient(badgeX1, badgeY1, badgeX1 + badgeW, badgeY1 + badgeH);
+    const gradient = ctx.createLinearGradient(PAD_X, badgeY, PAD_X + badgeW, badgeY + badgeH);
     gradient.addColorStop(0, GOLD_SOFT);
     gradient.addColorStop(1, GOLD_DEEP);
     ctx.fillStyle = gradient;
-    cutCornerPath(ctx, badgeX1, badgeY1, badgeW, badgeH, badgeCut);
+    cutCornerPath(ctx, PAD_X, badgeY, badgeW, badgeH, badgeCut);
     ctx.fill();
     ctx.strokeStyle = GOLD_DEEP;
     ctx.lineWidth = 3;
-    cutCornerPath(ctx, badgeX1 + 1.5, badgeY1 + 1.5, badgeW - 3, badgeH - 3, badgeCut);
+    cutCornerPath(ctx, PAD_X + 1.5, badgeY + 1.5, badgeW - 3, badgeH - 3, badgeCut);
     ctx.stroke();
 
-    ctx.fillStyle = PURPLE_DEEP;
-    ctx.textBaseline = "middle";
+    ctx.fillStyle = INK_BLACK;
     ctx.textAlign = "center";
-    ctx.fillText(item.code, badgeX1 + badgeW / 2 - badgeCut / 4, badgeY1 + badgeH / 2 + 6);
+    ctx.textBaseline = "middle";
+    ctx.fillText(item.code, PAD_X + badgeW / 2 - badgeCut / 4, badgeY + badgeH / 2 + 6);
     ctx.textAlign = "left";
+
     ctx.textBaseline = "alphabetic";
   }
 
-  // ── Nombre de la máquina, grande y en blanco. ──
-  const nameTop = taglineY + 56;
+  // Nombre principal y variante tienen su propio espacio y peso tipográfico.
+  const zoneCy = 838;
+  const circleR = 34;
+  const dividerY = zoneCy - circleR - 34;
+  const nameMaxW = contentRight - PAD_X;
+  const titleBottom = content.subtitle ? 670 : 736;
   ctx.letterSpacing = "1px";
-  const { size: nameSize, lines: nameLines } = fitLines(
-    ctx,
-    item.name.toUpperCase(),
-    leftColW,
-    84,
-    40,
-    3,
-  );
+  const title = fitLines(ctx, content.title.toUpperCase(), nameMaxW, 82, 40, 3);
+  const nameSize = Math.min(title.size, (titleBottom - 442) / (title.lines.length * 1.08));
   const nameLineHeight = nameSize * 1.08;
+  const nameTop = titleBottom - title.lines.length * nameLineHeight;
   ctx.font = `900 ${nameSize}px Arial`;
   ctx.fillStyle = "#ffffff";
-  nameLines.forEach((line, i) => {
+  title.lines.forEach((line, i) => {
     ctx.fillText(line, PAD_X, nameTop + nameSize * 0.85 + i * nameLineHeight);
   });
   ctx.letterSpacing = "0px";
+  if (content.subtitle) {
+    const detail = fitLines(ctx, content.subtitle, nameMaxW, 34, 26, 2);
+    ctx.font = `500 ${detail.size}px Arial`;
+    ctx.fillStyle = "rgba(255,255,255,0.72)";
+    detail.lines.forEach((line, i) => {
+      ctx.fillText(line, PAD_X, 706 + i * detail.size * 1.2);
+    });
+  }
 
-  // ── Línea divisoria + zona con ícono en círculo morado. ──
-  const dividerY = nameTop + nameLines.length * nameLineHeight + 30;
-  ctx.strokeStyle = "rgba(255,255,255,0.25)";
+  // ── Línea divisoria + zona muscular con ícono dorado. ──
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(PAD_X, dividerY);
-  ctx.lineTo(PAD_X + leftColW, dividerY);
+  ctx.lineTo(contentRight, dividerY);
   ctx.stroke();
 
-  const circleR = 38;
   const circleCx = PAD_X + circleR;
-  const circleCy = dividerY + 26 + circleR;
-  ctx.fillStyle = PURPLE;
+  ctx.fillStyle = "rgba(240,180,41,0.12)";
   ctx.beginPath();
-  ctx.arc(circleCx, circleCy, circleR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.4)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  drawIcon(ctx, ZONE_ICON_OPS[item.zone] ?? DUMBBELL, circleCx, circleCy, 40, "#ffffff", 2);
-
-  const zoneText = item.units > 1 ? `${item.zone} · Unidad ${item.unit}/${item.units}` : item.zone;
-  ctx.font = "900 30px Arial";
-  ctx.fillStyle = "#ffffff";
-  ctx.textBaseline = "middle";
-  ctx.fillText(zoneText.toUpperCase(), circleCx + circleR + 22, circleCy + 2);
-  ctx.textBaseline = "alphabetic";
-
-  // ── Pastilla de pie de página, abajo a la izquierda. ──
-  const pillH = 54;
-  const pillIconSize = 22;
-  const pillPadX = 22;
-  const pillGap = 12;
-  const footerText = "XTREME GYM · GUÍA DE MÁQUINAS";
-  ctx.font = "800 16px Arial";
-  const footerTextW = ctx.measureText(footerText).width;
-  const pillW = pillPadX * 2 + pillIconSize + pillGap + footerTextW;
-  const pillX = PAD_X;
-  const pillY = LABEL_HEIGHT - PAD_BOTTOM - pillH;
-  ctx.fillStyle = INK_BLACK;
-  roundedRectPath(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+  ctx.arc(circleCx, zoneCy, circleR, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = GOLD;
-  ctx.lineWidth = 2.5;
-  roundedRectPath(ctx, pillX + 1.25, pillY + 1.25, pillW - 2.5, pillH - 2.5, pillH / 2 - 1);
+  ctx.lineWidth = 2;
   ctx.stroke();
-  drawIcon(
-    ctx,
-    BOOK_OPEN,
-    pillX + pillPadX + pillIconSize / 2,
-    pillY + pillH / 2,
-    pillIconSize,
-    GOLD,
-    2.2,
-  );
-  ctx.font = "800 16px Arial";
-  ctx.fillStyle = GOLD;
-  ctx.textBaseline = "middle";
-  ctx.fillText(footerText, pillX + pillPadX + pillIconSize + pillGap, pillY + pillH / 2 + 1);
-  ctx.textBaseline = "alphabetic";
+  drawIcon(ctx, ZONE_ICON_OPS[content.zone] ?? DUMBBELL, circleCx, zoneCy, 36, GOLD, 2);
 
-  // ── Columna derecha: tarjeta blanca con el QR + CTA "Escaneá aquí". ──
-  const rcLeft = SPLIT_BOTTOM_X + 40;
-  const rcRight = LABEL_WIDTH - PAD_X;
-  const rcCenterX = (rcLeft + rcRight) / 2;
-  const cardPad = 22;
+  const zoneTextX = circleCx + circleR + 24;
+  ctx.letterSpacing = "5px";
+  ctx.font = "700 16px Arial";
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.fillText("ZONA", zoneTextX, zoneCy - 12);
+  ctx.letterSpacing = "1.5px";
+  ctx.font = "900 30px Arial";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(content.zone.toUpperCase(), zoneTextX, zoneCy + 24);
+  ctx.letterSpacing = "0px";
+
+  // ── Panel de papel: tarjeta oscura con el QR, botón y la URL legible. ──
+  const cardPad = 40;
   const cardSize = qrSize + cardPad * 2;
-  const cardX = rcCenterX - cardSize / 2;
-  const cardY = PAD_TOP + 6;
+  const cardX = (LABEL_WIDTH - cardSize) / 2;
+  const cardY = 980;
+
+  ctx.textAlign = "center";
+  ctx.font = "700 24px Arial";
+  ctx.fillStyle = "rgba(10,10,12,0.7)";
+  ctx.fillText(content.benefits, LABEL_WIDTH / 2, 955);
+  ctx.textAlign = "left";
 
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.2)";
   ctx.shadowBlur = 28;
   ctx.shadowOffsetY = 10;
-  ctx.fillStyle = "#ffffff";
-  roundedRectPath(ctx, cardX, cardY, cardSize, cardSize, 20);
+  ctx.fillStyle = MACHINE_QR_BACKGROUND;
+  roundedRectPath(ctx, cardX, cardY, cardSize, cardSize, 22);
   ctx.fill();
   ctx.restore();
   ctx.strokeStyle = "rgba(0,0,0,0.08)";
   ctx.lineWidth = 1.5;
-  roundedRectPath(ctx, cardX + 0.75, cardY + 0.75, cardSize - 1.5, cardSize - 1.5, 20);
+  roundedRectPath(ctx, cardX + 0.75, cardY + 0.75, cardSize - 1.5, cardSize - 1.5, 22);
   ctx.stroke();
   ctx.drawImage(qrCanvas, cardX + cardPad, cardY + cardPad, qrSize, qrSize);
 
-  const ctaText = "ESCANEÁ AQUÍ";
+  const ctaText = "ESCANEÁ PARA VER CÓMO USARLA";
   const ctaIconSize = 26;
   const ctaGap = 14;
-  const ctaPadX = 28;
+  const ctaPadX = 30;
+  const ctaH = 64;
+  ctx.letterSpacing = "1px";
   ctx.font = "900 30px Arial";
-  const ctaTextW = ctx.measureText(ctaText).width;
-  const ctaH = 60;
-  const ctaW = ctaPadX * 2 + ctaIconSize + ctaGap + ctaTextW;
-  const ctaX = rcCenterX - ctaW / 2;
-  const ctaY = cardY + cardSize + 30;
+  const ctaW = ctaPadX * 2 + ctaIconSize + ctaGap + ctx.measureText(ctaText).width;
+  const ctaX = (LABEL_WIDTH - ctaW) / 2;
+  const ctaY = cardY + cardSize + 22;
   ctx.fillStyle = INK_BLACK;
   roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, ctaH / 2);
   ctx.fill();
@@ -580,12 +588,47 @@ async function composeLabel(item: MachineLabel): Promise<Blob> {
   ctx.lineWidth = 3;
   roundedRectPath(ctx, ctaX + 1.5, ctaY + 1.5, ctaW - 3, ctaH - 3, ctaH / 2 - 1.5);
   ctx.stroke();
-  drawIcon(ctx, SCAN_LINE, ctaX + ctaPadX + ctaIconSize / 2, ctaY + ctaH / 2, ctaIconSize, GOLD, 2.2);
-  ctx.font = "900 30px Arial";
+  drawIcon(
+    ctx,
+    SCAN_LINE,
+    ctaX + ctaPadX + ctaIconSize / 2,
+    ctaY + ctaH / 2,
+    ctaIconSize,
+    GOLD,
+    2.2,
+  );
   ctx.fillStyle = GOLD;
   ctx.textBaseline = "middle";
   ctx.fillText(ctaText, ctaX + ctaPadX + ctaIconSize + ctaGap, ctaY + ctaH / 2 + 2);
+  ctx.letterSpacing = "0px";
+
+  // URL legible bajo el botón, para quien no pueda escanear.
+  ctx.textAlign = "center";
+  const shortUrl = readableUrl(getMachineShortUrl(item.id, item.url));
+  const urlText = fitLines(ctx, shortUrl, LABEL_WIDTH - PAD_X * 2, 30, 22, 1);
+  ctx.font = `700 ${urlText.size}px Arial`;
+  ctx.fillStyle = INK_BLACK;
+  ctx.fillText(urlText.lines[0], LABEL_WIDTH / 2, ctaY + ctaH + 34);
+  ctx.textAlign = "left";
+
+  // ── Pie de página. ──
+  const footerText = "XTREME GYM · GUÍA DE MÁQUINAS";
+  const footerIcon = 24;
+  const footerGap = 14;
+  ctx.letterSpacing = "2px";
+  ctx.font = "800 21px Arial";
+  const footerW = footerIcon + footerGap + ctx.measureText(footerText).width;
+  const footerX = (LABEL_WIDTH - footerW) / 2;
+  drawIcon(ctx, BOOK_OPEN, footerX + footerIcon / 2, footerY + FOOTER_H / 2, footerIcon, GOLD, 2.2);
+  ctx.fillStyle = GOLD;
+  ctx.fillText(footerText, footerX + footerIcon + footerGap, footerY + FOOTER_H / 2 + 1);
+  ctx.letterSpacing = "0px";
   ctx.textBaseline = "alphabetic";
+
+  // Marco dorado de cierre, encima de todo.
+  ctx.strokeStyle = GOLD_DEEP;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(5, 5, LABEL_WIDTH - 10, LABEL_HEIGHT - 10);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
@@ -609,7 +652,8 @@ async function downloadLabel(item: MachineLabel) {
 
 /**
  * Hoja de QR para staff. En pantalla es una tabla con todos los códigos (uno por
- * unidad física); al imprimir salen las etiquetas recortables (código grande + QR).
+ * unidad física); al imprimir salen las etiquetas verticales recortables (código
+ * grande + QR). El PNG de alta resolución se genera aparte, con `composeLabel`.
  */
 export default function QrSheet({ items }: { items: MachineLabel[] }) {
   const [busy, setBusy] = useState(false);
@@ -722,7 +766,7 @@ export default function QrSheet({ items }: { items: MachineLabel[] }) {
                   )}
                 </td>
                 <td className="px-3 py-3 sm:px-4">
-                  <p className="text-sm font-black uppercase leading-tight">{item.name}</p>
+                  <LabelName item={item} />
                   <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/35 sm:hidden">
                     {item.zone}
                   </p>
@@ -781,33 +825,39 @@ export default function QrSheet({ items }: { items: MachineLabel[] }) {
         </table>
       </div>
 
-      {/* Etiquetas recortables: ocultas en pantalla, esto es lo único que sale al imprimir. */}
-      <div className="hidden print:grid print:grid-cols-2 print:gap-4">
+      {/* Etiquetas recortables verticales: ocultas en pantalla, es lo único que sale al imprimir. */}
+      <div className="hidden print:grid print:grid-cols-2 print:gap-5">
         {items.map((item) => (
           <div
             key={unitKey(item)}
-            className="flex break-inside-avoid flex-col items-center gap-2 border-2 border-black p-4 text-center text-black"
+            className="flex break-inside-avoid flex-col items-center gap-2.5 border-2 border-black px-4 pb-4 pt-5 text-center text-black"
           >
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/50">
-              Xtreme Gym · Guía de máquinas
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-black/55">
+              Xtreme Gym · Ciudad Quesada
             </p>
             {item.code ? (
-              <p className="font-mono text-4xl font-black leading-none tracking-[0.06em] text-black">
+              <p className="bg-black px-4 py-1.5 font-mono text-[32px] font-black leading-none tracking-[0.06em] text-white">
                 {item.code}
               </p>
             ) : (
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-black/40">
+              <p className="border-2 border-dashed border-black/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-black/45">
                 Sin código asignado
               </p>
             )}
-            <p className="text-sm font-black uppercase leading-tight">{item.name}</p>
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-black/50">
-              {item.zone}
-              {item.units > 1 ? ` · Unidad ${item.unit}/${item.units}` : ""}
+            <LabelName item={item} />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/55">
+              Zona · {getMachineLabelContent(item).zone}
             </p>
+            <div className="mt-1 h-px w-12 bg-black/25" />
             <MachineQr value={item.url} label={qrLabel(item)} size={150} showDownload={false} />
-            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-black/60">
-              Escaneá para ver la guía
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-black">
+              Escaneá para ver cómo usarla
+            </p>
+            <p className="text-[9px] font-medium text-black/70">
+              {getMachineLabelContent(item).benefits}
+            </p>
+            <p className="break-all text-[11px] font-bold text-black">
+              {readableUrl(getMachineShortUrl(item.id, item.url))}
             </p>
           </div>
         ))}
@@ -843,7 +893,7 @@ export default function QrSheet({ items }: { items: MachineLabel[] }) {
           <img
             src={preview.url}
             alt={`Etiqueta de ${preview.item.name}`}
-            className="w-full border-[3px] border-black"
+            className="mx-auto block max-h-[70vh] w-auto max-w-full border-[3px] border-black"
           />
         )}
       </GameModal>
