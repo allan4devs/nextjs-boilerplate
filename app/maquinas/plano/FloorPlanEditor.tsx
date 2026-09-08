@@ -248,6 +248,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     future: rawHistory.future.map((plan) => applyMachineTexts(plan, labels)),
   }), [rawHistory, labels]);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
+  const [moveWithChildren, setMoveWithChildren] = useState(true);
   const [marqueeRect, setMarqueeRect] = useState<Geometry | null>(null);
   const [zoom, setZoom] = useState(0.8);
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -461,6 +462,63 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     [announce, commitPlan],
   );
 
+  const nudgeTargets = useCallback(
+    (targets: PlanTarget[], dx: number, dy: number) => {
+      const current = presentRef.current;
+      const targetsMap = new Map<string, PlanTarget>();
+      for (const t of targets) targetsMap.set(targetKey(t), t);
+
+      if (moveWithChildren) {
+        for (const t of targets) {
+          if (t.kind === "custom") {
+            const el = current.customElements.find((e) => e.id === t.id);
+            if (el?.type === "area" && !el.locked) {
+              const children = getAreaChildrenTargets(current, el.id, inventory);
+              for (const child of children) {
+                targetsMap.set(targetKey(child), child);
+              }
+            }
+          }
+        }
+      }
+
+      const allTargets = Array.from(targetsMap.values());
+      const initialGeometries: Geometry[] = [];
+      const validTargets: PlanTarget[] = [];
+
+      for (const t of allTargets) {
+        const isDirect = targets.some((dt) => targetsMatch(dt, t));
+        if (isDirect && targetLocked(current, t)) continue;
+        const geom = getTargetGeometry(current, t);
+        if (!geom) continue;
+        initialGeometries.push(geom);
+        validTargets.push(t);
+      }
+
+      if (!validTargets.length) return;
+
+      const { dx: clampedDx, dy: clampedDy } = clampGroupDelta(
+        initialGeometries,
+        dx,
+        dy,
+        current.canvas,
+      );
+      if (clampedDx === 0 && clampedDy === 0) return;
+
+      const updates = validTargets.map((t, index) => ({
+        target: t,
+        geometry: {
+          ...initialGeometries[index],
+          x: initialGeometries[index].x + clampedDx,
+          y: initialGeometries[index].y + clampedDy,
+        },
+      }));
+
+      commitPlan(updateTargetGeometries(current, updates));
+    },
+    [commitPlan, inventory, moveWithChildren],
+  );
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const element = event.target as HTMLElement | null;
@@ -484,6 +542,48 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
         event.preventDefault();
         redo();
         return;
+      }
+      if (modifier && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        if (selected?.kind === "custom") {
+          const el = presentRef.current.customElements.find((e) => e.id === selected.id);
+          if (el?.type === "area") {
+            const children = getAreaChildrenTargets(presentRef.current, el.id, inventory);
+            if (children.length) {
+              setSelectedKeys(new Set(children.map(targetKey)));
+              announce(`${children.length} elementos seleccionados en ${el.label}`);
+              return;
+            }
+          }
+        }
+        const allKeys = new Set<string>();
+        for (const asset of inventory) {
+          if (presentRef.current.placements[asset.id]) {
+            allKeys.add(targetKey({ kind: "asset", id: asset.id }));
+          }
+        }
+        for (const el of presentRef.current.customElements) {
+          allKeys.add(targetKey({ kind: "custom", id: el.id }));
+        }
+        setSelectedKeys(allKeys);
+        announce(`${allKeys.size} elementos seleccionados`);
+        return;
+      }
+      if (selectedTargets.length && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+        const baseStep = snapEnabled ? presentRef.current.canvas.gridSize : 1;
+        const step = baseStep * (event.shiftKey ? 5 : 1);
+        const directions: Record<string, [number, number]> = {
+          ArrowLeft: [-step, 0],
+          ArrowRight: [step, 0],
+          ArrowUp: [0, -step],
+          ArrowDown: [0, step],
+        };
+        const dir = directions[event.key];
+        if (dir) {
+          event.preventDefault();
+          nudgeTargets(selectedTargets, dir[0], dir[1]);
+          return;
+        }
       }
       if (event.key === "Escape") {
         setSelectedKeys(new Set());
@@ -509,7 +609,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [redo, removeTargets, selectedTargets, undo]);
+  }, [announce, inventory, nudgeTargets, redo, removeTargets, selected, selectedTargets, snapEnabled, undo]);
 
   useEffect(() => {
     if (selectedTargets.length) setInspectorOpen(true);
@@ -704,12 +804,13 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     event.stopPropagation();
     const plan = presentRef.current;
     const key = targetKey(target);
+    const isMultiModifier = event.shiftKey || event.ctrlKey || event.metaKey;
 
-    // Shift+clic agrega o quita este bloque del grupo seleccionado sin
+    // Control/Cmd/Shift+clic agrega o quita este bloque del grupo seleccionado sin
     // tocar el resto; un clic normal reemplaza la selección, salvo que el
     // bloque ya sea parte de un grupo (para poder arrastrarlo sin perderlo).
     let nextKeys = selectedKeys;
-    if (mode === "move" && event.shiftKey) {
+    if (mode === "move" && isMultiModifier) {
       nextKeys = new Set(selectedKeys);
       if (nextKeys.has(key)) nextKeys.delete(key);
       else nextKeys.add(key);
@@ -721,12 +822,34 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     }
 
     const isGroupDrag = mode === "move" && nextKeys.size > 1 && nextKeys.has(key);
-    const targets = isGroupDrag ? Array.from(nextKeys, parseTargetKey) : [target];
+    const initialTargets = isGroupDrag ? Array.from(nextKeys, parseTargetKey) : [target];
 
+    // Si algún objetivo es un área/cuadrante y mover con hijos está activo, incluimos a todos sus hijos
+    const targetsToMoveMap = new Map<string, PlanTarget>();
+    for (const t of initialTargets) {
+      targetsToMoveMap.set(targetKey(t), t);
+      if (mode === "move" && moveWithChildren && t.kind === "custom") {
+        const el = plan.customElements.find((e) => e.id === t.id);
+        if (el?.type === "area" && !el.locked) {
+          const children = getAreaChildrenTargets(plan, el.id, inventory);
+          for (const child of children) {
+            targetsToMoveMap.set(targetKey(child), child);
+          }
+        }
+      }
+    }
+
+    const targetsToMove = Array.from(targetsToMoveMap.values());
     const items: PointerInteractionItem[] = [];
-    for (const groupTarget of targets) {
+
+    for (const groupTarget of targetsToMove) {
       const initial = getTargetGeometry(plan, groupTarget);
-      if (!initial || targetLocked(plan, groupTarget)) continue;
+      if (!initial) continue;
+      // Si fue seleccionado directamente y está bloqueado, no se mueve
+      // (a menos que sea un hijo moviéndose junto a su área desbloqueada)
+      const isDirect = initialTargets.some((it) => targetsMatch(it, groupTarget));
+      if (isDirect && targetLocked(plan, groupTarget)) continue;
+
       const node = document.getElementById(domIdFor(groupTarget));
       if (!node) continue;
       items.push({ target: groupTarget, initial, node, preview: initial });
@@ -751,47 +874,69 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     const active = interactionRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
     event.preventDefault();
-    const dx = (event.clientX - active.startClientX) / zoom;
-    const dy = (event.clientY - active.startClientY) / zoom;
-    let next = active.before;
-    let anyChanged = false;
+    const rawDx = (event.clientX - active.startClientX) / zoom;
+    const rawDy = (event.clientY - active.startClientY) / zoom;
 
-    for (const item of active.items) {
-      let geometry: Geometry;
-      if (active.mode === "move") {
-        geometry = {
-          ...item.initial,
-          x: snap(item.initial.x + dx, active.snapSize),
-          y: snap(item.initial.y + dy, active.snapSize),
-        };
-      } else {
-        geometry = {
-          ...item.initial,
-          width: clamp(
-            snap(item.initial.width + dx, active.snapSize),
-            MIN_ITEM_SIZE,
-            active.before.canvas.width - item.initial.x,
-          ),
-          height: clamp(
-            snap(item.initial.height + dy, active.snapSize),
-            MIN_ITEM_SIZE,
-            active.before.canvas.height - item.initial.y,
-          ),
-        };
-      }
-
-      next = updateTargetGeometry(next, item.target, geometry);
+    if (active.mode === "resize") {
+      const item = active.items[0];
+      if (!item) return;
+      const geometry: Geometry = {
+        ...item.initial,
+        width: clamp(
+          snap(item.initial.width + rawDx, active.snapSize),
+          MIN_ITEM_SIZE,
+          active.before.canvas.width - item.initial.x,
+        ),
+        height: clamp(
+          snap(item.initial.height + rawDy, active.snapSize),
+          MIN_ITEM_SIZE,
+          active.before.canvas.height - item.initial.y,
+        ),
+      };
+      const next = updateTargetGeometry(active.before, item.target, geometry);
       const applied = getTargetGeometry(next, item.target);
-      if (!applied) continue;
-      if (geometryChanged(item.initial, applied)) anyChanged = true;
+      if (!applied) return;
       item.preview = applied;
       item.node.style.left = `${applied.x}px`;
       item.node.style.top = `${applied.y}px`;
       item.node.style.width = `${applied.width}px`;
       item.node.style.height = `${applied.height}px`;
+      active.previewPlan = next;
+      active.changed = geometryChanged(item.initial, applied);
+      return;
     }
 
-    active.previewPlan = next;
+    // Modo mover (individual, múltiple con Control o cuadrante completo con hijos):
+    const snappedDx = snap(rawDx, active.snapSize);
+    const snappedDy = snap(rawDy, active.snapSize);
+
+    const allInitials = active.items.map((it) => it.initial);
+    const { dx: clampedDx, dy: clampedDy } = clampGroupDelta(
+      allInitials,
+      snappedDx,
+      snappedDy,
+      active.before.canvas,
+    );
+
+    const updates: Array<{ target: PlanTarget; geometry: Geometry }> = [];
+    let anyChanged = false;
+
+    for (const item of active.items) {
+      const geometry: Geometry = {
+        ...item.initial,
+        x: item.initial.x + clampedDx,
+        y: item.initial.y + clampedDy,
+      };
+      updates.push({ target: item.target, geometry });
+      if (geometry.x !== item.initial.x || geometry.y !== item.initial.y) {
+        anyChanged = true;
+      }
+      item.preview = geometry;
+      item.node.style.left = `${geometry.x}px`;
+      item.node.style.top = `${geometry.y}px`;
+    }
+
+    active.previewPlan = updateTargetGeometries(active.before, updates);
     active.changed = anyChanged;
   };
 
@@ -834,7 +979,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     node.setPointerCapture(event.pointerId);
     marqueeRef.current = {
       pointerId: event.pointerId,
-      additive: event.shiftKey,
+      additive: event.shiftKey || event.ctrlKey || event.metaKey,
       originX,
       originY,
       x: originX,
@@ -962,18 +1107,22 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     cancelMarquee(event);
   };
 
-  const nudgeTarget = (target: PlanTarget, dx: number, dy: number) => {
-    const current = presentRef.current;
-    const geometry = getTargetGeometry(current, target);
-    if (!geometry || targetLocked(current, target)) return;
-    commitPlan(updateTargetGeometry(current, target, { ...geometry, x: geometry.x + dx, y: geometry.y + dy }));
-  };
-
   const onItemKeyDown = (event: ReactKeyboardEvent<HTMLElement>, target: PlanTarget) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       event.stopPropagation();
-      setSelectedKeys(new Set([targetKey(target)]));
+      const isMulti = event.ctrlKey || event.metaKey || event.shiftKey;
+      const key = targetKey(target);
+      if (isMulti) {
+        setSelectedKeys((prev) => {
+          const next = new Set(prev);
+          if (next.has(key)) next.delete(key);
+          else next.add(key);
+          return next;
+        });
+      } else {
+        setSelectedKeys(new Set([key]));
+      }
       return;
     }
     const baseStep = snapEnabled ? history.present.canvas.gridSize : 1;
@@ -988,9 +1137,129 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     if (direction) {
       event.preventDefault();
       event.stopPropagation();
-      nudgeTarget(target, direction[0], direction[1]);
+      const targetsToNudge =
+        selectedKeys.size > 1 && selectedKeys.has(targetKey(target))
+          ? selectedTargets
+          : [target];
+      nudgeTargets(targetsToNudge, direction[0], direction[1]);
     }
   };
+
+  const alignSelected = useCallback(
+    (alignment: "left" | "centerH" | "right" | "top" | "centerV" | "bottom" | "distributeH" | "distributeV") => {
+      if (selectedTargets.length < 2) return;
+      const current = presentRef.current;
+      const unlockedTargets = selectedTargets.filter((t) => !targetLocked(current, t));
+      if (unlockedTargets.length < 2) {
+        announce("Desbloqueá al menos 2 elementos para alinearlos");
+        return;
+      }
+
+      const items = unlockedTargets
+        .map((target) => ({
+          target,
+          geometry: getTargetGeometry(current, target)!,
+        }))
+        .filter((item) => item.geometry !== null);
+
+      if (items.length < 2) return;
+
+      const minX = Math.min(...items.map((i) => i.geometry.x));
+      const maxX = Math.max(...items.map((i) => i.geometry.x + i.geometry.width));
+      const minY = Math.min(...items.map((i) => i.geometry.y));
+      const maxY = Math.max(...items.map((i) => i.geometry.y + i.geometry.height));
+
+      const snapSize = snapEnabled ? current.canvas.gridSize : 1;
+      const updates: Array<{ target: PlanTarget; geometry: Geometry }> = [];
+
+      if (alignment === "left") {
+        for (const item of items) {
+          updates.push({ target: item.target, geometry: { ...item.geometry, x: minX } });
+        }
+      } else if (alignment === "right") {
+        for (const item of items) {
+          updates.push({ target: item.target, geometry: { ...item.geometry, x: maxX - item.geometry.width } });
+        }
+      } else if (alignment === "centerH") {
+        const midX = (minX + maxX) / 2;
+        for (const item of items) {
+          updates.push({
+            target: item.target,
+            geometry: { ...item.geometry, x: snap(midX - item.geometry.width / 2, snapSize) },
+          });
+        }
+      } else if (alignment === "top") {
+        for (const item of items) {
+          updates.push({ target: item.target, geometry: { ...item.geometry, y: minY } });
+        }
+      } else if (alignment === "bottom") {
+        for (const item of items) {
+          updates.push({ target: item.target, geometry: { ...item.geometry, y: maxY - item.geometry.height } });
+        }
+      } else if (alignment === "centerV") {
+        const midY = (minY + maxY) / 2;
+        for (const item of items) {
+          updates.push({
+            target: item.target,
+            geometry: { ...item.geometry, y: snap(midY - item.geometry.height / 2, snapSize) },
+          });
+        }
+      } else if (alignment === "distributeH") {
+        if (items.length < 3) {
+          announce("Se necesitan al menos 3 elementos para distribuir");
+          return;
+        }
+        const sorted = [...items].sort((a, b) => a.geometry.x - b.geometry.x);
+        const first = sorted[0];
+        const last = sorted[sorted.length - 1];
+        const totalItemsWidth = sorted.reduce((sum, item) => sum + item.geometry.width, 0);
+        const totalSpan = last.geometry.x + last.geometry.width - first.geometry.x;
+        const availableGap = totalSpan - totalItemsWidth;
+        const gap = availableGap / (sorted.length - 1);
+        let curX = first.geometry.x;
+        for (const item of sorted) {
+          updates.push({ target: item.target, geometry: { ...item.geometry, x: snap(curX, snapSize) } });
+          curX += item.geometry.width + gap;
+        }
+      } else if (alignment === "distributeV") {
+        if (items.length < 3) {
+          announce("Se necesitan al menos 3 elementos para distribuir");
+          return;
+        }
+        const sorted = [...items].sort((a, b) => a.geometry.y - b.geometry.y);
+        const first = sorted[0];
+        const last = sorted[sorted.length - 1];
+        const totalItemsHeight = sorted.reduce((sum, item) => sum + item.geometry.height, 0);
+        const totalSpan = last.geometry.y + last.geometry.height - first.geometry.y;
+        const availableGap = totalSpan - totalItemsHeight;
+        const gap = availableGap / (sorted.length - 1);
+        let curY = first.geometry.y;
+        for (const item of sorted) {
+          updates.push({ target: item.target, geometry: { ...item.geometry, y: snap(curY, snapSize) } });
+          curY += item.geometry.height + gap;
+        }
+      }
+
+      if (updates.length) {
+        commitPlan(updateTargetGeometries(current, updates));
+        announce("Elementos alineados");
+      }
+    },
+    [announce, commitPlan, selectedTargets, snapEnabled],
+  );
+
+  const selectAreaChildren = useCallback(
+    (areaId: string) => {
+      const children = getAreaChildrenTargets(history.present, areaId, inventory);
+      if (!children.length) {
+        announce("Este cuadrante no tiene elementos adentro");
+        return;
+      }
+      setSelectedKeys(new Set(children.map(targetKey)));
+      announce(`${children.length} elementos seleccionados en el cuadrante`);
+    },
+    [announce, history.present, inventory],
+  );
 
   const updateSelectedGeometry = (field: keyof Geometry, rawValue: string) => {
     if (!selected || !selectedGeometry) return;
@@ -1264,6 +1533,21 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
         >
           <Grid3X3 className="h-4 w-4" /> Imán {snapEnabled ? "sí" : "no"}
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMoveWithChildren((val) => {
+              const next = !val;
+              announce(next ? "Cuadrantes moverán sus elementos hijos" : "Cuadrantes se moverán solos");
+              return next;
+            });
+          }}
+          className={`${TOOL_BUTTON} ${moveWithChildren ? "border-[#d8ff3e]/55 bg-[#d8ff3e]/10 text-[#eaff93]" : ""}`}
+          title="Al mover un cuadrante (área), arrastra automáticamente todas las máquinas y elementos adentro"
+          aria-pressed={moveWithChildren}
+        >
+          <Layers className="h-4 w-4" /> Cuadrante con hijos {moveWithChildren ? "sí" : "no"}
+        </button>
         <div className="flex items-center border-2 border-white/15">
           <button
             type="button"
@@ -1431,6 +1715,10 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                   const target: PlanTarget = { kind: "custom", id: element.id };
                   const key = targetKey(target);
                   const isSelected = selectedKeys.has(key);
+                  const isArea = element.type === "area";
+                  const areaChildrenCount = isArea
+                    ? getAreaChildrenTargets(history.present, element.id, inventory).length
+                    : 0;
                   return (
                     <div
                       id={domIdFor(target)}
@@ -1454,9 +1742,41 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                       onKeyDown={(event) => onItemKeyDown(event, target)}
                       onFocus={() => setSelectedKeys((prev) => (prev.has(key) ? prev : new Set([key])))}
                     >
-                      <span className={styles.customType}>{CUSTOM_TYPE_LABELS[element.type]}</span>
-                      <span className={styles.itemName}>{element.label}</span>
-                      {element.locked && <Lock className={styles.lockIcon} aria-hidden="true" />}
+                      {isArea ? (
+                        <div className={styles.areaHeaderBar}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={styles.itemName}>{element.label}</span>
+                            <span className={styles.areaBadge} title={`${areaChildrenCount} elementos dentro de este cuadrante`}>
+                              <Boxes className="h-2.5 w-2.5" />
+                              {areaChildrenCount} {areaChildrenCount === 1 ? "elem" : "elems"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {!element.locked && (
+                              <span className="hidden items-center gap-1 text-[8px] font-extrabold uppercase tracking-wider text-[#d8ff3e]/80 sm:flex" title="Arrastrá para mover el cuadrante con sus hijos">
+                                <Move className="h-2.5 w-2.5" /> Mover
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className={styles.areaLockBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleLockForTargets([target], !element.locked);
+                              }}
+                              title={element.locked ? "Desbloquear cuadrante para mover con sus hijos" : "Fijar posición del cuadrante"}
+                            >
+                              {element.locked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3 text-[#d8ff3e]" />}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <span className={styles.customType}>{CUSTOM_TYPE_LABELS[element.type]}</span>
+                          <span className={styles.itemName}>{element.label}</span>
+                          {element.locked && <Lock className={styles.lockIcon} aria-hidden="true" />}
+                        </>
+                      )}
                       {!element.locked && (
                         <button
                           type="button"
@@ -1569,7 +1889,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                   </button>
                 </div>
                 <p className="mt-3 text-xs font-semibold leading-5 text-white/42">
-                  Arrastrá cualquiera de los bloques seleccionados para moverlos juntos. Shift+clic suma o quita un bloque del grupo.
+                  Arrastrá cualquiera de los bloques seleccionados para moverlos juntos (o usá las flechas del teclado). Control+clic o Shift+clic suma o quita bloques.
                 </p>
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => toggleLockForTargets(selectedTargets, true)} className={TOOL_BUTTON}>
@@ -1585,6 +1905,35 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                   >
                     <Trash2 className="h-4 w-4" /> Quitar del plano
                   </button>
+                </div>
+                <div className="mt-5 border-t border-white/10 pt-4">
+                  <p className="mb-2 text-[9px] font-black uppercase tracking-[0.14em] text-white/40">Alinear y distribuir</p>
+                  <div className={styles.alignToolGrid}>
+                    <button type="button" onClick={() => alignSelected("left")} className={styles.alignBtn} title="Alinear a la izquierda">
+                      <AlignStartVertical className="h-4 w-4" /> Izq
+                    </button>
+                    <button type="button" onClick={() => alignSelected("centerH")} className={styles.alignBtn} title="Centrar horizontalmente">
+                      <AlignCenter className="h-4 w-4" /> Centro H
+                    </button>
+                    <button type="button" onClick={() => alignSelected("right")} className={styles.alignBtn} title="Alinear a la derecha">
+                      <AlignEndVertical className="h-4 w-4" /> Der
+                    </button>
+                    <button type="button" onClick={() => alignSelected("distributeH")} className={styles.alignBtn} title="Distribuir horizontalmente">
+                      <AlignHorizontalDistributeCenter className="h-4 w-4" /> Dist H
+                    </button>
+                    <button type="button" onClick={() => alignSelected("top")} className={styles.alignBtn} title="Alinear arriba">
+                      <AlignStartHorizontal className="h-4 w-4" /> Arriba
+                    </button>
+                    <button type="button" onClick={() => alignSelected("centerV")} className={styles.alignBtn} title="Centrar verticalmente">
+                      <AlignCenter className="h-4 w-4" /> Centro V
+                    </button>
+                    <button type="button" onClick={() => alignSelected("bottom")} className={styles.alignBtn} title="Alinear abajo">
+                      <AlignEndHorizontal className="h-4 w-4" /> Abajo
+                    </button>
+                    <button type="button" onClick={() => alignSelected("distributeV")} className={styles.alignBtn} title="Distribuir verticalmente">
+                      <AlignVerticalDistributeCenter className="h-4 w-4" /> Dist V
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -1669,6 +2018,41 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                       className="h-10 w-full cursor-pointer border-2 border-white/15 bg-black p-1"
                     />
                   </label>
+                )}
+
+                {selectedCustom && selectedCustom.type === "area" && (
+                  <div className="mt-4 border border-[#d8ff3e]/30 bg-[#d8ff3e]/5 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Layers className="h-4 w-4 text-[#d8ff3e]" />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-[#d8ff3e]">Cuadrante con hijos</span>
+                      </div>
+                      <span className="border border-[#d8ff3e]/40 bg-black/60 px-2 py-0.5 text-[9px] font-extrabold text-[#eaff93]">
+                        {getAreaChildrenTargets(history.present, selectedCustom.id, inventory).length} elementos
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] font-semibold leading-4 text-white/50">
+                      Al arrastrar o mover con flechas este cuadrante, todas las máquinas y bloques adentro se moverán juntos.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => selectAreaChildren(selectedCustom.id)}
+                        className={`${TOOL_BUTTON} w-full justify-start text-[9px]`}
+                      >
+                        <CheckSquare className="h-3.5 w-3.5 text-[#d8ff3e]" /> Seleccionar elementos del cuadrante (Ctrl+A)
+                      </button>
+                      <label className="mt-1 flex cursor-pointer select-none items-center gap-2 text-[10px] font-extrabold text-white/75 hover:text-white">
+                        <input
+                          type="checkbox"
+                          checked={moveWithChildren}
+                          onChange={(e) => setMoveWithChildren(e.target.checked)}
+                          className="h-4 w-4 accent-[#d8ff3e]"
+                        />
+                        Arrastrar cuadrante con sus elementos hijos
+                      </label>
+                    </div>
+                  </div>
                 )}
 
                 <fieldset className="mt-5">
