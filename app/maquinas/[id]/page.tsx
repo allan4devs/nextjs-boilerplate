@@ -5,10 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  ChevronLeft,
-  ChevronRight,
   MapPin,
-  ScanLine,
   Timer,
   TriangleAlert,
 } from "lucide-react";
@@ -16,18 +13,14 @@ import { GameCallout, GameChip, GamePanel } from "@/app/components/GameOS";
 import {
   MACHINE_GUIDE,
   findMachineGuide,
-  machineNeighbors,
   machinePath,
-  machineQrValue,
 } from "@/app/lib/machines";
 import { getDb } from "@/lib/helpers/mongodb";
 import { getMachineMedia } from "@/lib/xtreme/machine-media";
 import MachineGallery from "../_components/MachineGallery";
-import MachineQr from "../_components/MachineQr";
 import MachineVideo from "../_components/MachineVideo";
 import InventoryConnections from "../_components/InventoryConnections";
 import { getPublicEquipment } from "@/lib/xtreme/public-equipment";
-import { physicalMachineQrValue } from "@/app/lib/physical-machine-links";
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ asset?: string }> };
 
@@ -64,10 +57,8 @@ export default async function MachineDetailPage({ params, searchParams }: Params
   const machine = findMachineGuide(id);
   if (!machine) notFound();
 
-  const { prev, next } = machineNeighbors(machine.id);
   const [{ inventory, source }, query] = await Promise.all([getPublicEquipment(), searchParams]);
   const unit = inventory.find((asset) => asset.id === query.asset && asset.machineGuideId === machine.id);
-  const qrValue = unit ? physicalMachineQrValue(unit.id) : machineQrValue(machine.id);
 
   const db = await getDb();
   const media = await getMachineMedia(db, machine.id);
@@ -77,65 +68,39 @@ export default async function MachineDetailPage({ params, searchParams }: Params
   const videoLabel = media?.videoLabel || machine.videoLabel;
 
   return (
-    <article className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-      <Link
-        href="/maquinas"
-        className="inline-flex min-h-11 items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/50 transition hover:text-[#d8ff3e] focus-visible:text-[#d8ff3e] focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Todas las máquinas
-      </Link>
-
-      <header className="mt-5 border-b-2 border-white/12 pb-6">
-        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#d8ff3e]">
-          {machine.zone} · {machine.level}
-        </p>
-        <h1 className="mt-3 text-[clamp(2.2rem,6vw,4rem)] font-black uppercase leading-[0.88] tracking-[-0.03em] text-balance">
+    <article className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+      <header className="mb-5">
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Cómo usarla</p>
+        <h1 className="mt-2 text-2xl font-black uppercase leading-tight tracking-tight sm:text-4xl">
           {unit?.name ?? machine.name}
         </h1>
-        {unit && <p className="mt-3 font-bold text-[#d8ff3e]">{unit.code || unit.id} · {unit.area}</p>}
-        {machine.summary && (
-          <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/70 text-pretty sm:text-lg">
-            {machine.summary}
-          </p>
-        )}
-        {machine.location && (
-          <p className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-white/45">
-            <MapPin className="h-4 w-4 text-[#d8ff3e]" />
-            {machine.location}
-          </p>
-        )}
+        <p className="mt-2 text-xs font-bold text-white/50">
+          {unit?.code ? `${unit.code} · ` : ""}{unit?.area ?? machine.zone}
+        </p>
       </header>
 
-      <div className="mt-6">
-        <InventoryConnections inventory={inventory} source={source} guides={[{ id: machine.id, name: machine.name }]} guideId={machine.id} selectedAssetId={unit?.id} />
-      </div>
+      <section aria-label="Videos y fotos" className="space-y-5">
+        {videoUrl && (
+          <MachineVideo url={videoUrl} name={machine.name} label={videoLabel || "Abrir video"} />
+        )}
+        {image && <MachineGallery key={machine.id} name={machine.name} image={image} images={images} />}
+        {!videoUrl && !image && (
+          <p className="rounded-xl border border-white/15 p-5 text-sm text-white/60">
+            Todavía no hay fotos ni videos asociados. Podés consultar la guía de uso abajo.
+          </p>
+        )}
+      </section>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-6">
-          <MachineGallery name={machine.name} image={image} images={images} />
-
-          <div className="flex flex-wrap gap-1.5">
-            {machine.muscles.map((muscle) => (
-              <GameChip key={muscle} tone="lime">
-                {muscle}
-              </GameChip>
-            ))}
-          </div>
-
-          {videoUrl && (
-            <section>
-              <h2 className="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-[#d8ff3e]">
-                Video de técnica
-              </h2>
-              <MachineVideo
-                url={videoUrl}
-                name={machine.name}
-                label={videoLabel ? `${videoLabel} · YouTube` : "Ver en YouTube"}
-              />
-            </section>
-          )}
-
+      <div className="mt-8 space-y-3">
+        <details className="group rounded-xl border border-white/15 bg-white/[0.03]">
+          <summary className="cursor-pointer rounded-xl p-5 font-black focus-visible:outline-2 focus-visible:outline-[#d8ff3e]">
+            Cómo usarla y entrenamientos
+            <span className="mt-1 block text-xs font-medium text-white/50">Ajustes, técnica y series para empezar</span>
+          </summary>
+          <div className="space-y-5 border-t border-white/10 p-4 sm:p-5">
+            <div className="flex flex-wrap gap-1.5">
+              {machine.muscles.map((muscle) => <GameChip key={muscle} tone="lime">{muscle}</GameChip>)}
+            </div>
           <GamePanel title="Ajuste inicial" tone="cyan" compact>
             <p className="text-sm font-bold leading-6 text-white/70">{machine.setup}</p>
           </GamePanel>
@@ -167,61 +132,49 @@ export default async function MachineDetailPage({ params, searchParams }: Params
             <span className="font-black uppercase">Starter · </span>
             {machine.starter}
           </GameCallout>
-        </div>
-
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <div className="border-[3px] border-[#d8ff3e]/40 bg-[#0c0c0c] p-4 shadow-[4px_4px_0_rgba(0,0,0,0.6)]">
-            <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">
-              <ScanLine className="h-4 w-4" />
-              QR de esta máquina
-            </p>
-            <p className="mt-1 text-xs font-bold text-white/45">
-              Es el mismo que va pegado en el equipo. Escaneálo para volver a esta ficha.
-            </p>
-            <div className="mt-4">
-              <MachineQr value={qrValue} label={machine.name} size={196} />
-            </div>
-            <p className="mt-3 break-all text-center text-[10px] font-bold text-white/30">{qrValue}</p>
+            <Link href="/app" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[#d8ff3e]">
+              Ver mis entrenamientos <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-        </aside>
+        </details>
+
+        <details className="rounded-xl border border-white/15 bg-white/[0.03]">
+          <summary className="cursor-pointer rounded-xl p-5 font-black focus-visible:outline-2 focus-visible:outline-[#d8ff3e]">
+            Detalles de la máquina
+            <span className="mt-1 block text-xs font-medium text-white/50">Descripción, marca, año y ubicación</span>
+          </summary>
+          <div className="space-y-5 border-t border-white/10 p-4 sm:p-5">
+            {(unit?.description || machine.summary) && (
+              <p className="text-sm leading-7 text-white/70">{unit?.description || machine.summary}</p>
+            )}
+            <dl className="grid grid-cols-2 gap-4 text-sm">
+              {[
+                ["Nombre", unit?.name ?? machine.name],
+                ["Zona", unit?.area ?? machine.zone],
+                ["Marca", unit?.brand || "Sin registrar"],
+                ["Modelo", "Sin registrar"],
+                ["Año", unit?.year ? String(unit.year) : "Sin registrar"],
+                ["Nivel", machine.level],
+              ].map(([label, value]) => (
+                <div key={label} className="min-w-0">
+                  <dt className="text-xs text-white/45">{label}</dt>
+                  <dd className="mt-1 break-words font-bold">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            {(unit?.location || machine.location) && (
+              <p className="flex items-start gap-2 text-sm text-white/60">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#d8ff3e]" />
+                {unit?.location || machine.location}
+              </p>
+            )}
+            <InventoryConnections inventory={inventory} source={source} guides={[{ id: machine.id, name: machine.name }]} guideId={machine.id} selectedAssetId={unit?.id} />
+          </div>
+        </details>
       </div>
 
-      <nav className="mt-12 grid gap-3 border-t-2 border-white/12 pt-6 sm:grid-cols-2">
-        {prev && (
-          <Link
-            href={machinePath(prev.id)}
-            className="group flex items-center gap-3 border-2 border-white/15 bg-black/30 p-3.5 transition hover:border-[#d8ff3e] focus-visible:border-[#d8ff3e] focus-visible:outline-none"
-          >
-            <ChevronLeft className="h-5 w-5 shrink-0 text-white/40 transition group-hover:text-[#d8ff3e]" />
-            <span className="min-w-0">
-              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/40">
-                Anterior
-              </span>
-              <span className="block truncate text-sm font-black uppercase">{prev.name}</span>
-            </span>
-          </Link>
-        )}
-        {next && (
-          <Link
-            href={machinePath(next.id)}
-            className="group flex items-center justify-end gap-3 border-2 border-white/15 bg-black/30 p-3.5 text-right transition hover:border-[#d8ff3e] focus-visible:border-[#d8ff3e] focus-visible:outline-none sm:col-start-2"
-          >
-            <span className="min-w-0">
-              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/40">
-                Siguiente
-              </span>
-              <span className="block truncate text-sm font-black uppercase">{next.name}</span>
-            </span>
-            <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition group-hover:text-[#d8ff3e]" />
-          </Link>
-        )}
-      </nav>
-
-      <Link
-        href="/maquinas/qr"
-        className="mt-6 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white/35 transition hover:text-[#d8ff3e] focus-visible:text-[#d8ff3e] focus-visible:outline-none"
-      >
-        Staff: códigos y QR de todas <ArrowRight className="h-3.5 w-3.5" />
+      <Link href="/maquinas" className="mt-8 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-white/50 hover:text-[#d8ff3e]">
+        <ArrowLeft className="h-4 w-4" /> Todas las máquinas
       </Link>
     </article>
   );
