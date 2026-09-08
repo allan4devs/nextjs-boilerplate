@@ -272,7 +272,12 @@ try {
   const report = {
     generatedAt: now.toISOString(),
     summary,
-    changes: changes.map(({ id: _id, normalizedName: _key, ...change }) => change),
+    changes: changes.map((change) => {
+      const rest = { ...change };
+      delete rest.id;
+      delete rest.normalizedName;
+      return rest;
+    }),
     skipped,
   };
 

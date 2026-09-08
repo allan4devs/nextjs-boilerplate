@@ -33,7 +33,6 @@ export default function MachineVideo({ url, name, label }: MachineVideoProps) {
         </div>
       ) : isDirectVideo ? (
         <div className="relative aspect-video overflow-hidden border-[3px] border-[#d8ff3e]/45 bg-black">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             className="absolute inset-0 h-full w-full object-contain"
             src={url}

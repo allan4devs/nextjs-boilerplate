@@ -364,6 +364,107 @@ export function updateTargetGeometry(
   };
 }
 
+export function updateTargetGeometries(
+  plan: PlanDocument,
+  updates: Array<{ target: PlanTarget; geometry: Geometry }>,
+): PlanDocument {
+  let nextPlacements = plan.placements;
+  let placementsChanged = false;
+  const customMap = new Map<string, Geometry>();
+
+  for (const update of updates) {
+    const nextGeometry = clampGeometry(update.geometry, plan);
+    if (update.target.kind === "asset") {
+      const current = (placementsChanged ? nextPlacements : plan.placements)[update.target.id];
+      if (current) {
+        if (!placementsChanged) {
+          nextPlacements = { ...plan.placements };
+          placementsChanged = true;
+        }
+        nextPlacements[update.target.id] = { ...current, ...nextGeometry };
+      }
+    } else {
+      customMap.set(update.target.id, nextGeometry);
+    }
+  }
+
+  const nextCustomElements = customMap.size
+    ? plan.customElements.map((element) => {
+        const update = customMap.get(element.id);
+        return update ? { ...element, ...update } : element;
+      })
+    : plan.customElements;
+
+  return {
+    ...plan,
+    placements: nextPlacements,
+    customElements: nextCustomElements,
+  };
+}
+
+export function isPointInGeometry(px: number, py: number, bounds: Geometry): boolean {
+  return px >= bounds.x && px <= bounds.x + bounds.width && py >= bounds.y && py <= bounds.y + bounds.height;
+}
+
+export function isItemInsideArea(item: Geometry, area: Geometry): boolean {
+  const cx = item.x + item.width / 2;
+  const cy = item.y + item.height / 2;
+  return isPointInGeometry(cx, cy, area);
+}
+
+export function getAreaChildrenTargets(
+  plan: PlanDocument,
+  areaId: string,
+  inventory: FloorInventoryItem[],
+): PlanTarget[] {
+  const area = plan.customElements.find((el) => el.id === areaId && el.type === "area");
+  if (!area) return [];
+  const targets: PlanTarget[] = [];
+
+  // Asset placements inside area
+  for (const asset of inventory) {
+    const placement = plan.placements[asset.id];
+    if (placement && isItemInsideArea(placement, area)) {
+      targets.push({ kind: "asset", id: asset.id });
+    }
+  }
+
+  // Other custom elements inside area (excluding the area itself)
+  for (const custom of plan.customElements) {
+    if (custom.id !== areaId && isItemInsideArea(custom, area)) {
+      targets.push({ kind: "custom", id: custom.id });
+    }
+  }
+
+  return targets;
+}
+
+export function clampGroupDelta(
+  items: Geometry[],
+  dx: number,
+  dy: number,
+  canvas: { width: number; height: number },
+): { dx: number; dy: number } {
+  if (!items.length) return { dx, dy };
+
+  let minAllowedDx = -Infinity;
+  let maxAllowedDx = Infinity;
+  let minAllowedDy = -Infinity;
+  let maxAllowedDy = Infinity;
+
+  for (const item of items) {
+    minAllowedDx = Math.max(minAllowedDx, -item.x);
+    maxAllowedDx = Math.min(maxAllowedDx, canvas.width - (item.x + item.width));
+    minAllowedDy = Math.max(minAllowedDy, -item.y);
+    maxAllowedDy = Math.min(maxAllowedDy, canvas.height - (item.y + item.height));
+  }
+
+  return {
+    dx: clamp(dx, minAllowedDx, maxAllowedDx),
+    dy: clamp(dy, minAllowedDy, maxAllowedDy),
+  };
+}
+
 function overlaps(a: Geometry, b: Geometry, margin = 8) {
   return !(
     a.x + a.width + margin <= b.x ||

@@ -24,7 +24,7 @@
  *     --workbook "C:/.../Total Estado Socios (8).xlsx" --report scripts/excel/latinsoft-movements-report.json
  *   (agregar --apply para escribir en Mongo; sin --apply es vista previa)
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import ExcelJS from "exceljs";
 import { MongoClient } from "mongodb";
 
