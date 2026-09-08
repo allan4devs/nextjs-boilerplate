@@ -23,6 +23,7 @@ import {
   Grid3X3,
   Hand,
   Layers,
+  LayoutGrid,
   Lock,
   LockOpen,
   Minus,
@@ -59,6 +60,7 @@ import {
   isItemInsideArea,
   normalizeForSearch,
   parsePlanDocument,
+  reorganizeAreaChildren,
   snap,
   updateTargetGeometries,
   updateTargetGeometry,
@@ -880,6 +882,52 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     if (active.mode === "resize") {
       const item = active.items[0];
       if (!item) return;
+
+      const isArea =
+        item.target.kind === "custom" &&
+        active.before.customElements.find((e) => e.id === item.target.id)?.type === "area";
+
+      if (isArea) {
+        const proposedGeometry: Geometry = {
+          ...item.initial,
+          width: clamp(
+            snap(item.initial.width + rawDx, active.snapSize),
+            MIN_ITEM_SIZE,
+            active.before.canvas.width - item.initial.x,
+          ),
+          height: clamp(
+            snap(item.initial.height + rawDy, active.snapSize),
+            MIN_ITEM_SIZE,
+            active.before.canvas.height - item.initial.y,
+          ),
+        };
+
+        const result = reorganizeAreaChildren(
+          active.before,
+          item.target.id,
+          inventory,
+          proposedGeometry,
+        );
+
+        if (result) {
+          item.preview = result.areaGeometry;
+          item.node.style.width = `${result.areaGeometry.width}px`;
+          item.node.style.height = `${result.areaGeometry.height}px`;
+
+          for (const update of result.updates) {
+            const childNode = document.getElementById(domIdFor(update.target));
+            if (childNode) {
+              childNode.style.left = `${update.geometry.x}px`;
+              childNode.style.top = `${update.geometry.y}px`;
+            }
+          }
+
+          active.previewPlan = result.plan;
+          active.changed = true;
+          return;
+        }
+      }
+
       const geometry: Geometry = {
         ...item.initial,
         width: clamp(
@@ -1261,6 +1309,19 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     [announce, history.present, inventory],
   );
 
+  const handleReorganizeArea = useCallback(
+    (areaId: string) => {
+      const result = reorganizeAreaChildren(history.present, areaId, inventory);
+      if (!result || !result.updates.length) {
+        announce("El cuadrante no tiene elementos para reorganizar");
+        return;
+      }
+      commitPlan(result.plan);
+      announce(`${result.updates.length} elementos reorganizados dentro del cuadrante`);
+    },
+    [announce, commitPlan, history.present, inventory],
+  );
+
   const updateSelectedGeometry = (field: keyof Geometry, rawValue: string) => {
     if (!selected || !selectedGeometry) return;
     if (targetLocked(history.present, selected)) return;
@@ -1272,12 +1333,25 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
         : field === "height"
           ? clamp(value, MIN_ITEM_SIZE, history.present.canvas.height - selectedGeometry.y)
           : value;
-    commitPlan(
-      updateTargetGeometry(history.present, selected, {
-        ...selectedGeometry,
-        [field]: boundedValue,
-      }),
-    );
+
+    const nextGeom = {
+      ...selectedGeometry,
+      [field]: boundedValue,
+    };
+
+    if (
+      selected.kind === "custom" &&
+      selectedCustom?.type === "area" &&
+      (field === "width" || field === "height")
+    ) {
+      const result = reorganizeAreaChildren(history.present, selected.id, inventory, nextGeom);
+      if (result) {
+        commitPlan(result.plan);
+        return;
+      }
+    }
+
+    commitPlan(updateTargetGeometry(history.present, selected, nextGeom));
   };
 
   const updateSelectedLabel = (label: string) => {
@@ -1757,6 +1831,19 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                                 <Move className="h-2.5 w-2.5" /> Mover
                               </span>
                             )}
+                            {!element.locked && areaChildrenCount > 0 && (
+                              <button
+                                type="button"
+                                className={styles.areaLockBtn}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReorganizeArea(element.id);
+                                }}
+                                title="Reorganizar elementos dentro del cuadrante"
+                              >
+                                <LayoutGrid className="h-3 w-3 text-[#d8ff3e]" />
+                              </button>
+                            )}
                             <button
                               type="button"
                               className={styles.areaLockBtn}
@@ -2041,6 +2128,15 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                         className={`${TOOL_BUTTON} w-full justify-start text-[9px]`}
                       >
                         <CheckSquare className="h-3.5 w-3.5 text-[#d8ff3e]" /> Seleccionar elementos del cuadrante (Ctrl+A)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReorganizeArea(selectedCustom.id)}
+                        disabled={selectedLocked}
+                        className={`${TOOL_BUTTON} w-full justify-start text-[9px]`}
+                        title="Reorganiza y empaca las máquinas dentro del cuadrante para que no salgan de los bordes"
+                      >
+                        <LayoutGrid className="h-3.5 w-3.5 text-[#d8ff3e]" /> Reorganizar elementos en el cuadrante
                       </button>
                       <label className="mt-1 flex cursor-pointer select-none items-center gap-2 text-[10px] font-extrabold text-white/75 hover:text-white">
                         <input

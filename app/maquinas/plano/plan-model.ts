@@ -465,6 +465,112 @@ export function clampGroupDelta(
   };
 }
 
+export function reorganizeAreaChildren(
+  plan: PlanDocument,
+  areaId: string,
+  inventory: FloorInventoryItem[],
+  customAreaGeometry?: Geometry,
+): {
+  plan: PlanDocument;
+  areaGeometry: Geometry;
+  updates: Array<{ target: PlanTarget; geometry: Geometry }>;
+} | null {
+  const area = plan.customElements.find((el) => el.id === areaId && el.type === "area");
+  if (!area) return null;
+
+  const currentAreaGeom = customAreaGeometry ?? area;
+  const childTargets = getAreaChildrenTargets(plan, areaId, inventory);
+  if (!childTargets.length) {
+    return {
+      plan: customAreaGeometry
+        ? updateTargetGeometry(plan, { kind: "custom", id: areaId }, currentAreaGeom)
+        : plan,
+      areaGeometry: currentAreaGeom,
+      updates: [],
+    };
+  }
+
+  // Obtenemos los elementos hijos ordenados por su posición visual actual (arriba-abajo, izq-der)
+  const childItems = childTargets
+    .map((target) => {
+      const geometry = getTargetGeometry(plan, target);
+      return geometry ? { target, geometry } : null;
+    })
+    .filter((item): item is { target: PlanTarget; geometry: Geometry } => item !== null)
+    .sort((a, b) => {
+      const rowDiff = Math.round(a.geometry.y / 24) - Math.round(b.geometry.y / 24);
+      if (rowDiff !== 0) return rowDiff;
+      return a.geometry.x - b.geometry.x;
+    });
+
+  const PADDING_X = 16;
+  const PADDING_BOTTOM = 16;
+  const HEADER_OFFSET = 42;
+  const GAP_X = 14;
+  const GAP_Y = 14;
+
+  const startX = currentAreaGeom.x + PADDING_X;
+  const startY = currentAreaGeom.y + HEADER_OFFSET;
+
+  // El ancho debe ser suficiente para el elemento más ancho
+  const maxChildWidth = childItems.reduce((max, c) => Math.max(max, c.geometry.width), 0);
+  const minRequiredWidth = Math.max(MIN_ITEM_SIZE, maxChildWidth + PADDING_X * 2);
+  const effectiveAreaWidth = Math.max(currentAreaGeom.width, minRequiredWidth);
+  const maxInnerWidth = effectiveAreaWidth - PADDING_X * 2;
+
+  let cursorX = startX;
+  let cursorY = startY;
+  let rowHeight = 0;
+  const updates: Array<{ target: PlanTarget; geometry: Geometry }> = [];
+
+  for (const child of childItems) {
+    const w = child.geometry.width;
+    const h = child.geometry.height;
+
+    // Si no cabe en la fila actual, saltamos a la siguiente fila
+    if (cursorX !== startX && cursorX + w > startX + maxInnerWidth) {
+      cursorX = startX;
+      cursorY += rowHeight + GAP_Y;
+      rowHeight = 0;
+    }
+
+    updates.push({
+      target: child.target,
+      geometry: {
+        x: cursorX,
+        y: cursorY,
+        width: w,
+        height: h,
+      },
+    });
+
+    cursorX += w + GAP_X;
+    rowHeight = Math.max(rowHeight, h);
+  }
+
+  // La altura del cuadrante debe ajustarse para contener todas las filas sin que salgan del borde
+  const totalHeightNeeded = rowHeight ? cursorY + rowHeight + PADDING_BOTTOM - currentAreaGeom.y : currentAreaGeom.height;
+  const finalAreaHeight = Math.max(currentAreaGeom.height, totalHeightNeeded);
+
+  const finalAreaGeom: Geometry = {
+    x: currentAreaGeom.x,
+    y: currentAreaGeom.y,
+    width: effectiveAreaWidth,
+    height: finalAreaHeight,
+  };
+
+  const nextPlan = updateTargetGeometries(plan, [
+    { target: { kind: "custom", id: areaId }, geometry: finalAreaGeom },
+    ...updates,
+  ]);
+
+  return {
+    plan: nextPlan,
+    areaGeometry: finalAreaGeom,
+    updates,
+  };
+}
+
 function overlaps(a: Geometry, b: Geometry, margin = 8) {
   return !(
     a.x + a.width + margin <= b.x ||
