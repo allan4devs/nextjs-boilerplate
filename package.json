@@ -23,6 +23,7 @@
     "mongodb": "^7.5.0",
     "next": "^16.2.10",
     "nodemailer": "^6.10.1",
+    "pdf-lib": "^1.17.1",
     "qr-code-styling": "^1.9.2",
     "qrcode": "^1.5.4",
     "react": "19.2.4",

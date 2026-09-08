@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { DEFAULT_EQUIPMENT_ASSETS } from "@/lib/xtreme/equipment";
-import FloorPlanEditor, { type FloorInventoryItem } from "./FloorPlanEditor";
+import { getPublicEquipment } from "@/lib/xtreme/public-equipment";
+import FloorPlanEditor from "./FloorPlanEditor";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { absolute: "Plano editable del gimnasio · Xtreme Gym" },
@@ -9,17 +11,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function GymFloorPlanPage() {
-  const inventory: FloorInventoryItem[] = DEFAULT_EQUIPMENT_ASSETS.map((asset) => ({
-    id: asset.id,
-    area: asset.area,
-    kind: asset.kind,
-    code: asset.code,
-    name: asset.name,
-    location: asset.location,
-    status: asset.status,
-    machineGuideId: asset.machineGuideId,
-  }));
-
-  return <FloorPlanEditor inventory={inventory} />;
+export default async function GymFloorPlanPage() {
+  const { inventory, source } = await getPublicEquipment();
+  return <><p className="px-4 text-xs text-amber-200">{source === "fallback" ? "Sin conexión al inventario: se muestra la copia inicial. Reintentá recargando." : "Inventario compartido · las posiciones y etiquetas sin publicar se guardan en este navegador."}</p><FloorPlanEditor inventory={inventory} /></>;
 }

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { machineQrValue } from "@/app/lib/machines";
-import { DEFAULT_EQUIPMENT_ASSETS } from "@/lib/xtreme/equipment";
+import { physicalMachineQrValue } from "@/app/lib/physical-machine-links";
+import { getPublicEquipment, type PublicEquipment } from "@/lib/xtreme/public-equipment";
 import EditableQrSheet, { type EditableQrItem } from "../_components/EditableQrSheet";
 
 export const metadata: Metadata = {
@@ -11,8 +11,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-function physicalMachineLabels(): EditableQrItem[] {
-  const machines = DEFAULT_EQUIPMENT_ASSETS.filter(
+export const dynamic = "force-dynamic";
+
+function physicalMachineLabels(inventory: PublicEquipment[]): EditableQrItem[] {
+  const machines = inventory.filter(
     (asset) => asset.kind === "machine" && Boolean(asset.machineGuideId),
   );
   const totals = new Map<string, number>();
@@ -38,14 +40,15 @@ function physicalMachineLabels(): EditableQrItem[] {
       unitLetter: null,
       unit,
       units: totals.get(machineGuideId) ?? 1,
-      url: machineQrValue(machineGuideId),
+      url: physicalMachineQrValue(asset.id),
       status: asset.status,
     };
   });
 }
 
-export default function QrSheetPage() {
-  const items = physicalMachineLabels();
+export default async function QrSheetPage() {
+  const { inventory, source } = await getPublicEquipment();
+  const items = physicalMachineLabels(inventory);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -64,8 +67,8 @@ export default function QrSheetPage() {
         </h1>
         <p className="mt-4 max-w-3xl text-sm font-semibold leading-6 text-white/65 text-pretty">
           La hoja sale del inventario físico: {items.length} equipos registrados, una etiqueta por máquina.
-          Cada etiqueta se descarga en formato vertical de 1200×1800 px, para imprimir a 10×15 cm, pensada
-          para pegarla en el costado del aparato. Podés ordenar las etiquetas y editar el código de
+          Descargá un solo PDF con dos etiquetas de 9×16 cm por hoja A4, centradas y listas
+          para recortar y pegar en el costado del aparato. Podés ordenar las etiquetas y editar el código de
           máquina o el nombre; el código QR no se edita y siempre apunta a la ficha pública.
         </p>
         <p className="mt-3 max-w-3xl text-xs leading-5 text-white/50">
@@ -76,7 +79,8 @@ export default function QrSheetPage() {
       </header>
 
       <div className="mt-8">
-        <EditableQrSheet initialItems={items} />
+        {source === "fallback" && <p role="status" className="mb-4 text-sm text-amber-200">Sin conexión al inventario: se muestra la copia inicial. Reintentá antes de imprimir.</p>}
+        <EditableQrSheet initialItems={items} inventory={inventory} />
       </div>
     </div>
   );

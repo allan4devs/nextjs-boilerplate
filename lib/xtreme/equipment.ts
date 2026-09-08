@@ -268,6 +268,7 @@ export type EquipmentAssetPatch = Partial<
     | "depreciation"
     | "maintenance"
     | "warranty"
+    | "machineGuideId"
   >
 >;
 

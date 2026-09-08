@@ -22,6 +22,7 @@ export type Geometry = {
 export type AssetPlacement = Geometry & {
   locked: boolean;
   label?: string;
+  code?: string;
 };
 
 export type CustomElementType = "area" | "obstacle" | "access" | "equipment";
@@ -462,8 +463,9 @@ export function parsePlanDocument(
         ...geometry,
         locked: rawPlacement.locked === true,
         ...(typeof rawPlacement.label === "string" && rawPlacement.label.trim()
-          ? { label: rawPlacement.label.trim().slice(0, 120) }
+          ? { label: rawPlacement.label.trim().slice(0, 140) }
           : {}),
+        ...(typeof rawPlacement.code === "string" ? { code: rawPlacement.code.slice(0, 32) } : {}),
       };
     }
   }

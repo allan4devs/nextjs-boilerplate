@@ -25,8 +25,11 @@ import { getMachineMedia } from "@/lib/xtreme/machine-media";
 import MachineGallery from "../_components/MachineGallery";
 import MachineQr from "../_components/MachineQr";
 import MachineVideo from "../_components/MachineVideo";
+import InventoryConnections from "../_components/InventoryConnections";
+import { getPublicEquipment } from "@/lib/xtreme/public-equipment";
+import { physicalMachineQrValue } from "@/app/lib/physical-machine-links";
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ asset?: string }> };
 
 // El video/fotos de cada máquina se puede editar desde /admin/equipo, así que
 // esta ficha se renderiza por request en vez de quedar fija del build estático.
@@ -56,13 +59,15 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function MachineDetailPage({ params }: Params) {
+export default async function MachineDetailPage({ params, searchParams }: Params) {
   const { id } = await params;
   const machine = findMachineGuide(id);
   if (!machine) notFound();
 
   const { prev, next } = machineNeighbors(machine.id);
-  const qrValue = machineQrValue(machine.id);
+  const [{ inventory, source }, query] = await Promise.all([getPublicEquipment(), searchParams]);
+  const unit = inventory.find((asset) => asset.id === query.asset && asset.machineGuideId === machine.id);
+  const qrValue = unit ? physicalMachineQrValue(unit.id) : machineQrValue(machine.id);
 
   const db = await getDb();
   const media = await getMachineMedia(db, machine.id);
@@ -86,8 +91,9 @@ export default async function MachineDetailPage({ params }: Params) {
           {machine.zone} · {machine.level}
         </p>
         <h1 className="mt-3 text-[clamp(2.2rem,6vw,4rem)] font-black uppercase leading-[0.88] tracking-[-0.03em] text-balance">
-          {machine.name}
+          {unit?.name ?? machine.name}
         </h1>
+        {unit && <p className="mt-3 font-bold text-[#d8ff3e]">{unit.code || unit.id} · {unit.area}</p>}
         {machine.summary && (
           <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/70 text-pretty sm:text-lg">
             {machine.summary}
@@ -100,6 +106,10 @@ export default async function MachineDetailPage({ params }: Params) {
           </p>
         )}
       </header>
+
+      <div className="mt-6">
+        <InventoryConnections inventory={inventory} source={source} guides={[{ id: machine.id, name: machine.name }]} guideId={machine.id} selectedAssetId={unit?.id} />
+      </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">

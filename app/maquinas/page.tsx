@@ -9,6 +9,10 @@ import {
   type MachineGuide,
 } from "@/app/lib/machines";
 import ZoneNav from "./_components/ZoneNav";
+import InventoryConnections from "./_components/InventoryConnections";
+import { getPublicEquipment, type PublicEquipment } from "@/lib/xtreme/public-equipment";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { absolute: "Guía de máquinas · Xtreme Gym" },
@@ -21,11 +25,16 @@ const HERO_IMAGE = "/xtreme/piso-maquinas-panoramica.webp";
 
 function MachineCard({
   machine,
+  inventory,
   featured = false,
 }: {
   machine: MachineGuide;
+  inventory: PublicEquipment[];
   featured?: boolean;
 }) {
+  const units = inventory.filter((asset) => asset.kind === "machine" && asset.machineGuideId === machine.id);
+  const names = new Set(units.map((asset) => asset.name));
+  const displayName = names.size === 1 ? units[0].name : machine.name;
   return (
     <Link
       href={machinePath(machine.id)}
@@ -63,8 +72,9 @@ function MachineCard({
             featured ? "text-2xl sm:text-[1.9rem]" : "text-lg sm:text-xl"
           }`}
         >
-          {machine.name}
+          {displayName}
         </h3>
+        {units.length > 0 && <p className="text-xs font-bold text-[#d8ff3e]">{units.length} {units.length === 1 ? "unidad" : "unidades"} · {units.map((asset) => asset.code || asset.id).join(" · ")}</p>}
         {machine.summary && (
           <p className="max-w-md text-sm font-semibold leading-6 text-white/65 text-pretty">
             {machine.summary}
@@ -89,11 +99,14 @@ function MachineCard({
   );
 }
 
-export default function MaquinasIndexPage() {
+export default async function MaquinasIndexPage() {
+  const { inventory, source } = await getPublicEquipment();
   const groups = machinesByZone();
   const zones = groups.map((g) => g.zone);
-  const total = MACHINE_GUIDE.length;
-  const withVideo = MACHINE_GUIDE.filter((m) => m.videoUrl).length;
+  const physicalMachines = inventory.filter((asset) => asset.kind === "machine");
+  const total = physicalMachines.length;
+  const guidesWithVideo = new Set(MACHINE_GUIDE.filter((machine) => machine.videoUrl).map((machine) => machine.id));
+  const withVideo = physicalMachines.filter((asset) => guidesWithVideo.has(asset.machineGuideId ?? "")).length;
 
   return (
     <>
@@ -123,7 +136,7 @@ export default function MaquinasIndexPage() {
 
           <dl className="mt-9 grid max-w-lg grid-cols-3 border-[3px] border-white/15 bg-black/40 backdrop-blur-sm">
             {[
-              { value: total, label: "equipos y zonas" },
+              { value: total, label: "máquinas físicas" },
               { value: withVideo, label: "con video" },
               { value: groups.length, label: "zonas" },
             ].map((stat, index) => (
@@ -147,6 +160,11 @@ export default function MaquinasIndexPage() {
       <ZoneNav zones={zones} />
 
       <div className="mx-auto max-w-6xl space-y-16 px-4 py-14 sm:px-6 sm:py-16">
+        <InventoryConnections
+          inventory={inventory}
+          source={source}
+          guides={MACHINE_GUIDE.map(({ id, name }) => ({ id, name }))}
+        />
         {groups.map(({ zone, machines }) => {
           const hasFeatured = machines.length === 1 || machines.length >= 3;
           const featured = hasFeatured ? machines[0] : null;
@@ -161,16 +179,16 @@ export default function MaquinasIndexPage() {
                   {zone}
                 </h2>
                 <span className="shrink-0 text-[11px] font-black uppercase tracking-[0.16em] text-white/40">
-                  {machines.length} {machines.length === 1 ? "equipo" : "equipos"}
+                  {machines.length} {machines.length === 1 ? "ficha" : "fichas"}
                 </span>
               </div>
 
               <div className="mt-6 space-y-4">
-                {featured && <MachineCard machine={featured} featured />}
+                {featured && <MachineCard machine={featured} inventory={inventory} featured />}
                 {rest.length > 0 && (
                   <div className={`grid gap-4 ${restCols}`}>
                     {rest.map((machine) => (
-                      <MachineCard key={machine.id} machine={machine} />
+                      <MachineCard key={machine.id} machine={machine} inventory={inventory} />
                     ))}
                   </div>
                 )}
@@ -207,7 +225,7 @@ export default function MaquinasIndexPage() {
             <div>
               <p className="text-sm font-black uppercase tracking-[0.08em]">Staff · plano editable</p>
               <p className="mt-1 text-xs font-bold text-white/45">
-                Un piso en cuadrícula para ubicar, mover y dimensionar los 131 activos físicos.
+                Un piso en cuadrícula para ubicar, mover y dimensionar los {inventory.length} activos físicos.
               </p>
             </div>
           </div>

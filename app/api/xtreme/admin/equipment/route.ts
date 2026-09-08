@@ -3,6 +3,8 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit, diffFields } from "@/lib/xtreme/audit";
 import {
   createEquipmentAsset,
+  DEFAULT_EQUIPMENT_ASSETS,
+  ensureDefaultEquipmentAssets,
   listEquipmentAssets,
   updateEquipmentAsset,
   type EquipmentArea,
@@ -13,6 +15,7 @@ import {
 } from "@/lib/xtreme/equipment";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { EQUIPMENT_ASSETS_COLLECTION } from "@/lib/xtreme/shared";
+import { findMachineGuide } from "@/app/components/member/catalog/machines";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +91,12 @@ function parseEquipmentPatch(body: Record<string, unknown>) {
   if (patch.name !== undefined && !patch.name.trim()) {
     return { error: "El nombre del activo no puede quedar vacío." } as const;
   }
+  if (body.machineGuideId !== undefined) {
+    if (typeof body.machineGuideId !== "string" || !findMachineGuide(body.machineGuideId)) {
+      return { error: "Seleccioná una ficha de máquina válida." } as const;
+    }
+    patch.machineGuideId = body.machineGuideId;
+  }
   if (!Object.keys(patch).length) {
     return { error: "No hay campos editables para actualizar." } as const;
   }
@@ -133,10 +142,17 @@ export async function PATCH(req: NextRequest) {
 
   const db = await getDb();
   const collection = db.collection<EquipmentAssetDoc>(EQUIPMENT_ASSETS_COLLECTION);
-  const before = await collection.findOne({ id });
+  let before = await collection.findOne({ id });
+  if (!before && DEFAULT_EQUIPMENT_ASSETS.some((asset) => asset.id === id)) {
+    await ensureDefaultEquipmentAssets(db);
+    before = await collection.findOne({ id });
+  }
   if (!before) return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
 
   const { patch } = parsed;
+  if (patch.machineGuideId !== undefined && before.kind !== "machine") {
+    return NextResponse.json({ error: "Solo las máquinas pueden vincularse a una ficha." }, { status: 400 });
+  }
   const updated = await updateEquipmentAsset(db, id, patch);
   if (!updated) return NextResponse.json({ error: "No se pudo actualizar el activo." }, { status: 500 });
 

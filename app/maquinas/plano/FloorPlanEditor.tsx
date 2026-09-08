@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import AssetConnectionPanel from "./AssetConnectionPanel";
+import { useMachineTexts } from "../_components/useMachineTexts";
+import { applyMachineTexts, readMachineTexts, type MachineTexts } from "../_components/machine-label-store";
 import {
   ArrowLeft,
   Boxes,
@@ -192,7 +195,7 @@ function targetLabel(
   if (target.kind === "asset") {
     const asset = inventoryById.get(target.id);
     const placement = plan.placements[target.id];
-    return placement?.label || asset?.name || target.id;
+    return placement?.label ?? asset?.name ?? target.id;
   }
   return plan.customElements.find((element) => element.id === target.id)?.label ?? "Elemento";
 }
@@ -219,11 +222,17 @@ function shortPlateLabel(name: string) {
 
 export default function FloorPlanEditor({ inventory }: { inventory: FloorInventoryItem[] }) {
   const initialPlan = useMemo(() => createInitialPlan(inventory), [inventory]);
-  const [history, dispatch] = useReducer(historyReducer, {
+  const { labels, error: labelsError, updateTexts } = useMachineTexts();
+  const [rawHistory, dispatch] = useReducer(historyReducer, {
     past: [],
     present: initialPlan,
     future: [],
   });
+  const history = useMemo(() => ({
+    present: applyMachineTexts(rawHistory.present, labels),
+    past: rawHistory.past.map((plan) => applyMachineTexts(plan, labels)),
+    future: rawHistory.future.map((plan) => applyMachineTexts(plan, labels)),
+  }), [rawHistory, labels]);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [marqueeRect, setMarqueeRect] = useState<Geometry | null>(null);
   const [zoom, setZoom] = useState(0.8);
@@ -285,10 +294,10 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       if (kindFilter !== "all" && asset.kind !== kindFilter) return false;
       if (!query) return true;
       return normalizeForSearch(
-        `${asset.id} ${asset.code} ${asset.name} ${asset.area} ${asset.location}`,
+        `${asset.id} ${history.present.placements[asset.id]?.code ?? labels[asset.id]?.code ?? asset.code} ${history.present.placements[asset.id]?.label ?? asset.name} ${asset.name} ${asset.area} ${asset.location}`,
       ).includes(query);
     });
-  }, [areaFilter, inventory, kindFilter, search]);
+  }, [areaFilter, inventory, kindFilter, search, history.present.placements, labels]);
 
   const selectedAsset =
     selected?.kind === "asset" ? inventoryById.get(selected.id) ?? null : null;
@@ -336,9 +345,18 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
 
   const commitPlan = useCallback((plan: PlanDocument) => {
     if (plan === presentRef.current) return;
+    const changes: MachineTexts = {};
+    for (const [id, placement] of Object.entries(plan.placements)) {
+      const before = presentRef.current.placements[id];
+      const change: MachineTexts[string] = {};
+      if (placement.label !== undefined && placement.label !== before?.label) change.name = placement.label;
+      if (placement.code !== undefined && placement.code !== before?.code) change.code = placement.code;
+      if (Object.keys(change).length) changes[id] = change;
+    }
+    if (Object.keys(changes).length && !updateTexts(changes)) return;
     presentRef.current = plan;
     dispatch({ type: "commit", plan });
-  }, []);
+  }, [updateTexts]);
 
   const undo = useCallback(() => {
     const previous = historyRef.current.past.at(-1);
@@ -501,6 +519,11 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     dispatch({ type: "load", plan });
     hydratedRef.current = true;
     setHydrated(true);
+    const assetId = new URLSearchParams(window.location.search).get("asset");
+    if (assetId && inventory.some((asset) => asset.id === assetId)) {
+      setSelectedKeys(new Set([targetKey({ kind: "asset", id: assetId })]));
+      setInspectorOpen(true);
+    }
   }, [initialPlan, inventory]);
 
   useEffect(() => {
@@ -509,7 +532,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       try {
         window.localStorage.setItem(
           PLAN_STORAGE_KEY,
-          JSON.stringify({ savedAt: new Date().toISOString(), plan: presentRef.current }),
+          JSON.stringify({ savedAt: new Date().toISOString(), plan: applyMachineTexts(presentRef.current, readMachineTexts()) }),
         );
       } catch {
         // El guardado visible reporta errores; al desmontar no actualizamos estado.
@@ -531,7 +554,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
         const timestamp = new Date().toISOString();
         window.localStorage.setItem(
           PLAN_STORAGE_KEY,
-          JSON.stringify({ savedAt: timestamp, plan: history.present }),
+          JSON.stringify({ savedAt: timestamp, plan: applyMachineTexts(presentRef.current, readMachineTexts()) }),
         );
         setSavedAt(timestamp);
         setSaveState("saved");
@@ -554,6 +577,15 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     });
     window.requestAnimationFrame(() => document.getElementById(domIdFor(target))?.focus());
   }, [zoom]);
+
+  const openedLinkedAsset = useRef(false);
+  useEffect(() => {
+    if (!hydrated || openedLinkedAsset.current) return;
+    const assetId = new URLSearchParams(window.location.search).get("asset");
+    if (!assetId || !inventoryById.has(assetId)) return;
+    openedLinkedAsset.current = true;
+    focusTarget({ kind: "asset", id: assetId });
+  }, [focusTarget, hydrated, inventoryById]);
 
   const addAsset = useCallback(
     (asset: FloorInventoryItem, shouldFocus = true) => {
@@ -969,15 +1001,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     if (!selected) return;
     const current = history.present;
     if (selected.kind === "asset") {
-      const placement = current.placements[selected.id];
-      if (!placement) return;
-      commitPlan({
-        ...current,
-        placements: {
-          ...current.placements,
-          [selected.id]: { ...placement, ...(label ? { label } : { label: undefined }) },
-        },
-      });
+      updateTexts({ [selected.id]: { name: label } });
       return;
     }
     commitPlan({
@@ -1327,9 +1351,9 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                   <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass(asset.status)}`} aria-hidden="true" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.12em] text-white/38">
-                      {asset.id} {asset.code ? `· #${asset.code}` : ""} · {KIND_LABELS[asset.kind]} · {STATUS_LABELS[asset.status]}
+                      {asset.id} · {history.present.placements[asset.id]?.code ?? labels[asset.id]?.code ?? asset.code} · {KIND_LABELS[asset.kind]} · {STATUS_LABELS[asset.status]}
                     </span>
-                    <span className="mt-1 block text-xs font-extrabold leading-4 text-white/78 group-hover:text-white">{asset.name}</span>
+                    <span className="mt-1 block text-xs font-extrabold leading-4 text-white/78 group-hover:text-white">{history.present.placements[asset.id]?.label ?? labels[asset.id]?.name ?? asset.name}</span>
                     <span className="mt-1 block truncate text-[9px] font-bold text-white/30">{asset.area}</span>
                   </span>
                   <span className={`grid h-7 w-7 shrink-0 place-items-center border ${isPlaced ? "border-emerald-400/30 text-emerald-300" : "border-[#d8ff3e]/35 text-[#d8ff3e]"}`} aria-label={isPlaced ? "Ubicado" : "Agregar al plano"}>
@@ -1441,7 +1465,8 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                   const target: PlanTarget = { kind: "asset", id: asset.id };
                   const key = targetKey(target);
                   const isSelected = selectedKeys.has(key);
-                  const displayName = placement.label || asset.name;
+                  const displayName = placement.label ?? asset.name;
+                  const displayCode = placement.code ?? asset.code;
                   const itemColor = colorForArea(asset.area);
                   return (
                     <div
@@ -1466,7 +1491,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                       onKeyDown={(event) => onItemKeyDown(event, target)}
                       onFocus={() => setSelectedKeys((prev) => (prev.has(key) ? prev : new Set([key])))}
                     >
-                      <span className={styles.itemMeta}>{asset.code ? `#${asset.code}` : asset.id}</span>
+                      <span className={styles.itemMeta}>{displayCode || asset.id}</span>
                       <span className={styles.itemName}>{asset.kind === "plate" ? shortPlateLabel(displayName) : displayName}</span>
                       <span className={styles.itemKind}>{KIND_LABELS[asset.kind]}</span>
                       {placement.locked && <Lock className={styles.lockIcon} aria-hidden="true" />}
@@ -1558,7 +1583,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                       {selectedAsset ? KIND_LABELS[selectedAsset.kind] : selectedCustom ? CUSTOM_TYPE_LABELS[selectedCustom.type] : "Elemento"}
                     </p>
                     <h2 className="mt-1 break-words text-lg font-black uppercase leading-5">
-                      {selectedAsset ? selectedPlacement?.label || selectedAsset.name : selectedCustom?.label}
+                      {selectedAsset ? selectedPlacement?.label ?? selectedAsset.name : selectedCustom?.label}
                     </h2>
                   </div>
                   <button
@@ -1577,7 +1602,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                 {selectedAsset && (
                   <div className="mt-3 flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-[0.1em]">
                     <span className="border border-white/15 px-2 py-1 text-white/50">{selectedAsset.id}</span>
-                    {selectedAsset.code && <span className="border border-white/15 px-2 py-1 text-white/50">Código #{selectedAsset.code}</span>}
+                    <span className="border border-white/15 px-2 py-1 text-white/50">Código {selectedPlacement?.code ?? selectedAsset.code}</span>
                     <span className="inline-flex items-center gap-1.5 border border-white/15 px-2 py-1 text-white/50">
                       <span className={`h-2 w-2 rounded-full ${statusDotClass(selectedAsset.status)}`} />
                       {STATUS_LABELS[selectedAsset.status]}
@@ -1585,15 +1610,31 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                   </div>
                 )}
 
+                {selectedAsset && selectedPlacement && (
+                  <AssetConnectionPanel
+                    key={selectedAsset.id}
+                    asset={selectedAsset}
+                    name={selectedPlacement.label ?? selectedAsset.name}
+                    code={selectedPlacement.code ?? selectedAsset.code}
+                    duplicateCode={inventory.some((other) => other.id !== selectedAsset.id &&
+                      (history.present.placements[other.id]?.code ?? other.code).trim().toLowerCase() ===
+                      (selectedPlacement.code ?? selectedAsset.code).trim().toLowerCase() &&
+                      Boolean((selectedPlacement.code ?? selectedAsset.code).trim()))}
+                    onCode={(code) => { updateTexts({ [selectedAsset.id]: { code } }); }}
+                  />
+                )}
+
+                {labelsError && <p role="alert" className="mt-3 text-xs text-red-300">{labelsError}</p>}
                 <label className="mt-5 block">
-                  <span className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.14em] text-white/38">Etiqueta del bloque</span>
+                  <span className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.14em] text-white/38">{selectedAsset ? "Nombre de la máquina" : "Etiqueta del bloque"}</span>
                   <input
-                    value={selectedAsset ? selectedPlacement?.label ?? "" : selectedCustom?.label ?? ""}
+                    maxLength={140}
+                    value={selectedAsset ? selectedPlacement?.label ?? selectedAsset.name : selectedCustom?.label ?? ""}
                     placeholder={selectedAsset?.name}
                     onChange={(event) => updateSelectedLabel(event.target.value)}
                     className={FIELD_CLASS}
                   />
-                  {selectedAsset && <span className="mt-1.5 block text-[9px] font-bold text-white/28">Dejala vacía para usar el nombre del inventario.</span>}
+                  {selectedAsset && <span className="mt-1.5 block text-[9px] font-bold text-white/45">Este nombre se actualiza también en la etiqueta QR.</span>}
                 </label>
 
                 {selectedCustom && (

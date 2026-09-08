@@ -160,6 +160,8 @@ export function machineBaseCode(id: string) {
 }
 
 export type MachineLabel = {
+  /** Stable physical unit when the label comes from the equipment inventory. */
+  assetId?: string;
   /** Id de la máquina en el catálogo. */
   id: string;
   name: string;

@@ -20,7 +20,10 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { MachineLabel } from "@/app/lib/machines";
-import { absoluteAppUrl } from "@/lib/constants/app-url";
+import { physicalMachinePath, physicalMachineQrValue } from "@/app/lib/physical-machine-links";
+import { useMachineTexts } from "./useMachineTexts";
+import { readMachineTexts, type MachineTexts } from "./machine-label-store";
+import type { FloorInventoryItem } from "../plano/plan-model";
 import QrSheet from "./QrSheet";
 
 const STORAGE_KEY = "xtreme:machine-qr-editor:v1";
@@ -126,14 +129,21 @@ function effectiveItem(item: EditableQrItem, draft?: Draft): EditableQrItem {
   };
 }
 
-function canonicalQrUrl(machineGuideId: string) {
-  return absoluteAppUrl(`/maquinas/${encodeURIComponent(machineGuideId)}`);
-}
-
-export default function EditableQrSheet({ initialItems }: { initialItems: EditableQrItem[] }) {
+export default function EditableQrSheet({ initialItems }: { initialItems: EditableQrItem[]; inventory: FloorInventoryItem[] }) {
+  const { labels, ready: labelsReady, error: labelsError, updateTexts } = useMachineTexts();
   const [baseItems, setBaseItems] = useState(() => withUnitCounts(initialItems));
   const [order, setOrder] = useState(() => initialItems.map((item) => item.assetId));
-  const [drafts, setDrafts] = useState<Drafts>({});
+  const drafts = useMemo(() => {
+    const changes: Drafts = {};
+    for (const item of baseItems) {
+      const text = labels[item.assetId];
+      const draft: Draft = {};
+      if (text?.name !== undefined && text.name !== item.name) draft.name = text.name;
+      if (text?.code !== undefined && text.code !== item.code) draft.code = text.code;
+      if (Object.keys(draft).length) changes[item.assetId] = draft;
+    }
+    return changes;
+  }, [baseItems, labels]);
   const [search, setSearch] = useState("");
   const [syncState, setSyncState] = useState<SyncState>("checking");
   const [storageReady, setStorageReady] = useState(false);
@@ -153,20 +163,21 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
     }
     if (stored) {
       setOrder(reconcileOrder(stored.order, initialItems));
-      setDrafts(stored.drafts);
     }
     setStorageReady(true);
+    const assetId = new URLSearchParams(window.location.search).get("asset");
+    if (assetId && ids.has(assetId)) setSearch(assetId);
   }, [initialItems]);
 
   useEffect(() => {
     if (!storageReady) return;
-    const state: StoredEditorState = { version: 1, order, drafts };
+    const state: StoredEditorState = { version: 1, order, drafts: {} };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       setNotice("Este navegador no permitió guardar la copia local.");
     }
-  }, [drafts, order, storageReady]);
+  }, [order, storageReady]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -203,7 +214,7 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
             unit: initial?.unit ?? 1,
             units: initial?.units ?? 1,
             unitLetter: null,
-            url: canonicalQrUrl(machineGuideId),
+            url: physicalMachineQrValue(asset.id),
           };
         });
         const normalized = withUnitCounts(liveItems);
@@ -254,17 +265,7 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
   function updateDraft(assetId: string, field: keyof Draft, value: string) {
     const base = baseItems.find((item) => item.assetId === assetId);
     if (!base) return;
-    setDrafts((current) => {
-      const nextDraft = { ...current[assetId], [field]: value };
-      if (nextDraft.code === base.code) delete nextDraft.code;
-      if (nextDraft.name === base.name) delete nextDraft.name;
-      if (!Object.keys(nextDraft).length) {
-        const next = { ...current };
-        delete next[assetId];
-        return next;
-      }
-      return { ...current, [assetId]: nextDraft };
-    });
+    if (!updateTexts({ [assetId]: { [field]: value } })) return;
     setSaveErrors((current) => {
       if (!current[assetId]) return current;
       const next = { ...current };
@@ -329,9 +330,9 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
 
   function discardDrafts() {
     if (!dirtyIds.length) return;
-    if (!window.confirm("¿Descartar los cambios de código y nombre que todavía no se guardaron?")) return;
-    setDrafts({});
-    setNotice("Cambios de texto descartados.");
+    if (!window.confirm("¿Descartar los cambios de código y nombre en las etiquetas y en el plano?")) return;
+    if (!updateTexts(Object.fromEntries(baseItems.filter((item) => drafts[item.assetId]).map((item) => [item.assetId, { name: item.name, code: item.code }])))) return;
+    setNotice("Cambios de texto descartados en las etiquetas y en el plano.");
   }
 
   async function saveChanges() {
@@ -386,9 +387,23 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
     const saved = results
       .filter((result): result is PromiseFulfilledResult<ApiEquipmentAsset> => result.status === "fulfilled")
       .map((result) => result.value);
-    const savedIds = new Set(saved.map((asset) => asset.id));
     if (saved.length) {
       const savedById = new Map(saved.map((asset) => [asset.id, asset]));
+      // Normalize successful saves only if another tab has not edited the field meanwhile.
+      try {
+        const latest = readMachineTexts();
+        const normalized: MachineTexts = {};
+        for (const asset of saved) {
+          const submitted = submittedDrafts[asset.id];
+          const change: Draft = {};
+          if (submitted.name !== undefined && latest[asset.id]?.name === submitted.name) change.name = asset.name;
+          if (submitted.code !== undefined && latest[asset.id]?.code === submitted.code) change.code = asset.code;
+          if (Object.keys(change).length) normalized[asset.id] = change;
+        }
+        if (Object.keys(normalized).length) updateTexts(normalized);
+      } catch {
+        setNotice("Inventario guardado, pero no se pudo actualizar la copia local. Reintentá la sincronización.");
+      }
       setBaseItems((current) =>
         withUnitCounts(
           current.map((item) => {
@@ -399,18 +414,7 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
           }),
         ),
       );
-      setDrafts((current) => {
-        const next = { ...current };
-        for (const id of savedIds) {
-          const asset = savedById.get(id);
-          const remaining = { ...next[id] };
-          if (remaining.code === asset?.code) delete remaining.code;
-          if (remaining.name === asset?.name) delete remaining.name;
-          if (Object.keys(remaining).length) next[id] = remaining;
-          else delete next[id];
-        }
-        return next;
-      });
+
     }
     const failed = results.length - saved.length;
     const errors: Record<string, string> = {};
@@ -447,6 +451,11 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
   return (
     <div className="space-y-10">
       <section className="border-[3px] border-[#d8ff3e]/55 bg-[#0c0c0c] shadow-[5px_5px_0_rgba(0,0,0,0.7)] print:hidden">
+        <div className="border-b border-white/15 p-4 text-sm">
+          <Link href="/maquinas/plano" className="underline">Abrir plano</Link>
+          <p className="mt-2 text-white/60">El nombre y el código son los mismos en el plano y en la etiqueta. Al editarlos aquí o en el plano, ambos se actualizan automáticamente en este navegador. Guardá el inventario para compartirlos con otros dispositivos.</p>
+          {labelsError && <p role="alert" className="mt-2 text-amber-200">{labelsError}</p>}
+        </div>
         <div className="border-b-2 border-white/10 p-4 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -539,7 +548,7 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
             href="#resultado-etiquetas"
             className="mt-4 inline-flex min-h-11 items-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d8ff3e] underline decoration-[#d8ff3e]/45 underline-offset-4 hover:decoration-[#d8ff3e]"
           >
-            Saltar al resultado, impresión y PNG
+            Saltar al resultado, impresión y PDF
           </a>
         </div>
 
@@ -581,7 +590,7 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
                     <input
                       value={item.code}
                       onChange={(event) => updateDraft(item.assetId, "code", event.target.value)}
-                      disabled={saving}
+                      disabled={saving || !labelsReady}
                       maxLength={32}
                       className="h-11 w-full border-2 border-white/15 bg-black/40 px-3 font-mono text-sm font-black text-white outline-none focus:border-[#d8ff3e] disabled:cursor-wait disabled:opacity-55"
                     />
@@ -589,13 +598,13 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
 
                   <label className="block">
                     <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
-                      Nombre impreso {nameChanged ? <em className="not-italic text-[#d8ff3e]">Modificado</em> : null}
+                      Nombre de la máquina {nameChanged ? <em className="not-italic text-[#d8ff3e]">Modificado</em> : null}
                     </span>
                     <input
                       id={`qr-name-${item.assetId}`}
                       value={item.name}
                       onChange={(event) => updateDraft(item.assetId, "name", event.target.value)}
-                      disabled={saving}
+                      disabled={saving || !labelsReady}
                       required
                       aria-invalid={!item.name.trim() || Boolean(saveError)}
                       maxLength={140}
@@ -608,7 +617,8 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
                     <div className="mt-1.5 flex min-h-11 items-center gap-2 border border-white/10 bg-black/25 px-3 text-[11px] font-bold text-white/45">
                       <Link2 className="h-3.5 w-3.5 shrink-0 text-[#d8ff3e]" />
                       <span className="min-w-0 flex-1 truncate">/maquinas/{item.machineGuideId}</span>
-                      <Link href={`/maquinas/${item.machineGuideId}`} target="_blank" className="shrink-0 text-[#d8ff3e] underline-offset-4 hover:underline">Abrir</Link>
+                      <Link href={physicalMachinePath(item.assetId)} target="_blank" className="shrink-0 text-[#d8ff3e] underline-offset-4 hover:underline">Abrir</Link>
+                      <Link href={`/maquinas/plano?asset=${encodeURIComponent(item.assetId)}`} className="shrink-0 text-[#d8ff3e] underline">Plano</Link>
                     </div>
                     <p className="mt-1 text-[10px] font-bold text-white/60">QR bloqueado: editar texto no cambia este destino.</p>
                   </div>
@@ -638,9 +648,9 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
       <section id="resultado-etiquetas" tabIndex={-1} className="scroll-mt-6 outline-none">
         <div className="mb-4 print:hidden">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Resultado actualizado</p>
-          <h2 className="mt-2 text-2xl font-black uppercase">Rótulo 16:9, hoja A4 y PNG</h2>
+          <h2 className="mt-2 text-2xl font-black uppercase">Etiquetas en un solo PDF</h2>
           <p className="mt-2 text-xs font-semibold leading-5 text-white/50">
-            La vista previa y el PNG muestran el rótulo horizontal 16:9; imprimir genera una hoja A4 compacta para recortar.
+            El PDF conserva el diseño de 9 × 16 cm, con dos etiquetas centradas por hoja A4. Incluye las {visibleItems.length} unidades que coinciden con la búsqueda; limpiala para incluir todas en un solo archivo.
           </p>
         </div>
         {syncState === "checking" ? (
@@ -657,10 +667,10 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
             {syncState === "local" ? (
               <div className="mb-4 flex items-start gap-2 border border-amber-300/25 bg-amber-300/[0.06] p-3 text-xs font-semibold leading-5 text-amber-100/80 print:hidden">
                 <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                Vista local basada en el inventario inicial y en tus borradores. Iniciá sesión como admin para confirmar datos actuales y guardarlos centralmente.
+                Vista basada en el inventario recibido y en tus borradores locales. Iniciá sesión como admin para guardar los cambios centralmente.
               </div>
             ) : null}
-            <QrSheet items={orderedItems} />
+            <QrSheet items={visibleItems} />
           </>
         )}
       </section>
