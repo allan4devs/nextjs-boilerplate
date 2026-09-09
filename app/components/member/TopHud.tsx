@@ -5,6 +5,7 @@
 import { Flame, Menu, Star, Target, Zap } from "lucide-react";
 import { GameButton, GameHudPill } from "../GameOS";
 import type { MemberOs } from "./useMemberOs";
+import VisitTimer from "./journey/VisitTimer";
 
 export default function TopHud({ os }: { os: MemberOs }) {
   const {
@@ -12,7 +13,6 @@ export default function TopHud({ os }: { os: MemberOs }) {
     unlocked,
     trainedToday,
     effectiveStreak,
-    level,
     weekDoneCount,
     weeklyGoal,
     setOsModal,
@@ -35,17 +35,17 @@ export default function TopHud({ os }: { os: MemberOs }) {
         </p>
         {unlocked && (
           <div className="ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto sm:gap-2">
-            {!trainedToday && (
+            {os.activeVisit ? <VisitTimer startedAt={os.activeVisit.checkedInAt} /> : !trainedToday && (
               <GameButton
                 variant="orange"
                 className="min-h-9 shrink-0 !px-3 text-xs"
               onClick={() => setOsModal({ kind: "gym-session" })}
               >
                 <Zap className="h-4 w-4" />
-                <span className="hidden sm:inline">Entreno</span>
+                <span className="hidden sm:inline">Ingreso</span>
               </GameButton>
             )}
-            <GameHudPill
+            {!os.activeVisit && <><GameHudPill
               icon={Flame}
               label="Racha"
               value={effectiveStreak}
@@ -56,10 +56,10 @@ export default function TopHud({ os }: { os: MemberOs }) {
             <GameHudPill
               icon={Star}
               label="Nv"
-              value={level}
+              value={os.journey?.level ?? 0}
               tone="cyan"
               compact
-              onClick={() => setOsModal({ kind: "level" })}
+              onClick={() => os.setTab("resumen")}
             />
             <GameHudPill
               icon={Target}
@@ -70,6 +70,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
               className="max-[360px]:hidden"
               onClick={() => setOsModal({ kind: "week" })}
             />
+            </>}
             {/* Solo desktop: hueco para el atajo flotante "Sistemas" */}
             <span className="hidden w-28 shrink-0 lg:block" aria-hidden />
           </div>
@@ -81,7 +82,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
         )}
       </div>
       {/* Progreso de la semana siempre a la vista: barra viva bajo el HUD */}
-      {unlocked && (
+      {unlocked && !os.activeVisit && (
         <div className="h-[3px] w-full bg-black/60">
           <div
             className="xg-stripes h-full bg-gradient-to-r from-[#d8ff3e] to-cyan-300 transition-[width] duration-700 ease-out"

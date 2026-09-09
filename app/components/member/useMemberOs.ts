@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemberJourney } from "./hooks/useMemberJourney";
+
 /**
  * Member OS - hook central de estado.
  * Sesion por cedula + PIN, datos del socio, reservas, gamificacion,
@@ -541,6 +543,9 @@ export function useMemberOs() {
       }>(response);
       setActiveVisit(data.activeVisit);
       if (data.status) setGymStatus(data.status);
+      setOsModal(null);
+      setShowLogin(false);
+      setTab("resumen");
       setMessage("Ingreso registrado. El tiempo ya está corriendo.");
       trackAction("visit_checkin", { tab: "resumen", label: "ok" });
       return true;
@@ -1257,7 +1262,7 @@ export function useMemberOs() {
           action: "bodyMetric",
           memberName,
           weightKg: Number(weightKg),
-          waistCm: Number(waistCm),
+          waistCm: waistCm ? Number(waistCm) : undefined,
           note: metricNote,
           completedDate: todayIso(),
         }),
@@ -1331,7 +1336,7 @@ export function useMemberOs() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ action: "planWorkoutSave", exercises }),
+        body: JSON.stringify({ action: "planWorkoutSave", exercises, workoutId: currentMember.activePlanWorkout?.id, revision: currentMember.activePlanWorkout?.revision ?? 0 }),
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
@@ -1353,7 +1358,7 @@ export function useMemberOs() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ action: "planWorkoutFinish", exercises }),
+        body: JSON.stringify({ action: "planWorkoutFinish", exercises, workoutId: currentMember.activePlanWorkout?.id, revision: currentMember.activePlanWorkout?.revision ?? 0 }),
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
@@ -1376,7 +1381,7 @@ export function useMemberOs() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ action: "planWorkoutCancel" }),
+        body: JSON.stringify({ action: "planWorkoutCancel", workoutId: currentMember.activePlanWorkout?.id }),
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
@@ -1465,7 +1470,15 @@ export function useMemberOs() {
     window.setTimeout(() => cedulaInputRef.current?.focus(), 100);
   }
 
+  const journeyState = useMemberJourney({
+    unlocked,
+    memberKey: currentMember.normalizedName,
+    onMember: setMember,
+    revision: `${activeVisit?.id ?? ""}:${currentMember.totalWorkouts}:${currentMember.goal}:${currentMember.activePlanWorkout?.id ?? ""}`,
+  });
+
   return {
+    ...journeyState,
     // inputs de sesion / registro
     memberNameInput,
     setMemberNameInput,

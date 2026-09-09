@@ -29,6 +29,7 @@ import type { MemberOs } from "../useMemberOs";
 import type { Training } from "../domain/training";
 import PanelHub, { type HubPanel } from "../PanelHub";
 import PlanTrainingPanel from "../PlanTrainingPanel";
+import WorkoutGuide from "../journey/WorkoutGuide";
 
 function classCheckInHint(
   trainingId: string,
@@ -511,7 +512,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
       icon: ClipboardList,
       tone: activeWorkout ? "lime" : hasPlan ? "orange" : "white",
       badge: activeWorkout ? "LIVE" : hasPlan ? "OK" : undefined,
-      content: <PlanTrainingPanel os={os} />,
+      content: currentMember.activePlanWorkout ? <WorkoutGuide os={os} /> : <PlanTrainingPanel os={os} />,
     },
     {
       id: "clases",
@@ -597,7 +598,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
 
 
             {/* CTA principal — Marcar entreno */}
-            <button
+            {!activeVisit && <button
               type="button"
               onClick={() => setOsModal({ kind: "gym-session" })}
               className="group relative flex min-h-[4.5rem] w-full items-center gap-4 overflow-hidden border-[3px] border-[#d8ff3e] bg-[#060a01] px-4 text-left transition hover:bg-[#d8ff3e]/5"
@@ -618,7 +619,7 @@ export default function EntrenarTab({ os }: { os: MemberOs }) {
               <span className="relative text-[#d8ff3e] transition group-hover:translate-x-1">
                 <ChevronRight className="h-6 w-6" />
               </span>
-            </button>
+            </button>}
 
             {/* Acción secundaria */}
             <button

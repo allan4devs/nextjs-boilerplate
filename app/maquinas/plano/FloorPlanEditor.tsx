@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AssetConnectionPanel from "./AssetConnectionPanel";
+import { usePlanAutosave } from "./usePlanAutosave";
 import { useMachineTexts } from "../_components/useMachineTexts";
 import { applyMachineTexts, readMachineTexts, type MachineTexts } from "../_components/machine-label-store";
 import {
@@ -284,6 +285,15 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
 
   presentRef.current = history.present;
   historyRef.current = history;
+
+  const cloud = usePlanAutosave(history.present, hydrated, inventory, (plan) => {
+    updateTexts(Object.fromEntries(Object.entries(plan.placements).map(([id, placement]) => {
+      const asset = inventory.find((item) => item.id === id);
+      return [id, { name: placement.label ?? asset?.name ?? "", code: placement.code ?? asset?.code ?? "" }];
+    })));
+    presentRef.current = plan;
+    dispatch({ type: "load", plan });
+  });
 
   const selectedTargets = useMemo(
     () => Array.from(selectedKeys, parseTargetKey),
@@ -1563,8 +1573,8 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
           <span>{inventory.length} inventario</span>
           <span className="text-emerald-300">{placedCount} ubicados</span>
           {missingCount > 0 && <span className="text-amber-300">{missingCount} sin ubicar</span>}
-          <span className="hidden items-center gap-1.5 text-amber-200/70 md:flex" title="El autoguardado vive solo en este navegador; exportá un JSON cuando termines.">
-            <CircleAlert className="h-3.5 w-3.5 text-amber-300" /> Solo local
+          <span className="hidden items-center gap-1.5 text-amber-200/70 md:flex" title="Los cambios se guardan en MongoDB con tu sesión de admin y se respaldan en este navegador.">
+            <Save className="h-3.5 w-3.5 text-amber-300" /> Autoguardado MongoDB
           </span>
         </div>
       </header>
@@ -1660,6 +1670,19 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
           {saveState === "error" ? <CircleAlert className="h-4 w-4 text-red-400" /> : saveState === "saved" ? <Check className="h-4 w-4 text-emerald-400" /> : <Save className="h-4 w-4 text-[#d8ff3e]" />}
           {saveState === "loading" ? "Cargando" : saveState === "saving" ? "Guardando" : saveState === "error" ? "Sin guardar" : "Guardado local"}
         </div>
+      </div>
+
+      <div role="status" aria-live="polite" className="mb-3 flex flex-wrap items-center gap-3 border-2 border-white/15 p-3 text-xs">
+        <span className={cloud.error ? "text-amber-200" : "text-emerald-300"}>{cloud.status}</span>
+        {cloud.error && <span className="text-amber-200">{cloud.error}</span>}
+        {cloud.error && !cloud.conflict && <button type="button" className={TOOL_BUTTON} onClick={() => void cloud.retry()}>Reintentar</button>}
+        {cloud.error && <Link href="/admin" target="_blank" className={TOOL_BUTTON}>Abrir Admin</Link>}
+        <button type="button" className={TOOL_BUTTON} onClick={() => {
+          if (window.confirm("¿Restaurar el último plano guardado en MongoDB? La copia actual quedará como respaldo local de recuperación.")) void cloud.restore();
+        }}>Restaurar desde MongoDB</button>
+        {cloud.conflict && <button type="button" className={TOOL_BUTTON} onClick={() => {
+          if (window.confirm("¿Reemplazar el plano de MongoDB con esta copia local?")) void cloud.keepLocal();
+        }}>Conservar mi plano local</button>}
       </div>
 
       <div className={styles.workbench}>

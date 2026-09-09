@@ -11,6 +11,7 @@ export type HabitId = (typeof HABIT_IDS)[number];
 export type LifestyleChallengeId = "hydration-7" | "mobility-7" | "steps-5" | "sleep-7";
 
 export type WellnessEntry = {
+  assessedAt?: string;
   date: string;
   energy: number;
   mood: number;

@@ -16,6 +16,7 @@ export type Workout = {
 };
 
 export type WorkoutExerciseDetail = {
+  completed?: boolean;
   id: string;
   machineId: string;
   machineName: string;
@@ -40,6 +41,7 @@ export type PlanExercisePrescription = {
 };
 
 export type ActivePlanWorkout = {
+  revision?: number;
   id: string;
   planItemId: string;
   planTitle: string;
@@ -57,6 +59,7 @@ export type NotificationPrefs = {
 };
 
 export type BodyMetric = {
+  inbody?: import("@/lib/xtreme/body-composition").InBodyReport;
   id: string;
   date: string;
   weightKg: number;

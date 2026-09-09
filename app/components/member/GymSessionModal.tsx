@@ -186,7 +186,8 @@ function OpenGymSessionModal({ os }: { os: MemberOs }) {
           initialMinutes={activeVisit.elapsedMinutes}
         />
 
-        {!trainedToday && (
+        {(os.currentMember.activePlanWorkout || os.journey?.workout) && <div className="rounded-xl border border-white/15 p-4"><p className="text-sm text-white/60">Tu entrenamiento sigue en curso. Podés volver a él antes de salir; salir no lo marca como completado.</p><button type="button" onClick={() => { os.setTab("resumen"); closeOsModal(); }} className="mt-2 min-h-11 text-sm font-bold text-[#d8ff3e]">Retomar entrenamiento</button></div>}
+        {!trainedToday && !os.currentMember.activePlanWorkout && !os.journey?.workout && (
           <div className="border-[2px] border-white/12 p-3">
             <p className="mb-2 text-xs font-black uppercase text-white">¿Entrenaste?</p>
             <div className="grid grid-cols-2 gap-2">

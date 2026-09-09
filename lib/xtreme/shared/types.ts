@@ -10,6 +10,7 @@ export type Membership = {
 };
 
 export type WorkoutExerciseDetail = {
+  completed?: boolean;
   id: string;
   machineId: string;
   machineName: string;
@@ -49,6 +50,7 @@ export type PlanExercisePrescription = {
 };
 
 export type ActivePlanWorkout = {
+  revision?: number;
   id: string;
   planItemId: string;
   planTitle: string;
@@ -58,6 +60,7 @@ export type ActivePlanWorkout = {
 };
 
 export type BodyMetric = {
+  inbody?: import("../body-composition").InBodyReport;
   id?: string;
   date: string;
   weightKg: number;

@@ -445,10 +445,12 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
     {
       id: "carne",
       label: "Carné",
-      hint: memberName ? accessCode : "Sin sesión",
+      hint: os.activeVisit ? "Ya estás dentro" : memberName ? accessCode : "Sin sesión",
       icon: QrCode,
       tone: "lime",
-      content: memberName ? (
+      content: os.activeVisit ? (
+        <div className="space-y-3 p-4"><p className="font-bold text-[#d8ff3e]">Tu ingreso ya está registrado.</p><button type="button" onClick={() => os.setTab("resumen")} className="min-h-11 text-sm font-bold">Volver a mi entrenamiento →</button></div>
+      ) : memberName ? (
         <div>
           <div className="border-[3px] border-[#d8ff3e]/35 bg-gradient-to-b from-[#141414] to-black p-4 shadow-[4px_4px_0_rgba(216,255,62,0.18)]">
             <div className="flex items-center justify-between gap-2">

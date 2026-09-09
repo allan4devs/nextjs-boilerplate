@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { sendWelcomeEmail, sendAdminNewMemberNotification } from "@/lib/helpers/email";
 import { businessDate } from "@/lib/xtreme/business-date";
+import { parseBodyMetric, BodyMetricValidationError } from "@/lib/xtreme/body-composition";
 import { recordEvent } from "@/lib/xtreme/events";
 import { requestFingerprint } from "@/lib/xtreme/auth-attempts";
 import { grantFreeFirstDayIfEligible } from "@/lib/xtreme/entitlements";
@@ -740,8 +741,10 @@ export async function PATCH(req: NextRequest) {
         }
         return NextResponse.json({ member: toPublicMember(member, today) });
       }
+      if (member.journey?.workout) return NextResponse.json({ error: "Retomá o cancelá tu entrenamiento libre antes de iniciar el plan." }, { status: 409 });
       const now = new Date();
       const activePlanWorkout: ActivePlanWorkout = {
+        revision: 0,
         id: `plan-workout-${now.getTime()}`,
         planItemId: item.id,
         planTitle: member.trainingPlan.title || "Plan personalizado",
@@ -759,10 +762,11 @@ export async function PATCH(req: NextRequest) {
           notes: exercise.notes,
         })),
       };
-      await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
-        { normalizedName },
+      const started = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName, activePlanWorkout: { $exists: false }, "journey.workout": null },
         { $set: { activePlanWorkout, updatedAt: now } },
       );
+      if (!started.modifiedCount) return NextResponse.json({ error: "Tu sesión cambió. Actualizá y retomá el entrenamiento activo." }, { status: 409 });
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       return NextResponse.json({ member: toPublicMember(doc, today) });
     }
@@ -771,21 +775,24 @@ export async function PATCH(req: NextRequest) {
       const normalizedName = sessionOrErr.memberKey;
       const member = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       if (!member?.activePlanWorkout) return NextResponse.json({ error: "No hay un entreno activo." }, { status: 409 });
+      if (body.workoutId !== undefined && (body.workoutId !== member.activePlanWorkout.id || body.revision !== (member.activePlanWorkout.revision ?? 0))) return NextResponse.json({ error: "El entrenamiento cambió en otra pantalla. Actualizá antes de guardar." }, { status: 409 });
       const exercises = sanitizeWorkoutExercises(body.exercises);
-      await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
-        { normalizedName, "activePlanWorkout.id": member.activePlanWorkout.id },
-        { $set: { "activePlanWorkout.exercises": exercises, updatedAt: new Date() } },
+      const saved = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName, "activePlanWorkout.id": member.activePlanWorkout.id, ...(member.activePlanWorkout.revision === undefined ? { "activePlanWorkout.revision": { $exists: false } } : { "activePlanWorkout.revision": member.activePlanWorkout.revision }) },
+        { $set: { "activePlanWorkout.exercises": exercises, "activePlanWorkout.revision": (member.activePlanWorkout.revision ?? 0) + 1, updatedAt: new Date() } },
       );
+      if (!saved.modifiedCount) return NextResponse.json({ error: "Otro cambio llegó primero. Actualizá antes de reintentar." }, { status: 409 });
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       return NextResponse.json({ member: toPublicMember(doc, today) });
     }
 
     if (action === "planWorkoutCancel") {
       const normalizedName = sessionOrErr.memberKey;
-      await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
-        { normalizedName },
+      const canceled = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName, ...(body.workoutId ? { "activePlanWorkout.id": String(body.workoutId) } : {}) },
         { $unset: { activePlanWorkout: "" }, $set: { updatedAt: new Date() } },
       );
+      if (!canceled.matchedCount) return NextResponse.json({ error: "La sesión cambió. Actualizá antes de cancelar." }, { status: 409 });
       const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       return NextResponse.json({ member: toPublicMember(doc, today) });
     }
@@ -795,14 +802,17 @@ export async function PATCH(req: NextRequest) {
       const member = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       const active = member?.activePlanWorkout;
       if (!member?.trainingPlan || !active) return NextResponse.json({ error: "No hay un entreno activo." }, { status: 409 });
+      if (body.workoutId !== undefined && (body.workoutId !== active.id || body.revision !== (active.revision ?? 0))) return NextResponse.json({ error: "El entrenamiento cambió. Actualizá antes de finalizar." }, { status: 409 });
       const item = member.trainingPlan.items?.find((entry) => entry.id === active.planItemId);
       if (!item) return NextResponse.json({ error: "La sesion ya no existe en el plan." }, { status: 409 });
       const exercises = body.exercises === undefined
         ? active.exercises
         : sanitizeWorkoutExercises(body.exercises);
+      if (exercises.some((exercise) => exercise.completed !== undefined) && exercises.some((exercise) => !exercise.completed || !((exercise.sets > 0 && exercise.reps > 0) || exercise.seconds > 0))) return NextResponse.json({ error: "Completá y registrá cada ejercicio antes de finalizar." }, { status: 400 });
       const startedAt = new Date(active.startedAt);
       const elapsedMinutes = Math.max(1, Math.min(240, Math.round((Date.now() - startedAt.getTime()) / 60_000)));
-      const { member: completed, newBadges } = await completeTodayWorkout(
+      const previouslySaved = member.workouts.find((workout) => workout.planItemId === active.planItemId && workout.startedAt && new Date(workout.startedAt).getTime() === startedAt.getTime());
+      const { member: completed, newBadges } = previouslySaved ? { member, newBadges: [] } : await completeTodayWorkout(
         {
           repository: memberRepository,
           allowWithoutCheckin: true,
@@ -828,9 +838,9 @@ export async function PATCH(req: NextRequest) {
           exercises,
         },
       );
-      const workout = completed.workouts.at(-1);
+      const workout = previouslySaved ?? completed.workouts.at(-1);
       await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
-        { normalizedName },
+        { normalizedName, "activePlanWorkout.id": active.id },
         {
           $set: {
             "trainingPlan.items.$[el].done": true,
@@ -896,44 +906,40 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "bodyMetric") {
-      const weightKg = Math.max(1, Math.min(400, Number(body.weightKg) || 0));
-      const waistCm = Math.max(1, Math.min(300, Number(body.waistCm) || 0));
-      const note = String(body.note ?? "").trim().slice(0, 120);
-
-      if (!weightKg || !waistCm) {
-        return NextResponse.json({ error: "Faltan medidas." }, { status: 400 });
-      }
+      const parsedMetric = parseBodyMetric(body);
+      const { weightKg } = parsedMetric;
+      if (body.completedDate !== undefined && String(body.completedDate) !== completedDate) return NextResponse.json({ error: "Fecha de medición inválida." }, { status: 400 });
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(completedDate) || !Number.isFinite(new Date(`${completedDate}T12:00:00Z`).getTime()) || new Date(`${completedDate}T12:00:00Z`).toISOString().slice(0, 10) !== completedDate) return NextResponse.json({ error: "Fecha de medición inválida." }, { status: 400 });
+      if (completedDate > today) return NextResponse.json({ error: "La medición no puede tener fecha futura." }, { status: 400 });
 
       const normalizedName = sessionOrErr.memberKey;
       const now = new Date();
+      const requestId = String(body.requestId ?? "");
+      if (requestId && !/^[a-f0-9-]{36}$/i.test(requestId)) return NextResponse.json({ error: "Identificador de medición inválido." }, { status: 400 });
       const metric: BodyMetric = {
-        id: `metric-${completedDate}-${now.getTime()}`,
+        id: requestId ? `metric-${requestId}` : `metric-${completedDate}-${now.getTime()}`,
         date: completedDate,
-        weightKg,
-        waistCm,
-        note,
+        ...parsedMetric,
         createdAt: now,
       };
 
-      await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
-        { normalizedName },
+      const metricSaved = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
+        { normalizedName, "bodyMetrics.id": { $ne: metric.id } },
         {
           $set: {
             normalizedName,
             memberName,
             updatedAt: now,
           },
-          $setOnInsert: {
-            goal: "",
-            favoriteTraining: "",
-            workouts: [],
-            membership: createFreeFirstDayMembership(today),
-            createdAt: now,
-          },
           $push: { bodyMetrics: metric },
         },
-        { upsert: true },
+        { upsert: false },
       );
+      if (!metricSaved.matchedCount) {
+        const existing = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
+        if (!existing) return NextResponse.json({ error: "Socio no encontrado." }, { status: 404 });
+        return NextResponse.json({ member: toPublicMember(existing, today), leaderboard: await getMemberLeaderboard(memberRepository, today) });
+      }
 
       const newBadges = await syncMemberGamification(memberRepository, normalizedName, { today });
       await recordEvent(db, {
@@ -1025,6 +1031,7 @@ export async function PATCH(req: NextRequest) {
       leaderboard: await getMemberLeaderboard(memberRepository, today),
     });
   } catch (err) {
+    if (err instanceof BodyMetricValidationError) return NextResponse.json({ error: err.message }, { status: 400 });
     if (err instanceof MemberWorkoutError) {
       return NextResponse.json(
         { error: err.message, code: err.code },

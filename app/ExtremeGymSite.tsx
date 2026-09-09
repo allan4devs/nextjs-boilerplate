@@ -28,6 +28,7 @@ import PerfilTab from "./components/member/tabs/PerfilTab";
 import { useResumenViewModel } from "./components/member/view-models/useResumenViewModel";
 import ReceptionChatWidget from "./components/ReceptionChatWidget";
 import PushOptInBanner from "./components/member/PushOptInBanner";
+import MemberJourneyHome from "./components/member/journey/MemberJourneyHome";
 
 export default function ExtremeGymSite() {
   const os = useMemberOs();
@@ -140,7 +141,7 @@ export default function ExtremeGymSite() {
           </div>
         ) : (
           <div key={tab} className="space-y-2.5 sm:space-y-3">
-            {tab === "resumen" && <ResumenTab model={resumen.model} actions={resumen.actions} />}
+            {tab === "resumen" && (unlocked ? <MemberJourneyHome key={currentMember.normalizedName} os={os} /> : <ResumenTab model={resumen.model} actions={resumen.actions} />)}
             {tab === "entrenar" && <EntrenarTab os={os} />}
             {tab === "vida" && <VidaTab os={os} />}
             {tab === "maquinas" && <MaquinasTab os={os} />}
@@ -170,7 +171,7 @@ export default function ExtremeGymSite() {
       )}
 
       {/* Opt-in push de toda la app (entrenos, reservas, racha...) - no solo comunidad */}
-      {unlocked && memberName && !showPin && !showTour && (
+      {unlocked && memberName && !showPin && !showTour && !os.activeVisit && (
         <PushOptInBanner unlocked={unlocked} memberName={memberName} />
       )}
     </main>

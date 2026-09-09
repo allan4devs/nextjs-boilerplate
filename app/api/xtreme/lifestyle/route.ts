@@ -10,6 +10,7 @@ const HABITS = new Set(["water", "protein", "produce", "mobility", "walk", "slee
 const CHALLENGES = new Set(["hydration-7", "mobility-7", "steps-5", "sleep-7"]);
 
 type WellnessEntryDoc = {
+  assessedAt?: Date;
   date: string;
   energy: number;
   mood: number;
@@ -157,6 +158,7 @@ export async function PATCH(req: NextRequest) {
     if (action === "daily") {
       const previous = current.wellness.find((entry) => entry.date === today);
       const entry: WellnessEntryDoc = {
+        assessedAt: now,
         date: today,
         energy: numberIn(body.energy, 1, 5, previous?.energy ?? 3),
         mood: numberIn(body.mood, 1, 5, previous?.mood ?? 3),

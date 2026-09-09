@@ -11,6 +11,7 @@ import { GameLabel } from "../../GameOS";
 import { BadgeGallery } from "../../gamification";
 import { VisitHistoryList, WorkoutHistoryList } from "../ActivityHistory";
 import Avatar from "../Avatar";
+import BodyMetricsForm from "../BodyMetricsForm";
 import type { MemberOs } from "../useMemberOs";
 
 export default function ProgresoTab({ os }: { os: MemberOs }) {
@@ -20,14 +21,6 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
     unlockedCount,
     serverBadges,
     setOsModal,
-    weightKg,
-    setWeightKg,
-    waistCm,
-    setWaistCm,
-    metricNote,
-    setMetricNote,
-    saveBodyMetric,
-    latestMetric,
     metricTrend,
     leaderboard,
     currentMember,
@@ -49,8 +42,8 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
               Medición corporal + curva en la app
             </p>
             <p className="mt-1.5 text-xs font-semibold leading-relaxed text-white/50">
-              Medite en el consultorio sin costo y cargá peso y cintura acá. Tu historial queda
-              ligado a la racha y a tu meta - no se pierde en un papel.
+              Registrá tu peso, cintura y los datos de tu reporte InBody. Consultá tus
+              mediciones anteriores y llevá el seguimiento de tu objetivo.
             </p>
           </div>
         </div>
@@ -114,48 +107,8 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
-        <div className="border border-white/10 bg-white/[0.04] p-5">
-          <div className="flex items-center gap-3">
-            <Ruler className="h-5 w-5 text-cyan-300" />
-            <h2 className="text-lg font-black uppercase">Progreso corporal</h2>
-          </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Peso kg</span>
-              <input
-                value={weightKg}
-                onChange={(event) => setWeightKg(event.target.value)}
-                inputMode="decimal"
-                className="mt-2 w-full border border-white/10 bg-black/30 px-3 py-3 font-bold text-white outline-none focus:border-cyan-300"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Cintura cm</span>
-              <input
-                value={waistCm}
-                onChange={(event) => setWaistCm(event.target.value)}
-                inputMode="decimal"
-                className="mt-2 w-full border border-white/10 bg-black/30 px-3 py-3 font-bold text-white outline-none focus:border-cyan-300"
-              />
-            </label>
-          </div>
-          <input
-            value={metricNote}
-            onChange={(event) => setMetricNote(event.target.value)}
-            placeholder="Nota opcional"
-            className="mt-3 w-full border border-white/10 bg-black/30 px-3 py-3 font-bold text-white outline-none placeholder:text-white/30 focus:border-cyan-300"
-          />
-          <button
-            type="button"
-            onClick={saveBodyMetric}
-            disabled={!unlocked}
-            className="mt-3 w-full bg-cyan-300 px-4 py-3 font-black uppercase text-black transition hover:bg-white disabled:opacity-45"
-          >
-            Guardar medidas
-          </button>
-          <p className="mt-3 text-sm font-semibold text-white/45">
-            Ultimo registro: {latestMetric ? `${latestMetric.weightKg} kg - ${latestMetric.waistCm} cm` : "sin medidas aun"}
-          </p>
+        <div className="min-w-0 border border-white/10 bg-white/[0.04] p-5">
+          <BodyMetricsForm key={currentMember.normalizedName} os={os} />
         </div>
 
         <div className="border border-white/10 bg-white/[0.04] p-5">
@@ -180,7 +133,7 @@ export default function ProgresoTab({ os }: { os: MemberOs }) {
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Cintura (cm)</p>
                 <div className="mt-2 border border-white/10 bg-black/25 p-3">
                   <LineTrendChart
-                    data={metricTrend.map((m) => ({ date: m.date, value: m.waistCm }))}
+                    data={metricTrend.filter((m) => m.waistCm > 0).map((m) => ({ date: m.date, value: m.waistCm }))}
                     unit="cm"
                     color={CHART_CYAN}
                     height={150}

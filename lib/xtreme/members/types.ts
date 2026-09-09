@@ -29,6 +29,7 @@ export type Membership = {
 };
 
 export type BodyMetric = {
+  inbody?: import("../body-composition").InBodyReport;
   id: string;
   date: string;
   weightKg: number;
@@ -60,6 +61,7 @@ export type TrainingPlan = {
 };
 
 export type XtremeMemberDoc = {
+  journey?: import("../member-journey").JourneyState;
   normalizedName: string;
   memberName: string;
   goal: string;

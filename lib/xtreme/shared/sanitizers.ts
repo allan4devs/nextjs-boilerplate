@@ -11,6 +11,7 @@ export function sanitizeWorkoutExercises(input: unknown): WorkoutExerciseDetail[
   return input.slice(0, 40).map((entry, index) => {
     const raw = (entry ?? {}) as Record<string, unknown>;
     return {
+      ...(typeof raw.completed === "boolean" ? { completed: raw.completed } : {}),
       id: String(raw.id ?? "").trim().slice(0, 80) || `exercise-${index + 1}`,
       machineId: String(raw.machineId ?? "").trim().slice(0, 80),
       machineName: String(raw.machineName ?? "").trim().slice(0, 100),
