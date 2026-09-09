@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { equipment, names } from "./floor-area-modules.mjs";
 
 const machines = equipment.DEFAULT_EQUIPMENT_ASSETS.filter((asset) => asset.kind === "machine");
-assert.equal(machines.length, 76);
+assert.equal(machines.length, 81);
 for (const machine of machines) {
   assert.ok(machine.name.length <= 34, `${machine.id}: label too long`);
   assert.equal(names.migrateMachineName(machine.name), machine.name, "Migration must be idempotent");
@@ -15,4 +15,4 @@ assert.notEqual(names.migrateMachineName("Caminadora tipo escalera/pasos (steppe
 assert.equal(names.migrateMachineName("Polea morada"), "Polea morada", "Preserve staff corrections");
 assert.equal(names.migrateMachineName("Mi máquina personalizada"), "Mi máquina personalizada");
 assert.match(names.migrateMachineName("Máquina pequeña, tubo con pesas en extremos"), /por identificar/);
-console.log("PASS: 76 short labels, idempotency, distinct machine variants and custom-name preservation.");
+console.log("PASS: 81 short labels, idempotency, distinct machine variants and custom-name preservation.");

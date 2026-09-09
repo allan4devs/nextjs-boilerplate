@@ -32,6 +32,7 @@ type EquipmentStatus = "bueno" | "fuera_de_servicio" | "pendiente" | "sin_dato";
 
 export type EditableQrItem = MachineLabel & {
   assetId: string;
+  floor?: 1 | 2;
   machineGuideId: string;
   status: EquipmentStatus;
 };
@@ -42,6 +43,7 @@ type SyncState = "checking" | "connected" | "local" | "error";
 
 type ApiEquipmentAsset = {
   id: string;
+  floor?: 1 | 2;
   area: string;
   kind: string;
   code: string;
@@ -204,6 +206,7 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
           const initial = initialById.get(asset.id);
           return {
             assetId: asset.id,
+            floor: asset.floor ?? initial?.floor ?? 1,
             machineGuideId,
             id: machineGuideId,
             code: asset.code ?? "",
@@ -618,7 +621,7 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
                       <Link2 className="h-3.5 w-3.5 shrink-0 text-[#d8ff3e]" />
                       <span className="min-w-0 flex-1 truncate">/maquinas/{item.machineGuideId}</span>
                       <Link href={physicalMachinePath(item.assetId)} target="_blank" className="shrink-0 text-[#d8ff3e] underline-offset-4 hover:underline">Abrir</Link>
-                      <Link href={`/maquinas/plano?asset=${encodeURIComponent(item.assetId)}`} className="shrink-0 text-[#d8ff3e] underline">Plano</Link>
+                      <Link href={`/maquinas/plano?floor=${item.floor ?? 1}&asset=${encodeURIComponent(item.assetId)}`} className="shrink-0 text-[#d8ff3e] underline">Plano</Link>
                     </div>
                     <p className="mt-1 text-[10px] font-bold text-white/60">QR bloqueado: editar texto no cambia este destino.</p>
                   </div>

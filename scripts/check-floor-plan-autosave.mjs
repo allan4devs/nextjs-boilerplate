@@ -101,6 +101,7 @@ const collection = {
   },
 };
 const route = load("app/api/xtreme/admin/floor-plan/route.ts", {
+  "@/app/components/member/catalog/machines": { findMachineGuide: (id) => id === "smith-machine" ? { id } : null },
   "next/server": { NextResponse: { json: (data, options) => ({ data, status: options?.status ?? 200 }) } },
   "@/lib/helpers/mongodb": { getDb: async () => ({ collection: () => collection }) },
   "@/lib/xtreme/staff-session": { resolveStaffSession: async () => authorized ? { role: "admin" } : null },

@@ -23,6 +23,7 @@ export type EquipmentStatus = "bueno" | "fuera_de_servicio" | "pendiente" | "sin
 export type EquipmentAssetDoc = {
   /** Estable: `eq-001`..`eq-131`, número de fila de la auditoría física original. No es único el código impreso (hay duplicados reales, ej. dos "#25"), así que no se usa como llave. */
   id: string;
+  floor?: 1 | 2;
   area: EquipmentArea;
   kind: EquipmentKind;
   /** Código editable por área; no identifica el activo ni cambia el destino del QR. */
@@ -50,7 +51,23 @@ type SeedRow = Pick<
   EquipmentAssetDoc,
   "id" | "area" | "kind" | "code" | "name" | "location" | "status"
 > &
-  Partial<Pick<EquipmentAssetDoc, "description" | "machineGuideId">>;
+  Partial<Pick<EquipmentAssetDoc, "description" | "machineGuideId" | "floor">>;
+
+/** Units confirmed by the owner; model, condition and exact position remain to be completed. */
+export const SECOND_FLOOR_EQUIPMENT: SeedRow[] = [
+  ...[1, 2, 3].map((unit): SeedRow => ({
+    id: `eq-f2-bike-${unit}`, floor: 2, area: "Cardio", kind: "machine",
+    code: `P2-BI-0${unit}`, name: "Bicicleta estática", location: "Piso 2 · posición pendiente",
+    status: "sin_dato", machineGuideId: "bicicleta-estatica",
+    description: "Unidad confirmada. Pendiente completar foto, marca, modelo y ubicación exacta.",
+  })),
+  ...[1, 2].map((unit): SeedRow => ({
+    id: `eq-f2-pulldown-${unit}`, floor: 2, area: "Tren superior", kind: "machine",
+    code: `P2-JA-0${unit}`, name: "Jalón al pecho", location: "Piso 2 · posición pendiente",
+    status: "sin_dato", machineGuideId: "lat-pulldown",
+    description: "Unidad confirmada. Pendiente completar foto, marca, modelo y ubicación exacta.",
+  })),
+];
 
 /**
  * Transcripción 1:1 de la auditoría física de activos fijos de Xtreme Gym
@@ -234,7 +251,7 @@ export const DEFAULT_EQUIPMENT_ASSETS: SeedRow[] = ORIGINAL_EQUIPMENT_ASSETS.map
   const sequence = (areaCounts.get(area) ?? 0) + 1;
   areaCounts.set(area, sequence);
   return { ...row, name: row.kind === "machine" ? migrateMachineName(row.name) : row.name, area, code: `${EQUIPMENT_AREA_CODES[area]}-${String(sequence).padStart(2, "0")}` };
-});
+}).concat(SECOND_FLOOR_EQUIPMENT);
 export function normalizeEquipmentArea<T extends Pick<EquipmentAssetDoc, "id" | "area" | "code" | "machineGuideId">>(row: T): T {
   return { ...row, area: currentArea(row), code: migrateEquipmentCode(row.id, row.code) };
 }
@@ -251,6 +268,7 @@ export async function ensureDefaultEquipmentAssets(db: Db) {
         update: {
           $setOnInsert: {
             id: row.id,
+            floor: row.floor ?? 1,
             area: row.area,
             kind: row.kind,
             code: row.code,

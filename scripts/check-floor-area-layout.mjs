@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { equipment, model, codes, categorize } from "./floor-area-modules.mjs";
 
-const inventory = equipment.DEFAULT_EQUIPMENT_ASSETS.map(categorize);
+const inventory = equipment.DEFAULT_EQUIPMENT_ASSETS.filter((asset) => asset.floor !== 2).map(categorize);
 const plan = model.createInitialPlan(inventory);
 assert.equal(inventory.length, 131);
 assert.equal(new Set(inventory.map((item) => item.code)).size, 131);

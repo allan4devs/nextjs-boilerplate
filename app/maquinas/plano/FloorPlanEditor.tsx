@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AssetConnectionPanel from "./AssetConnectionPanel";
+import { MACHINE_GUIDE, findMachineGuide } from "@/app/lib/machines";
 import { usePlanAutosave } from "./usePlanAutosave";
 import { useMachineTexts } from "../_components/useMachineTexts";
 import { applyMachineTexts, readMachineTexts, type MachineTexts } from "../_components/machine-label-store";
@@ -49,6 +50,8 @@ import {
   MIN_ITEM_SIZE,
   floorPlanStorageKey,
   createSecondFloorPlan,
+  completeSecondFloorPlan,
+  linkKnownPlanMachines,
   STATUS_LABELS,
   clamp,
   clampGeometry,
@@ -240,7 +243,7 @@ function shortPlateLabel(name: string) {
 
 export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: FloorInventoryItem[]; floor?: 1 | 2 }) {
   const storageKey = floorPlanStorageKey(floor);
-  const initialPlan = useMemo(() => floor === 2 ? createSecondFloorPlan() : createInitialPlan(inventory), [inventory, floor]);
+  const initialPlan = useMemo(() => floor === 2 ? createSecondFloorPlan(inventory) : createInitialPlan(inventory), [inventory, floor]);
   const { labels, error: labelsError, updateTexts } = useMachineTexts();
   const [rawHistory, dispatch] = useReducer(historyReducer, {
     past: [],
@@ -289,7 +292,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
   historyRef.current = history;
 
   const cloud = usePlanAutosave(history.present, hydrated, inventory, (savedPlan) => {
-    const plan = floor === 2 ? savedPlan : migratePlanAreas(savedPlan, inventory);
+    const plan = linkKnownPlanMachines(floor === 2 ? completeSecondFloorPlan(savedPlan, inventory) : migratePlanAreas(savedPlan, inventory), MACHINE_GUIDE);
     updateTexts(Object.fromEntries(Object.entries(plan.placements).map(([id, placement]) => {
       const asset = inventory.find((item) => item.id === id);
       return [id, { name: placement.label ?? asset?.name ?? "", code: placement.code ?? asset?.code ?? "" }];
@@ -642,7 +645,8 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
         if (saved && !saved.areaLayoutRevision) {
           window.localStorage.setItem(`${storageKey}:before-area-reorganization`, raw);
         }
-        plan = saved ? (floor === 2 ? saved : migratePlanAreas(saved, inventory)) : initialPlan;
+        plan = saved ? (floor === 2 ? completeSecondFloorPlan(saved, inventory) : migratePlanAreas(saved, inventory)) : initialPlan;
+        plan = linkKnownPlanMachines(plan, MACHINE_GUIDE);
         if (isObject(parsed) && typeof parsed.savedAt === "string") setSavedAt(parsed.savedAt);
       }
       setSaveState("saved");
@@ -1430,6 +1434,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
       type: "equipment",
       label: selectedPlacement.label ?? selectedAsset.name,
       color: colorForArea(selectedAsset.area),
+      machineGuideId: selectedAsset.machineGuideId,
     } : null);
     if (!source) return;
     const current = history.present;
@@ -1531,7 +1536,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
       if (!window.confirm("¿Reemplazar el plano actual con el archivo importado? Podés deshacer después.")) {
         return;
       }
-      commitPlan(floor === 2 ? plan : migratePlanAreas(plan, inventory));
+      commitPlan(floor === 2 ? completeSecondFloorPlan(plan, inventory) : migratePlanAreas(plan, inventory));
       setSelectedKeys(new Set());
       announce("Plano importado");
     } catch {
@@ -1541,7 +1546,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
 
   const resetPlan = () => {
     if (!window.confirm(floor === 2 ? "¿Restablecer los tres bloques del piso 2?" : `¿Restablecer la distribución inicial de los ${inventory.length} activos?`)) return;
-    commitPlan(floor === 2 ? createSecondFloorPlan() : createInitialPlan(inventory));
+    commitPlan(floor === 2 ? createSecondFloorPlan(inventory) : createInitialPlan(inventory));
     setSelectedKeys(new Set());
     announce("Plano restablecido desde el inventario");
   };
@@ -1897,7 +1902,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
                         </div>
                       ) : (
                         <>
-                          <span className={styles.customType}>{CUSTOM_TYPE_LABELS[element.type]}</span>
+                          <span className={styles.customType}>{element.type === "equipment" ? (element.machineGuideId ? "Ficha vinculada" : "Ficha pendiente") : CUSTOM_TYPE_LABELS[element.type]}</span>
                           <span className={styles.itemName}>{element.label}</span>
                           {element.locked && <Lock className={styles.lockIcon} aria-hidden="true" />}
                         </>
@@ -2124,6 +2129,22 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
                   />
                   {selectedAsset && <span className="mt-1.5 block text-[9px] font-bold text-white/45">Este nombre se actualiza también en la etiqueta QR.</span>}
                 </label>
+
+                {selectedCustom?.type === "equipment" && (
+                  <div className="mt-4 space-y-2 border-y border-white/15 py-3 text-xs">
+                    <label className="block font-bold">Ficha de este equipo
+                      <select value={selectedCustom.machineGuideId ?? ""} className={`${FIELD_CLASS} mt-2`} onChange={(event) => {
+                        const current = history.present;
+                        commitPlan({ ...current, customElements: current.customElements.map((element) => element.id === selectedCustom.id ? { ...element, machineGuideId: event.target.value || undefined } : element) });
+                      }}>
+                        <option value="">Pendiente de identificar</option>
+                        {MACHINE_GUIDE.map((guide) => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
+                      </select>
+                    </label>
+                    {findMachineGuide(selectedCustom.machineGuideId ?? "") ? <Link href={`/maquinas/${selectedCustom.machineGuideId}`} className="block font-bold text-[#d8ff3e] underline">Ver ficha de técnica</Link> : <p className="text-amber-200">Elegí la ficha cuando identifiqués la máquina.</p>}
+                    <p className="text-white/50">Equipo manual del plano. La conexión se autoguarda con el piso.</p>
+                  </div>
+                )}
 
                 {selectedCustom && (
                   <label className="mt-3 block">

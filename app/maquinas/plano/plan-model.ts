@@ -5,6 +5,7 @@ export type FloorAssetStatus = "bueno" | "fuera_de_servicio" | "pendiente" | "si
 
 export type FloorInventoryItem = {
   id: string;
+  floor?: 1 | 2;
   area: string;
   kind: FloorAssetKind;
   code: string;
@@ -37,11 +38,13 @@ export type CustomElement = Geometry & {
   label: string;
   color: string;
   locked: boolean;
+  machineGuideId?: string;
 };
 
 export type PlanDocument = {
   version: 1;
   areaLayoutRevision?: number;
+  secondFloorEquipmentRevision?: number;
   canvas: {
     width: number;
     height: number;
@@ -60,8 +63,8 @@ export function floorPlanStorageKey(floor: 1 | 2) {
   return floor === 1 ? PLAN_STORAGE_KEY : `${PLAN_STORAGE_KEY}:floor-2`;
 }
 
-export function createSecondFloorPlan(): PlanDocument {
-  return {
+export function createSecondFloorPlan(inventory: FloorInventoryItem[] = []): PlanDocument {
+  const plan: PlanDocument = {
     version: 1, areaLayoutRevision: AREA_LAYOUT_REVISION,
     canvas: { width: 1600, height: 1000, gridSize: 20 },
     placements: {},
@@ -71,6 +74,35 @@ export function createSecondFloorPlan(): PlanDocument {
       { id: "floor-2-free-weights", label: "Peso libre", color: "#fbbf24" },
     ].map((block, index) => ({ ...block, type: "area", locked: false, x: 60 + index * 500, y: 100, width: 440, height: 400 })),
   };
+  return completeSecondFloorPlan(plan, inventory);
+}
+
+/** Add newly confirmed units once, preserving edited blocks and every existing position. */
+export function completeSecondFloorPlan(plan: PlanDocument, inventory: FloorInventoryItem[]): PlanDocument {
+  if (plan.secondFloorEquipmentRevision === 1 || !inventory.length) return plan;
+  let next: PlanDocument = { ...plan, placements: { ...plan.placements }, secondFloorEquipmentRevision: 1 };
+  for (const asset of inventory) {
+    if (next.placements[asset.id]) continue;
+    const size = defaultSizeForKind(asset.kind);
+    const position = findOpenPosition(next, size);
+    next = { ...next, canvas: { ...next.canvas, height: position.requiredHeight }, placements: {
+      ...next.placements, [asset.id]: { x: position.x, y: position.y, ...size, locked: false },
+    } };
+  }
+  return next;
+}
+
+export function linkKnownPlanMachines(plan: PlanDocument, guides: Array<{ id: string; name: string }>): PlanDocument {
+  let changed = false;
+  const customElements = plan.customElements.map((element) => {
+    if (element.type !== "equipment" || element.machineGuideId) return element;
+    const normalized = normalizeForSearch(element.label).replace(/\s+copia$/, "").trim();
+    const matches = new Set(guides.filter((guide) => normalizeForSearch(guide.name).trim() === normalized).map((guide) => guide.id));
+    if (matches.size !== 1) return element;
+    changed = true;
+    return { ...element, machineGuideId: [...matches][0] };
+  });
+  return changed ? { ...plan, customElements } : plan;
 }
 export const PLAN_VERSION = 1;
 export const MIN_ITEM_SIZE = 28;
@@ -186,7 +218,7 @@ export function createInitialPlan(inventory: FloorInventoryItem[], previous?: Pl
         color: colorForArea(area), locked: false, x: innerX, y: top, width: blockWidth - 64, height });
       cursorY += height + 20;
     }
-    customElements.push({ id: `seed-area-${slug(area)}`, type: "area", label: `${AREA_PREFIX[area] ?? ""} ? ${area}`.replace(/^ ? /, ""),
+    customElements.push({ id: `seed-area-${slug(area)}`, type: "area", label: AREA_PREFIX[area] ? `${AREA_PREFIX[area]} · ${area}` : area,
       color: colorForArea(area), locked: false, x, y, width: blockWidth, height: cursorY - y + 8 }, ...childAreas);
     columnBottoms[column] = cursorY + 48;
   }
@@ -629,6 +661,7 @@ export function parsePlanDocument(
             ? rawElement.color
             : "#d8ff3e",
         locked: rawElement.locked === true,
+        ...(typeof rawElement.machineGuideId === "string" && /^[a-z0-9-]{1,100}$/.test(rawElement.machineGuideId) ? { machineGuideId: rawElement.machineGuideId } : {}),
       });
     }
   }
@@ -636,6 +669,7 @@ export function parsePlanDocument(
   return {
     version: PLAN_VERSION,
     ...(finiteNumber(value.areaLayoutRevision) ? { areaLayoutRevision: value.areaLayoutRevision } : {}),
+    ...(value.secondFloorEquipmentRevision === 1 ? { secondFloorEquipmentRevision: 1 } : {}),
     canvas,
     placements,
     customElements,

@@ -31,6 +31,7 @@ function physicalMachineLabels(inventory: PublicEquipment[]): EditableQrItem[] {
     seen.set(machineGuideId, unit);
     return {
       assetId: asset.id,
+      floor: asset.floor ?? 1,
       machineGuideId,
       id: machineGuideId,
       name: asset.name,

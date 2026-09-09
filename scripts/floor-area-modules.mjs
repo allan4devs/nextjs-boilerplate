@@ -19,6 +19,7 @@ export const names = load("lib/xtreme/machine-display-names.ts");
 export const equipment = load("lib/xtreme/equipment.ts", { "./shared": {}, "./equipment-area-codes": codes, "./machine-display-names": names });
 export const model = load("app/maquinas/plano/plan-model.ts", { "@/lib/xtreme/equipment-area-codes": codes });
 const { MACHINE_GUIDE } = load("app/components/member/catalog/machines.ts");
+export const guides = MACHINE_GUIDE;
 export function categorize(asset) {
   const guide = MACHINE_GUIDE.find((item) => item.id === asset.machineGuideId);
   return { ...equipment.normalizeEquipmentArea(asset), trainingCategory: guide?.zone, muscleGroup: guide?.muscles[0] };

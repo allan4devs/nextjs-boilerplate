@@ -48,7 +48,8 @@ export default function AssetConnectionPanel({ asset, name, code, duplicateCode,
       {guideId !== publishedGuideId && <span className="mt-2 block font-normal text-amber-200">Conexión pendiente de guardar. El QR abrirá la ficha elegida después de guardar.</span>}
     </label>}
     <button type="button" onClick={publish} disabled={saving || duplicateCode || !name.trim() || (asset.kind === "machine" && (!code.trim() || !guideId))} className="min-h-11 w-full border-2 border-[#d8ff3e]/50 px-2 font-bold text-[#d8ff3e] disabled:opacity-40">{saving ? "Guardando…" : "Guardar nombre, código y conexión"}</button>
-    <p className="text-white/45">Requiere sesión de admin. Las posiciones del plano siguen siendo locales.</p>
+    <p className="text-white/45">Requiere sesión de admin. Las posiciones se autoguardan en MongoDB con el piso.</p>
+    <Link className="block text-[#d8ff3e] underline" href="/admin/equipo">Completar foto, marca, modelo y estado en inventario</Link>
     {notice && <p role="status" className="text-amber-100">{notice}</p>}
     {guide ? <>
       <Link className="block font-bold text-[#d8ff3e] underline" href={physicalMachinePath(asset.id)}>Ver ficha: {guide.name}</Link>

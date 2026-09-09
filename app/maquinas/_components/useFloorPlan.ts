@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PLAN_STORAGE_KEY, parsePlanDocument, type FloorInventoryItem, type PlanDocument } from "../plano/plan-model";
+import { floorPlanStorageKey, parsePlanDocument, type FloorInventoryItem, type PlanDocument } from "../plano/plan-model";
 import { useMachineTexts } from "./useMachineTexts";
 import { applyMachineTexts } from "./machine-label-store";
 
@@ -12,13 +12,17 @@ export function useFloorPlan(inventory: FloorInventoryItem[]) {
   useEffect(() => {
     const refresh = () => {
       try {
-        const raw = window.localStorage.getItem(PLAN_STORAGE_KEY);
-        if (!raw) { setPlan(null); setError(""); return; }
-        const saved: unknown = JSON.parse(raw);
-        const candidate = saved && typeof saved === "object" && "plan" in saved ? saved.plan : saved;
-        const parsed = parsePlanDocument(candidate, inventory);
-        if (!parsed) throw new Error("invalid plan");
-        setPlan(parsed);
+        const plans: PlanDocument[] = [];
+        for (const floor of [1, 2] as const) {
+          const raw = window.localStorage.getItem(floorPlanStorageKey(floor));
+          if (!raw) continue;
+          const saved: unknown = JSON.parse(raw);
+          const candidate = saved && typeof saved === "object" && "plan" in saved ? saved.plan : saved;
+          const parsed = parsePlanDocument(candidate, inventory.filter((asset) => (asset.floor ?? 1) === floor));
+          if (!parsed) throw new Error("invalid plan");
+          plans.push(parsed);
+        }
+        setPlan(plans.length ? { ...plans[0], placements: Object.assign({}, ...plans.map((plan) => plan.placements)), customElements: plans.flatMap((plan) => plan.customElements) } : null);
         setError("");
       } catch {
         setPlan(null);

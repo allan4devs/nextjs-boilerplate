@@ -17,7 +17,7 @@ export default function InventoryConnections({ inventory, guides, source, guideI
   const machines = inventory.filter((asset) => asset.kind === "machine" && (!guideId || asset.machineGuideId === guideId));
   const linked = new Set(machines.map((asset) => asset.machineGuideId));
   const unlinkedGuides = guideId ? [] : guides.filter((guide) => !linked.has(guide.id));
-  const customMachines = guideId ? [] : plan?.customElements.filter((element) => element.type === "equipment") ?? [];
+  const customMachines = guideId ? [] : plan?.customElements.filter((element) => element.type === "equipment" && !element.machineGuideId) ?? [];
   const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const rows = machines.filter((asset) => normalize(`${asset.id} ${labels[asset.id]?.code ?? plan?.placements[asset.id]?.code ?? asset.code} ${asset.area} ${asset.name} ${labels[asset.id]?.name ?? plan?.placements[asset.id]?.label ?? ""} ${guideById.get(asset.machineGuideId ?? "")?.name ?? ""}`).includes(normalize(query)));
 
@@ -39,7 +39,7 @@ export default function InventoryConnections({ inventory, guides, source, guideI
             const guide = guideById.get(asset.machineGuideId ?? "");
             const label = labels[asset.id]?.name ?? plan?.placements[asset.id]?.label ?? asset.name;
             return <tr key={asset.id} className={`border-b border-white/10 align-top ${asset.id === selectedAssetId ? "bg-[#d8ff3e]/10" : ""}`}>
-              <td className="p-3"><Link className="font-bold text-[#d8ff3e] underline" href={`/maquinas/plano?asset=${encodeURIComponent(asset.id)}`}>{(labels[asset.id]?.code ?? plan?.placements[asset.id]?.code ?? asset.code) || asset.id}</Link><span className="mt-1 block text-xs text-white/45">{asset.area} · {asset.id}</span><span className="mt-1 block text-xs text-white/55">{STATUS_LABELS[asset.status]} · {asset.location}</span></td>
+              <td className="p-3"><Link className="font-bold text-[#d8ff3e] underline" href={`/maquinas/plano?floor=${asset.floor ?? 1}&asset=${encodeURIComponent(asset.id)}`}>{(labels[asset.id]?.code ?? plan?.placements[asset.id]?.code ?? asset.code) || asset.id}</Link><span className="mt-1 block text-xs text-white/45">{asset.area} · {asset.id}</span><span className="mt-1 block text-xs text-white/55">{STATUS_LABELS[asset.status]} · {asset.location}</span></td>
               <td className="p-3 font-bold">{label}{label !== asset.name && <span className="mt-1 block text-xs font-normal text-white/45">Inventario: {asset.name}</span>}</td>
               <td className="p-3">{guide ? <Link className="text-[#d8ff3e] underline" href={physicalMachinePath(asset.id)}>{guide.name}</Link> : <span className="text-amber-300">Sin ficha vinculada</span>}<Link className="mt-2 block text-xs text-[#d8ff3e] underline" href={`/maquinas/qr?asset=${encodeURIComponent(asset.id)}`}>Ver código y QR de esta unidad</Link></td>
             </tr>;

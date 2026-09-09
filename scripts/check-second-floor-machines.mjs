@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import { equipment, guides, model } from "./floor-area-modules.mjs";
+
+const inventory = equipment.SECOND_FLOOR_EQUIPMENT;
+assert.equal(inventory.length, 5);
+assert.equal(inventory.filter((asset) => asset.machineGuideId === "bicicleta-estatica").length, 3);
+assert.equal(inventory.filter((asset) => asset.machineGuideId === "lat-pulldown").length, 2);
+assert.equal(new Set(inventory.map((asset) => asset.id)).size, 5);
+assert.equal(new Set(inventory.map((asset) => asset.code)).size, 5);
+for (const asset of inventory) assert.ok(guides.some((guide) => guide.id === asset.machineGuideId));
+const before = model.createSecondFloorPlan();
+before.customElements[0].x = 120;
+const next = model.completeSecondFloorPlan(before, inventory);
+assert.equal(JSON.stringify(next.customElements), JSON.stringify(before.customElements), "Preserve all manually arranged areas");
+assert.equal(Object.keys(next.placements).length, 5);
+assert.equal(model.parsePlanDocument(next, inventory).secondFloorEquipmentRevision, 1);
+assert.equal(Object.keys(model.parsePlanDocument(next, inventory).placements).length, 5);
+delete next.placements[inventory[0].id];
+assert.equal(model.completeSecondFloorPlan(next, inventory), next, "Later unplacing a unit must stay unplaced");
+const manual = { ...next, customElements: [{ id: "manual-smith", type: "equipment", label: "Maquina Smith", x: 10, y: 20, width: 100, height: 70, locked: false, color: "#ffffff" }] };
+const linked = model.linkKnownPlanMachines(manual, guides);
+assert.equal(linked.customElements[0].machineGuideId, "smith-machine");
+assert.equal(linked.customElements[0].x, 10);
+assert.equal(model.parsePlanDocument(linked, inventory).customElements[0].machineGuideId, "smith-machine");
+assert.equal(model.linkKnownPlanMachines(linked, guides), linked);
+assert.equal(model.linkKnownPlanMachines({ ...manual, customElements: [{ ...manual.customElements[0], label: "Equipo desconocido" }] }, guides).customElements[0].machineGuideId, undefined);
+console.log("PASS: 5 physical units, valid guides, unique QR identities, floor isolation, preserved positions, manual links and pending unknown equipment.");

@@ -3,6 +3,7 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { getPublicEquipment } from "@/lib/xtreme/public-equipment";
 import { parsePlanDocument, type PlanDocument } from "@/app/maquinas/plano/plan-model";
+import { findMachineGuide } from "@/app/components/member/catalog/machines";
 
 export const dynamic = "force-dynamic";
 type SavedPlan = { _id: string; revision: number; plan: PlanDocument; savedAt: string };
@@ -36,10 +37,14 @@ export async function PUT(req: NextRequest) {
     let body;
     try { body = JSON.parse(raw); } catch { return NextResponse.json({ error: "JSON inválido." }, { status: 400 }); }
     if (!body || !Number.isSafeInteger(body.revision) || body.revision < 0) return NextResponse.json({ error: "Revisión inválida." }, { status: 400 });
-    const { inventory, source } = id === "floor-2" ? { inventory: [], source: "shared" } : await getPublicEquipment();
+    const { inventory: allInventory, source } = await getPublicEquipment();
+    const inventory = allInventory.filter((asset) => (asset.floor ?? 1) === (id === "floor-2" ? 2 : 1));
     if (source === "fallback") throw new Error("Inventory unavailable");
     const plan = parsePlanDocument(body.plan, inventory);
     if (!plan) return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
+    if (plan.customElements.some((element) => element.machineGuideId && !findMachineGuide(element.machineGuideId))) {
+      return NextResponse.json({ error: "Una ficha vinculada no existe. Revisá el equipo manual." }, { status: 400 });
+    }
     const db = await getDb();
     const collection = db.collection<SavedPlan>("xtreme_gym_floor_plans");
     const savedAt = new Date().toISOString();
