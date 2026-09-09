@@ -1,12 +1,21 @@
 import { getDb } from "@/lib/helpers/mongodb";
-import { DEFAULT_EQUIPMENT_ASSETS, type EquipmentAssetDoc } from "./equipment";
+import { DEFAULT_EQUIPMENT_ASSETS, normalizeEquipmentArea, type EquipmentAssetDoc } from "./equipment";
+import { findMachineGuide } from "@/app/components/member/catalog/machines";
 import { EQUIPMENT_ASSETS_COLLECTION } from "./shared";
 
 /** Only fields intended for floor plans and public machine labels. Never serialize financial/admin fields. */
-export type PublicEquipment = Pick<EquipmentAssetDoc, "id" | "area" | "kind" | "code" | "name" | "location" | "status" | "machineGuideId" | "description" | "brand" | "year">;
+export type PublicEquipment = Pick<EquipmentAssetDoc, "id" | "area" | "kind" | "code" | "name" | "location" | "status" | "machineGuideId" | "description" | "brand" | "year"> & { trainingCategory?: string; muscleGroup?: string };
 
 export async function getPublicEquipment(): Promise<{ inventory: PublicEquipment[]; source: "shared" | "fallback" }> {
-  const project = ({ id, area, kind, code, name, location, status, machineGuideId, description, brand, year }: PublicEquipment): PublicEquipment => ({ id, area, kind, code, name, location, status, ...(description ? { description } : {}), ...(brand ? { brand } : {}), ...(year ? { year } : {}), ...(machineGuideId ? { machineGuideId } : {}) });
+  const project = (asset: PublicEquipment): PublicEquipment => {
+    const { id, area, kind, code, name, location, status, machineGuideId, description, brand, year } = normalizeEquipmentArea(asset);
+    const guide = machineGuideId ? findMachineGuide(machineGuideId) : undefined;
+    return { id, area, kind, code, name, location, status,
+      ...(description ? { description } : {}), ...(brand ? { brand } : {}), ...(year ? { year } : {}),
+      ...(machineGuideId ? { machineGuideId } : {}),
+      ...(guide ? { trainingCategory: guide.zone, muscleGroup: guide.muscles[0] } : {}),
+    };
+  };
   try {
     const db = await getDb();
     const saved = await db.collection<EquipmentAssetDoc>(EQUIPMENT_ASSETS_COLLECTION).find({}, {

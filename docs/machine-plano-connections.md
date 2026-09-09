@@ -1,5 +1,14 @@
 # Conexiones entre plano y máquinas
 
+## Organización por categorías (septiembre 2026)
+
+- Recepción izquierda, derecha y zona central se agrupan en **Tren superior (TS)**. Las máquinas de cardio de esas zonas pasan a **Cardio (CA)**; las dos fichas Core pasan a **Abs (AB)**.
+- El plano divide cada área en cuadrantes según `zone` de la ficha; Piernas usa el primer músculo del catálogo. No se deduce la categoría del nombre editable. Las demás áreas usan PI, PA, PB y PD.
+- Los códigos anteriores se migran por `assetId`; se conservan los códigos personalizados y todos los alias QR ya impresos.
+- `areaLayoutRevision: 2` aplica la nueva distribución una sola vez a planos anteriores. Mantiene nombres, tamaños, bloqueos, activos sin ubicar y elementos personalizados; los movimientos posteriores se conservan. El editor respalda el JSON anterior en `xtreme:machines-floor-plan:v1:before-area-reorganization` antes de migrarlo.
+- `node scripts/check-floor-area-layout.mjs` verifica códigos, cuadrantes, límites, superposiciones y movimiento/reorganización de áreas anidadas.
+- `node --env-file=.env --env-file=.env.local scripts/migrate-floor-areas.mjs` revisa Mongo sin escribir. `--apply` migra con control de concurrencia y respaldo en `xtreme_gym_floor_plan_migrations`. La ejecución de esta actualización modificó 82 activos; la revisión posterior devolvió cero cambios pendientes. No había plano `main` en Mongo: la copia del navegador se migra al abrir el editor y se guarda con la sesión admin.
+
 Comparación del inventario versionado. Las etiquetas corregidas en localStorage se leen desde el navegador donde se editaron; no se han recuperado ni publicado durante esta auditoría.
 
 Las páginas de plano, catálogo, ficha y QR ahora consultan la misma proyección del inventario compartido (sin costos, facturas, números de serie ni datos administrativos). Si falla la lectura, las páginas muestran que usan la copia inicial; el destino de un QR de unidad requiere una lectura compartida válida.

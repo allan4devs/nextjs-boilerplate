@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PLAN_STORAGE_KEY, parsePlanDocument, type FloorInventoryItem, type PlanDocument } from "./plan-model";
+import { floorPlanStorageKey, parsePlanDocument, type FloorInventoryItem, type PlanDocument } from "./plan-model";
 
-const ENDPOINT = "/api/xtreme/admin/floor-plan";
-const SYNC_KEY = `${PLAN_STORAGE_KEY}:mongo`;
 type Remote = { plan: PlanDocument | null; revision: number; savedAt?: string };
 
-export function usePlanAutosave(plan: PlanDocument, ready: boolean, inventory: FloorInventoryItem[], onRestore: (plan: PlanDocument) => void) {
+export function usePlanAutosave(plan: PlanDocument, ready: boolean, inventory: FloorInventoryItem[], onRestore: (plan: PlanDocument) => void, floor: 1 | 2 = 1) {
+  const storageKey = floorPlanStorageKey(floor);
+  const syncKey = `${storageKey}:mongo`;
+  const endpoint = `/api/xtreme/admin/floor-plan?floor=${floor}`;
   const [status, setStatus] = useState("Cargando MongoDB");
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState(false);
@@ -22,20 +23,20 @@ export function usePlanAutosave(plan: PlanDocument, ready: boolean, inventory: F
   restore.current = onRestore;
 
   const readRemote = useCallback(async (): Promise<Remote> => {
-    const response = await fetch(ENDPOINT, { cache: "no-store", signal: AbortSignal.timeout(15000) });
+    const response = await fetch(endpoint, { cache: "no-store", signal: AbortSignal.timeout(15000) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "No se pudo cargar MongoDB.");
     const parsed = data.plan === null ? null : parsePlanDocument(data.plan, inventory);
     if (data.plan !== null && !parsed) throw new Error("El plano de MongoDB no es válido.");
     return { ...data, plan: parsed };
-  }, [inventory]);
+  }, [inventory, endpoint]);
 
   const remember = useCallback((value: PlanDocument, rev: number) => {
     revision.current = rev;
     acknowledged.current = JSON.stringify(value);
     // Failure here must not turn a successful Mongo write into a failed write.
-    try { localStorage.setItem(SYNC_KEY, JSON.stringify({ revision: rev, plan: acknowledged.current })); } catch { /* local backup reports its own status */ }
-  }, []);
+    try { localStorage.setItem(syncKey, JSON.stringify({ revision: rev, plan: acknowledged.current })); } catch { /* local backup reports its own status */ }
+  }, [syncKey]);
 
   const sync = useCallback(async () => {
     if (busy.current || blocked.current) return;
@@ -46,8 +47,8 @@ export function usePlanAutosave(plan: PlanDocument, ready: boolean, inventory: F
         let meta: { revision?: number; plan?: string } | null = null;
         let hasLocal = false;
         try {
-          meta = JSON.parse(localStorage.getItem(SYNC_KEY) || "null");
-          hasLocal = Boolean(localStorage.getItem(PLAN_STORAGE_KEY));
+          meta = JSON.parse(localStorage.getItem(syncKey) || "null");
+          hasLocal = Boolean(localStorage.getItem(storageKey));
         } catch { /* preserve current draft */ }
         const remote = await readRemote();
         if (remote.plan) {
@@ -73,7 +74,7 @@ export function usePlanAutosave(plan: PlanDocument, ready: boolean, inventory: F
       const snapshot = current.current;
       if (JSON.stringify(snapshot) !== acknowledged.current) {
         setStatus("Guardando en MongoDB");
-        const response = await fetch(ENDPOINT, {
+        const response = await fetch(endpoint, {
           method: "PUT", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ plan: snapshot, revision: revision.current }),
           signal: AbortSignal.timeout(15000),
@@ -91,7 +92,7 @@ export function usePlanAutosave(plan: PlanDocument, ready: boolean, inventory: F
       setError(cause instanceof Error ? cause.message : "No se pudo conectar a MongoDB.");
       setStatus("Pendiente de guardar en MongoDB");
     } finally { busy.current = false; }
-  }, [readRemote, remember]);
+  }, [readRemote, remember, storageKey, endpoint, syncKey]);
 
   useEffect(() => {
     if (!ready) return;
@@ -132,7 +133,7 @@ export function usePlanAutosave(plan: PlanDocument, ready: boolean, inventory: F
       if (!useLocal && !remote.plan) throw new Error("Todavía no hay un plano guardado en MongoDB.");
       // Preserve the discarded draft separately for recovery.
       if (!useLocal) {
-        localStorage.setItem(`${PLAN_STORAGE_KEY}:recovery`, JSON.stringify({ savedAt: new Date().toISOString(), plan: current.current }));
+        localStorage.setItem(`${storageKey}:recovery`, JSON.stringify({ savedAt: new Date().toISOString(), plan: current.current }));
         remember(remote.plan!, remote.revision);
         current.current = remote.plan!;
         restore.current(remote.plan!);
@@ -147,7 +148,7 @@ export function usePlanAutosave(plan: PlanDocument, ready: boolean, inventory: F
       setError(cause instanceof Error ? cause.message : "No se pudo restaurar el plano.");
     } finally { busy.current = false; }
     if (!blocked.current) void sync();
-  }, [readRemote, remember, sync]);
+  }, [readRemote, remember, sync, storageKey]);
 
   return { status, error, conflict, retry: sync, restore: () => choose(false), keepLocal: () => choose(true) };
 }

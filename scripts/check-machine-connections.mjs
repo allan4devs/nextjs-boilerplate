@@ -16,9 +16,9 @@ function readModule(filename, imports = {}) {
   return exports;
 }
 
-const { DEFAULT_EQUIPMENT_ASSETS: inventory } = readModule("lib/xtreme/equipment.ts", { "./shared": {} });
+const { DEFAULT_EQUIPMENT_ASSETS: inventory } = readModule("lib/xtreme/equipment.ts", { "./shared": {}, "./equipment-area-codes": readModule("lib/xtreme/equipment-area-codes.ts") });
 const { MACHINE_GUIDE: guides } = readModule("app/components/member/catalog/machines.ts");
-const { createInitialPlan, parsePlanDocument } = readModule("app/maquinas/plano/plan-model.ts");
+const { createInitialPlan, parsePlanDocument } = readModule("app/maquinas/plano/plan-model.ts", { "@/lib/xtreme/equipment-area-codes": readModule("lib/xtreme/equipment-area-codes.ts") });
 const { physicalMachineQrValue } = readModule("app/lib/physical-machine-links.ts", { "@/lib/constants/app-url": { absoluteAppUrl: (pathname) => `https://example.test${pathname}` } });
 
 const machines = inventory.filter((asset) => asset.kind === "machine");

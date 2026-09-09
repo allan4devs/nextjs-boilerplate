@@ -14,7 +14,7 @@ function load(file, imports = {}, globals = {}) {
   }, ...globals });
   return exports;
 }
-const model = load("app/maquinas/plano/plan-model.ts");
+const model = load("app/maquinas/plano/plan-model.ts", { "@/lib/xtreme/equipment-area-codes": load("lib/xtreme/equipment-area-codes.ts") });
 const inventory = [{ id: "eq-001", area: "Cardio", kind: "machine", code: "A", name: "Test", location: "", status: "bueno" }];
 const plan = model.createInitialPlan(inventory);
 const moved = structuredClone(plan);
@@ -86,14 +86,17 @@ assert.equal(stale.calls.length, 1, "Conflict blocks automatic overwrite retries
 
 let authorized = true;
 let saved = null;
+const floors = new Map();
 const collection = {
-  findOne: async () => saved,
+  findOne: async (filter) => floors.get(filter._id) ?? null,
   updateOne: async (filter, update, options) => {
+    saved = floors.get(filter._id) ?? null;
     if (saved && saved.revision !== filter.revision) {
       if (options.upsert) throw { code: 11000 };
       return { matchedCount: 0, upsertedCount: 0 };
     }
-    saved = { _id: "main", ...update.$set, revision: (saved?.revision ?? 0) + 1 };
+    saved = { _id: filter._id, ...update.$set, revision: (saved?.revision ?? 0) + 1 };
+    floors.set(filter._id, saved);
     return { matchedCount: options.upsert ? 0 : 1, upsertedCount: options.upsert ? 1 : 0 };
   },
 };
@@ -116,3 +119,17 @@ assert.equal((await route.PUT(request({ plan: moved, revision: 1 }))).status, 20
 assert.equal((await route.PUT(request({ plan, revision: 1 }))).status, 409);
 assert.equal((await route.GET({})).data.plan.placements["eq-001"].x, moved.placements["eq-001"].x);
 console.log("PASS: Mongo restore, local migration, recovery backup, queued edits, conflicts, authorization, validation and revision checks.");
+
+const second = model.createSecondFloorPlan();
+assert.equal(second.customElements.length, 3);
+assert.equal(Object.keys(second.placements).length, 0);
+assert.equal(second.customElements.map((block) => block.label).join(","), "Bicicletas,Calistenia,Peso libre");
+assert.ok(second.customElements.every((block) => block.type === "area" && !block.locked));
+assert.notEqual(model.floorPlanStorageKey(1), model.floorPlanStorageKey(2));
+const firstBefore = JSON.stringify(floors.get("main"));
+const floorRequest = (floor, value) => ({ ...request(value), nextUrl: new URL(`https://example.test/api?floor=${floor}`) });
+assert.equal((await route.PUT(floorRequest(2, { plan: second, revision: 0 }))).status, 200);
+assert.equal(JSON.stringify(floors.get("main")), firstBefore, "Second-floor writes preserve the first floor");
+assert.equal((await route.GET(floorRequest(2))).data.plan.customElements.length, 3);
+assert.equal((await route.PUT(floorRequest(3, { plan: second, revision: 0 }))).status, 400);
+console.log("PASS: second floor contains only three movable blocks and uses isolated Mongo/local storage.");

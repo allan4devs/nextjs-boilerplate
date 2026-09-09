@@ -47,7 +47,8 @@ import {
   CUSTOM_TYPE_LABELS,
   KIND_LABELS,
   MIN_ITEM_SIZE,
-  PLAN_STORAGE_KEY,
+  floorPlanStorageKey,
+  createSecondFloorPlan,
   STATUS_LABELS,
   clamp,
   clampGeometry,
@@ -58,9 +59,9 @@ import {
   findOpenPosition,
   getAreaChildrenTargets,
   getTargetGeometry,
-  isItemInsideArea,
   normalizeForSearch,
   parsePlanDocument,
+  migratePlanAreas,
   reorganizeAreaChildren,
   snap,
   updateTargetGeometries,
@@ -237,8 +238,9 @@ function shortPlateLabel(name: string) {
   return name.match(/\d+(?:\.\d+)?\s*lb/i)?.[0] ?? "Disco";
 }
 
-export default function FloorPlanEditor({ inventory }: { inventory: FloorInventoryItem[] }) {
-  const initialPlan = useMemo(() => createInitialPlan(inventory), [inventory]);
+export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: FloorInventoryItem[]; floor?: 1 | 2 }) {
+  const storageKey = floorPlanStorageKey(floor);
+  const initialPlan = useMemo(() => floor === 2 ? createSecondFloorPlan() : createInitialPlan(inventory), [inventory, floor]);
   const { labels, error: labelsError, updateTexts } = useMachineTexts();
   const [rawHistory, dispatch] = useReducer(historyReducer, {
     past: [],
@@ -286,14 +288,15 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
   presentRef.current = history.present;
   historyRef.current = history;
 
-  const cloud = usePlanAutosave(history.present, hydrated, inventory, (plan) => {
+  const cloud = usePlanAutosave(history.present, hydrated, inventory, (savedPlan) => {
+    const plan = floor === 2 ? savedPlan : migratePlanAreas(savedPlan, inventory);
     updateTexts(Object.fromEntries(Object.entries(plan.placements).map(([id, placement]) => {
       const asset = inventory.find((item) => item.id === id);
       return [id, { name: placement.label ?? asset?.name ?? "", code: placement.code ?? asset?.code ?? "" }];
     })));
     presentRef.current = plan;
     dispatch({ type: "load", plan });
-  });
+  }, floor);
 
   const selectedTargets = useMemo(
     () => Array.from(selectedKeys, parseTargetKey),
@@ -630,11 +633,16 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
   useEffect(() => {
     let plan = initialPlan;
     try {
-      const raw = window.localStorage.getItem(PLAN_STORAGE_KEY);
+      const raw = window.localStorage.getItem(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw) as unknown;
         const candidate = isObject(parsed) && "plan" in parsed ? parsed.plan : parsed;
-        plan = parsePlanDocument(candidate, inventory) ?? initialPlan;
+        const saved = parsePlanDocument(candidate, inventory);
+        if (saved) plan = saved;
+        if (saved && !saved.areaLayoutRevision) {
+          window.localStorage.setItem(`${storageKey}:before-area-reorganization`, raw);
+        }
+        plan = saved ? (floor === 2 ? saved : migratePlanAreas(saved, inventory)) : initialPlan;
         if (isObject(parsed) && typeof parsed.savedAt === "string") setSavedAt(parsed.savedAt);
       }
       setSaveState("saved");
@@ -650,14 +658,14 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       setSelectedKeys(new Set([targetKey({ kind: "asset", id: assetId })]));
       setInspectorOpen(true);
     }
-  }, [initialPlan, inventory]);
+  }, [initialPlan, inventory, floor, storageKey]);
 
   useEffect(() => {
     const flushLatestPlan = () => {
       if (!hydratedRef.current) return;
       try {
         window.localStorage.setItem(
-          PLAN_STORAGE_KEY,
+          storageKey,
           JSON.stringify({ savedAt: new Date().toISOString(), plan: applyMachineTexts(presentRef.current, readMachineTexts()) }),
         );
       } catch {
@@ -670,7 +678,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       window.removeEventListener("pagehide", flushLatestPlan);
       flushLatestPlan();
     };
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -679,7 +687,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       try {
         const timestamp = new Date().toISOString();
         window.localStorage.setItem(
-          PLAN_STORAGE_KEY,
+          storageKey,
           JSON.stringify({ savedAt: timestamp, plan: applyMachineTexts(presentRef.current, readMachineTexts()) }),
         );
         setSavedAt(timestamp);
@@ -689,7 +697,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       }
     }, 260);
     return () => window.clearTimeout(timeout);
-  }, [history.present, hydrated]);
+  }, [history.present, hydrated, storageKey]);
 
   const focusTarget = useCallback((target: PlanTarget) => {
     setSelectedKeys(new Set([targetKey(target)]));
@@ -1494,7 +1502,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `plano-xtreme-gym-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.download = `plano-xtreme-gym-piso-${floor}-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
     announce("Plano exportado en JSON");
@@ -1516,7 +1524,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       if (!window.confirm("¿Reemplazar el plano actual con el archivo importado? Podés deshacer después.")) {
         return;
       }
-      commitPlan(plan);
+      commitPlan(floor === 2 ? plan : migratePlanAreas(plan, inventory));
       setSelectedKeys(new Set());
       announce("Plano importado");
     } catch {
@@ -1525,8 +1533,8 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
   };
 
   const resetPlan = () => {
-    if (!window.confirm(`¿Restablecer la distribución inicial de los ${inventory.length} activos?`)) return;
-    commitPlan(createInitialPlan(inventory));
+    if (!window.confirm(floor === 2 ? "¿Restablecer los tres bloques del piso 2?" : `¿Restablecer la distribución inicial de los ${inventory.length} activos?`)) return;
+    commitPlan(floor === 2 ? createSecondFloorPlan() : createInitialPlan(inventory));
     setSelectedKeys(new Set());
     announce("Plano restablecido desde el inventario");
   };
@@ -1566,7 +1574,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
             Plano editable del gimnasio
           </h1>
           <span className="border-2 border-[#d8ff3e]/45 bg-[#d8ff3e]/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-[#eaff93]">
-            Piso 1
+            Piso {floor}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-black uppercase tracking-[0.14em] text-white/45">
@@ -1764,7 +1772,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
         <section className={`${styles.canvasPanel} ${PANEL_CLASS}`}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-white/10 px-4 py-3">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">Lienzo · Piso 1</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">Lienzo · Piso {floor}</p>
               <p className="mt-0.5 text-xs font-bold text-white/42">Arrastrá el bloque; usá la esquina inferior derecha para redimensionar.</p>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
@@ -1789,10 +1797,10 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
                 onPointerMove={onCanvasPointerMove}
                 onPointerUp={onCanvasPointerUp}
                 onPointerCancel={onCanvasPointerCancel}
-                aria-label="Plano editable del piso 1"
+                aria-label={`Plano editable del piso ${floor}`}
               >
                 <div className={styles.floorStamp}>
-                  <strong>Piso 1</strong>
+                  <strong>Piso {floor}</strong>
                   <span>{history.present.canvas.width} × {history.present.canvas.height} u</span>
                 </div>
 
@@ -2259,7 +2267,7 @@ export default function FloorPlanEditor({ inventory }: { inventory: FloorInvento
       </div>
 
       <div className={styles.printHeading}>
-        <strong>Xtreme Gym · Plano esquemático · Piso 1</strong>
+        <strong>Xtreme Gym · Plano esquemático · Piso {floor}</strong>
         <span>Inventario: {inventory.length} activos · Escala visual, no arquitectónica</span>
       </div>
       <p className="sr-only" aria-live="polite">{message}</p>

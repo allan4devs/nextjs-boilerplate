@@ -1,4 +1,5 @@
 import { PLAN_STORAGE_KEY, type PlanDocument } from "../plano/plan-model";
+import { migrateEquipmentCode } from "@/lib/xtreme/equipment-area-codes";
 
 export const MACHINE_LABELS_KEY = "xtreme:machine-labels:v1";
 export const MACHINE_LABELS_EVENT = "xtreme:machine-labels-changed";
@@ -22,7 +23,10 @@ export function readMachineTexts(): MachineTexts {
     if (parsed.version !== 1 || !parsed.labels || typeof parsed.labels !== "object") {
       throw new Error("No se pudo leer los nombres compartidos.");
     }
-    return Object.fromEntries(Object.entries(parsed.labels).map(([id, value]) => [id, textFields(value)]));
+    return Object.fromEntries(Object.entries(parsed.labels).map(([id, value]) => {
+      const text = textFields(value);
+      return [id, { ...text, ...(text.code !== undefined ? { code: migrateEquipmentCode(id, text.code) } : {}) }];
+    }));
   }
 
   // Migrate once. Existing plano corrections have priority over older QR drafts.
@@ -44,6 +48,9 @@ export function readMachineTexts(): MachineTexts {
         labels[id] = { ...labels[id], ...textFields({ name: placement?.label, code: placement?.code }) };
       }
     }
+  }
+  for (const [id, text] of Object.entries(labels)) {
+    if (text.code !== undefined) text.code = migrateEquipmentCode(id, text.code);
   }
   window.localStorage.setItem(MACHINE_LABELS_KEY, JSON.stringify({ version: 1, labels }));
   return labels;

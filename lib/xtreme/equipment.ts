@@ -1,7 +1,11 @@
 import type { Db } from "mongodb";
 import { EQUIPMENT_ASSETS_COLLECTION } from "./shared";
+import { migrateEquipmentCode } from "./equipment-area-codes";
+export { migrateEquipmentCode } from "./equipment-area-codes";
 
 export type EquipmentArea =
+  | "Tren superior"
+  | "Abs"
   | "Piernas"
   | "Pesas - Bancos"
   | "Pesas - Discos"
@@ -20,7 +24,7 @@ export type EquipmentAssetDoc = {
   id: string;
   area: EquipmentArea;
   kind: EquipmentKind;
-  /** Código impreso en el piso, tal como está hoy (puede estar vacío o duplicado). */
+  /** Código editable por área; no identifica el activo ni cambia el destino del QR. */
   code: string;
   name: string;
   description?: string;
@@ -59,7 +63,7 @@ type SeedRow = Pick<
  * reemplazando los números impresos originales (repetidos y con huecos).
  * Bancos y discos conservan su `code` original (vacío) por ahora.
  */
-export const DEFAULT_EQUIPMENT_ASSETS: SeedRow[] = [
+const ORIGINAL_EQUIPMENT_ASSETS: SeedRow[] = [
   // ── Piernas (22) ───────────────────────────────────────────────────
   { id: "eq-001", area: "Piernas", kind: "machine", code: "PI-01", name: "Glúteo / extensión de cadera", location: "Planta baja - zona techada (frente a juegos/comida/baños)", status: "bueno", machineGuideId: "glute-hip-extension" },
   { id: "eq-002", area: "Piernas", kind: "machine", code: "PI-02", name: "Hip Abductor", location: "Planta baja - zona techada (frente a juegos/comida/baños)", status: "bueno", machineGuideId: "hip-abductor" },
@@ -208,6 +212,32 @@ export const DEFAULT_EQUIPMENT_ASSETS: SeedRow[] = [
   { id: "eq-131", area: "Poleas adicionales", kind: "machine", code: "PA-04", name: "Polea azul", location: "Poleas adicionales - Frente al VIP", status: "sin_dato", machineGuideId: "cable-station" },
 ];
 
+export const EQUIPMENT_AREA_CODES: Partial<Record<EquipmentArea, string>> = {
+  "Tren superior": "TS", Abs: "AB", Piernas: "PI", Cardio: "CA",
+  "Pesas - Bancos": "PB", "Pesas - Discos": "PD", "Poleas adicionales": "PA",
+};
+
+/** Reorganización por categoría; la ubicación física auditada y el assetId no cambian. */
+function currentArea(row: Pick<EquipmentAssetDoc, "area" | "machineGuideId">): EquipmentArea {
+  if (["torso-rotation", "ab-machine"].includes(row.machineGuideId ?? "")) return "Abs";
+  if (["Recepción - Izquierda", "Recepción - Derecha", "Zona Central"].includes(row.area)) {
+    if (["treadmill", "stair-stepper", "stair-climber", "bicicleta-estatica"].includes(row.machineGuideId ?? "")) return "Cardio";
+    return "Tren superior";
+  }
+  return row.area;
+}
+
+const areaCounts = new Map<string, number>();
+export const DEFAULT_EQUIPMENT_ASSETS: SeedRow[] = ORIGINAL_EQUIPMENT_ASSETS.map((row) => {
+  const area = currentArea(row);
+  const sequence = (areaCounts.get(area) ?? 0) + 1;
+  areaCounts.set(area, sequence);
+  return { ...row, area, code: `${EQUIPMENT_AREA_CODES[area]}-${String(sequence).padStart(2, "0")}` };
+});
+export function normalizeEquipmentArea<T extends Pick<EquipmentAssetDoc, "id" | "area" | "code" | "machineGuideId">>(row: T): T {
+  return { ...row, area: currentArea(row), code: migrateEquipmentCode(row.id, row.code) };
+}
+
 /** Upsert idempotente: no duplica si se corre de nuevo (mismo patrón que `ensureDefaultProducts`). */
 export async function ensureDefaultEquipmentAssets(db: Db) {
   if (!DEFAULT_EQUIPMENT_ASSETS.length) return;
@@ -245,10 +275,10 @@ export async function listEquipmentAssets(
   await ensureDefaultEquipmentAssets(db);
   const collection = db.collection<EquipmentAssetDoc>(EQUIPMENT_ASSETS_COLLECTION);
   const filter: Record<string, unknown> = {};
-  if (opts.area) filter.area = opts.area;
   if (opts.kind) filter.kind = opts.kind;
   if (opts.status) filter.status = opts.status;
-  return collection.find(filter).sort({ area: 1, code: 1, name: 1 }).toArray();
+  const rows = (await collection.find(filter).sort({ area: 1, code: 1, name: 1 }).toArray()).map(normalizeEquipmentArea);
+  return opts.area ? rows.filter((row) => row.area === opts.area) : rows;
 }
 
 export type EquipmentAssetPatch = Partial<

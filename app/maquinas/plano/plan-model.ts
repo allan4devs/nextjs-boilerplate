@@ -1,3 +1,5 @@
+import { migrateEquipmentCode } from "@/lib/xtreme/equipment-area-codes";
+
 export type FloorAssetKind = "machine" | "bench" | "plate";
 export type FloorAssetStatus = "bueno" | "fuera_de_servicio" | "pendiente" | "sin_dato";
 
@@ -10,6 +12,8 @@ export type FloorInventoryItem = {
   location: string;
   status: FloorAssetStatus;
   machineGuideId?: string;
+  trainingCategory?: string;
+  muscleGroup?: string;
 };
 
 export type Geometry = {
@@ -37,6 +41,7 @@ export type CustomElement = Geometry & {
 
 export type PlanDocument = {
   version: 1;
+  areaLayoutRevision?: number;
   canvas: {
     width: number;
     height: number;
@@ -51,38 +56,35 @@ export type PlanTarget =
   | { kind: "custom"; id: string };
 
 export const PLAN_STORAGE_KEY = "xtreme:machines-floor-plan:v1";
+export function floorPlanStorageKey(floor: 1 | 2) {
+  return floor === 1 ? PLAN_STORAGE_KEY : `${PLAN_STORAGE_KEY}:floor-2`;
+}
+
+export function createSecondFloorPlan(): PlanDocument {
+  return {
+    version: 1, areaLayoutRevision: AREA_LAYOUT_REVISION,
+    canvas: { width: 1600, height: 1000, gridSize: 20 },
+    placements: {},
+    customElements: [
+      { id: "floor-2-bikes", label: "Bicicletas", color: "#22d3ee" },
+      { id: "floor-2-calisthenics", label: "Calistenia", color: "#a78bfa" },
+      { id: "floor-2-free-weights", label: "Peso libre", color: "#fbbf24" },
+    ].map((block, index) => ({ ...block, type: "area", locked: false, x: 60 + index * 500, y: 100, width: 440, height: 400 })),
+  };
+}
 export const PLAN_VERSION = 1;
 export const MIN_ITEM_SIZE = 28;
 
-const CANVAS_WIDTH_MIN = 1400;
-const CANVAS_MIN_HEIGHT = 1000;
+export const AREA_LAYOUT_REVISION = 2;
 const OUTER_PADDING = 40;
 const ITEM_GAP = 16;
-const AREA_GAP = 34;
 const AREA_HEADER = 58;
-const COLUMN_GAP = 28;
-const COLUMN_GROUP_GAP = 72;
-const COLUMN_INNER_PAD = 16;
-const MACHINE_UNIT = 112;
-const NARROW_COLS_PER_ROW = 2;
-const WIDE_COLS_PER_ROW = 4;
-
-/**
- * El plano físico agrupa "Pesas - Bancos" + "Pesas - Discos" como una franja de
- * peso libre, "Cardio" como la franja de caminadoras, y el resto en columnas
- * lado a lado con "Piernas" aparte (más ancha). Los nombres de área son los
- * mismos del inventario; solo cambia cómo se acomodan al crear el plano inicial.
- */
-const BAND_AREAS = ["Pesas - Bancos", "Pesas - Discos", "Cardio"];
-const NARROW_COLUMN_AREAS = [
-  "Recepción - Izquierda",
-  "Recepción - Derecha",
-  "Zona Central",
-  "Poleas adicionales",
-];
-const WIDE_COLUMN_AREA = "Piernas";
+const AREA_ORDER = ["Tren superior", "Piernas", "Abs", "Cardio", "Poleas adicionales", "Pesas - Bancos", "Pesas - Discos"];
+const AREA_PREFIX: Record<string, string> = { "Tren superior": "TS", Piernas: "PI", Abs: "AB", Cardio: "CA", "Poleas adicionales": "PA", "Pesas - Bancos": "PB", "Pesas - Discos": "PD" };
 
 const AREA_COLORS: Record<string, string> = {
+  "Tren superior": "#60a5fa",
+  Abs: "#f472b6",
   Piernas: "#d8ff3e",
   "Pesas - Bancos": "#fbbf24",
   "Pesas - Discos": "#fb923c",
@@ -132,185 +134,84 @@ function slug(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-function packFlowLayout(
-  assets: FloorInventoryItem[],
-  originX: number,
-  originY: number,
-  maxWidth: number,
-): { placements: Record<string, AssetPlacement>; bottom: number } {
-  const placements: Record<string, AssetPlacement> = {};
-  let x = originX;
-  let y = originY;
-  let rowHeight = 0;
-
-  for (const asset of assets) {
-    const size = defaultSizeForKind(asset.kind);
-    if (x !== originX && x + size.width > originX + maxWidth) {
-      x = originX;
-      y += rowHeight + ITEM_GAP;
-      rowHeight = 0;
-    }
-
-    placements[asset.id] = { x, y, width: size.width, height: size.height, locked: false };
-    x += size.width + ITEM_GAP;
-    rowHeight = Math.max(rowHeight, size.height);
-  }
-
-  return { placements, bottom: rowHeight ? y + rowHeight : originY };
+/** Categories come from each machine's existing guide, not from its editable name. */
+function quadrantFor(asset: FloorInventoryItem): string {
+  if (asset.area === "Piernas") return asset.muscleGroup || asset.trainingCategory || "Piernas";
+  if (asset.area === "Abs") return "Abdominales y core";
+  return asset.trainingCategory || asset.area;
 }
 
-export function createInitialPlan(inventory: FloorInventoryItem[]): PlanDocument {
-  const groups = new Map<string, FloorInventoryItem[]>();
-  for (const asset of inventory) {
-    const group = groups.get(asset.area) ?? [];
-    group.push(asset);
-    groups.set(asset.area, group);
-  }
-
+export function createInitialPlan(inventory: FloorInventoryItem[], previous?: PlanDocument): PlanDocument {
   const placements: Record<string, AssetPlacement> = {};
   const customElements: CustomElement[] = [];
-
-  const narrowColWidth =
-    COLUMN_INNER_PAD * 2 + NARROW_COLS_PER_ROW * MACHINE_UNIT + (NARROW_COLS_PER_ROW - 1) * ITEM_GAP;
-  const wideColWidth =
-    COLUMN_INNER_PAD * 2 + WIDE_COLS_PER_ROW * MACHINE_UNIT + (WIDE_COLS_PER_ROW - 1) * ITEM_GAP;
-  const columnsRowWidth =
-    NARROW_COLUMN_AREAS.length * narrowColWidth +
-    (NARROW_COLUMN_AREAS.length - 1) * COLUMN_GAP +
-    COLUMN_GROUP_GAP +
-    wideColWidth;
-  const canvasWidth = Math.max(CANVAS_WIDTH_MIN, columnsRowWidth + OUTER_PADDING * 2);
-
-  let cursorY = OUTER_PADDING;
-
-  // Franjas anchas arriba: "Pesas - Bancos" + "Pesas - Discos" juntas leen como
-  // el bloque de peso libre; "Cardio" debajo lee como la franja de caminadoras.
-  for (const area of BAND_AREAS) {
-    const assets = groups.get(area) ?? [];
-    const areaTop = cursorY;
-    const innerX = OUTER_PADDING + 56;
-    const innerWidth = canvasWidth - OUTER_PADDING * 2 - 56;
-    const { placements: bandPlacements, bottom } = packFlowLayout(
-      assets,
-      innerX,
-      areaTop + AREA_HEADER,
-      innerWidth,
-    );
-    Object.assign(placements, bandPlacements);
-    const areaBottom = Math.max(areaTop + 118, bottom + 32);
-    customElements.push({
-      id: `seed-area-${slug(area)}`,
-      type: "area",
-      label: area,
-      color: colorForArea(area),
-      x: OUTER_PADDING,
-      y: areaTop,
-      width: canvasWidth - OUTER_PADDING * 2,
-      height: areaBottom - areaTop,
-      locked: true,
-    });
-    cursorY = areaBottom + AREA_GAP;
-  }
-
-  // Fila de columnas abajo: 4 angostas una junto a otra y "Piernas" aparte,
-  // más ancha, como el bloque PIERNA separado del plano físico.
-  const columnsTop = cursorY;
-  let columnX = OUTER_PADDING;
-  let columnsBottom = columnsTop;
-
-  for (const area of NARROW_COLUMN_AREAS) {
-    const assets = groups.get(area) ?? [];
-    const innerX = columnX + COLUMN_INNER_PAD;
-    const innerWidth = narrowColWidth - COLUMN_INNER_PAD * 2;
-    const contentTop = columnsTop + AREA_HEADER;
-
-    let contentBottom: number;
-    let gradasBox: CustomElement | null = null;
-
-    if (area === "Recepción - Izquierda") {
-      // Las 2 "gradas" (stair steppers) de esta área quedan aparte, en su
-      // propia caja anidada, como el recuadro "2 gradas" del plano físico.
-      const stairAssets = assets.filter((asset) => asset.machineGuideId === "stair-stepper");
-      const restAssets = assets.filter((asset) => asset.machineGuideId !== "stair-stepper");
-      const rest = packFlowLayout(restAssets, innerX, contentTop, innerWidth);
-      Object.assign(placements, rest.placements);
-      const gradasTop = rest.bottom + ITEM_GAP;
-      const gradas = packFlowLayout(stairAssets, innerX, gradasTop, innerWidth);
-      Object.assign(placements, gradas.placements);
-      contentBottom = stairAssets.length ? gradas.bottom : rest.bottom;
-      if (stairAssets.length) {
-        gradasBox = {
-          id: "seed-area-2-gradas",
-          type: "area",
-          label: `${stairAssets.length} gradas`,
-          color: "#f8fafc",
-          x: innerX - COLUMN_INNER_PAD / 2,
-          y: gradasTop - COLUMN_INNER_PAD / 2,
-          width: innerWidth + COLUMN_INNER_PAD,
-          height: gradas.bottom - gradasTop + COLUMN_INNER_PAD,
-          locked: true,
-        };
+  // Two columns with enough room for readable category quadrants and machine labels.
+  const largestWidth = Math.max(112, ...Object.values(previous?.placements ?? {}).map((item) => item.width));
+  const blockWidth = Math.max(940, largestWidth + 96);
+  const columns = blockWidth > 2300 ? 1 : 2;
+  const canvasWidth = Math.min(5000, OUTER_PADDING * 2 + blockWidth * columns + 40 * (columns - 1));
+  const columnBottoms = Array.from({ length: columns }, () => OUTER_PADDING);
+  const areas = [...new Set(inventory.map((asset) => asset.area))].sort((a, b) => {
+    const ai = AREA_ORDER.indexOf(a), bi = AREA_ORDER.indexOf(b);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || a.localeCompare(b);
+  });
+  for (const area of areas) {
+    const column = columnBottoms.indexOf(Math.min(...columnBottoms));
+    const x = OUTER_PADDING + column * (blockWidth + 40);
+    const y = columnBottoms[column];
+    const members = inventory.filter((asset) => asset.area === area);
+    const categories = [...new Set(members.map(quadrantFor))].sort((a, b) => a.localeCompare(b));
+    let cursorY = y + AREA_HEADER;
+    const childAreas: CustomElement[] = [];
+    for (const category of categories) {
+      const group = members.filter((asset) => quadrantFor(asset) === category);
+      const innerX = x + 32;
+      const top = cursorY;
+      let itemX = innerX + 16;
+      let itemY = top + 44;
+      let rowHeight = 0;
+      for (const asset of group) {
+        const old = previous?.placements[asset.id];
+        const size = old ?? defaultSizeForKind(asset.kind);
+        if (itemX > innerX + 16 && itemX + size.width > x + blockWidth - 48) {
+          itemX = innerX + 16;
+          itemY += rowHeight + ITEM_GAP;
+          rowHeight = 0;
+        }
+        placements[asset.id] = { ...old, ...(old?.code !== undefined ? { code: migrateEquipmentCode(asset.id, old.code) } : {}), x: itemX, y: itemY, width: size.width, height: size.height, locked: old?.locked ?? false };
+        itemX += size.width + ITEM_GAP;
+        rowHeight = Math.max(rowHeight, size.height);
       }
-    } else {
-      const result = packFlowLayout(assets, innerX, contentTop, innerWidth);
-      Object.assign(placements, result.placements);
-      contentBottom = result.bottom;
+      const height = itemY + rowHeight + 20 - top;
+      childAreas.push({ id: `seed-category-${slug(area)}-${slug(category)}`, type: "area", label: category,
+        color: colorForArea(area), locked: false, x: innerX, y: top, width: blockWidth - 64, height });
+      cursorY += height + 20;
     }
-
-    const columnBottom = Math.max(columnsTop + 160, contentBottom + 24);
-    customElements.push({
-      id: `seed-area-${slug(area)}`,
-      type: "area",
-      label: area,
-      color: colorForArea(area),
-      x: columnX,
-      y: columnsTop,
-      width: narrowColWidth,
-      height: columnBottom - columnsTop,
-      locked: true,
-    });
-    if (gradasBox) customElements.push(gradasBox);
-    columnsBottom = Math.max(columnsBottom, columnBottom);
-    columnX += narrowColWidth + COLUMN_GAP;
+    customElements.push({ id: `seed-area-${slug(area)}`, type: "area", label: `${AREA_PREFIX[area] ?? ""} ? ${area}`.replace(/^ ? /, ""),
+      color: colorForArea(area), locked: false, x, y, width: blockWidth, height: cursorY - y + 8 }, ...childAreas);
+    columnBottoms[column] = cursorY + 48;
   }
-
-  {
-    const assets = groups.get(WIDE_COLUMN_AREA) ?? [];
-    const wideX = columnX + COLUMN_GROUP_GAP - COLUMN_GAP;
-    const innerX = wideX + COLUMN_INNER_PAD;
-    const innerWidth = wideColWidth - COLUMN_INNER_PAD * 2;
-    const { placements: widePlacements, bottom } = packFlowLayout(
-      assets,
-      innerX,
-      columnsTop + AREA_HEADER,
-      innerWidth,
-    );
-    Object.assign(placements, widePlacements);
-    const columnBottom = Math.max(columnsTop + 160, bottom + 24);
-    customElements.push({
-      id: `seed-area-${slug(WIDE_COLUMN_AREA)}`,
-      type: "area",
-      label: WIDE_COLUMN_AREA,
-      color: colorForArea(WIDE_COLUMN_AREA),
-      x: wideX,
-      y: columnsTop,
-      width: wideColWidth,
-      height: columnBottom - columnsTop,
-      locked: true,
-    });
-    columnsBottom = Math.max(columnsBottom, columnBottom);
+  let height = Math.max(1000, ...columnBottoms);
+  // Keep user-created rooms, obstacles, doors and manual equipment as editable objects.
+  const extras = previous?.customElements.filter((element) => !element.id.startsWith("seed-area-") && !element.id.startsWith("seed-category-")) ?? [];
+  if (extras.length) {
+    const minX = Math.min(...extras.map((element) => element.x));
+    const minY = Math.min(...extras.map((element) => element.y));
+    const originY = height;
+    for (const element of extras) {
+      const moved = { ...element, x: element.x - minX + OUTER_PADDING, y: element.y - minY + originY };
+      customElements.push(moved);
+      height = Math.max(height, moved.y + moved.height + OUTER_PADDING);
+    }
   }
+  return { version: PLAN_VERSION, areaLayoutRevision: AREA_LAYOUT_REVISION,
+    canvas: { width: Math.max(canvasWidth, ...customElements.map((element) => element.x + element.width + OUTER_PADDING)), height, gridSize: previous?.canvas.gridSize ?? 20 },
+    placements, customElements };
+}
 
-  return {
-    version: PLAN_VERSION,
-    canvas: {
-      width: canvasWidth,
-      height: Math.max(CANVAS_MIN_HEIGHT, columnsBottom + OUTER_PADDING),
-      gridSize: 20,
-    },
-    placements,
-    customElements,
-  };
+/** Runs once for old saved layouts. Later hand edits keep their exact positions. */
+export function migratePlanAreas(plan: PlanDocument, inventory: FloorInventoryItem[]): PlanDocument {
+  if ((plan.areaLayoutRevision ?? 0) >= AREA_LAYOUT_REVISION) return plan;
+  return createInitialPlan(inventory.filter((asset) => Boolean(plan.placements[asset.id])), plan);
 }
 
 export function clamp(value: number, min: number, max: number) {
@@ -431,7 +332,10 @@ export function getAreaChildrenTargets(
 
   // Other custom elements inside area (excluding the area itself)
   for (const custom of plan.customElements) {
-    if (custom.id !== areaId && isItemInsideArea(custom, area)) {
+    const inside = custom.type === "area"
+      ? custom.x >= area.x && custom.y >= area.y && custom.x + custom.width <= area.x + area.width && custom.y + custom.height <= area.y + area.height
+      : isItemInsideArea(custom, area);
+    if (custom.id !== areaId && inside) {
       targets.push({ kind: "custom", id: custom.id });
     }
   }
@@ -479,7 +383,19 @@ export function reorganizeAreaChildren(
   if (!area) return null;
 
   const currentAreaGeom = customAreaGeometry ?? area;
-  const childTargets = getAreaChildrenTargets(plan, areaId, inventory);
+  const allChildren = getAreaChildrenTargets(plan, areaId, inventory);
+  const nestedAreas = allChildren.flatMap((target) => {
+    const element = target.kind === "custom" ? plan.customElements.find((item) => item.id === target.id && item.type === "area") : undefined;
+    return element ? [element] : [];
+  });
+  // Pack immediate children only. Nested quadrants carry their own contents together.
+  const childTargets = allChildren.filter((target) => {
+    const geometry = getTargetGeometry(plan, target);
+    return geometry && !nestedAreas.some((nested) => nested.id !== target.id &&
+      geometry.x >= nested.x && geometry.y >= nested.y &&
+      geometry.x + geometry.width <= nested.x + nested.width &&
+      geometry.y + geometry.height <= nested.y + nested.height);
+  });
   if (!childTargets.length) {
     return {
       plan: customAreaGeometry
@@ -505,7 +421,7 @@ export function reorganizeAreaChildren(
 
   const PADDING_X = 16;
   const PADDING_BOTTOM = 16;
-  const HEADER_OFFSET = 42;
+  const HEADER_OFFSET = AREA_HEADER;
   const GAP_X = 14;
   const GAP_Y = 14;
 
@@ -543,6 +459,15 @@ export function reorganizeAreaChildren(
         height: h,
       },
     });
+
+    if (child.target.kind === "custom" && nestedAreas.some((nested) => nested.id === child.target.id)) {
+      for (const descendant of getAreaChildrenTargets(plan, child.target.id, inventory)) {
+        const geometry = getTargetGeometry(plan, descendant);
+        if (geometry) updates.push({ target: descendant, geometry: {
+          ...geometry, x: geometry.x + cursorX - child.geometry.x, y: geometry.y + cursorY - child.geometry.y,
+        } });
+      }
+    }
 
     cursorX += w + GAP_X;
     rowHeight = Math.max(rowHeight, h);
@@ -710,6 +635,7 @@ export function parsePlanDocument(
 
   return {
     version: PLAN_VERSION,
+    ...(finiteNumber(value.areaLayoutRevision) ? { areaLayoutRevision: value.areaLayoutRevision } : {}),
     canvas,
     placements,
     customElements,
