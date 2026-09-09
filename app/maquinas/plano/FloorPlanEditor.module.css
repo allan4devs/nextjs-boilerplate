@@ -240,6 +240,12 @@
   text-transform: uppercase;
 }
 
+.assetItem .itemName {
+  text-transform: none;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
 .benchItem {
   padding: 7px 8px 8px;
 }

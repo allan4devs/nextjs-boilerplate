@@ -16,7 +16,7 @@ function load(file, imports = {}, globals = {}) {
 }
 
 const model = load("app/maquinas/plano/plan-model.ts", { "@/lib/xtreme/equipment-area-codes": load("lib/xtreme/equipment-area-codes.ts") });
-const { DEFAULT_EQUIPMENT_ASSETS } = load("lib/xtreme/equipment.ts", { "./shared": {}, "./equipment-area-codes": load("lib/xtreme/equipment-area-codes.ts") });
+const { DEFAULT_EQUIPMENT_ASSETS } = load("lib/xtreme/equipment.ts", { "./shared": {}, "./machine-display-names": load("lib/xtreme/machine-display-names.ts"), "./equipment-area-codes": load("lib/xtreme/equipment-area-codes.ts") });
 const inventory = DEFAULT_EQUIPMENT_ASSETS.filter((asset) => asset.kind === "machine");
 const first = inventory[0].id;
 const second = inventory[1].id;
@@ -32,7 +32,7 @@ const storage = new Map([
 let writesBlocked = false;
 const events = [];
 function tab() {
-  return load("app/maquinas/_components/machine-label-store.ts", { "../plano/plan-model": model, "@/lib/xtreme/equipment-area-codes": load("lib/xtreme/equipment-area-codes.ts") }, {
+  return load("app/maquinas/_components/machine-label-store.ts", { "../plano/plan-model": model, "@/lib/xtreme/machine-display-names": load("lib/xtreme/machine-display-names.ts"), "@/lib/xtreme/equipment-area-codes": load("lib/xtreme/equipment-area-codes.ts") }, {
     Event: class { constructor(type) { this.type = type; } },
     window: {
       localStorage: {

@@ -1423,35 +1423,42 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
     announce("Bloque girado 90°");
   };
 
-  const duplicateSelectedCustom = () => {
-    if (!selectedCustom) return;
+  const duplicateSelectedItem = () => {
+    const source: CustomElement | null = selectedCustom ?? (selectedAsset && selectedPlacement ? {
+      ...selectedPlacement,
+      id: selectedAsset.id,
+      type: "equipment",
+      label: selectedPlacement.label ?? selectedAsset.name,
+      color: colorForArea(selectedAsset.area),
+    } : null);
+    if (!source) return;
     const current = history.present;
     const offset = current.canvas.gridSize * 2;
     const geometry = clampGeometry(
       {
-        ...selectedCustom,
+        ...source,
         x:
-          selectedCustom.x + selectedCustom.width + offset <= current.canvas.width
-            ? selectedCustom.x + offset
-            : selectedCustom.x - offset,
+          source.x + source.width + offset <= current.canvas.width
+            ? source.x + offset
+            : source.x - offset,
         y:
-          selectedCustom.y + selectedCustom.height + offset <= current.canvas.height
-            ? selectedCustom.y + offset
-            : selectedCustom.y - offset,
+          source.y + source.height + offset <= current.canvas.height
+            ? source.y + offset
+            : source.y - offset,
       },
       current,
     );
     const element: CustomElement = {
-      ...selectedCustom,
+      ...source,
       ...geometry,
       id: createCustomId(),
-      label: `${selectedCustom.label} copia`,
+      label: `${source.label} copia`,
       locked: false,
     };
     const next = { ...current, customElements: [...current.customElements, element] };
     commitPlan(next);
     focusTarget({ kind: "custom", id: element.id });
-    announce("Elemento duplicado");
+    announce(selectedAsset ? "Máquina duplicada como copia editable del plano" : "Elemento duplicado");
   };
 
   const updateCanvas = (field: "width" | "height" | "gridSize", rawValue: string) => {
@@ -1944,8 +1951,8 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
                       onFocus={() => setSelectedKeys((prev) => (prev.has(key) ? prev : new Set([key])))}
                     >
                       <span className={styles.itemMeta}>{displayCode || asset.id}</span>
-                      <span className={styles.itemName}>{asset.kind === "plate" ? shortPlateLabel(displayName) : displayName}</span>
-                      <span className={styles.itemKind}>{KIND_LABELS[asset.kind]}</span>
+                      <span className={styles.itemName} title={`${displayName} · ${displayCode}`}>{asset.kind === "plate" ? shortPlateLabel(displayName) : displayName}</span>
+                      <span className={styles.itemKind}>{asset.kind === "machine" ? (asset.trainingCategory === "Core" ? "Abdominales" : asset.trainingCategory ?? "Máquina") : KIND_LABELS[asset.kind]}</span>
                       {placement.locked && <Lock className={styles.lockIcon} aria-hidden="true" />}
                       {!placement.locked && (
                         <button
@@ -2215,7 +2222,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
                     {targetLocked(history.present, selected) ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                     {targetLocked(history.present, selected) ? "Liberar" : "Fijar posición"}
                   </button>
-                  {selectedCustom && <button type="button" onClick={duplicateSelectedCustom} disabled={selectedLocked} className={TOOL_BUTTON}><Copy className="h-4 w-4" /> Duplicar</button>}
+                  <button type="button" onClick={duplicateSelectedItem} className={TOOL_BUTTON} title="Crear una copia editable en el plano"><Copy className="h-4 w-4" /> {selectedAsset ? "Duplicar máquina" : "Duplicar"}</button>
                   <button type="button" onClick={() => removeTarget(selected)} disabled={selectedLocked} className={`${TOOL_BUTTON} border-red-400/25 hover:border-red-400 hover:text-red-200`}>
                     <Trash2 className="h-4 w-4" /> {selectedAsset ? "Sin ubicar" : "Eliminar"}
                   </button>

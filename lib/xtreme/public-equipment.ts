@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/helpers/mongodb";
 import { DEFAULT_EQUIPMENT_ASSETS, normalizeEquipmentArea, type EquipmentAssetDoc } from "./equipment";
 import { findMachineGuide } from "@/app/components/member/catalog/machines";
+import { migrateMachineName } from "./machine-display-names";
 import { EQUIPMENT_ASSETS_COLLECTION } from "./shared";
 
 /** Only fields intended for floor plans and public machine labels. Never serialize financial/admin fields. */
@@ -10,7 +11,7 @@ export async function getPublicEquipment(): Promise<{ inventory: PublicEquipment
   const project = (asset: PublicEquipment): PublicEquipment => {
     const { id, area, kind, code, name, location, status, machineGuideId, description, brand, year } = normalizeEquipmentArea(asset);
     const guide = machineGuideId ? findMachineGuide(machineGuideId) : undefined;
-    return { id, area, kind, code, name, location, status,
+    return { id, area, kind, code, name: kind === "machine" ? migrateMachineName(name) : name, location, status,
       ...(description ? { description } : {}), ...(brand ? { brand } : {}), ...(year ? { year } : {}),
       ...(machineGuideId ? { machineGuideId } : {}),
       ...(guide ? { trainingCategory: guide.zone, muscleGroup: guide.muscles[0] } : {}),

@@ -15,7 +15,8 @@ function load(file, imports = {}) {
   return exports;
 }
 export const codes = load("lib/xtreme/equipment-area-codes.ts");
-export const equipment = load("lib/xtreme/equipment.ts", { "./shared": {}, "./equipment-area-codes": codes });
+export const names = load("lib/xtreme/machine-display-names.ts");
+export const equipment = load("lib/xtreme/equipment.ts", { "./shared": {}, "./equipment-area-codes": codes, "./machine-display-names": names });
 export const model = load("app/maquinas/plano/plan-model.ts", { "@/lib/xtreme/equipment-area-codes": codes });
 const { MACHINE_GUIDE } = load("app/components/member/catalog/machines.ts");
 export function categorize(asset) {

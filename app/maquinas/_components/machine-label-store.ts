@@ -1,5 +1,6 @@
 import { PLAN_STORAGE_KEY, type PlanDocument } from "../plano/plan-model";
 import { migrateEquipmentCode } from "@/lib/xtreme/equipment-area-codes";
+import { migrateMachineName } from "@/lib/xtreme/machine-display-names";
 
 export const MACHINE_LABELS_KEY = "xtreme:machine-labels:v1";
 export const MACHINE_LABELS_EVENT = "xtreme:machine-labels-changed";
@@ -10,7 +11,7 @@ function textFields(value: unknown): MachineText {
   if (!value || typeof value !== "object") return {};
   const text = value as MachineText;
   return {
-    ...(typeof text.name === "string" ? { name: text.name.slice(0, 140) } : {}),
+    ...(typeof text.name === "string" ? { name: migrateMachineName(text.name.slice(0, 140)) } : {}),
     ...(typeof text.code === "string" ? { code: text.code.slice(0, 32) } : {}),
   };
 }
@@ -69,7 +70,7 @@ export function applyMachineTexts(plan: PlanDocument, labels: MachineTexts): Pla
   return { ...plan, placements: Object.fromEntries(Object.entries(plan.placements).map(([id, placement]) => {
     const text = labels[id];
     return [id, { ...placement,
-      ...(text?.name !== undefined ? { label: text.name } : {}),
+      ...(text?.name !== undefined ? { label: text.name } : placement.label !== undefined ? { label: migrateMachineName(placement.label) } : {}),
       ...(text?.code !== undefined ? { code: text.code } : {}),
     }];
   })) };
