@@ -1,3 +1,4 @@
+import { QR_GROUPS } from "@/lib/xtreme/qr-groups";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit, diffFields } from "@/lib/xtreme/audit";
@@ -141,6 +142,20 @@ export async function PATCH(req: NextRequest) {
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const db = await getDb();
+  const group = QR_GROUPS.find(item => item.id === id);
+  if (group) {
+    const { patch } = parsed;
+    if (Object.keys(patch).some(key => !["name", "code"].includes(key))) {
+      return NextResponse.json({ error: "Solo nombre y código se editan en etiquetas grupales." }, { status: 400 });
+    }
+    const groups = db.collection("xtreme_gym_qr_groups");
+    const beforeGroup = await groups.findOne({ id });
+    await groups.updateOne({ id }, { $set: { ...patch, updatedAt: new Date() }, $setOnInsert: { id, createdAt: new Date() } }, { upsert: true });
+    await writeAudit(db, { actorRole: session.role, actorId: session.staffId, actorName: session.staffName,
+      action: "equipment_asset_updated", targetType: "system", targetId: id,
+      summary: `Actualizó etiqueta grupal ${group.name}`, changes: diffFields(beforeGroup ?? group, patch) });
+    return NextResponse.json({ asset: { ...group, ...beforeGroup, ...patch, status: "sin_dato", floor: 1 } });
+  }
   const collection = db.collection<EquipmentAssetDoc>(EQUIPMENT_ASSETS_COLLECTION);
   let before = await collection.findOne({ id });
   if (!before && DEFAULT_EQUIPMENT_ASSETS.some((asset) => asset.id === id)) {

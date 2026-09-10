@@ -5,7 +5,7 @@
   "scripts": {
     "predev": "node scripts/sync-face-models.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/sync-face-models.mjs",
+    "prebuild": "node scripts/sync-face-models.mjs && node scripts/build-video-library.mjs",
     "build": "next build",
     "face:models": "node scripts/sync-face-models.mjs",
     "start": "next start",

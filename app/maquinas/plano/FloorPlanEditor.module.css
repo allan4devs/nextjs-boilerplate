@@ -12,6 +12,35 @@
   flex: 1 1 auto;
 }
 
+.showControlsButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 65;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid rgba(216, 255, 62, 0.5);
+  background: rgba(7, 7, 7, 0.92);
+  padding: 0 14px;
+  color: #eaff93;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.showControlsButton:hover,
+.showControlsButton:focus-visible {
+  border-color: #d8ff3e;
+  background: #d8ff3e;
+  color: #070707;
+  outline: none;
+}
+
 .inventoryPanel,
 .inspectorPanel {
   position: fixed;
@@ -69,6 +98,7 @@
   flex: 1 1 auto;
   overflow: auto;
   overscroll-behavior: contain;
+  touch-action: none;
   background:
     linear-gradient(45deg, rgba(255, 255, 255, 0.018) 25%, transparent 25%),
     linear-gradient(-45deg, rgba(255, 255, 255, 0.018) 25%, transparent 25%),
@@ -80,6 +110,10 @@
 }
 
 .canvasViewport.panReady {
+  cursor: grab;
+}
+
+.canvasViewport.backgroundPanReady {
   cursor: grab;
 }
 

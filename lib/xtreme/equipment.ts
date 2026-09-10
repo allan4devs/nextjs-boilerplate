@@ -101,7 +101,7 @@ const ORIGINAL_EQUIPMENT_ASSETS: SeedRow[] = [
   { id: "eq-016", area: "Piernas", kind: "machine", code: "PI-16", name: "Sissy Squats", description: "Confirmada por rótulo en foto.", location: "Planta baja - frente a bronceado / venta de batidos", status: "bueno", machineGuideId: "sissy-squat" },
   { id: "eq-017", area: "Piernas", kind: "machine", code: "PI-17", name: "Hack Squat", description: "Corregido de 'sentadilla AC'.", location: "Planta baja - frente a bronceado / venta de batidos", status: "bueno", machineGuideId: "hack-squat" },
   { id: "eq-018", area: "Piernas", kind: "machine", code: "PI-18", name: "Sentadilla Perfecta", description: "Confirmada por rótulo en foto.", location: "Planta baja - frente a bronceado / venta de batidos", status: "bueno", machineGuideId: "sentadilla-perfecta" },
-  { id: "eq-019", area: "Piernas", kind: "machine", code: "PI-19", name: "Máquina pequeña, tubo con pesas en extremos", description: "Sin etiqueta ni número.", location: "Planta baja - zona techada (cerca de comidas)", status: "pendiente", machineGuideId: "tubo-pesas-pendiente" },
+  { id: "eq-019", area: "Piernas", kind: "machine", code: "PI-19A", name: "Máquina pequeña, tubo con pesas en extremos", description: "Sin etiqueta ni número.", location: "Planta baja - zona techada (cerca de comidas)", status: "pendiente", machineGuideId: "tubo-pesas-pendiente" },
   { id: "eq-020", area: "Piernas", kind: "machine", code: "PI-20", name: "Máquina de pie tipo multi-estación", description: "Nota 'dejar máquina descargada'; sin etiqueta.", location: "Planta baja - frente a bronceado / venta de batidos", status: "pendiente", machineGuideId: "multiestacion-pie-pendiente" },
   { id: "eq-021", area: "Piernas", kind: "machine", code: "PI-21", name: "Hip Thrust (rack con plataforma)", description: "Sin etiqueta ni número.", location: "Planta baja - zona techada (frente a juegos/comida/baños)", status: "bueno", machineGuideId: "hip-thrust" },
   { id: "eq-022", area: "Piernas", kind: "machine", code: "PI-22", name: "Hip Abduction", description: "Misma familia que #19, sin etiqueta de número.", location: "Planta baja - zona techada (frente a juegos/comida/baños)", status: "bueno", machineGuideId: "hip-abductor" },
@@ -211,7 +211,6 @@ const ORIGINAL_EQUIPMENT_ASSETS: SeedRow[] = [
   { id: "eq-116", area: "Recepción - Derecha", kind: "machine", code: "RD-04", name: "Rotación de tronco", location: "Recepción - Derecha - Piso", status: "sin_dato", machineGuideId: "torso-rotation" },
   { id: "eq-117", area: "Recepción - Derecha", kind: "machine", code: "RD-05", name: "Abdominal", location: "Recepción - Derecha - Piso", status: "sin_dato", machineGuideId: "ab-machine" },
   { id: "eq-118", area: "Recepción - Derecha", kind: "machine", code: "RD-06", name: "Back extension", location: "Recepción - Derecha - Piso", status: "sin_dato", machineGuideId: "back-extension" },
-  { id: "eq-119", area: "Recepción - Derecha", kind: "machine", code: "RD-07", name: "Press inclinado", location: "Recepción - Derecha - Piso", status: "sin_dato", machineGuideId: "incline-chest-press" },
   { id: "eq-120", area: "Recepción - Derecha", kind: "machine", code: "RD-08", name: "Aperturas de pecho (Titanium) - brazos hacia el frente", location: "Recepción - Derecha - Piso", status: "sin_dato", machineGuideId: "pec-deck" },
   { id: "eq-121", area: "Recepción - Derecha", kind: "machine", code: "RD-09", name: "Chest Incline Press (más nueva, similar a la Titanium)", location: "Recepción - Derecha - Piso", status: "sin_dato", machineGuideId: "incline-chest-press" },
   { id: "eq-122", area: "Recepción - Derecha", kind: "machine", code: "RD-10", name: "Banca inclinada con postes en ángulo hacia arriba, pesos a los lados", description: "Uso/nombre exacto pendiente de definir.", location: "Recepción - Derecha - Piso", status: "sin_dato", machineGuideId: "banca-inclinada-pendiente" },
@@ -251,7 +250,7 @@ export const DEFAULT_EQUIPMENT_ASSETS: SeedRow[] = ORIGINAL_EQUIPMENT_ASSETS.map
   const sequence = (areaCounts.get(area) ?? 0) + 1;
   areaCounts.set(area, sequence);
   return { ...row, name: migrateMachineName(row.name), area, code: `${EQUIPMENT_AREA_CODES[area]}-${String(sequence).padStart(2, "0")}` };
-}).concat(SECOND_FLOOR_EQUIPMENT);
+}).filter(row => row.id !== "eq-019").concat(SECOND_FLOOR_EQUIPMENT);
 export function normalizeEquipmentArea<T extends Pick<EquipmentAssetDoc, "id" | "area" | "code" | "machineGuideId">>(row: T): T {
   return { ...row, area: currentArea(row), code: migrateEquipmentCode(row.id, row.code) };
 }

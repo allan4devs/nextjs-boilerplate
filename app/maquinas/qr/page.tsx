@@ -1,7 +1,10 @@
+import { getPublicQrGroups } from "@/lib/xtreme/public-qr-groups";
+import { qrGroupPath } from "@/lib/xtreme/qr-groups";
+import { absoluteAppUrl } from "@/lib/constants/app-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { physicalMachineQrValue } from "@/app/lib/physical-machine-links";
+import { isPrintableEquipment, physicalMachineQrValue } from "@/app/lib/physical-machine-links";
 import { getPublicEquipment, type PublicEquipment } from "@/lib/xtreme/public-equipment";
 import EditableQrSheet, { type EditableQrItem } from "../_components/EditableQrSheet";
 
@@ -15,18 +18,18 @@ export const dynamic = "force-dynamic";
 
 function physicalMachineLabels(inventory: PublicEquipment[]): EditableQrItem[] {
   const machines = inventory.filter(
-    (asset) => asset.kind === "machine" && Boolean(asset.machineGuideId),
+    isPrintableEquipment,
   );
   const totals = new Map<string, number>();
   const seen = new Map<string, number>();
 
   for (const asset of machines) {
-    const guideId = asset.machineGuideId as string;
+    const guideId = asset.machineGuideId || asset.id;
     totals.set(guideId, (totals.get(guideId) ?? 0) + 1);
   }
 
-  return machines.map((asset) => {
-    const machineGuideId = asset.machineGuideId as string;
+  const machineItems = machines.map((asset) => {
+    const machineGuideId = asset.machineGuideId || asset.id;
     const unit = (seen.get(machineGuideId) ?? 0) + 1;
     seen.set(machineGuideId, unit);
     return {
@@ -45,11 +48,19 @@ function physicalMachineLabels(inventory: PublicEquipment[]): EditableQrItem[] {
       status: asset.status,
     };
   });
+  return machineItems;
 }
 
 export default async function QrSheetPage() {
   const { inventory, source } = await getPublicEquipment();
-  const items = physicalMachineLabels(inventory);
+  const groups = await getPublicQrGroups();
+  const groupItems: EditableQrItem[] = groups.map(group => ({
+    assetId: group.id, floor: 1, machineGuideId: group.id, id: group.id,
+    name: group.name, zone: group.area, code: group.code, baseCode: group.code,
+    unitLetter: null, unit: 1, units: 1, status: "sin_dato",
+    url: absoluteAppUrl(qrGroupPath(group.id)),
+  }));
+  const items = [...physicalMachineLabels(inventory), ...groupItems];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -67,7 +78,7 @@ export default async function QrSheetPage() {
           Códigos y QR de máquinas
         </h1>
         <p className="mt-4 max-w-3xl text-sm font-semibold leading-6 text-white/65 text-pretty">
-          La hoja sale del inventario físico: {items.length} equipos registrados, una etiqueta por máquina.
+          La hoja sale del inventario físico: {items.length} equipos registrados, una etiqueta por equipo. Incluye bancos; discos y mancuernas llevan dos etiquetas grupales de cada tipo, y curl con barra lleva una.
           Descargá un solo PDF con dos etiquetas de 9×16 cm por hoja A4, centradas y listas
           para recortar y pegar en el costado del aparato. Podés ordenar las etiquetas y editar el código de
           máquina o el nombre; el código QR no se edita y siempre apunta a la ficha pública.

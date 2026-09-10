@@ -60,3 +60,5 @@ public/xtreme/*
 
 .vercel
 .env*.local
+
+!public/xtreme/maquina-pendiente.svg

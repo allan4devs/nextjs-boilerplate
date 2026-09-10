@@ -129,7 +129,7 @@ export default function QrSheet({ items }: { items: MachineLabel[] }) {
     }
   }
 
-  const modelCount = useMemo(() => new Set(items.map((i) => i.id)).size, [items]);
+  const modelCount = useMemo(() => new Set(items.map((i) => i.url)).size, [items]);
 
   // Libera el object URL de la etiqueta al cerrar el modal o salir de la página.
   useEffect(() => {
@@ -197,8 +197,8 @@ export default function QrSheet({ items }: { items: MachineLabel[] }) {
           body { background: #fff !important; }
           body:has(.machine-label-print) * { visibility: hidden; }
           .machine-label-print, .machine-label-print * { visibility: visible !important; }
-          .machine-label-print { display: grid !important; grid-template-columns: 90mm 90mm; gap: 8mm; position: absolute; top: 0; left: 0; }
-          .machine-label-print img { display: block; width: 90mm; height: 160mm; break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+          .machine-label-print { display: grid !important; grid-template-columns: 90mm 90mm; gap: 8mm; position: absolute; top: 0; left: 0; border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+          .machine-label-print img { display: block; width: 90mm; height: 160mm; break-inside: avoid; border: 0 !important; outline: 0 !important; box-shadow: none !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
         }
       `}</style>
 

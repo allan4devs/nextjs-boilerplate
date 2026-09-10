@@ -59,6 +59,10 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
   const [draft, setDraft] = useState<MachineMediaDraft>(toMediaDraft(undefined));
   const [siblings, setSiblings] = useState<EquipmentAssetLite[]>([]);
   const [videoLibrary, setVideoLibrary] = useState<VideoLibraryItem[]>([]);
+  const [preview, setPreview] = useState<VideoLibraryItem | null>(null);
+  const [query, setQuery] = useState("");
+  const [libraryError, setLibraryError] = useState("");
+  const [previewError, setPreviewError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -86,6 +90,7 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
         const found = (mediaJson.items ?? []).find((item) => item.id === machineId);
         setDraft(toMediaDraft(found));
         setSiblings((assetsJson.assets ?? []).filter((a) => a.machineGuideId === machineId));
+        if (!libraryRes.ok) setLibraryError("No se pudo cargar la biblioteca de videos. Recarg? la p?gina para reintentar.");
         if (libraryRes.ok) {
           const libraryJson = (await libraryRes.json()) as { items?: VideoLibraryItem[] };
           if (active) setVideoLibrary(libraryJson.items ?? []);
@@ -222,38 +227,36 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
             </label>
           </div>
 
-          {videoLibrary.length > 0 && (
-            <div className="space-y-1.5">
-              <GameLabel tone="white">Videos subidos en public/videos</GameLabel>
-              <div className="flex flex-wrap gap-1.5">
-                {videoLibrary.map((item) => {
-                  const active = draft.videoUrl === item.path;
-                  return (
-                    <button
-                      key={item.path}
-                      type="button"
-                      onClick={() => {
-                        setDraft((prev) => ({
-                          ...prev,
-                          videoUrl: item.path,
-                          videoLabel: prev.videoLabel || titleizeFileName(item.name),
-                        }));
-                        setSaved(false);
-                      }}
-                      className={`inline-flex items-center gap-1.5 border-2 px-2 py-1.5 text-[10px] font-black uppercase tracking-wide transition ${
-                        active
-                          ? "border-[#d8ff3e] bg-[#d8ff3e]/10 text-[#d8ff3e]"
-                          : "border-white/15 text-white/55 hover:border-[#d8ff3e]/50 hover:text-white"
-                      }`}
-                    >
-                      <FileVideo className="h-3.5 w-3.5" />
-                      {item.name}
-                    </button>
-                  );
-                })}
-              </div>
+          <div className="space-y-3">
+            <GameLabel tone="white">Videos de public ({videoLibrary.length})</GameLabel>
+            <p className="text-xs text-white/55">Busc? por nombre, reproduc? para confirmar y luego seleccion? el video. Al final, guard? los cambios de la ficha.</p>
+            {libraryError && <GameCallout tone="orange">{libraryError}</GameCallout>}
+            <input aria-label="Buscar videos por nombre" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nombre o carpeta?" className={INPUT_CLASS} />
+            <div className="max-h-64 space-y-1 overflow-y-auto">
+              {videoLibrary.filter((item) => item.name.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es"))).map((item) => (
+                <button key={item.path} type="button" aria-pressed={preview?.path === item.path}
+                  onClick={() => { setPreview(item); setPreviewError(false); }}
+                  className={`flex w-full items-center gap-2 border-2 p-3 text-left text-xs transition ${preview?.path === item.path ? "border-[#d8ff3e] text-[#d8ff3e]" : "border-white/15 text-white/70 hover:border-white/40"}`}>
+                  <FileVideo className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 break-all">{item.name}</span>
+                  {draft.videoUrl === item.path && <span className="ml-auto shrink-0 text-[#d8ff3e]">Seleccionado</span>}
+                </button>
+              ))}
             </div>
-          )}
+            {!libraryError && !videoLibrary.length && <p className="text-xs text-white/55">No hay videos en public.</p>}
+            {!!videoLibrary.length && !videoLibrary.some((item) => item.name.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es"))) && <p className="text-xs text-white/55">No hay videos con ese nombre.</p>}
+            {preview && (
+              <div className="space-y-3 border-2 border-white/15 p-3">
+                <p className="break-all text-sm font-bold">{preview.name}</p>
+                <video key={preview.path} src={preview.path} controls playsInline preload="metadata" aria-label={`Vista previa de ${preview.name}`} onError={() => setPreviewError(true)} className="max-h-96 w-full bg-black" />
+                {previewError && <p role="alert" className="text-xs text-orange-300">No se pudo reproducir este archivo. Verific? que exista y que su formato sea compatible con el navegador.</p>}
+                <GameButton variant="lime" disabled={saving} onClick={() => {
+                  setDraft((prev) => ({ ...prev, videoUrl: preview.path, videoLabel: titleizeFileName(preview.name.split("/").pop() ?? preview.name).slice(0, 80) }));
+                  setSaved(false);
+                }}>Seleccionar este video</GameButton>
+              </div>
+            )}
+          </div>
 
           {!draft.videoUrl && machine.videoUrl && (
             <p className="text-xs font-bold text-white/40">
@@ -312,7 +315,7 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
           {error && <p className="text-xs font-bold text-red-300">{error}</p>}
           {saved && !error && <p className="text-xs font-bold text-[#d8ff3e]">Guardado.</p>}
 
-          <GameButton variant="lime" onClick={() => void save()} disabled={saving}>
+          <GameButton variant="lime" onClick={() => void save()} disabled={saving || loading || !!loadError}>
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Guardar video y fotos
           </GameButton>

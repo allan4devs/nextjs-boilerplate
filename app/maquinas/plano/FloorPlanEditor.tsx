@@ -22,6 +22,8 @@ import {
   Copy,
   DoorOpen,
   Download,
+  Eye,
+  EyeOff,
   Grid3X3,
   Hand,
   Layers,
@@ -269,6 +271,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
   const [message, setMessage] = useState("");
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [controlsHidden, setControlsHidden] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -1146,7 +1149,11 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
   };
 
   const onCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button === 1 || (event.button === 0 && spacePressed)) {
+    const hasSelectionModifier = event.shiftKey || event.ctrlKey || event.metaKey;
+    const shouldPanEmptyBackground =
+      event.button === 0 && selectedKeys.size === 0 && !spacePressed && !hasSelectionModifier;
+
+    if (event.button === 1 || (event.button === 0 && (spacePressed || shouldPanEmptyBackground))) {
       beginPan(event);
       return;
     }
@@ -1573,7 +1580,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
 
   return (
     <section className={`${styles.editorPage} w-full px-3 py-2.5 sm:px-4`}>
-      <header className={`${styles.pageHeader} mb-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}>
+      {!controlsHidden && <header className={`${styles.pageHeader} mb-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}>
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/maquinas"
@@ -1597,9 +1604,9 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
             <Save className="h-3.5 w-3.5 text-amber-300" /> Autoguardado MongoDB
           </span>
         </div>
-      </header>
+      </header>}
 
-      <div className={`${styles.toolbar} ${PANEL_CLASS} mb-2.5 flex flex-wrap items-center gap-2 p-2.5`}>
+      {!controlsHidden && <div className={`${styles.toolbar} ${PANEL_CLASS} mb-2.5 flex flex-wrap items-center gap-2 p-2.5`}>
         <button
           type="button"
           onClick={() => setInventoryOpen((value) => !value)}
@@ -1690,9 +1697,18 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
           {saveState === "error" ? <CircleAlert className="h-4 w-4 text-red-400" /> : saveState === "saved" ? <Check className="h-4 w-4 text-emerald-400" /> : <Save className="h-4 w-4 text-[#d8ff3e]" />}
           {saveState === "loading" ? "Cargando" : saveState === "saving" ? "Guardando" : saveState === "error" ? "Sin guardar" : "Guardado local"}
         </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => setControlsHidden(true)}
+          className={`${TOOL_BUTTON} ml-auto border-[#d8ff3e]/35 text-[#eaff93]`}
+          aria-label="Ocultar controles del editor"
+          title="Ocultar controles para trabajar con más espacio"
+        >
+          <EyeOff className="h-4 w-4" /> Ocultar controles
+        </button>
+      </div>}
 
-      <div role="status" aria-live="polite" className="mb-3 flex flex-wrap items-center gap-3 border-2 border-white/15 p-3 text-xs">
+      {!controlsHidden && <div role="status" aria-live="polite" className="mb-3 flex flex-wrap items-center gap-3 border-2 border-white/15 p-3 text-xs">
         <span className={cloud.error ? "text-amber-200" : "text-emerald-300"}>{cloud.status}</span>
         {cloud.error && <span className="text-amber-200">{cloud.error}</span>}
         {cloud.error && !cloud.conflict && <button type="button" className={TOOL_BUTTON} onClick={() => void cloud.retry()}>Reintentar</button>}
@@ -1703,9 +1719,20 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
         {cloud.conflict && <button type="button" className={TOOL_BUTTON} onClick={() => {
           if (window.confirm("¿Reemplazar el plano de MongoDB con esta copia local?")) void cloud.keepLocal();
         }}>Conservar mi plano local</button>}
-      </div>
+      </div>}
 
       <div className={styles.workbench}>
+        {controlsHidden && (
+          <button
+            type="button"
+            onClick={() => setControlsHidden(false)}
+            className={styles.showControlsButton}
+            aria-label="Mostrar controles del editor"
+            title="Mostrar controles del editor"
+          >
+            <Eye className="h-4 w-4" /> Mostrar controles
+          </button>
+        )}
         <aside
           className={`${styles.inventoryPanel} ${inventoryOpen ? styles.panelOpen : ""} ${PANEL_CLASS}`}
           aria-label="Inventario de activos"
@@ -1782,7 +1809,7 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
         </aside>
 
         <section className={`${styles.canvasPanel} ${PANEL_CLASS}`}>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-white/10 px-4 py-3">
+          {!controlsHidden && <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-white/10 px-4 py-3">
             <div>
               <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#d8ff3e]">Lienzo · Piso {floor}</p>
               <p className="mt-0.5 text-xs font-bold text-white/42">Arrastrá el bloque; usá la esquina inferior derecha para redimensionar.</p>
@@ -1792,13 +1819,13 @@ export default function FloorPlanEditor({ inventory, floor = 1 }: { inventory: F
                 <MousePointer2 className="h-4 w-4" /> Arrastrá para seleccionar varios · Shift suma
               </p>
               <p className="flex items-center gap-2">
-                <Hand className="h-4 w-4" /> Espacio + arrastrar o clic central para desplazarte
+                <Hand className="h-4 w-4" /> Fondo vacío: arrastrá para desplazarte · espacio o clic central siempre
               </p>
             </div>
-          </div>
+          </div>}
           <div
             ref={viewportRef}
-            className={`${styles.canvasViewport} ${spacePressed ? styles.panReady : ""} ${isPanning ? styles.panning : ""}`}
+            className={`${styles.canvasViewport} ${selectedKeys.size === 0 ? styles.backgroundPanReady : ""} ${spacePressed ? styles.panReady : ""} ${isPanning ? styles.panning : ""}`}
           >
             <div className={styles.canvasScaleFrame} style={canvasFrameStyle}>
               <div

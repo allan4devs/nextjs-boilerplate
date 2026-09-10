@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { MachineLabel } from "@/app/lib/machines";
-import { physicalMachinePath, physicalMachineQrValue } from "@/app/lib/physical-machine-links";
+import { isPrintableEquipment, physicalMachineQrValue } from "@/app/lib/physical-machine-links";
 import { useMachineTexts } from "./useMachineTexts";
 import { readMachineTexts, type MachineTexts } from "./machine-label-store";
 import type { FloorInventoryItem } from "../plano/plan-model";
@@ -185,7 +185,7 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
     const controller = new AbortController();
     async function loadLiveInventory() {
       try {
-        const response = await fetch("/api/xtreme/admin/equipment?kind=machine", {
+        const response = await fetch("/api/xtreme/admin/equipment", {
           cache: "no-store",
           signal: controller.signal,
         });
@@ -196,13 +196,13 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
         if (!response.ok) throw new Error("No se pudo consultar el inventario.");
         const payload = (await response.json()) as { assets?: ApiEquipmentAsset[] };
         const assets = (payload.assets ?? []).filter(
-          (asset) => asset.kind === "machine" && Boolean(asset.machineGuideId),
+          isPrintableEquipment,
         );
         if (!assets.length) throw new Error("El inventario no devolvió máquinas.");
 
         const initialById = new Map(initialItems.map((item) => [item.assetId, item]));
         const liveItems = assets.map((asset): EditableQrItem => {
-          const machineGuideId = asset.machineGuideId as string;
+          const machineGuideId = asset.machineGuideId || asset.id;
           const initial = initialById.get(asset.id);
           return {
             assetId: asset.id,
@@ -220,7 +220,8 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
             url: physicalMachineQrValue(asset.id),
           };
         });
-        const normalized = withUnitCounts(liveItems);
+        const groupItems = initialItems.filter((item) => item.assetId.startsWith("group-"));
+        const normalized = withUnitCounts([...liveItems, ...groupItems]);
         setBaseItems(normalized);
         setOrder((current) => reconcileOrder(current, normalized));
         setSyncState("connected");
@@ -619,9 +620,9 @@ export default function EditableQrSheet({ initialItems }: { initialItems: Editab
                     <p className="text-[10px] font-black uppercase tracking-[0.11em] text-white/35">{item.assetId} · {item.zone}</p>
                     <div className="mt-1.5 flex min-h-11 items-center gap-2 border border-white/10 bg-black/25 px-3 text-[11px] font-bold text-white/45">
                       <Link2 className="h-3.5 w-3.5 shrink-0 text-[#d8ff3e]" />
-                      <span className="min-w-0 flex-1 truncate">/maquinas/{item.machineGuideId}</span>
-                      <Link href={physicalMachinePath(item.assetId)} target="_blank" className="shrink-0 text-[#d8ff3e] underline-offset-4 hover:underline">Abrir</Link>
-                      <Link href={`/maquinas/plano?floor=${item.floor ?? 1}&asset=${encodeURIComponent(item.assetId)}`} className="shrink-0 text-[#d8ff3e] underline">Plano</Link>
+                      <span className="min-w-0 flex-1 truncate">{item.url}</span>
+                      <Link href={item.url} target="_blank" className="shrink-0 text-[#d8ff3e] underline-offset-4 hover:underline">Abrir</Link>
+                      {!item.assetId.startsWith("group-") && <Link href={`/maquinas/plano?floor=${item.floor ?? 1}&asset=${encodeURIComponent(item.assetId)}`} className="shrink-0 text-[#d8ff3e] underline">Plano</Link>}
                     </div>
                     <p className="mt-1 text-[10px] font-bold text-white/60">QR bloqueado: editar texto no cambia este destino.</p>
                   </div>
