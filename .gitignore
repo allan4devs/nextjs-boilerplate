@@ -50,15 +50,8 @@ scripts/email-recovery-report.json
 agents/
 skills/
 .scripts/*
-!public/
-public/*
-!public/ruleta/
-!public/ruleta/*.webp
-!public/xtreme/
-public/xtreme/*
-!public/xtreme/qr-monogram.svg
+
 
 .vercel
 .env*.local
 
-!public/xtreme/maquina-pendiente.svg
