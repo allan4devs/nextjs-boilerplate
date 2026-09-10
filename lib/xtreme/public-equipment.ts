@@ -11,7 +11,7 @@ export async function getPublicEquipment(): Promise<{ inventory: PublicEquipment
   const project = (asset: PublicEquipment): PublicEquipment => {
     const { id, area, kind, code, name, location, status, machineGuideId, description, brand, year } = normalizeEquipmentArea(asset);
     const guide = machineGuideId ? findMachineGuide(machineGuideId) : undefined;
-    return { id, floor: asset.floor ?? 1, area, kind, code, name: kind === "machine" ? migrateMachineName(name) : name, location, status,
+    return { id, floor: asset.floor ?? 1, area, kind, code, name: migrateMachineName(name), location, status,
       ...(description ? { description } : {}), ...(brand ? { brand } : {}), ...(year ? { year } : {}),
       ...(machineGuideId ? { machineGuideId } : {}),
       ...(guide ? { trainingCategory: guide.zone, muscleGroup: guide.muscles[0] } : {}),

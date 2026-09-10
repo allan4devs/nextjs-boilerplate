@@ -250,7 +250,7 @@ export const DEFAULT_EQUIPMENT_ASSETS: SeedRow[] = ORIGINAL_EQUIPMENT_ASSETS.map
   const area = currentArea(row);
   const sequence = (areaCounts.get(area) ?? 0) + 1;
   areaCounts.set(area, sequence);
-  return { ...row, name: row.kind === "machine" ? migrateMachineName(row.name) : row.name, area, code: `${EQUIPMENT_AREA_CODES[area]}-${String(sequence).padStart(2, "0")}` };
+  return { ...row, name: migrateMachineName(row.name), area, code: `${EQUIPMENT_AREA_CODES[area]}-${String(sequence).padStart(2, "0")}` };
 }).concat(SECOND_FLOOR_EQUIPMENT);
 export function normalizeEquipmentArea<T extends Pick<EquipmentAssetDoc, "id" | "area" | "code" | "machineGuideId">>(row: T): T {
   return { ...row, area: currentArea(row), code: migrateEquipmentCode(row.id, row.code) };
