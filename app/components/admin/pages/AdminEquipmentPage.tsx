@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  ChevronDown,
-  ChevronUp,
   ChevronRight,
   Loader2,
   Save,
@@ -99,7 +98,8 @@ const INPUT_CLASS =
 
 type MachineMedia = { videoUrl?: string; videoLabel?: string; images?: string[] };
 
-export function AdminEquipmentPage() {
+export function AdminEquipmentPage({ assetId }: { assetId?: string }) {
+  const router = useRouter();
   const {
     data: { data },
   } = useAdmin();
@@ -111,9 +111,9 @@ export function AdminEquipmentPage() {
   const [kindFilter, setKindFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState<string>("");
   const [drafts, setDrafts] = useState<Record<string, EditableFields>>({});
   const [savingId, setSavingId] = useState("");
+  const [savedId, setSavedId] = useState("");
   const [rowError, setRowError] = useState<Record<string, string>>({});
 
   const [mediaById, setMediaById] = useState<Record<string, MachineMedia>>({});
@@ -158,22 +158,19 @@ export function AdminEquipmentPage() {
     })();
   }, []);
 
-  // Deep link desde /maquinas/qr (`?machine=<machineGuideId>`): abre y enfoca esa máquina.
+  // Conserva los enlaces antiguos, abriendo ahora una p?gina individual.
   useEffect(() => {
-    if (autoOpenedRef.current || !assets) return;
-    const targetId = new URLSearchParams(window.location.search).get("machine");
-    if (!targetId) return;
-    const match = assets.find((a) => a.machineGuideId === targetId);
+    if (assetId || autoOpenedRef.current || !assets) return;
+    const params = new URLSearchParams(window.location.search);
+    const targetAsset = params.get("assetId");
+    const targetGuide = params.get("machine");
+    const match = targetAsset
+      ? assets.find((asset) => asset.id === targetAsset)
+      : targetGuide ? assets.find((asset) => asset.machineGuideId === targetGuide) : undefined;
     if (!match) return;
     autoOpenedRef.current = true;
-    setExpanded(match.id);
-    requestAnimationFrame(() => {
-      document.getElementById(`equipment-row-${match.id}`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    });
-  }, [assets]);
+    router.replace(`/admin/equipo/${encodeURIComponent(match.id)}`);
+  }, [assets, assetId, router]);
 
   const areas = useMemo(
     () => Array.from(new Set((assets ?? []).map((a) => a.area))).sort(),
@@ -181,6 +178,7 @@ export function AdminEquipmentPage() {
   );
 
   const filtered = useMemo(() => {
+    if (assetId) return (assets ?? []).filter((asset) => asset.id === assetId);
     const q = search.trim().toLowerCase();
     if (!q) return assets ?? [];
     return (assets ?? []).filter(
@@ -189,7 +187,7 @@ export function AdminEquipmentPage() {
         a.code.toLowerCase().includes(q) ||
         a.location.toLowerCase().includes(q),
     );
-  }, [assets, search]);
+  }, [assets, search, assetId]);
 
   if (!data || (data.role !== "admin" && data.role !== "super")) return null;
 
@@ -198,12 +196,14 @@ export function AdminEquipmentPage() {
   }
 
   function setDraft(id: string, patch: Partial<EditableFields>) {
+    setSavedId("");
     setDrafts((prev) => ({ ...prev, [id]: { ...(prev[id] ?? toEditable(assets!.find((a) => a.id === id)!)), ...patch } }));
   }
 
   async function save(asset: EquipmentAsset) {
     const draft = draftFor(asset);
     setSavingId(asset.id);
+    setSavedId("");
     setRowError((prev) => ({ ...prev, [asset.id]: "" }));
     try {
       const res = await adminFetch("/api/xtreme/admin/equipment", {
@@ -228,6 +228,7 @@ export function AdminEquipmentPage() {
       });
       const json = (await res.json()) as { asset?: EquipmentAsset; error?: string };
       if (!res.ok) throw new Error(json.error ?? "No se pudo guardar.");
+      setSavedId(asset.id);
       setAssets((prev) => (prev ?? []).map((a) => (a.id === asset.id ? { ...a, ...json.asset } : a)));
       setDrafts((prev) => {
         const next = { ...prev };
@@ -243,12 +244,13 @@ export function AdminEquipmentPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {assetId && <Link href="/admin/equipo" className="inline-flex min-h-10 items-center text-sm font-bold text-[#d8ff3e]">? Volver a Equipo</Link>}
       <section className="border-[3px] border-white/15 bg-[#0c0c0c] p-5 sm:p-6">
         <div className="flex items-start gap-3">
           <Wrench className="mt-0.5 h-6 w-6 shrink-0 text-[#d8ff3e]" />
           <div>
             <GameLabel>Inventario de activos fijos</GameLabel>
-            <h2 className="mt-2 text-2xl font-black uppercase">Equipo</h2>
+            <h2 className="mt-2 text-2xl font-black uppercase">{assetId ? filtered[0]?.name ?? "Editar m?quina" : "Equipo"}</h2>
             <p className="mt-2 max-w-3xl text-sm font-bold leading-relaxed text-white/55">
               131 equipos de la auditoría física. Completá marca, código, costo y estado a medida que
               se van confirmando en piso — los cambios quedan en la bitácora.
@@ -257,7 +259,7 @@ export function AdminEquipmentPage() {
         </div>
       </section>
 
-      <section className="flex flex-wrap items-center gap-2 border-[3px] border-white/10 bg-white/[0.02] p-3">
+      {!assetId && <section className="flex flex-wrap items-center gap-2 border-[3px] border-white/10 bg-white/[0.02] p-3">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -285,7 +287,7 @@ export function AdminEquipmentPage() {
         <span className="text-[11px] font-black uppercase text-white/40">
           {loading ? "Cargando…" : `${filtered.length} de ${assets?.length ?? 0}`}
         </span>
-      </section>
+      </section>}
 
       {loadError && <GameCallout tone="orange">{loadError}</GameCallout>}
 
@@ -297,17 +299,19 @@ export function AdminEquipmentPage() {
         <div className="space-y-2">
           {filtered.map((asset) => {
             const draft = draftFor(asset);
-            const isOpen = expanded === asset.id;
+            if (!assetId) return (
+              <Link key={asset.id} href={`/admin/equipo/${encodeURIComponent(asset.id)}`} className="flex flex-wrap items-center gap-3 border-2 border-white/12 bg-white/[0.02] p-4 transition hover:border-[#d8ff3e]">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-white">{asset.code ? `${asset.code} ? ` : ""}{asset.name}</p>
+                  <p className="mt-1 text-xs text-white/50">{asset.area} ? {KIND_LABEL[asset.kind]}</p>
+                </div>
+                <GameChip tone={STATUS_TONE[asset.status]}>{STATUS_LABEL[asset.status]}</GameChip>
+                <span className="inline-flex items-center gap-1 text-xs font-black text-[#d8ff3e]">Editar m?quina <ChevronRight className="h-4 w-4" /></span>
+              </Link>
+            );
             return (
               <div key={asset.id} id={`equipment-row-${asset.id}`} className="border-2 border-white/12 bg-white/[0.02] scroll-mt-24">
                 <div className="flex flex-wrap items-center gap-2 p-3">
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(isOpen ? "" : asset.id)}
-                    className="flex min-h-9 items-center gap-1.5 border-2 border-white/15 bg-black/40 px-2 text-white/60 hover:text-[#d8ff3e]"
-                  >
-                    {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  </button>
                   <div className="min-w-[160px] flex-1">
                     <p className="text-sm font-black text-white">{asset.name}</p>
                     <p className="text-[10px] font-bold uppercase tracking-wide text-white/40">
@@ -315,12 +319,14 @@ export function AdminEquipmentPage() {
                     </p>
                   </div>
                   <input
+                    aria-label="C?digo"
                     value={draft.code}
                     onChange={(e) => setDraft(asset.id, { code: e.target.value })}
                     placeholder="Código"
                     className={`${INPUT_CLASS} w-24`}
                   />
                   <select
+                    aria-label="Estado"
                     value={draft.status}
                     onChange={(e) => setDraft(asset.id, { status: e.target.value as EquipmentStatus })}
                     className={`${INPUT_CLASS} w-44`}
@@ -340,7 +346,9 @@ export function AdminEquipmentPage() {
                   <div className="px-3 pb-2 text-xs font-bold text-red-300">{rowError[asset.id]}</div>
                 )}
 
-                {isOpen && (
+                {savedId === asset.id && <p role="status" className="px-3 pb-3 text-sm font-bold text-[#d8ff3e]">Cambios guardados.</p>}
+
+                {assetId && (
                   <>
                   <div className="grid gap-2 border-t-2 border-white/10 p-3 sm:grid-cols-2 lg:grid-cols-4">
                     <label className="space-y-1">
@@ -403,7 +411,7 @@ export function AdminEquipmentPage() {
                     return (
                       <div className="flex flex-wrap items-center gap-2 border-t-2 border-white/10 bg-black/20 p-3">
                         <Link
-                          href={`/admin/equipo/media/${machineGuideId}`}
+                          href={`/admin/equipo/media/${machineGuideId}?assetId=${encodeURIComponent(asset.id)}`}
                           className="inline-flex min-h-9 items-center gap-1.5 border-2 border-white/15 bg-black/40 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-white/70 transition hover:border-[#d8ff3e] hover:text-[#d8ff3e]"
                         >
                           <Video className="h-3.5 w-3.5" />
@@ -424,7 +432,7 @@ export function AdminEquipmentPage() {
             );
           })}
           {!loading && filtered.length === 0 && (
-            <p className="p-6 text-center text-sm font-bold text-white/40">Sin resultados con estos filtros.</p>
+            <p className="p-6 text-center text-sm font-bold text-white/40">{assetId ? "No se encontr? esta m?quina." : "Sin resultados con estos filtros."}</p>
           )}
         </div>
       )}

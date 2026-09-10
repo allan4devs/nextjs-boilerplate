@@ -34,20 +34,20 @@ function titleizeFileName(fileName: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function BackLink() {
+function BackLink({ assetId }: { assetId?: string }) {
   return (
     <Link
-      href="/admin/equipo"
+      href={assetId ? `/admin/equipo/${encodeURIComponent(assetId)}` : "/admin/equipo"}
       className="inline-flex min-h-9 items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-white/50 transition hover:text-[#d8ff3e]"
     >
       <ArrowLeft className="h-3.5 w-3.5" />
-      Volver a Equipo
+      {assetId ? "Volver a la máquina" : "Volver a Equipo"}
     </Link>
   );
 }
 
 /** Página dedicada al video/fotos de UNA máquina (`machineGuideId`), no un editor general de todas. */
-export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
+export function AdminMachineMediaPage({ machineId, assetId }: { machineId: string; assetId?: string }) {
   const {
     data: { data },
   } = useAdmin();
@@ -63,6 +63,7 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
   const [query, setQuery] = useState("");
   const [libraryError, setLibraryError] = useState("");
   const [previewError, setPreviewError] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -90,7 +91,7 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
         const found = (mediaJson.items ?? []).find((item) => item.id === machineId);
         setDraft(toMediaDraft(found));
         setSiblings((assetsJson.assets ?? []).filter((a) => a.machineGuideId === machineId));
-        if (!libraryRes.ok) setLibraryError("No se pudo cargar la biblioteca de videos. Recarg? la p?gina para reintentar.");
+        if (!libraryRes.ok) setLibraryError("No se pudo cargar la biblioteca de videos. Recargá la página para reintentar.");
         if (libraryRes.ok) {
           const libraryJson = (await libraryRes.json()) as { items?: VideoLibraryItem[] };
           if (active) setVideoLibrary(libraryJson.items ?? []);
@@ -111,7 +112,7 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
   if (!machine) {
     return (
       <div className="space-y-4">
-        <BackLink />
+        <BackLink assetId={assetId} />
         <GameCallout tone="orange">Esa máquina no existe en el catálogo.</GameCallout>
       </div>
     );
@@ -168,7 +169,7 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <BackLink />
+      <BackLink assetId={assetId} />
 
       <section className="border-[3px] border-white/15 bg-[#0c0c0c] p-5 sm:p-6">
         <div className="flex items-start gap-3">
@@ -229,13 +230,20 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
 
           <div className="space-y-3">
             <GameLabel tone="white">Videos de public ({videoLibrary.length})</GameLabel>
-            <p className="text-xs text-white/55">Busc? por nombre, reproduc? para confirmar y luego seleccion? el video. Al final, guard? los cambios de la ficha.</p>
+            <p className="text-xs text-white/55">Buscá un video y tocá su nombre para reproducirlo. Seleccioná el correcto y guardá la ficha.</p>
             {libraryError && <GameCallout tone="orange">{libraryError}</GameCallout>}
-            <input aria-label="Buscar videos por nombre" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nombre o carpeta?" className={INPUT_CLASS} />
-            <div className="max-h-64 space-y-1 overflow-y-auto">
+            <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.2fr)] xl:items-start">
+            <div className="min-w-0 space-y-3">
+            <input aria-label="Buscar videos por nombre" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nombre o carpeta..." className={INPUT_CLASS} />
+            <div className="max-h-64 space-y-1 overflow-y-auto overscroll-contain xl:max-h-[560px]">
               {videoLibrary.filter((item) => item.name.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es"))).map((item) => (
                 <button key={item.path} type="button" aria-pressed={preview?.path === item.path}
-                  onClick={() => { setPreview(item); setPreviewError(false); }}
+                  onClick={() => {
+                    if (preview?.path === item.path) return;
+                    setPreview(item);
+                    setPreviewError(false);
+                    setPreviewLoading(true);
+                  }}
                   className={`flex w-full items-center gap-2 border-2 p-3 text-left text-xs transition ${preview?.path === item.path ? "border-[#d8ff3e] text-[#d8ff3e]" : "border-white/15 text-white/70 hover:border-white/40"}`}>
                   <FileVideo className="h-4 w-4 shrink-0" />
                   <span className="min-w-0 break-all">{item.name}</span>
@@ -245,17 +253,29 @@ export function AdminMachineMediaPage({ machineId }: { machineId: string }) {
             </div>
             {!libraryError && !videoLibrary.length && <p className="text-xs text-white/55">No hay videos en public.</p>}
             {!!videoLibrary.length && !videoLibrary.some((item) => item.name.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es"))) && <p className="text-xs text-white/55">No hay videos con ese nombre.</p>}
-            {preview && (
-              <div className="space-y-3 border-2 border-white/15 p-3">
+            </div>
+            {preview ? (
+              <div className="min-w-0 space-y-3 border-2 border-white/15 p-3 xl:sticky xl:top-4">
                 <p className="break-all text-sm font-bold">{preview.name}</p>
-                <video key={preview.path} src={preview.path} controls playsInline preload="metadata" aria-label={`Vista previa de ${preview.name}`} onError={() => setPreviewError(true)} className="max-h-96 w-full bg-black" />
-                {previewError && <p role="alert" className="text-xs text-orange-300">No se pudo reproducir este archivo. Verific? que exista y que su formato sea compatible con el navegador.</p>}
-                <GameButton variant="lime" disabled={saving} onClick={() => {
+                <div className="relative flex h-[min(60vh,560px)] min-h-60 w-full items-center justify-center overflow-hidden bg-black">
+                  <video key={preview.path} src={preview.path} controls autoPlay muted playsInline preload="auto"
+                    aria-label={`Vista previa de ${preview.name}`}
+                    onLoadStart={() => setPreviewLoading(true)}
+                    onLoadedData={() => setPreviewLoading(false)}
+                    onCanPlay={() => setPreviewLoading(false)}
+                    onError={() => { setPreviewError(true); setPreviewLoading(false); }}
+                    className="h-full w-full object-contain" />
+                  {previewLoading && !previewError && <div role="status" className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm"><Loader2 className="h-5 w-5 animate-spin" /> Cargando video...</div>}
+                </div>
+                <p className="text-xs text-white/50">La vista previa inicia sin sonido. Podés activarlo en los controles o abrir pantalla completa.</p>
+                {previewError && <p role="alert" className="text-xs text-orange-300">No se pudo reproducir este archivo. Verificá que exista y que su formato sea compatible con el navegador.</p>}
+                <GameButton variant="lime" disabled={saving || previewError || previewLoading} onClick={() => {
                   setDraft((prev) => ({ ...prev, videoUrl: preview.path, videoLabel: titleizeFileName(preview.name.split("/").pop() ?? preview.name).slice(0, 80) }));
                   setSaved(false);
                 }}>Seleccionar este video</GameButton>
               </div>
-            )}
+            ) : <div className="flex min-h-60 items-center justify-center border-2 border-dashed border-white/15 p-6 text-center text-sm text-white/50">Elegí un video de la lista para verlo aquí.</div>}
+            </div>
           </div>
 
           {!draft.videoUrl && machine.videoUrl && (

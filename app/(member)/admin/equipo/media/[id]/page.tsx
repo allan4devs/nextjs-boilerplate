@@ -3,9 +3,10 @@ import { AdminMachineMediaPage } from "@/app/components/admin/pages/AdminMachine
 
 export const metadata: Metadata = { title: "Video y fotos | Admin" };
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ assetId?: string }> };
 
-export default async function AdminEquipoMediaRoute({ params }: Params) {
+export default async function AdminEquipoMediaRoute({ params, searchParams }: Params) {
   const { id } = await params;
-  return <AdminMachineMediaPage machineId={id} />;
+  const { assetId } = await searchParams;
+  return <AdminMachineMediaPage machineId={id} assetId={assetId} />;
 }

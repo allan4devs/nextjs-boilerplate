@@ -9,11 +9,19 @@
   },
   {
     "name": "videos/02-dominada-asistida.MOV",
-    "path": "/videos/02-dominada-asistida.MOV"
+    "path": "/videos/02-dominada-asistida.MOV.browser.mp4"
   },
   {
     "name": "videos/03-jalon-abierto.MOV",
-    "path": "/videos/03-jalon-abierto.MOV"
+    "path": "/videos/03-jalon-abierto.MOV.browser.mp4"
+  },
+  {
+    "name": "videos/curl_biceps.MOV",
+    "path": "/videos/curl_biceps.MOV"
+  },
+  {
+    "name": "videos/curl_biceps2.mp4",
+    "path": "/videos/curl_biceps2.mp4"
   },
   {
     "name": "videos/dips-sentado.MOV",
@@ -24,20 +32,20 @@
     "path": "/videos/dominada-asistida.MOV"
   },
   {
-    "name": "videos/IMG_5557.MOV",
-    "path": "/videos/IMG_5557.MOV"
+    "name": "videos/estacionremo.mp4",
+    "path": "/videos/estacionremo.mp4"
   },
   {
-    "name": "videos/IMG_5561.MOV",
-    "path": "/videos/IMG_5561.MOV"
+    "name": "videos/IMG_5557.MOV",
+    "path": "/videos/IMG_5557.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5562.MOV",
-    "path": "/videos/IMG_5562.MOV"
+    "path": "/videos/IMG_5562.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5563.MOV",
-    "path": "/videos/IMG_5563.MOV"
+    "path": "/videos/IMG_5563.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5564.MOV",
@@ -45,19 +53,15 @@
   },
   {
     "name": "videos/IMG_5565.MOV",
-    "path": "/videos/IMG_5565.MOV"
+    "path": "/videos/IMG_5565.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5566.MOV",
-    "path": "/videos/IMG_5566.MOV"
+    "path": "/videos/IMG_5566.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5567.MOV",
     "path": "/videos/IMG_5567.MOV"
-  },
-  {
-    "name": "videos/IMG_5568.MOV",
-    "path": "/videos/IMG_5568.MOV"
   },
   {
     "name": "videos/IMG_5569.MOV",
@@ -65,123 +69,143 @@
   },
   {
     "name": "videos/IMG_5570.MOV",
-    "path": "/videos/IMG_5570.MOV"
-  },
-  {
-    "name": "videos/IMG_5572.MOV",
-    "path": "/videos/IMG_5572.MOV"
+    "path": "/videos/IMG_5570.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5573.MOV",
-    "path": "/videos/IMG_5573.MOV"
+    "path": "/videos/IMG_5573.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5574.MOV",
-    "path": "/videos/IMG_5574.MOV"
+    "path": "/videos/IMG_5574.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5576.MOV",
-    "path": "/videos/IMG_5576.MOV"
+    "path": "/videos/IMG_5576.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5577.MOV",
-    "path": "/videos/IMG_5577.MOV"
+    "path": "/videos/IMG_5577.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5578.MOV",
-    "path": "/videos/IMG_5578.MOV"
+    "path": "/videos/IMG_5578.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5579.MOV",
-    "path": "/videos/IMG_5579.MOV"
+    "path": "/videos/IMG_5579.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5580.MOV",
-    "path": "/videos/IMG_5580.MOV"
+    "path": "/videos/IMG_5580.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5581.MOV",
-    "path": "/videos/IMG_5581.MOV"
+    "path": "/videos/IMG_5581.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5582.MOV",
-    "path": "/videos/IMG_5582.MOV"
+    "path": "/videos/IMG_5582.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5583.MOV",
-    "path": "/videos/IMG_5583.MOV"
+    "path": "/videos/IMG_5583.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5584.MOV",
-    "path": "/videos/IMG_5584.MOV"
+    "path": "/videos/IMG_5584.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5585.MOV",
-    "path": "/videos/IMG_5585.MOV"
+    "path": "/videos/IMG_5585.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5586.MOV",
-    "path": "/videos/IMG_5586.MOV"
+    "path": "/videos/IMG_5586.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5587.MOV",
-    "path": "/videos/IMG_5587.MOV"
+    "path": "/videos/IMG_5587.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5588.MOV",
-    "path": "/videos/IMG_5588.MOV"
+    "path": "/videos/IMG_5588.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5589.MOV",
-    "path": "/videos/IMG_5589.MOV"
+    "path": "/videos/IMG_5589.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5590.MOV",
-    "path": "/videos/IMG_5590.MOV"
+    "path": "/videos/IMG_5590.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5591.MOV",
-    "path": "/videos/IMG_5591.MOV"
+    "path": "/videos/IMG_5591.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5592.MOV",
-    "path": "/videos/IMG_5592.MOV"
+    "path": "/videos/IMG_5592.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5593.MOV",
-    "path": "/videos/IMG_5593.MOV"
+    "path": "/videos/IMG_5593.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5594.MOV",
-    "path": "/videos/IMG_5594.MOV"
+    "path": "/videos/IMG_5594.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5595.MOV",
-    "path": "/videos/IMG_5595.MOV"
+    "path": "/videos/IMG_5595.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5600.MOV",
-    "path": "/videos/IMG_5600.MOV"
+    "path": "/videos/IMG_5600.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5604.MOV",
-    "path": "/videos/IMG_5604.MOV"
+    "path": "/videos/IMG_5604.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5605.MOV",
-    "path": "/videos/IMG_5605.MOV"
+    "path": "/videos/IMG_5605.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5606.MOV",
-    "path": "/videos/IMG_5606.MOV"
+    "path": "/videos/IMG_5606.MOV.browser.mp4"
   },
   {
     "name": "videos/IMG_5608.MOV",
-    "path": "/videos/IMG_5608.MOV"
+    "path": "/videos/IMG_5608.MOV.browser.mp4"
+  },
+  {
+    "name": "videos/maquina07.MOV",
+    "path": "/videos/maquina07.MOV"
+  },
+  {
+    "name": "videos/maquina07m.mp4",
+    "path": "/videos/maquina07m.mp4"
+  },
+  {
+    "name": "videos/pecho.MOV",
+    "path": "/videos/pecho.MOV"
+  },
+  {
+    "name": "videos/press-militar.mp4",
+    "path": "/videos/press-militar.mp4"
+  },
+  {
+    "name": "videos/press-militarmp.mp4",
+    "path": "/videos/press-militarmp.mp4"
   },
   {
     "name": "videos/remo-cerrado.MOV",
-    "path": "/videos/remo-cerrado.MOV"
+    "path": "/videos/remo-cerrado.MOV.browser.mp4"
+  },
+  {
+    "name": "videos/ts_dips.mp4",
+    "path": "/videos/ts_dips.mp4"
   },
   {
     "name": "xtreme/hero-training-pexels.mp4",

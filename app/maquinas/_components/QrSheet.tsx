@@ -304,7 +304,7 @@ export default function QrSheet({ items }: { items: MachineLabel[] }) {
                       PDF
                     </button>
                     <Link
-                      href={`/admin/equipo?machine=${item.id}`}
+                      href={item.assetId ? `/admin/equipo/${encodeURIComponent(item.assetId)}` : `/admin/equipo?machine=${encodeURIComponent(item.id)}`}
                       target="_blank"
                       className="inline-flex min-h-11 items-center gap-1.5 border-2 border-[#d8ff3e]/40 bg-[#d8ff3e]/10 px-3 text-[11px] font-black uppercase tracking-[0.1em] text-[#eaff93] transition hover:border-[#d8ff3e] hover:bg-[#d8ff3e]/20 focus-visible:border-[#d8ff3e] focus-visible:outline-none"
                     >
