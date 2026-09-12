@@ -72,10 +72,6 @@
     "path": "/videos/IMG_5570.MOV.browser.mp4"
   },
   {
-    "name": "videos/IMG_5573.MOV",
-    "path": "/videos/IMG_5573.MOV.browser.mp4"
-  },
-  {
     "name": "videos/IMG_5574.MOV",
     "path": "/videos/IMG_5574.MOV.browser.mp4"
   },
@@ -190,6 +186,10 @@
   {
     "name": "videos/pecho.MOV",
     "path": "/videos/pecho.MOV"
+  },
+  {
+    "name": "videos/press_inclinado.MOV",
+    "path": "/videos/press_inclinado.MOV"
   },
   {
     "name": "videos/press-militar.mp4",

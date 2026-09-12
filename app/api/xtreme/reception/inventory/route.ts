@@ -1,3 +1,6 @@
+import { randomUUID, createHash } from "crypto";
+import { getMongoClient } from "@/lib/helpers/mongodb";
+import { authenticateStaffCode } from "@/lib/xtreme/staff-session";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit } from "@/lib/xtreme/audit";
@@ -288,5 +291,90 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El efectivo y el SINPE deben completar exactamente el total de la venta." }, { status: 400 });
     }
     return NextResponse.json({ error: "No se pudo registrar la venta." }, { status: 400 });
+  }
+}
+
+
+export async function DELETE(req: NextRequest) {
+  const operator = await receptionSession(req);
+  if (!operator) return NextResponse.json({ error: "Sesi?n de recepci?n requerida." }, { status: 401 });
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.id !== "string" || !body.id || !["sale", "purchase"].includes(body.kind) || typeof body.code !== "string") {
+    return NextResponse.json({ error: "Registro y c?digo admin requeridos." }, { status: 400 });
+  }
+  const db = await getDb();
+  // Atomic fixed-window limit, independent of whether the credential is correct.
+  const window = Math.floor(Date.now() / 900_000);
+  const key = createHash("sha256").update(`${req.headers.get("x-forwarded-for") || "unknown"}|${window}`).digest("hex");
+  const attempt = await db.collection<{ _id: string; count: number; expiresAt: Date }>("xtreme_gym_inventory_delete_attempts").findOneAndUpdate(
+    { _id: key }, { $inc: { count: 1 }, $set: { expiresAt: new Date(Date.now() + 900_000) } },
+    { upsert: true, returnDocument: "after" },
+  );
+  if ((attempt?.count ?? 0) > 5) return NextResponse.json({ error: "Demasiados intentos. Esper? 15 minutos." }, { status: 429 });
+  const admin = authenticateStaffCode(body.code, "admin");
+  if (!admin) return NextResponse.json({ error: "C?digo admin incorrecto." }, { status: 403 });
+  const transaction = (await getMongoClient()).startSession();
+  try {
+    await transaction.withTransaction(async () => {
+      const options = { session: transaction };
+      const stock = db.collection<ProductInventoryDoc>(PRODUCT_INVENTORY_COLLECTION);
+      const audit = db.collection<AuditDoc>(AUDIT_COLLECTION);
+      const now = new Date();
+      let original: unknown;
+      if (body.kind === "sale") {
+        const sales = db.collection<ProductSaleDoc>(PRODUCT_SALES_COLLECTION);
+        const sale = await sales.findOne({ id: body.id }, options);
+        if (!sale) throw new Error("El registro ya fue eliminado o no existe.");
+        original = sale;
+        for (const item of sale.items) {
+          const camera = item.cameraSold ?? item.quantity;
+          const warehouse = item.warehouseSold ?? 0;
+          if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0 || !Number.isSafeInteger(camera) || camera < 0 || !Number.isSafeInteger(warehouse) || warehouse < 0 || camera + warehouse !== item.quantity) {
+            throw new Error("La venta tiene cantidades inv?lidas y requiere revisi?n.");
+          }
+          const result = await stock.updateOne({ id: item.productId }, [
+            { $set: {
+              cameraQuantity: { $add: [{ $ifNull: ["$cameraQuantity", "$quantity"] }, camera] },
+              warehouseQuantity: { $add: [{ $ifNull: ["$warehouseQuantity", 0] }, warehouse] },
+              quantity: { $add: ["$quantity", item.quantity] }, updatedAt: now,
+            } },
+          ], options);
+          if (!result.matchedCount) throw new Error("No se encontr? un producto de la venta. Revis? el inventario.");
+        }
+        await sales.deleteOne({ _id: sale._id }, options);
+      } else {
+        const entry = await audit.findOne({ id: body.id, action: "product_inventory_adjusted" }, options);
+        if (!entry) throw new Error("El registro ya fue eliminado o no existe.");
+        const delta = entry.meta?.delta as { quantity?: number; cameraQuantity?: number; warehouseQuantity?: number } | undefined;
+        const quantity = delta?.quantity;
+        const camera = delta?.cameraQuantity;
+        const warehouse = delta?.warehouseQuantity;
+        if (typeof quantity !== "number" || typeof camera !== "number" || typeof warehouse !== "number" || !Number.isSafeInteger(quantity) || !Number.isSafeInteger(camera) || !Number.isSafeInteger(warehouse) || quantity <= 0 || camera < 0 || warehouse < 0 || camera + warehouse !== quantity) {
+          throw new Error("Este movimiento no es una entrada de mercader?a reversible.");
+        }
+        original = entry;
+        const result = await stock.updateOne({ id: entry.targetId, quantity: { $gte: quantity }, cameraQuantity: { $gte: camera }, warehouseQuantity: { $gte: warehouse } }, {
+          $inc: { quantity: -quantity, cameraQuantity: -camera, warehouseQuantity: -warehouse }, $set: { updatedAt: now },
+        }, options);
+        if (!result.matchedCount) throw new Error("No hay existencias suficientes en c?mara o bodega para revertir esta entrada.");
+        await audit.updateOne({ _id: entry._id }, { $set: { action: "product_inventory_entry_deleted" } }, options);
+      }
+      await audit.insertOne({
+        id: `aud-${randomUUID()}`, at: now, actorRole: admin.role,
+        ...(admin.id ? { actorId: admin.id } : {}), ...(admin.name ? { actorName: admin.name } : {}),
+        action: body.kind === "sale" ? "product_sale_deleted" : "product_purchase_deleted",
+        targetType: "system", targetId: body.id,
+        summary: body.kind === "sale" ? "Venta eliminada y existencias devueltas" : "Entrada de mercader?a eliminada y existencias descontadas",
+        meta: { original, requestedBy: operator.staffName || operator.role },
+      }, options);
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const expected = /^(El registro|La venta|No se encontr?|Este movimiento|No hay existencias)/.test(message);
+    if (!expected) console.error("INVENTORY DELETE", error);
+    return NextResponse.json({ error: expected ? message : "No se pudo eliminar el registro. No se aplicaron cambios; intent? de nuevo." }, { status: expected ? 409 : 500 });
+  } finally {
+    await transaction.endSession();
   }
 }

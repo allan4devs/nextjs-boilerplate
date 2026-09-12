@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Clock3, Loader2, Printer, RefreshCw, SlidersHorizontal } from "lucide-react";
-import { GameChip, GameLabel } from "../GameOS";
+import { GameChip, GameLabel, GameModal } from "../GameOS";
 import ProductSaleReceipt from "./ProductSaleReceipt";
 
 type Sale = {
@@ -50,6 +50,29 @@ function rangeFor(days: number) {
 }
 
 export default function SalesMonitoringPanel() {
+  const [deletion, setDeletion] = useState<{ id: string; kind: "sale" | "purchase"; label: string } | null>(null);
+  const [adminCode, setAdminCode] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  function openDelete(target: NonNullable<typeof deletion>) {
+    setAdminCode(""); setDeleteError(""); setDeletion(target);
+  }
+  async function deleteRecord() {
+    if (!deletion || deleting || !adminCode.trim()) return;
+    setDeleting(true); setDeleteError("");
+    try {
+      const response = await fetch("/api/xtreme/reception/inventory", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deletion.id, kind: deletion.kind, code: adminCode }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "No se pudo eliminar.");
+      setDeletion(null); setAdminCode(""); setPrintSale(null);
+      window.dispatchEvent(new Event("xtreme:storefront-updated"));
+    } catch (cause) {
+      setDeleteError(cause instanceof Error ? cause.message : "Error de conexi?n.");
+    } finally { setDeleting(false); }
+  }
   const initial = rangeFor(0);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
@@ -147,6 +170,7 @@ export default function SalesMonitoringPanel() {
                     <Printer className="h-4 w-4" />
                   </button>
                 </div>
+                <button type="button" onClick={() => openDelete({ id: sale.id, kind: "sale", label: `Venta de ${crc.format(sale.total)} ? ${dateTime.format(new Date(sale.createdAt))}` })} className="mt-3 min-h-10 border-2 border-red-400/40 px-3 text-xs font-black text-red-200">Eliminar venta ? c?digo admin</button>
                 <div className="mt-3 space-y-1">{sale.items.map((item) => <div key={item.productId} className="flex justify-between gap-3 text-sm font-bold text-white/65"><span>{item.quantity} × {item.name}</span><span className="shrink-0">{crc.format(item.quantity * item.unitPrice)}</span></div>)}</div>
               </article>)}
             </div>
@@ -160,6 +184,7 @@ export default function SalesMonitoringPanel() {
                 const delta = entry.meta.delta ?? {};
                 return <article key={entry.id} className="border-[3px] border-orange-300/25 bg-orange-400/[0.05] p-4">
                   <div className="flex items-start justify-between gap-3"><div><p className="font-black uppercase">{entry.meta.productName || entry.productId}</p><p className="mt-1 text-xs font-bold text-white/40">{dateTime.format(new Date(entry.at))} · {entry.actorRole}</p></div><SlidersHorizontal className="h-5 w-5 text-orange-300" /></div>
+                  {(delta.quantity ?? 0) > 0 && (delta.cameraQuantity ?? -1) >= 0 && (delta.warehouseQuantity ?? -1) >= 0 && delta.quantity === (delta.cameraQuantity ?? 0) + (delta.warehouseQuantity ?? 0) && <button type="button" onClick={() => openDelete({ id: entry.id, kind: "purchase", label: `Entrada de ${delta.quantity} ? ${entry.meta.productName || entry.productId}` })} className="mt-3 min-h-10 border-2 border-red-400/40 px-3 text-xs font-black text-red-200">Eliminar entrada / compra ? c?digo admin</button>}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {delta.quantity !== undefined && delta.quantity !== 0 && <Delta label="Total" value={delta.quantity} />}
                     {delta.cameraQuantity !== undefined && delta.cameraQuantity !== 0 && <Delta label="Cámara" value={delta.cameraQuantity} />}
@@ -174,6 +199,20 @@ export default function SalesMonitoringPanel() {
         </div>
       </>}
 
+      <GameModal open={Boolean(deletion)} onClose={() => { if (!deleting) { setDeletion(null); setAdminCode(""); } }} title="Eliminar registro" size="sm">
+        <form onSubmit={(event) => { event.preventDefault(); void deleteRecord(); }} className="space-y-4">
+          <p className="font-bold">{deletion?.label}</p>
+          <p className="text-sm text-white/65">{deletion?.kind === "sale" ? "Se quitar? la venta de los totales y se devolver?n los productos al inventario. En ventas antiguas sin ubicaci?n registrada, se devolver?n a c?mara." : "Se descontar?n las unidades de esta entrada de c?mara y bodega. Los precios y otros datos del producto se conservar?n."} Se conservar? una copia en la auditor?a.</p>
+          <label className="block text-sm font-bold">C?digo de administrador
+            <input type="password" autoComplete="off" required value={adminCode} disabled={deleting} onChange={(event) => setAdminCode(event.target.value)} className="mt-2 block min-h-11 w-full border-2 border-white/25 bg-black px-3 text-white" />
+          </label>
+          {deleteError && <p role="alert" className="text-sm text-red-200">{deleteError}</p>}
+          <div className="flex gap-3">
+            <button type="button" disabled={deleting} onClick={() => { setDeletion(null); setAdminCode(""); }} className="min-h-11 border-2 border-white/25 px-4">Cancelar</button>
+            <button type="submit" disabled={deleting || !adminCode.trim()} className="min-h-11 border-2 border-red-400 bg-red-500/20 px-4 font-bold text-red-200 disabled:opacity-40">{deleting ? "Eliminando?" : "Confirmar eliminaci?n"}</button>
+          </div>
+        </form>
+      </GameModal>
       {printSale && (
         <div className="pointer-events-none absolute left-[-9999px] top-0" aria-hidden="true">
           <ProductSaleReceipt

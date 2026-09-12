@@ -29,7 +29,7 @@ export type ProductInventoryDoc = {
 
 export type ProductSaleDoc = {
   id: string;
-  items: Array<{ productId: string; name: string; quantity: number; unitPrice: number }>;
+  items: Array<{ productId: string; name: string; quantity: number; unitPrice: number; cameraSold?: number; warehouseSold?: number }>;
   total: number;
   paymentMethod: "cash" | "sinpe" | "mixed";
   cashAmount: number;
@@ -400,6 +400,8 @@ export async function recordProductSale(
       name: product.name,
       quantity: combined.get(product.id) ?? 0,
       unitPrice: product.price,
+      cameraSold: decremented.find((item) => item.id === product.id)!.cameraSold,
+      warehouseSold: decremented.find((item) => item.id === product.id)!.warehouseSold,
     }));
     const sale: ProductSaleDoc = {
       id: `sale-${randomUUID()}`,
