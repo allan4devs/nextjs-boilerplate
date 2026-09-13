@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const SKIP = /\.(jpg|jpeg|png|ico|webp|gif|avif|bmp|mp4|webm|mov|avi|mp3|wav|ogg|woff2?|ttf|otf|pdf|zip|gz|tgz|7z|rar|docx?|xlsx?|pptx?)$/i;
+const SKIP = /\.(bin|jpg|jpeg|png|ico|webp|gif|avif|bmp|mp4|webm|mov|avi|mp3|wav|ogg|woff2?|ttf|otf|pdf|zip|gz|tgz|7z|rar|docx?|xlsx?|pptx?)$/i;
 const INTENTIONAL_MOJIBAKE_EXAMPLES = new Set([
   ".claude/skills/verify/SKILL.md",
   "scripts/excel/fix-mojibake.py",

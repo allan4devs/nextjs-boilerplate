@@ -16,5 +16,5 @@ async function scan(directory, segments = []) {
 }
 const items = await scan(path.join(process.cwd(), "public"));
 items.sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }));
-await writeFile(new URL("../lib/xtreme/video-library.generated.json", import.meta.url), `${JSON.stringify(items, null, 2)}\n`);
+await writeFile(new URL("../../lib/xtreme/video-library.generated.json", import.meta.url), `${JSON.stringify(items, null, 2)}\n`);
 console.log(`Biblioteca de videos: ${items.length} archivos.`);

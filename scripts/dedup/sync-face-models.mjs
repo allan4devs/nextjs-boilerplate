@@ -13,7 +13,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const SOURCE_DIR = path.join(ROOT, "node_modules", "@vladmandic", "human", "models");
 const TARGET_DIR = path.join(ROOT, "public", "models", "human");
 
