@@ -19,6 +19,7 @@ export type TrainingProgramDoc = TrainingProgramTemplate & {
   revision: number;
   active: boolean;
   defaultPool: boolean;
+  updatedBy?: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -58,7 +59,9 @@ function cloneDefaultProgram(template: TrainingProgramTemplate, now: Date): Trai
 /** Seed is insert-only: after creation Mongo is the operational source of truth. */
 export async function ensureTrainingPrograms(db: Db) {
   const now = new Date();
-  await db.collection<TrainingProgramDoc>(TRAINING_PROGRAMS_COLLECTION).bulkWrite(
+  const collection = db.collection<TrainingProgramDoc>(TRAINING_PROGRAMS_COLLECTION);
+  await collection.createIndex({ id: 1 }, { unique: true });
+  await collection.bulkWrite(
     DEFAULT_TRAINING_PROGRAMS.map((template) => ({
       updateOne: {
         filter: { id: template.id },
@@ -149,6 +152,7 @@ export function materializeTrainingPlan(args: {
     const saved = previousItems.get(id);
     return {
       id,
+      programSessionId: session.id,
       day: session.day,
       focus: session.focus,
       exercises: session.exercises,
@@ -164,6 +168,7 @@ export function materializeTrainingPlan(args: {
         );
         return {
           id: `${id}-${exercise.id}`,
+          programExerciseId: exercise.id,
           ...(machine ? { assetId: machine.id } : {}),
           machineId: exercise.machineId,
           machineName: machine?.name ?? exercise.exerciseName,
@@ -221,6 +226,11 @@ export async function ensureMemberTrainingPlan(db: Db, memberKey: string, today 
   const assignedProgram = assignment
     ? programs.find((program) => program.id === assignment.programId)
     : null;
+  const missingAssignedProgram = Boolean(
+    assignment
+      && assignment.source !== "trainer_custom"
+      && !assignedProgram,
+  );
   const program = shouldCycle
     ? chooseTrainingProgram(programs, member, cycle)
     : assignedProgram ?? chooseTrainingProgram(programs, member, cycle);
@@ -232,10 +242,10 @@ export async function ensureMemberTrainingPlan(db: Db, memberKey: string, today 
       && assignment.source !== "trainer_custom"
       && program.revision > assignment.programRevision,
   );
-  if (!missingPlan && !staleGroupPlan && !shouldCycle) return member;
+  if (!missingPlan && !staleGroupPlan && !missingAssignedProgram && !shouldCycle) return member;
 
   const now = new Date();
-  const source: AssignmentSource = assignment?.source === "trainer_group" && !shouldCycle
+  const source: AssignmentSource = assignment?.source === "trainer_group" && assignedProgram && !shouldCycle
     ? "trainer_group"
     : "auto_default";
   const nextAssignment = assignmentFor(
@@ -246,7 +256,7 @@ export async function ensureMemberTrainingPlan(db: Db, memberKey: string, today 
     cycle,
     now,
   );
-  const trainingPlan = materializeTrainingPlan({
+  const plan = materializeTrainingPlan({
     program,
     equipment,
     memberKey,
@@ -254,8 +264,13 @@ export async function ensureMemberTrainingPlan(db: Db, memberKey: string, today 
     cycle,
     previous: staleGroupPlan ? member.trainingPlan : undefined,
   });
+  const trainingPlan: TrainingPlan = {
+    ...plan,
+    createdAt: member.trainingPlan?.createdAt ?? now,
+    updatedAt: now,
+  };
   await members.updateOne(
-    { normalizedName: memberKey, activePlanWorkout: { $exists: false } },
+    { normalizedName: memberKey, "activePlanWorkout.id": { $exists: false } },
     { $set: { trainingPlan, trainingProgramAssignment: nextAssignment, updatedAt: now } },
   );
   return members.findOne({ normalizedName: memberKey });
@@ -280,9 +295,13 @@ export async function assignTrainingProgram(args: {
   const today = args.today ?? businessDate(now);
   const cycle = (member.trainingProgramAssignment?.cycle ?? -1) + 1;
   const assignment = assignmentFor(program, memberKey, "trainer_group", assignedBy, cycle, now);
-  const trainingPlan = materializeTrainingPlan({ program, equipment, memberKey, today, cycle });
+  const trainingPlan: TrainingPlan = {
+    ...materializeTrainingPlan({ program, equipment, memberKey, today, cycle }),
+    createdAt: now,
+    updatedAt: now,
+  };
   await members.updateOne(
-    { normalizedName: memberKey, activePlanWorkout: { $exists: false } },
+    { normalizedName: memberKey, "activePlanWorkout.id": { $exists: false } },
     { $set: { trainingPlan, trainingProgramAssignment: assignment, coach: assignedBy, updatedAt: now } },
   );
   return { status: "assigned" as const, member: await members.findOne({ normalizedName: memberKey }) };
@@ -312,7 +331,11 @@ export async function assignDefaultProgramsToMembers(db: Db, assignedBy: string,
         },
         update: {
           $set: {
-            trainingPlan: materializeTrainingPlan({ program, equipment, memberKey, today, cycle: 0 }),
+            trainingPlan: {
+              ...materializeTrainingPlan({ program, equipment, memberKey, today, cycle: 0 }),
+              createdAt: now,
+              updatedAt: now,
+            },
             trainingProgramAssignment: assignmentFor(program, memberKey, "auto_default", assignedBy, 0, now),
             updatedAt: now,
           },
@@ -323,4 +346,136 @@ export async function assignDefaultProgramsToMembers(db: Db, assignedBy: string,
   if (!operations.length) return { matched: missing.length, assigned: 0 };
   const result = await members.bulkWrite(operations, { ordered: false });
   return { matched: missing.length, assigned: result.modifiedCount };
+}
+
+function slug(value: string, fallback: string) {
+  const normalized = value.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 48);
+  return normalized || fallback;
+}
+
+/** Saves one reusable group program and refreshes every idle member in that group. */
+export async function updateTrainingProgramFromPlan(args: {
+  db: Db;
+  programId: string;
+  plan: TrainingPlan;
+  actorName: string;
+  today?: string;
+}) {
+  const { db, programId, plan, actorName } = args;
+  const collection = db.collection<TrainingProgramDoc>(TRAINING_PROGRAMS_COLLECTION);
+  const current = await collection.findOne({ id: programId, active: true });
+  if (!current) return { status: "missing_program" as const, synced: 0, deferred: 0 };
+  const requestedExercises = plan.items.flatMap((item) => item.prescribedExercises ?? []);
+  if (plan.items.some((item) => !item.prescribedExercises?.length)) {
+    return { status: "invalid_machine" as const, synced: 0, deferred: 0 };
+  }
+  const equipment = await listEquipmentAssets(db, { kind: "machine" });
+  const availableGuideIds = new Set(
+    equipment
+      .filter((asset) => asset.status !== "fuera_de_servicio" && asset.machineGuideId)
+      .map((asset) => asset.machineGuideId),
+  );
+  const invalidExercise = requestedExercises.find(
+    (exercise) => !exercise.machineId || !availableGuideIds.has(exercise.machineId),
+  );
+  if (invalidExercise) return { status: "invalid_machine" as const, synced: 0, deferred: 0 };
+
+  const sessions = plan.items.map((item, sessionIndex) => {
+    const previous = current.sessions[sessionIndex];
+    const sessionId = item.programSessionId || previous?.id || slug(item.day, `session-${sessionIndex + 1}`);
+    return {
+      id: sessionId,
+      day: item.day,
+      focus: item.focus,
+      targetMinutes: item.targetMinutes,
+      exercises: item.exercises,
+      machines: (item.prescribedExercises ?? []).map((exercise, exerciseIndex) => ({
+        id: exercise.programExerciseId || previous?.machines[exerciseIndex]?.id || slug(exercise.exerciseName, `exercise-${exerciseIndex + 1}`),
+        machineId: exercise.machineId,
+        exerciseName: exercise.exerciseName,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        weightKg: exercise.weightKg,
+        targetSeconds: exercise.targetSeconds,
+        notes: exercise.notes,
+      })),
+    };
+  });
+  const now = new Date();
+  const revision = current.revision + 1;
+  const updated = await collection.updateOne(
+    { id: programId, revision: current.revision },
+    {
+      $set: {
+        name: plan.title,
+        shortName: plan.title.slice(0, 24),
+        objective: plan.objective,
+        coachNote: plan.coachNote,
+        weeklySessions: plan.weeklySessions,
+        sessions,
+        revision,
+        updatedAt: now,
+        updatedBy: actorName,
+      },
+    },
+  );
+  if (!updated.modifiedCount) return { status: "conflict" as const, synced: 0, deferred: 0 };
+  const program = await collection.findOne({ id: programId });
+  if (!program) return { status: "missing_program" as const, synced: 0, deferred: 0 };
+
+  const members = db.collection<MemberDoc>(MEMBERS_COLLECTION);
+  const groupMembers = await members.find(
+    { "trainingProgramAssignment.programId": programId },
+    { projection: { normalizedName: 1, trainingPlan: 1, trainingProgramAssignment: 1, activePlanWorkout: 1 } },
+  ).toArray();
+  const today = args.today ?? businessDate(now);
+  const idle = groupMembers.filter((member) => !member.activePlanWorkout);
+  const operations: AnyBulkWriteOperation<MemberDoc>[] = idle.map((member) => {
+    const memberKey = member.normalizedName ?? "";
+    const assignment = member.trainingProgramAssignment!;
+    const trainingPlan: TrainingPlan = {
+      ...materializeTrainingPlan({
+        program,
+        equipment,
+        memberKey,
+        today,
+        cycle: assignment.cycle,
+        previous: member.trainingPlan,
+      }),
+      createdAt: member.trainingPlan?.createdAt ?? now,
+      updatedAt: now,
+    };
+    return {
+      updateOne: {
+        filter: {
+          normalizedName: memberKey,
+          "trainingProgramAssignment.programId": programId,
+          "activePlanWorkout.id": { $exists: false },
+        },
+        update: {
+          $set: {
+            trainingPlan,
+            "trainingProgramAssignment.programName": program.name,
+            "trainingProgramAssignment.programRevision": revision,
+            "trainingProgramAssignment.assignedBy": actorName,
+            updatedAt: now,
+          },
+        },
+      },
+    };
+  });
+  const syncResult = operations.length
+    ? await members.bulkWrite(operations, { ordered: false })
+    : null;
+  return {
+    status: "updated" as const,
+    synced: syncResult?.modifiedCount ?? 0,
+    deferred: groupMembers.length - idle.length,
+    program,
+  };
 }

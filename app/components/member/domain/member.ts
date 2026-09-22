@@ -35,6 +35,7 @@ export type WorkoutExerciseDetail = {
 
 export type PlanExercisePrescription = {
   id: string;
+  programExerciseId?: string;
   assetId?: string;
   machineId: string;
   machineName: string;
@@ -79,6 +80,7 @@ export type BodyMetric = {
 
 export type PlanItem = {
   id: string;
+  programSessionId?: string;
   day: string;
   focus: string;
   exercises: string;

@@ -4,7 +4,6 @@ import type {
   WorkoutExerciseDetail,
 } from "@/app/components/member/types";
 import type {
-  DefaultTrainingProgramId,
   TrainingProgramTemplate,
 } from "@/lib/xtreme/training-program-catalog";
 
@@ -136,7 +135,7 @@ export type MemberSignal = {
   priority: number;
 };
 
-export type PlanTemplateId = DefaultTrainingProgramId;
+export type PlanTemplateId = string;
 export type PlanTemplate = TrainingProgramTemplate;
 
 export type TrainerNotice = { tone: "success" | "error"; text: string } | null;

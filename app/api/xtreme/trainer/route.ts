@@ -11,6 +11,7 @@ import {
   assignDefaultProgramsToMembers,
   assignTrainingProgram,
   listTrainingPrograms,
+  updateTrainingProgramFromPlan,
 } from "@/lib/xtreme/training-programs";
 import {
   MEMBERS_COLLECTION,
@@ -182,6 +183,29 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ ok: true, member: result.member ? trainerMemberView(result.member) : null });
   }
+
+  if (action === "update_training_program") {
+    const programId = String(body.programId ?? "").trim();
+    const plan = sanitizePlan(body.plan);
+    if (!programId || !plan.title || !plan.items.length) {
+      return NextResponse.json({ error: "Programa, título y sesiones requeridos." }, { status: 400 });
+    }
+    const result = await updateTrainingProgramFromPlan({ db, programId, plan, actorName });
+    if (result.status === "missing_program") return NextResponse.json({ error: "Programa no encontrado." }, { status: 404 });
+    if (result.status === "invalid_machine") return NextResponse.json({ error: "Cada ejercicio del grupo debe apuntar a una máquina del catálogo." }, { status: 400 });
+    if (result.status === "conflict") return NextResponse.json({ error: "Otro entrenador actualizó el programa. Refrescá antes de reintentar." }, { status: 409 });
+    await writeAudit(db, {
+      actorRole: "trainer",
+      actorId: session.staffId,
+      actorName,
+      action: "trainer.update_training_program",
+      targetType: "system",
+      targetId: programId,
+      summary: `${actorName} actualizó ${plan.title} para ${result.synced} socios`,
+      meta: { programId, revision: result.program.revision, synced: result.synced, deferred: result.deferred },
+    });
+    return NextResponse.json({ ok: true, synced: result.synced, deferred: result.deferred });
+  }
   if (action === "toggle_class") {
     const trainingId = String(body.trainingId ?? "").trim();
     const date = String(body.date ?? businessDate()).trim();
@@ -204,6 +228,9 @@ export async function POST(req: NextRequest) {
   const plan = sanitizePlan(body.plan);
   if (!plan.title || !plan.items.length) {
     return NextResponse.json({ error: "El plan necesita titulo y al menos una sesion." }, { status: 400 });
+  }
+  if (plan.items.some((item) => !item.prescribedExercises?.length)) {
+    return NextResponse.json({ error: "Cada sesion necesita al menos una maquina fisica." }, { status: 400 });
   }
   const normalizedName = normalizeKey(memberName);
   const existing = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });

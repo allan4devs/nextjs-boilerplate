@@ -2,19 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Copy, Dumbbell, ExternalLink, MapPin, Plus, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Copy, Dumbbell, ExternalLink, MapPin, Plus, RotateCcw, Save, Sparkles, Trash2, Users } from "lucide-react";
 import { GameButton, GameLabel } from "@/app/components/GameOS";
 import { physicalMachinePath } from "@/app/lib/physical-machine-links";
-import { PLAN_TEMPLATES } from "../constants";
 import type { TrainerOs } from "../hooks/useTrainerOs";
 import type { PlanExercisePrescription, PlanItem, TrainingMachine } from "../types";
 import { TrainerField, TrainerNumberField, TrainerTextarea } from "./TrainerFields";
 
 export function TrainerPlanEditor({ os }: { os: TrainerOs }) {
+  const groupProgram = os.programs.find((program) => program.id === os.selected?.trainingProgramAssignment?.programId);
   return <div className="space-y-4">
     <section className="border-[3px] border-cyan-300/40 bg-[#0c0c0c] p-4">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><GameLabel tone="cyan">Punto de partida</GameLabel><h3 className="mt-2 text-xl font-black uppercase">Plantillas inteligentes</h3><p className="mt-1 text-sm font-bold text-white/40">Aplicá una base y personalizala según la evaluación.</p></div>{os.dirty && <span className="border-2 border-orange-300 px-2 py-1 text-[9px] font-black uppercase text-orange-200">Cambios sin guardar</span>}</div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{PLAN_TEMPLATES.map((template) => <button type="button" key={template.id} onClick={() => os.applyTemplate(template.id)} className="group border-[3px] border-white/10 bg-black/30 p-3 text-left transition hover:border-cyan-300"><Sparkles className="h-5 w-5 text-cyan-300" /><p className="mt-3 font-black uppercase">{template.name}</p><p className="mt-1 text-xs font-bold leading-5 text-white/40">{template.description}</p><span className="mt-3 block text-[9px] font-black uppercase text-cyan-300">{template.weeklySessions} días · aplicar →</span></button>)}</div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{os.programs.map((template) => <button type="button" key={template.id} onClick={() => os.applyTemplate(template.id)} className="group border-[3px] border-white/10 bg-black/30 p-3 text-left transition hover:border-cyan-300"><Sparkles className="h-5 w-5 text-cyan-300" /><p className="mt-3 font-black uppercase">{template.name}</p><p className="mt-1 text-xs font-bold leading-5 text-white/40">{template.description}</p><span className="mt-3 block text-[9px] font-black uppercase text-cyan-300">{template.weeklySessions} días · Mongo r{template.revision} · aplicar →</span></button>)}</div>
     </section>
 
     <section className="border-[3px] border-white/15 bg-[#0c0c0c]">
@@ -39,7 +39,7 @@ export function TrainerPlanEditor({ os }: { os: TrainerOs }) {
 
       <footer className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t-[3px] border-white/15 bg-[#0c0c0c]/95 p-3 backdrop-blur sm:p-4">
         <div>{os.validationError ? <p className="text-xs font-bold text-orange-300">{os.validationError}</p> : <p className="inline-flex items-center gap-2 text-xs font-bold text-[#d8ff3e]"><Check className="h-4 w-4" /> Plan listo para guardar</p>}<p className="mt-1 text-[10px] font-black uppercase text-white/30">{os.draft.items.length} sesiones · {os.draft.items.reduce((sum, item) => sum + item.targetMinutes, 0)} min totales</p></div>
-        <div className="flex gap-2"><GameButton variant="ghost" onClick={os.resetDraft} disabled={!os.dirty}><RotateCcw className="h-4 w-4" /> Descartar</GameButton><GameButton onClick={() => void os.save()} disabled={os.saving || Boolean(os.validationError)}>{os.saving ? <span className="animate-pulse">Guardando...</span> : <><Save className="h-4 w-4" /> Guardar plan</>}</GameButton></div>
+        <div className="flex flex-wrap gap-2"><GameButton variant="ghost" onClick={os.resetDraft} disabled={!os.dirty}><RotateCcw className="h-4 w-4" /> Descartar</GameButton>{groupProgram ? <GameButton variant="cyan" onClick={() => void os.saveGroup()} disabled={os.saving || Boolean(os.validationError)}><Users className="h-4 w-4" /> Guardar para grupo ({groupProgram.memberCount})</GameButton> : null}<GameButton onClick={() => void os.save()} disabled={os.saving || Boolean(os.validationError)}>{os.saving ? <span className="animate-pulse">Guardando...</span> : <><Save className="h-4 w-4" /> Guardar solo para este socio</>}</GameButton></div>
       </footer>
     </section>
   </div>;

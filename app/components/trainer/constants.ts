@@ -1,4 +1,3 @@
-import { DEFAULT_TRAINING_PROGRAMS } from "@/lib/xtreme/training-program-catalog";
 import type { TrainerFilter, TrainerTab } from "./types";
 
 export const DEFAULT_COACH_NAME = "Entrenador Xtreme";
@@ -16,6 +15,4 @@ export const TRAINER_TABS: Array<{ id: TrainerTab; label: string }> = [
   { id: "plan", label: "Plan de trabajo" },
   { id: "history", label: "Ejecución" },
 ];
-
-export const PLAN_TEMPLATES = DEFAULT_TRAINING_PROGRAMS;
 

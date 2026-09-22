@@ -1,10 +1,10 @@
 import { MACHINE_GUIDE } from "@/app/components/member/catalog/machines";
-import { DEFAULT_COACH_NAME, PLAN_TEMPLATES } from "./constants";
+import type { TrainingProgramTemplate } from "@/lib/xtreme/training-program-catalog";
+import { DEFAULT_COACH_NAME } from "./constants";
 import type {
   MemberSignal,
   PlanExercisePrescription,
   PlanItem,
-  PlanTemplateId,
   TrainerFilter,
   TrainerMember,
   TrainerPlan,
@@ -77,8 +77,7 @@ export function createEquipmentPrescription(machine: TrainingMachine): PlanExerc
   }, machine);
 }
 
-export function planFromTemplate(templateId: PlanTemplateId, equipment: TrainingMachine[] = []): TrainerPlan {
-  const template = PLAN_TEMPLATES.find((entry) => entry.id === templateId) ?? PLAN_TEMPLATES[0];
+export function planFromTemplate(template: TrainingProgramTemplate, equipment: TrainingMachine[] = []): TrainerPlan {
   return {
     title: template.name,
     objective: template.objective,
@@ -105,6 +104,9 @@ export function validatePlan(plan: TrainerPlan) {
   if (!plan.objective.trim()) return "Definí el objetivo para que el socio entienda el enfoque.";
   if (!plan.items.length) return "Agregá al menos una sesión.";
   if (plan.items.some((item) => !item.day.trim() || !item.focus.trim())) return "Cada sesión necesita nombre y enfoque.";
+  if (plan.items.some((item) => !item.prescribedExercises?.length)) {
+    return "Cada sesión necesita al menos una máquina prescrita.";
+  }
   if (plan.items.some((item) => item.prescribedExercises?.some((exercise) => !exercise.assetId))) {
     return "Vinculá cada ejercicio prescrito con una máquina física del piso.";
   }

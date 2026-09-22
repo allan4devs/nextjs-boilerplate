@@ -11,6 +11,7 @@ import {
   loginTrainer,
   logoutTrainer,
   persistTrainerPlan,
+  persistTrainingProgram,
   toggleClassStatus,
   trainerSession,
 } from "../api";
@@ -18,7 +19,6 @@ import { DEFAULT_COACH_NAME } from "../constants";
 import type {
   PlanExercisePrescription,
   PlanItem,
-  PlanTemplateId,
   TrainerFilter,
   TrainerMember,
   TrainerNotice,
@@ -296,13 +296,15 @@ export function useTrainerOs() {
     updateItem(itemIndex, { prescribedExercises: exercises.filter((_, index) => index !== exerciseIndex) });
   }, [draft.items, updateItem]);
 
-  const applyTemplate = useCallback((templateId: PlanTemplateId) => {
+  const applyTemplate = useCallback((templateId: string) => {
     if (dirty && draft.items.length && !window.confirm("¿Reemplazar el borrador con esta plantilla?")) return;
-    setDraft(planFromTemplate(templateId, equipment));
+    const template = programs.find((entry) => entry.id === templateId);
+    if (!template) return;
+    setDraft(planFromTemplate(template, equipment));
     setDirty(true);
     setNotice(null);
     setTab("plan");
-  }, [dirty, draft.items.length, equipment]);
+  }, [dirty, draft.items.length, equipment, programs]);
 
   const resetDraft = useCallback(() => resetWorkspace(selected), [resetWorkspace, selected]);
 
@@ -329,6 +331,39 @@ export function useTrainerOs() {
       setSaving(false);
     }
   }, [coachName, draft, selected]);
+
+  const saveGroup = useCallback(async () => {
+    if (!selected?.trainingProgramAssignment) return;
+    const program = programs.find((entry) => entry.id === selected.trainingProgramAssignment?.programId);
+    if (!program) return;
+    const invalid = validatePlan(draft);
+    if (invalid) {
+      setNotice({ tone: "error", text: invalid });
+      return;
+    }
+    if (!window.confirm(`¿Actualizar ${program.name} para sus ${program.memberCount} socios? Los entrenos activos se actualizarán al terminar.`)) return;
+    setSaving(true);
+    setNotice(null);
+    try {
+      const result = await persistTrainingProgram(program.id, draft);
+      const refreshed = await fetchTrainerMembers();
+      if (refreshed.authenticated) {
+        setMembers(refreshed.members);
+        setPrograms(refreshed.programs);
+        setEquipment(refreshed.equipment);
+        const member = refreshed.members.find((entry) => entry.normalizedName === selected.normalizedName) ?? null;
+        if (member) resetWorkspace(member);
+      }
+      setNotice({
+        tone: "success",
+        text: `${program.name} actualizado para ${result.synced} socios${result.deferred ? `; ${result.deferred} lo recibirá al terminar su entreno activo` : ""}.`,
+      });
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "No se pudo actualizar el grupo." });
+    } finally {
+      setSaving(false);
+    }
+  }, [draft, programs, resetWorkspace, selected]);
 
   const assignDefaults = useCallback(async () => {
     if (dirty && !window.confirm("¿Asignar programas y descartar los cambios sin guardar?")) return;
@@ -425,7 +460,7 @@ export function useTrainerOs() {
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
     saving, assigningPrograms, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,
     updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise, selectExerciseMachine,
-    deleteExercise, applyTemplate, resetDraft, save, assignDefaults, assignProgram,
+    deleteExercise, applyTemplate, resetDraft, save, saveGroup, assignDefaults, assignProgram,
     changeAgendaDate, toggleClass, expelAttendee,
   };
 }

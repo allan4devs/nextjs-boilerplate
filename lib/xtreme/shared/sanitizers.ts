@@ -36,6 +36,7 @@ function sanitizePrescriptions(input: unknown): PlanExercisePrescription[] {
     const raw = (entry ?? {}) as Record<string, unknown>;
     return {
       id: String(raw.id ?? "").trim().slice(0, 80) || `prescription-${index + 1}`,
+      ...(String(raw.programExerciseId ?? "").trim() ? { programExerciseId: String(raw.programExerciseId).trim().slice(0, 80) } : {}),
       ...(String(raw.assetId ?? "").trim() ? { assetId: String(raw.assetId).trim().slice(0, 80) } : {}),
       machineId: String(raw.machineId ?? "").trim().slice(0, 80),
       machineName: String(raw.machineName ?? "").trim().slice(0, 100),
@@ -61,6 +62,7 @@ export function sanitizePlan(input: unknown): TrainingPlan {
     const item = (entry ?? {}) as Record<string, unknown>;
     return {
       id: String(item.id ?? "").trim() || `plan-${now.getTime()}-${index}`,
+      ...(String(item.programSessionId ?? "").trim() ? { programSessionId: String(item.programSessionId).trim().slice(0, 80) } : {}),
       day: String(item.day ?? "").trim().slice(0, 40),
       focus: String(item.focus ?? "").trim().slice(0, 80),
       exercises: String(item.exercises ?? "").trim().slice(0, 500),

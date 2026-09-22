@@ -45,6 +45,7 @@ export type WorkoutEntry = {
 
 export type PlanExercisePrescription = {
   id: string;
+  programExerciseId?: string;
   /** Stable identity of the physical unit selected by the trainer. */
   assetId?: string;
   machineId: string;
@@ -92,6 +93,7 @@ export type WorkoutHistoryItem = {
 
 export type PlanItem = {
   id: string;
+  programSessionId?: string;
   day: string;
   focus: string;
   exercises: string;

@@ -41,6 +41,7 @@ export type BodyMetric = {
 
 export type PlanItem = {
   id: string;
+  programSessionId?: string;
   day: string;
   focus: string;
   exercises: string;

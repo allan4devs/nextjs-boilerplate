@@ -106,3 +106,12 @@ export async function assignMemberProgram(memberKey: string, programId: string) 
   });
   return payload<SavePlanResponse>(response);
 }
+
+export async function persistTrainingProgram(programId: string, plan: TrainerPlan) {
+  const response = await fetch("/api/xtreme/trainer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "update_training_program", programId, plan }),
+  });
+  return payload<{ ok: boolean; synced: number; deferred: number }>(response);
+}
