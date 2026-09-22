@@ -50,6 +50,12 @@ export function toPublicMember(
     bodyMetrics,
     latestBodyMetric: bodyMetrics.at(-1) ?? null,
     trainingPlan: toPublicTrainingPlan(doc?.trainingPlan),
+    trainingProgramAssignment: doc?.trainingProgramAssignment
+      ? {
+          ...doc.trainingProgramAssignment,
+          assignedAt: new Date(doc.trainingProgramAssignment.assignedAt).toISOString(),
+        }
+      : null,
     activePlanWorkout: doc?.activePlanWorkout ?? null,
     notificationPrefs: mergeNotificationPrefs(doc?.notificationPrefs),
     tourDone: Boolean(doc?.tourDoneAt),

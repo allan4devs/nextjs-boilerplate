@@ -9,6 +9,7 @@ export type {
   NotificationPrefs,
   PlanItem,
   PlanExercisePrescription,
+  TrainingProgramAssignment,
   VisitHistoryRecord,
   VisitHistoryResponse,
   Workout,

@@ -19,6 +19,7 @@ import {
   PINS_COLLECTION,
   sanitizeWorkoutExercises,
   type ActivePlanWorkout,
+  type WorkoutExerciseDetail,
 } from "@/lib/xtreme/shared";
 import {
   WEEKLY_GOAL_DEFAULT,
@@ -56,6 +57,7 @@ import {
   findActiveMemberVisit,
   presentActiveMemberVisit,
 } from "@/lib/xtreme/member-visit";
+import { ensureMemberTrainingPlan } from "@/lib/xtreme/training-programs";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +85,27 @@ function queueWorkoutPush(
   }
 }
 
+function preservePhysicalMachineIdentity(
+  incoming: WorkoutExerciseDetail[],
+  current: WorkoutExerciseDetail[],
+) {
+  const currentById = new Map(current.map((exercise) => [exercise.id, exercise]));
+  return incoming.map((exercise) => {
+    const saved = currentById.get(exercise.id);
+    if (!saved?.assetId) return exercise;
+    return {
+      ...exercise,
+      assetId: saved.assetId,
+      machineId: saved.machineId,
+      machineName: saved.machineName,
+      machineCode: saved.machineCode,
+      machineArea: saved.machineArea,
+      machineLocation: saved.machineLocation,
+      machineFloor: saved.machineFloor,
+    };
+  });
+}
+
 async function buildAuthenticatedMemberPayload(
   db: Awaited<ReturnType<typeof getDb>>,
   normalizedName: string,
@@ -90,6 +113,7 @@ async function buildAuthenticatedMemberPayload(
   extra: Record<string, unknown> = {},
 ) {
   const now = new Date();
+  await ensureMemberTrainingPlan(db, normalizedName, today);
   const memberRepository = createMongoMemberRepository(db);
   const newBadges = await syncMemberGamification(memberRepository, normalizedName, { today });
   const doc = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
@@ -752,8 +776,13 @@ export async function PATCH(req: NextRequest) {
         startedAt: now,
         exercises: (item.prescribedExercises ?? []).map((exercise) => ({
           id: exercise.id,
+          ...(exercise.assetId ? { assetId: exercise.assetId } : {}),
           machineId: exercise.machineId,
           machineName: exercise.machineName,
+          ...(exercise.machineCode ? { machineCode: exercise.machineCode } : {}),
+          ...(exercise.machineArea ? { machineArea: exercise.machineArea } : {}),
+          ...(exercise.machineLocation ? { machineLocation: exercise.machineLocation } : {}),
+          ...(exercise.machineFloor ? { machineFloor: exercise.machineFloor } : {}),
           exerciseName: exercise.exerciseName,
           sets: exercise.sets,
           reps: exercise.reps,
@@ -776,7 +805,10 @@ export async function PATCH(req: NextRequest) {
       const member = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).findOne({ normalizedName });
       if (!member?.activePlanWorkout) return NextResponse.json({ error: "No hay un entreno activo." }, { status: 409 });
       if (body.workoutId !== undefined && (body.workoutId !== member.activePlanWorkout.id || body.revision !== (member.activePlanWorkout.revision ?? 0))) return NextResponse.json({ error: "El entrenamiento cambió en otra pantalla. Actualizá antes de guardar." }, { status: 409 });
-      const exercises = sanitizeWorkoutExercises(body.exercises);
+      const exercises = preservePhysicalMachineIdentity(
+        sanitizeWorkoutExercises(body.exercises),
+        member.activePlanWorkout.exercises,
+      );
       const saved = await db.collection<XtremeMemberDoc>(MEMBERS_COLLECTION).updateOne(
         { normalizedName, "activePlanWorkout.id": member.activePlanWorkout.id, ...(member.activePlanWorkout.revision === undefined ? { "activePlanWorkout.revision": { $exists: false } } : { "activePlanWorkout.revision": member.activePlanWorkout.revision }) },
         { $set: { "activePlanWorkout.exercises": exercises, "activePlanWorkout.revision": (member.activePlanWorkout.revision ?? 0) + 1, updatedAt: new Date() } },
@@ -807,7 +839,7 @@ export async function PATCH(req: NextRequest) {
       if (!item) return NextResponse.json({ error: "La sesion ya no existe en el plan." }, { status: 409 });
       const exercises = body.exercises === undefined
         ? active.exercises
-        : sanitizeWorkoutExercises(body.exercises);
+        : preservePhysicalMachineIdentity(sanitizeWorkoutExercises(body.exercises), active.exercises);
       if (exercises.some((exercise) => exercise.completed !== undefined) && exercises.some((exercise) => !exercise.completed || !((exercise.sets > 0 && exercise.reps > 0) || exercise.seconds > 0))) return NextResponse.json({ error: "Completá y registrá cada ejercicio antes de finalizar." }, { status: 400 });
       const startedAt = new Date(active.startedAt);
       const elapsedMinutes = Math.max(1, Math.min(240, Math.round((Date.now() - startedAt.getTime()) / 60_000)));

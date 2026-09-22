@@ -3,6 +3,7 @@ import type {
   ActivePlanWorkout,
   NotificationPrefs,
   PlanExercisePrescription,
+  TrainingProgramAssignment,
   WorkoutExerciseDetail,
 } from "@/lib/xtreme/shared";
 
@@ -51,6 +52,12 @@ export type PlanItem = {
 };
 
 export type TrainingPlan = {
+  programId?: string;
+  programName?: string;
+  programRevision?: number;
+  groupId?: string;
+  assignmentSource?: "group" | "custom";
+  cycle?: number;
   title: string;
   objective: string;
   coachNote: string;
@@ -75,6 +82,7 @@ export type XtremeMemberDoc = {
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
   trainingPlan?: TrainingPlan;
+  trainingProgramAssignment?: TrainingProgramAssignment;
   activePlanWorkout?: ActivePlanWorkout;
   weeklyGoal?: number;
   earnedBadges?: EarnedBadge[];

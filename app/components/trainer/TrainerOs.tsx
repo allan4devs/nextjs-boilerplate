@@ -9,6 +9,7 @@ import { useTrainerOs } from "./hooks/useTrainerOs";
 import { TrainerHistory } from "./ui/TrainerHistory";
 import { TrainerOverview } from "./ui/TrainerOverview";
 import { TrainerPlanEditor } from "./ui/TrainerPlanEditor";
+import { TrainerProgramsPanel } from "./ui/TrainerProgramsPanel";
 import { TrainerRoster } from "./ui/TrainerRoster";
 import { TrainerTodayClasses } from "./ui/TrainerTodayClasses";
 
@@ -37,6 +38,7 @@ export default function TrainerOs() {
       </section>
 
       <TrainerTodayClasses os={os} />
+      <TrainerProgramsPanel os={os} />
 
       <div className="grid min-h-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]">
         <TrainerRoster os={os} />

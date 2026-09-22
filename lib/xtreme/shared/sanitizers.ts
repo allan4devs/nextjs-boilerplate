@@ -13,8 +13,13 @@ export function sanitizeWorkoutExercises(input: unknown): WorkoutExerciseDetail[
     return {
       ...(typeof raw.completed === "boolean" ? { completed: raw.completed } : {}),
       id: String(raw.id ?? "").trim().slice(0, 80) || `exercise-${index + 1}`,
+      ...(String(raw.assetId ?? "").trim() ? { assetId: String(raw.assetId).trim().slice(0, 80) } : {}),
       machineId: String(raw.machineId ?? "").trim().slice(0, 80),
       machineName: String(raw.machineName ?? "").trim().slice(0, 100),
+      ...(String(raw.machineCode ?? "").trim() ? { machineCode: String(raw.machineCode).trim().slice(0, 40) } : {}),
+      ...(String(raw.machineArea ?? "").trim() ? { machineArea: String(raw.machineArea).trim().slice(0, 80) } : {}),
+      ...(String(raw.machineLocation ?? "").trim() ? { machineLocation: String(raw.machineLocation).trim().slice(0, 180) } : {}),
+      ...(Number.isFinite(Number(raw.machineFloor)) ? { machineFloor: Math.max(1, Math.min(20, Math.round(Number(raw.machineFloor)))) } : {}),
       exerciseName: String(raw.exerciseName ?? raw.machineName ?? "Ejercicio").trim().slice(0, 100),
       sets: Math.max(0, Math.min(20, Math.round(Number(raw.sets) || 0))),
       reps: Math.max(0, Math.min(500, Math.round(Number(raw.reps) || 0))),
@@ -31,8 +36,13 @@ function sanitizePrescriptions(input: unknown): PlanExercisePrescription[] {
     const raw = (entry ?? {}) as Record<string, unknown>;
     return {
       id: String(raw.id ?? "").trim().slice(0, 80) || `prescription-${index + 1}`,
+      ...(String(raw.assetId ?? "").trim() ? { assetId: String(raw.assetId).trim().slice(0, 80) } : {}),
       machineId: String(raw.machineId ?? "").trim().slice(0, 80),
       machineName: String(raw.machineName ?? "").trim().slice(0, 100),
+      ...(String(raw.machineCode ?? "").trim() ? { machineCode: String(raw.machineCode).trim().slice(0, 40) } : {}),
+      ...(String(raw.machineArea ?? "").trim() ? { machineArea: String(raw.machineArea).trim().slice(0, 80) } : {}),
+      ...(String(raw.machineLocation ?? "").trim() ? { machineLocation: String(raw.machineLocation).trim().slice(0, 180) } : {}),
+      ...(Number.isFinite(Number(raw.machineFloor)) ? { machineFloor: Math.max(1, Math.min(20, Math.round(Number(raw.machineFloor)))) } : {}),
       exerciseName: String(raw.exerciseName ?? raw.machineName ?? "Ejercicio").trim().slice(0, 100),
       sets: Math.max(0, Math.min(20, Math.round(Number(raw.sets) || 0))),
       reps: Math.max(0, Math.min(500, Math.round(Number(raw.reps) || 0))),

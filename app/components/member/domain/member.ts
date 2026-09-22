@@ -18,8 +18,13 @@ export type Workout = {
 export type WorkoutExerciseDetail = {
   completed?: boolean;
   id: string;
+  assetId?: string;
   machineId: string;
   machineName: string;
+  machineCode?: string;
+  machineArea?: string;
+  machineLocation?: string;
+  machineFloor?: number;
   exerciseName: string;
   sets: number;
   reps: number;
@@ -30,8 +35,13 @@ export type WorkoutExerciseDetail = {
 
 export type PlanExercisePrescription = {
   id: string;
+  assetId?: string;
   machineId: string;
   machineName: string;
+  machineCode?: string;
+  machineArea?: string;
+  machineLocation?: string;
+  machineFloor?: number;
   exerciseName: string;
   sets: number;
   reps: number;
@@ -80,6 +90,12 @@ export type PlanItem = {
 };
 
 export type MemberPlan = {
+  programId?: string;
+  programName?: string;
+  programRevision?: number;
+  groupId?: string;
+  assignmentSource?: "group" | "custom";
+  cycle?: number;
   title: string;
   objective: string;
   coachNote: string;
@@ -90,6 +106,18 @@ export type MemberPlan = {
   doneItems: number;
   totalItems: number;
   progressPct: number;
+};
+
+export type TrainingProgramAssignment = {
+  programId: string;
+  programName: string;
+  programRevision: number;
+  groupId: string;
+  cohort: string;
+  source: "auto_default" | "trainer_group" | "trainer_custom";
+  cycle: number;
+  assignedBy: string;
+  assignedAt: string;
 };
 
 export type Membership = {
@@ -147,6 +175,7 @@ export type Member = {
   bodyMetrics: BodyMetric[];
   latestBodyMetric: BodyMetric | null;
   trainingPlan: MemberPlan | null;
+  trainingProgramAssignment: TrainingProgramAssignment | null;
   activePlanWorkout: ActivePlanWorkout | null;
   notificationPrefs?: NotificationPrefs;
   tourDone?: boolean;

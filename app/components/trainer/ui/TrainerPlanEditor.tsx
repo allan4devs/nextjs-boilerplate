@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Copy, Dumbbell, Plus, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Copy, Dumbbell, ExternalLink, MapPin, Plus, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import { GameButton, GameLabel } from "@/app/components/GameOS";
-import { MACHINE_GUIDE } from "@/app/components/member/catalog/machines";
+import { physicalMachinePath } from "@/app/lib/physical-machine-links";
 import { PLAN_TEMPLATES } from "../constants";
 import type { TrainerOs } from "../hooks/useTrainerOs";
-import type { PlanExercisePrescription, PlanItem } from "../types";
+import type { PlanExercisePrescription, PlanItem, TrainingMachine } from "../types";
 import { TrainerField, TrainerNumberField, TrainerTextarea } from "./TrainerFields";
 
 export function TrainerPlanEditor({ os }: { os: TrainerOs }) {
   return <div className="space-y-4">
     <section className="border-[3px] border-cyan-300/40 bg-[#0c0c0c] p-4">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><GameLabel tone="cyan">Punto de partida</GameLabel><h3 className="mt-2 text-xl font-black uppercase">Plantillas inteligentes</h3><p className="mt-1 text-sm font-bold text-white/40">Aplicá una base y personalizala según la evaluación.</p></div>{os.dirty && <span className="border-2 border-orange-300 px-2 py-1 text-[9px] font-black uppercase text-orange-200">Cambios sin guardar</span>}</div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{PLAN_TEMPLATES.map((template) => <button key={template.id} onClick={() => os.applyTemplate(template.id)} className="group border-[3px] border-white/10 bg-black/30 p-3 text-left transition hover:border-cyan-300"><Sparkles className="h-5 w-5 text-cyan-300" /><p className="mt-3 font-black uppercase">{template.name}</p><p className="mt-1 text-xs font-bold leading-5 text-white/40">{template.description}</p><span className="mt-3 block text-[9px] font-black uppercase text-cyan-300">{template.weeklySessions} días · aplicar →</span></button>)}</div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{PLAN_TEMPLATES.map((template) => <button type="button" key={template.id} onClick={() => os.applyTemplate(template.id)} className="group border-[3px] border-white/10 bg-black/30 p-3 text-left transition hover:border-cyan-300"><Sparkles className="h-5 w-5 text-cyan-300" /><p className="mt-3 font-black uppercase">{template.name}</p><p className="mt-1 text-xs font-bold leading-5 text-white/40">{template.description}</p><span className="mt-3 block text-[9px] font-black uppercase text-cyan-300">{template.weeklySessions} días · aplicar →</span></button>)}</div>
     </section>
 
     <section className="border-[3px] border-white/15 bg-[#0c0c0c]">
@@ -28,8 +29,12 @@ export function TrainerPlanEditor({ os }: { os: TrainerOs }) {
       </div>
 
       <div className="space-y-3 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-2 border-cyan-300/25 bg-cyan-300/[.04] p-3 text-xs font-bold text-white/55">
+          <span>{os.equipment.length} máquinas físicas disponibles para vincular al plan.</span>
+          <Link href="/maquinas" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-cyan-200 hover:text-white">Abrir app de máquinas <ExternalLink className="h-3.5 w-3.5" /></Link>
+        </div>
         {os.draft.items.map((item, index) => <PlanSession key={item.id} item={item} index={index} total={os.draft.items.length} os={os} />)}
-        <button onClick={os.addItem} className="inline-flex min-h-12 w-full items-center justify-center gap-2 border-[3px] border-dashed border-cyan-300/45 font-black uppercase text-cyan-200 transition hover:bg-cyan-300/10"><Plus className="h-4 w-4" /> Agregar sesión</button>
+        <button type="button" onClick={os.addItem} className="inline-flex min-h-12 w-full items-center justify-center gap-2 border-[3px] border-dashed border-cyan-300/45 font-black uppercase text-cyan-200 transition hover:bg-cyan-300/10"><Plus className="h-4 w-4" /> Agregar sesión</button>
       </div>
 
       <footer className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t-[3px] border-white/15 bg-[#0c0c0c]/95 p-3 backdrop-blur sm:p-4">
@@ -42,26 +47,42 @@ export function TrainerPlanEditor({ os }: { os: TrainerOs }) {
 
 function PlanSession({ item, index, total, os }: { item: PlanItem; index: number; total: number; os: TrainerOs }) {
   const [expanded, setExpanded] = useState(index === 0 || !item.done);
-  const [machineId, setMachineId] = useState(MACHINE_GUIDE[0]?.id ?? "");
+  const [assetId, setAssetId] = useState("");
+  const selectedAssetId = os.equipment.some((machine) => machine.assetId === assetId && machine.status !== "fuera_de_servicio")
+    ? assetId
+    : os.equipment.find((machine) => machine.status !== "fuera_de_servicio")?.assetId ?? "";
   const exercises = item.prescribedExercises ?? [];
   return <article className={`border-[3px] ${item.done ? "border-[#d8ff3e]/35 bg-[#d8ff3e]/[.035]" : "border-white/15 bg-black/25"}`}>
     <header className="flex flex-wrap items-center gap-3 p-3">
-      <button onClick={() => setExpanded((value) => !value)} className={`grid h-10 w-10 shrink-0 place-items-center font-black ${item.done ? "bg-[#d8ff3e] text-black" : "bg-cyan-300 text-black"}`}>{item.done ? <Check className="h-5 w-5" /> : index + 1}</button>
-      <button onClick={() => setExpanded((value) => !value)} className="min-w-0 flex-1 text-left"><p className="truncate font-black uppercase">{item.day || `Sesión ${index + 1}`}</p><p className="truncate text-xs font-bold text-white/40">{item.focus || "Sin enfoque"} · {item.targetMinutes} min · {exercises.length} ejercicios</p></button>
-      <div className="flex items-center gap-1"><IconButton label="Subir" disabled={index === 0} onClick={() => os.moveItem(index, -1)}><ArrowUp /></IconButton><IconButton label="Bajar" disabled={index === total - 1} onClick={() => os.moveItem(index, 1)}><ArrowDown /></IconButton><IconButton label="Duplicar" onClick={() => os.duplicateItem(index)}><Copy /></IconButton><IconButton label="Eliminar" danger onClick={() => os.deleteItem(index)}><Trash2 /></IconButton><button onClick={() => setExpanded((value) => !value)} className="p-2 text-white/45">{expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}</button></div>
+      <button type="button" onClick={() => setExpanded((value) => !value)} className={`grid h-10 w-10 shrink-0 place-items-center font-black ${item.done ? "bg-[#d8ff3e] text-black" : "bg-cyan-300 text-black"}`}>{item.done ? <Check className="h-5 w-5" /> : index + 1}</button>
+      <button type="button" onClick={() => setExpanded((value) => !value)} className="min-w-0 flex-1 text-left"><p className="truncate font-black uppercase">{item.day || `Sesión ${index + 1}`}</p><p className="truncate text-xs font-bold text-white/40">{item.focus || "Sin enfoque"} · {item.targetMinutes} min · {exercises.length} ejercicios</p></button>
+      <div className="flex items-center gap-1"><IconButton label="Subir" disabled={index === 0} onClick={() => os.moveItem(index, -1)}><ArrowUp /></IconButton><IconButton label="Bajar" disabled={index === total - 1} onClick={() => os.moveItem(index, 1)}><ArrowDown /></IconButton><IconButton label="Duplicar" onClick={() => os.duplicateItem(index)}><Copy /></IconButton><IconButton label="Eliminar" danger onClick={() => os.deleteItem(index)}><Trash2 /></IconButton><button type="button" aria-label={expanded ? "Contraer sesión" : "Expandir sesión"} onClick={() => setExpanded((value) => !value)} className="p-2 text-white/45">{expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}</button></div>
     </header>
     {expanded && <div className="border-t border-white/10 p-3 sm:p-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><TrainerField label="Día / nombre" value={item.day} onChange={(value) => os.updateItem(index, { day: value })} /><TrainerField label="Enfoque" value={item.focus} onChange={(value) => os.updateItem(index, { focus: value })} /><TrainerNumberField label="Minutos meta" value={item.targetMinutes} min={5} max={180} onChange={(value) => os.updateItem(index, { targetMinutes: value })} /><div className="sm:col-span-2 lg:col-span-3"><TrainerTextarea label="Indicaciones generales" value={item.exercises} onChange={(value) => os.updateItem(index, { exercises: value })} rows={2} /></div></div>
       <div className="mt-4 border-t border-white/10 pt-4"><div className="flex items-center justify-between gap-3"><h4 className="flex items-center gap-2 text-sm font-black uppercase"><Dumbbell className="h-4 w-4 text-cyan-300" /> Prescripción detallada</h4><span className="text-[9px] font-black uppercase text-white/30">{exercises.length} ejercicios</span></div>
-        <div className="mt-3 space-y-2">{exercises.map((exercise, exerciseIndex) => <ExerciseRow key={exercise.id} exercise={exercise} onChange={(patch) => os.updateExercise(index, exerciseIndex, patch)} onDelete={() => os.deleteExercise(index, exerciseIndex)} />)}</div>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row"><select value={machineId} onChange={(event) => setMachineId(event.target.value)} className="min-h-11 flex-1 bg-white px-3 font-bold text-black">{MACHINE_GUIDE.map((machine) => <option key={machine.id} value={machine.id}>{machine.name} · {machine.zone}</option>)}</select><button onClick={() => os.addExercise(index, machineId)} className="inline-flex min-h-11 items-center justify-center gap-2 bg-cyan-300 px-4 text-xs font-black uppercase text-black"><Plus className="h-4 w-4" /> Prescribir máquina</button></div>
+        <div className="mt-3 space-y-2">{exercises.map((exercise, exerciseIndex) => <ExerciseRow key={exercise.id} exercise={exercise} equipment={os.equipment} onSelectMachine={(nextAssetId) => os.selectExerciseMachine(index, exerciseIndex, nextAssetId)} onChange={(patch) => os.updateExercise(index, exerciseIndex, patch)} onDelete={() => os.deleteExercise(index, exerciseIndex)} />)}</div>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row"><MachineSelect value={selectedAssetId} equipment={os.equipment} onChange={setAssetId} /><button type="button" disabled={!selectedAssetId} onClick={() => os.addExercise(index, selectedAssetId)} className="inline-flex min-h-11 items-center justify-center gap-2 bg-cyan-300 px-4 text-xs font-black uppercase text-black disabled:opacity-40"><Plus className="h-4 w-4" /> Prescribir máquina física</button></div>
       </div>
     </div>}
   </article>;
 }
 
-function ExerciseRow({ exercise, onChange, onDelete }: { exercise: PlanExercisePrescription; onChange: (patch: Partial<PlanExercisePrescription>) => void; onDelete: () => void }) {
-  return <div className="grid gap-2 border-2 border-white/10 bg-black/30 p-2 sm:grid-cols-2 xl:grid-cols-[1.5fr_repeat(4,.65fr)_auto]"><TrainerField label="Ejercicio" value={exercise.exerciseName} onChange={(value) => onChange({ exerciseName: value })} /><TrainerNumberField label="Series" value={exercise.sets} min={1} max={20} onChange={(value) => onChange({ sets: value })} /><TrainerNumberField label="Reps" value={exercise.reps} min={0} max={100} onChange={(value) => onChange({ reps: value })} /><TrainerNumberField label="Peso kg" value={exercise.weightKg} min={0} max={1000} onChange={(value) => onChange({ weightKg: value })} /><TrainerNumberField label="Segundos" value={exercise.targetSeconds} min={0} max={3600} onChange={(value) => onChange({ targetSeconds: value })} /><button aria-label="Eliminar ejercicio" onClick={onDelete} className="self-end p-3 text-white/35 transition hover:text-red-300"><Trash2 className="h-4 w-4" /></button><div className="sm:col-span-2 xl:col-span-6"><TrainerField label="Nota técnica" value={exercise.notes} onChange={(value) => onChange({ notes: value })} placeholder="Tempo, rango, descanso o corrección" /></div></div>;
+function ExerciseRow({ exercise, equipment, onSelectMachine, onChange, onDelete }: { exercise: PlanExercisePrescription; equipment: TrainingMachine[]; onSelectMachine: (assetId: string) => void; onChange: (patch: Partial<PlanExercisePrescription>) => void; onDelete: () => void }) {
+  return <div className="grid gap-2 border-2 border-white/10 bg-black/30 p-2 sm:grid-cols-2 xl:grid-cols-[1.5fr_repeat(4,.65fr)_auto]">
+    <div className="sm:col-span-2 xl:col-span-6">
+      <MachineSelect value={exercise.assetId ?? ""} equipment={equipment} onChange={onSelectMachine} invalid={!exercise.assetId} />
+      {exercise.assetId && <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold text-white/45"><span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-cyan-300" /> Piso {exercise.machineFloor ?? 1} · {exercise.machineArea}{exercise.machineLocation ? ` · ${exercise.machineLocation}` : ""}</span><Link href={physicalMachinePath(exercise.assetId)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-cyan-200">Ver ficha <ExternalLink className="h-3 w-3" /></Link></div>}
+    </div>
+    <TrainerField label="Ejercicio" value={exercise.exerciseName} onChange={(value) => onChange({ exerciseName: value })} /><TrainerNumberField label="Series" value={exercise.sets} min={1} max={20} onChange={(value) => onChange({ sets: value })} /><TrainerNumberField label="Reps" value={exercise.reps} min={0} max={100} onChange={(value) => onChange({ reps: value })} /><TrainerNumberField label="Peso kg" value={exercise.weightKg} min={0} max={1000} onChange={(value) => onChange({ weightKg: value })} /><TrainerNumberField label="Segundos" value={exercise.targetSeconds} min={0} max={3600} onChange={(value) => onChange({ targetSeconds: value })} /><button type="button" aria-label="Eliminar ejercicio" onClick={onDelete} className="self-end p-3 text-white/35 transition hover:text-red-300"><Trash2 className="h-4 w-4" /></button><div className="sm:col-span-2 xl:col-span-6"><TrainerField label="Nota técnica" value={exercise.notes} onChange={(value) => onChange({ notes: value })} placeholder="Tempo, rango, descanso o corrección" /></div>
+  </div>;
+}
+
+function MachineSelect({ value, equipment, onChange, invalid = false }: { value: string; equipment: TrainingMachine[]; onChange: (assetId: string) => void; invalid?: boolean }) {
+  return <select aria-label="Máquina física" aria-invalid={invalid} value={value} onChange={(event) => onChange(event.target.value)} className={`min-h-11 w-full bg-white px-3 font-bold text-black ${invalid ? "outline outline-2 outline-orange-300" : ""}`}>
+    <option value="">Elegí la máquina física (código · zona · piso)</option>
+    {equipment.map((machine) => <option key={machine.assetId} value={machine.assetId} disabled={machine.status === "fuera_de_servicio"}>{machine.code || "Sin código"} · {machine.name} · {machine.area} · Piso {machine.floor}{machine.status === "fuera_de_servicio" ? " · FUERA DE SERVICIO" : ""}</option>)}
+  </select>;
 }
 
 function IconButton({ label, onClick, disabled, danger, children }: { label: string; onClick: () => void; disabled?: boolean; danger?: boolean; children: React.ReactElement<{ className?: string }> }) { return <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick} className={`grid h-9 w-9 place-items-center transition disabled:opacity-20 ${danger ? "text-red-300/60 hover:bg-red-400/10 hover:text-red-300" : "text-white/35 hover:bg-white/10 hover:text-white"}`}>{children}</button>; }

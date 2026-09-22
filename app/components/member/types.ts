@@ -27,6 +27,7 @@ export type {
   ReservationState,
   Routine,
   Training,
+  TrainingProgramAssignment,
   VisitHistoryRecord,
   VisitHistoryResponse,
   Workout,

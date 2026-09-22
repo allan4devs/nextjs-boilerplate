@@ -3,6 +3,10 @@ import type {
   PlanItem,
   WorkoutExerciseDetail,
 } from "@/app/components/member/types";
+import type {
+  DefaultTrainingProgramId,
+  TrainingProgramTemplate,
+} from "@/lib/xtreme/training-program-catalog";
 
 export type { PlanExercisePrescription, PlanItem, WorkoutExerciseDetail };
 
@@ -25,6 +29,12 @@ export type TrainerMetric = {
 };
 
 export type TrainerPlan = {
+  programId?: string;
+  programName?: string;
+  programRevision?: number;
+  groupId?: string;
+  assignmentSource?: "group" | "custom";
+  cycle?: number;
   title: string;
   objective: string;
   coachNote: string;
@@ -37,6 +47,34 @@ export type TrainerPlan = {
   progressPct?: number;
 };
 
+export type TrainerProgramAssignment = {
+  programId: string;
+  programName: string;
+  programRevision: number;
+  groupId: string;
+  cohort: string;
+  source: "auto_default" | "trainer_group" | "trainer_custom";
+  cycle: number;
+  assignedBy: string;
+  assignedAt: string;
+};
+
+export type TrainerProgram = TrainingProgramTemplate & {
+  revision: number;
+  memberCount: number;
+};
+
+export type TrainingMachine = {
+  assetId: string;
+  machineGuideId?: string;
+  code: string;
+  name: string;
+  area: string;
+  location: string;
+  floor: number;
+  status: "bueno" | "fuera_de_servicio" | "pendiente" | "sin_dato";
+};
+
 export type TrainerMember = {
   memberName: string;
   normalizedName: string;
@@ -45,6 +83,7 @@ export type TrainerMember = {
   photoUrl: string;
   membershipStatus: MembershipStatus;
   trainingPlan: TrainerPlan | null;
+  trainingProgramAssignment: TrainerProgramAssignment | null;
   activePlanWorkout: {
     id?: string;
     planItemId: string;
@@ -97,29 +136,8 @@ export type MemberSignal = {
   priority: number;
 };
 
-export type PlanTemplateId = "starter" | "strength" | "hypertrophy" | "conditioning";
-
-export type PlanTemplate = {
-  id: PlanTemplateId;
-  name: string;
-  description: string;
-  weeklySessions: number;
-  objective: string;
-  sessions: Array<{
-    day: string;
-    focus: string;
-    targetMinutes: number;
-    exercises: string;
-    machines: Array<{
-      machineId: string;
-      sets: number;
-      reps: number;
-      weightKg?: number;
-      targetSeconds?: number;
-      notes?: string;
-    }>;
-  }>;
-};
+export type PlanTemplateId = DefaultTrainingProgramId;
+export type PlanTemplate = TrainingProgramTemplate;
 
 export type TrainerNotice = { tone: "success" | "error"; text: string } | null;
 
@@ -129,4 +147,6 @@ export type TrainerDashboardResponse = {
   date: string;
   members: TrainerMember[];
   todayClasses: TrainerTodayClass[];
+  equipment: TrainingMachine[];
+  programs: TrainerProgram[];
 };

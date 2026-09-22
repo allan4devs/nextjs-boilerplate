@@ -105,6 +105,12 @@ export function toPublicTrainingPlan(plan?: TrainingPlan) {
   const doneItems = items.filter((item) => item.done).length;
   const totalItems = items.length;
   return {
+    programId: plan.programId,
+    programName: plan.programName,
+    programRevision: plan.programRevision,
+    groupId: plan.groupId,
+    assignmentSource: plan.assignmentSource,
+    cycle: plan.cycle,
     title: plan.title ?? "",
     objective: plan.objective ?? "",
     coachNote: plan.coachNote ?? "",
