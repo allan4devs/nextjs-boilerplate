@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Clock3, Loader2, Printer, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, Clock3, Loader2, PackageCheck, Printer, RefreshCw, SlidersHorizontal, WalletCards } from "lucide-react";
 import { GameChip, GameLabel, GameModal } from "../GameOS";
 import ProductSaleReceipt from "./ProductSaleReceipt";
 
@@ -28,17 +28,37 @@ type Adjustment = {
 
 type Dashboard = {
   range: { from: string; to: string };
-  summary: { totalIncome: number; saleCount: number; unitsSold: number; averageTicket: number; adjustmentCount: number };
+  summary: {
+    totalIncome: number;
+    saleCount: number;
+    unitsSold: number;
+    averageTicket: number;
+    cashIncome: number;
+    sinpeIncome: number;
+    cashSaleCount: number;
+    sinpeSaleCount: number;
+    mixedSaleCount: number;
+    adjustmentCount: number;
+  };
+  productSummary: Array<{
+    productId: string;
+    name: string;
+    unitsSold: number;
+    saleCount: number;
+    totalIncome: number;
+    averageUnitPrice: number;
+  }>;
   sales: Sale[];
   adjustments: Adjustment[];
 };
 
 const crc = new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 0 });
 const dateTime = new Intl.DateTimeFormat("es-CR", { dateStyle: "short", timeStyle: "short" });
+const dateOnly = new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" });
 
 function localInputValue(date: Date) {
   const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  return new Date(date.getTime() - offset).toISOString().slice(0, 19);
 }
 
 function rangeFor(days: number) {
@@ -46,6 +66,19 @@ function rangeFor(days: number) {
   const from = new Date(to);
   if (days === 0) from.setHours(0, 0, 0, 0);
   else from.setDate(from.getDate() - days);
+  return { from: localInputValue(from), to: localInputValue(to) };
+}
+
+function currentMonthValue() {
+  return localInputValue(new Date()).slice(0, 7);
+}
+
+function rangeForMonth(value: string) {
+  const [year, month] = value.split("-").map(Number);
+  if (!year || !month) return rangeFor(0);
+  const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  const to = new Date(year, month, 1, 0, 0, 0, 0);
+  to.setMilliseconds(-1);
   return { from: localInputValue(from), to: localInputValue(to) };
 }
 
@@ -73,7 +106,9 @@ export default function SalesMonitoringPanel() {
       setDeleteError(cause instanceof Error ? cause.message : "Error de conexi?n.");
     } finally { setDeleting(false); }
   }
-  const initial = rangeFor(0);
+  const initialMonth = currentMonthValue();
+  const initial = rangeForMonth(initialMonth);
+  const [month, setMonth] = useState(initialMonth);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [data, setData] = useState<Dashboard | null>(null);
@@ -114,6 +149,15 @@ export default function SalesMonitoringPanel() {
 
   function applyPreset(days: number) {
     const range = rangeFor(days);
+    setMonth("");
+    setFrom(range.from);
+    setTo(range.to);
+  }
+
+  function applyMonth(value: string) {
+    if (!value) return;
+    const range = rangeForMonth(value);
+    setMonth(value);
     setFrom(range.from);
     setTo(range.to);
   }
@@ -123,8 +167,8 @@ export default function SalesMonitoringPanel() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <GameLabel tone="cyan">Control en tiempo real</GameLabel>
-          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">Monitoreo de ventas</h2>
-          <p className="mt-2 text-sm font-bold text-white/45">Consultá ingresos, ventas y reajustes en cualquier rango de fecha y hora.</p>
+          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">Reporte de ventas</h2>
+          <p className="mt-2 text-sm font-bold text-white/45">Revisá por mes cuánto se vendió de cada producto, los ingresos y cada movimiento.</p>
         </div>
         <button type="button" onClick={() => void load()} disabled={loading} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-4 text-xs font-black uppercase text-white/65 hover:border-[#d8ff3e]/60 hover:text-[#d8ff3e] disabled:opacity-40">
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Actualizar
@@ -132,17 +176,25 @@ export default function SalesMonitoringPanel() {
       </div>
 
       <div className="mt-5 border-[3px] border-white/15 bg-black/35 p-4">
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => applyPreset(0)} className="min-h-10 border-2 border-white/15 px-3 text-xs font-black uppercase hover:border-[#d8ff3e]">Hoy</button>
-          <button type="button" onClick={() => applyPreset(7)} className="min-h-10 border-2 border-white/15 px-3 text-xs font-black uppercase hover:border-[#d8ff3e]">7 días</button>
-          <button type="button" onClick={() => applyPreset(30)} className="min-h-10 border-2 border-white/15 px-3 text-xs font-black uppercase hover:border-[#d8ff3e]">30 días</button>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="min-w-52 text-[10px] font-black uppercase tracking-wide text-white/40">Mes del reporte
+            <span className="mt-1 flex min-h-11 items-center gap-2 border-[3px] border-[#d8ff3e]/65 bg-[#d8ff3e]/5 px-3">
+              <CalendarDays className="h-4 w-4 shrink-0 text-[#d8ff3e]" />
+              <input type="month" value={month} onChange={(event) => applyMonth(event.target.value)} className="w-full bg-transparent text-sm font-black text-white outline-none [color-scheme:dark]" />
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => applyPreset(0)} className="min-h-11 border-2 border-white/15 px-3 text-xs font-black uppercase hover:border-[#d8ff3e]">Hoy</button>
+            <button type="button" onClick={() => applyPreset(7)} className="min-h-11 border-2 border-white/15 px-3 text-xs font-black uppercase hover:border-[#d8ff3e]">7 días</button>
+            <button type="button" onClick={() => applyPreset(30)} className="min-h-11 border-2 border-white/15 px-3 text-xs font-black uppercase hover:border-[#d8ff3e]">30 días</button>
+          </div>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
           <label className="text-[10px] font-black uppercase tracking-wide text-white/40">Desde
-            <input type="datetime-local" value={from} onChange={(event) => setFrom(event.target.value)} className="mt-1 block min-h-11 w-full border-[3px] border-white/15 bg-black px-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]" />
+            <input type="datetime-local" step="1" value={from} onChange={(event) => { setMonth(""); setFrom(event.target.value); }} className="mt-1 block min-h-11 w-full border-[3px] border-white/15 bg-black px-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]" />
           </label>
           <label className="text-[10px] font-black uppercase tracking-wide text-white/40">Hasta
-            <input type="datetime-local" value={to} onChange={(event) => setTo(event.target.value)} className="mt-1 block min-h-11 w-full border-[3px] border-white/15 bg-black px-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]" />
+            <input type="datetime-local" step="1" value={to} onChange={(event) => { setMonth(""); setTo(event.target.value); }} className="mt-1 block min-h-11 w-full border-[3px] border-white/15 bg-black px-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]" />
           </label>
           <button type="button" onClick={() => void load()} className="mt-[15px] inline-flex min-h-11 items-center justify-center gap-2 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-5 text-xs font-black uppercase text-black"><Clock3 className="h-4 w-4" /> Consultar</button>
         </div>
@@ -158,9 +210,91 @@ export default function SalesMonitoringPanel() {
           <Metric label="Reajustes" value={String(data.summary.adjustmentCount)} warn={data.summary.adjustmentCount > 0} />
         </div>
 
+        <section className="mt-6 border-[3px] border-[#d8ff3e]/35 bg-[#d8ff3e]/[0.035] p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <GameLabel tone="lime">Resumen completo del período</GameLabel>
+              <h3 className="mt-2 flex items-center gap-2 text-2xl font-black uppercase">
+                <PackageCheck className="h-6 w-6 text-[#d8ff3e]" /> Productos vendidos
+              </h3>
+              <p className="mt-1 text-xs font-bold text-white/40">
+                {dateOnly.format(new Date(data.range.from))} al {dateOnly.format(new Date(data.range.to))} · agrupado por producto
+              </p>
+            </div>
+            <GameChip tone="lime">{data.productSummary.length} productos</GameChip>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <PaymentMetric
+              label="Efectivo"
+              amount={data.summary.cashIncome}
+              detail={`${data.summary.cashSaleCount} ventas directas`}
+            />
+            <PaymentMetric
+              label="SINPE"
+              amount={data.summary.sinpeIncome}
+              detail={`${data.summary.sinpeSaleCount} ventas directas`}
+            />
+            <div className="border-2 border-cyan-300/25 bg-cyan-300/[0.04] p-3">
+              <div className="flex items-center gap-2 text-cyan-200"><WalletCards className="h-4 w-4" /><p className="text-[10px] font-black uppercase tracking-[.14em]">Pagos mixtos</p></div>
+              <p className="mt-2 text-2xl font-black">{data.summary.mixedSaleCount}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase text-white/35">incluidos entre efectivo y SINPE</p>
+            </div>
+          </div>
+
+          {data.productSummary.length === 0 ? <div className="mt-4"><Empty text="No hay productos vendidos en este período." /></div> : (
+            <div className="mt-4 overflow-x-auto border-2 border-white/10">
+              <table className="w-full min-w-[760px] border-collapse text-left">
+                <thead className="bg-white/[0.06] text-[10px] font-black uppercase tracking-[.12em] text-white/45">
+                  <tr>
+                    <th scope="col" className="px-3 py-3">Producto</th>
+                    <th scope="col" className="px-3 py-3 text-right">Unidades</th>
+                    <th scope="col" className="px-3 py-3 text-right">Ventas</th>
+                    <th scope="col" className="px-3 py-3 text-right">Precio promedio</th>
+                    <th scope="col" className="px-3 py-3 text-right">Total vendido</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.productSummary.map((product, index) => {
+                    const maxUnits = data.productSummary[0]?.unitsSold || 1;
+                    const width = `${Math.max(5, Math.round((product.unitsSold / maxUnits) * 100))}%`;
+                    return (
+                      <tr key={product.productId} className="border-t-2 border-white/10 align-top">
+                        <th scope="row" className="px-3 py-3">
+                          <div className="flex items-start gap-3">
+                            <span className="grid h-7 w-7 shrink-0 place-items-center border-2 border-white/15 text-[10px] font-black text-white/45">{index + 1}</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-black text-white">{product.name}</p>
+                              <div className="mt-2 h-1.5 bg-white/10"><div className="h-full bg-[#d8ff3e]" style={{ width }} /></div>
+                            </div>
+                          </div>
+                        </th>
+                        <td className="px-3 py-3 text-right text-xl font-black text-[#d8ff3e]">{product.unitsSold}</td>
+                        <td className="px-3 py-3 text-right font-bold text-white/60">{product.saleCount}</td>
+                        <td className="px-3 py-3 text-right font-bold text-white/60">{crc.format(product.averageUnitPrice)}</td>
+                        <td className="px-3 py-3 text-right font-black text-white">{crc.format(product.totalIncome)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="border-t-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/10 font-black">
+                  <tr>
+                    <th scope="row" className="px-3 py-3 uppercase">Total del período</th>
+                    <td className="px-3 py-3 text-right text-[#d8ff3e]">{data.summary.unitsSold}</td>
+                    <td className="px-3 py-3 text-right">{data.summary.saleCount}</td>
+                    <td className="px-3 py-3" />
+                    <td className="px-3 py-3 text-right text-[#d8ff3e]">{crc.format(data.summary.totalIncome)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </section>
+
         <div className="mt-6 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
           <section>
             <div className="flex items-center justify-between gap-3"><div><GameLabel tone="lime">Movimientos cobrados</GameLabel><h3 className="mt-2 text-2xl font-black uppercase">Ventas recientes</h3></div><GameChip tone="lime">{data.sales.length}</GameChip></div>
+            {data.summary.saleCount > data.sales.length && <p className="mt-2 text-xs font-bold text-white/40">Mostrando las {data.sales.length} ventas más recientes. El resumen superior sí incluye las {data.summary.saleCount} ventas del período.</p>}
             <div className="mt-3 space-y-3">
               {data.sales.length === 0 && <Empty text="No hay ventas en este período." />}
               {data.sales.map((sale) => <article key={sale.id} className="border-[3px] border-white/15 bg-black/35 p-4">
@@ -235,6 +369,10 @@ export default function SalesMonitoringPanel() {
 
 function Metric({ label, value, accent = false, warn = false }: { label: string; value: string; accent?: boolean; warn?: boolean }) {
   return <div className={`border-[3px] p-4 ${warn ? "border-orange-300/45 bg-orange-400/[0.07]" : "border-white/15 bg-black/35"}`}><p className="text-[10px] font-black uppercase tracking-[.16em] text-white/40">{label}</p><p className={`mt-2 text-2xl font-black ${accent ? "text-[#d8ff3e]" : warn ? "text-orange-200" : "text-white"}`}>{value}</p></div>;
+}
+
+function PaymentMetric({ label, amount, detail }: { label: string; amount: number; detail: string }) {
+  return <div className="border-2 border-white/15 bg-black/30 p-3"><p className="text-[10px] font-black uppercase tracking-[.14em] text-white/40">{label}</p><p className="mt-2 text-2xl font-black text-white">{crc.format(amount)}</p><p className="mt-1 text-[10px] font-bold uppercase text-white/35">{detail}</p></div>;
 }
 
 function Delta({ label, value, money = false }: { label: string; value: number; money?: boolean }) {

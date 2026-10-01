@@ -42,20 +42,36 @@ export async function GET(req: NextRequest) {
     const safeFrom = from <= to ? from : to;
     const safeTo = from <= to ? to : from;
 
-    const [sales, totals, adjustments] = await Promise.all([
+    const salesRange = { createdAt: { $gte: safeFrom, $lte: safeTo } };
+    const adjustmentRange = { action: "product_inventory_adjusted", at: { $gte: safeFrom, $lte: safeTo } };
+    const [sales, totals, adjustments, adjustmentCount, productSummary] = await Promise.all([
       db.collection<ProductSaleDoc>(PRODUCT_SALES_COLLECTION)
-        .find({ createdAt: { $gte: safeFrom, $lte: safeTo } })
+        .find(salesRange)
         .sort({ createdAt: -1 })
         .limit(100)
         .toArray(),
       db.collection<ProductSaleDoc>(PRODUCT_SALES_COLLECTION)
-        .aggregate<{ totalIncome: number; saleCount: number; unitsSold: number }>([
-          { $match: { createdAt: { $gte: safeFrom, $lte: safeTo } } },
+        .aggregate<{
+          totalIncome: number;
+          saleCount: number;
+          unitsSold: number;
+          cashIncome: number;
+          sinpeIncome: number;
+          cashSaleCount: number;
+          sinpeSaleCount: number;
+          mixedSaleCount: number;
+        }>([
+          { $match: salesRange },
           {
             $group: {
               _id: null,
               totalIncome: { $sum: "$total" },
               saleCount: { $sum: 1 },
+              cashIncome: { $sum: { $ifNull: ["$cashAmount", 0] } },
+              sinpeIncome: { $sum: { $ifNull: ["$sinpeAmount", 0] } },
+              cashSaleCount: { $sum: { $cond: [{ $eq: ["$paymentMethod", "cash"] }, 1, 0] } },
+              sinpeSaleCount: { $sum: { $cond: [{ $eq: ["$paymentMethod", "sinpe"] }, 1, 0] } },
+              mixedSaleCount: { $sum: { $cond: [{ $eq: ["$paymentMethod", "mixed"] }, 1, 0] } },
               unitsSold: {
                 $sum: {
                   $reduce: {
@@ -70,9 +86,40 @@ export async function GET(req: NextRequest) {
         ])
         .next(),
       db.collection<AuditDoc>(AUDIT_COLLECTION)
-        .find({ action: "product_inventory_adjusted", at: { $gte: safeFrom, $lte: safeTo } })
+        .find(adjustmentRange)
         .sort({ at: -1 })
         .limit(100)
+        .toArray(),
+      db.collection<AuditDoc>(AUDIT_COLLECTION).countDocuments(adjustmentRange),
+      db.collection<ProductSaleDoc>(PRODUCT_SALES_COLLECTION)
+        .aggregate<{
+          _id: string;
+          name: string;
+          unitsSold: number;
+          totalIncome: number;
+          saleIds: string[];
+        }>([
+          { $match: salesRange },
+          { $sort: { createdAt: 1 } },
+          { $unwind: "$items" },
+          {
+            $group: {
+              _id: {
+                $ifNull: [
+                  "$items.productId",
+                  { $toLower: { $trim: { input: "$items.name" } } },
+                ],
+              },
+              name: { $last: "$items.name" },
+              unitsSold: { $sum: "$items.quantity" },
+              totalIncome: {
+                $sum: { $multiply: ["$items.quantity", "$items.unitPrice"] },
+              },
+              saleIds: { $addToSet: "$id" },
+            },
+          },
+          { $sort: { unitsSold: -1, totalIncome: -1, name: 1 } },
+        ])
         .toArray(),
     ]);
     const totalIncome = totals?.totalIncome ?? 0;
@@ -85,8 +132,23 @@ export async function GET(req: NextRequest) {
         saleCount,
         unitsSold,
         averageTicket: saleCount ? Math.round(totalIncome / saleCount) : 0,
-        adjustmentCount: adjustments.length,
+        cashIncome: totals?.cashIncome ?? 0,
+        sinpeIncome: totals?.sinpeIncome ?? 0,
+        cashSaleCount: totals?.cashSaleCount ?? 0,
+        sinpeSaleCount: totals?.sinpeSaleCount ?? 0,
+        mixedSaleCount: totals?.mixedSaleCount ?? 0,
+        adjustmentCount,
       },
+      productSummary: productSummary.map((product) => ({
+        productId: product._id,
+        name: product.name,
+        unitsSold: product.unitsSold,
+        saleCount: product.saleIds.length,
+        totalIncome: product.totalIncome,
+        averageUnitPrice: product.unitsSold
+          ? Math.round(product.totalIncome / product.unitsSold)
+          : 0,
+      })),
       sales,
       adjustments: adjustments.map((entry) => ({
         id: entry.id,
