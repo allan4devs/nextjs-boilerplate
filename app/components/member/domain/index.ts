@@ -3,6 +3,7 @@ export type {
   BodyMetric,
   ActiveVisit,
   ActivePlanWorkout,
+  ExercisePreference,
   Member,
   MemberPlan,
   Membership,

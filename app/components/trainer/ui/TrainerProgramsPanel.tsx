@@ -76,4 +76,3 @@ export function TrainerProgramsPanel({ os }: { os: TrainerOs }) {
 function Metric({ value, label }: { value: number; label: string }) {
   return <div><strong className="block text-lg font-black">{value}</strong><span className="text-[8px] font-black uppercase tracking-wider text-white/30">{label}</span></div>;
 }
-

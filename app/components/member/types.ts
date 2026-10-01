@@ -8,6 +8,7 @@ export type {
   BodyMetric,
   ActiveVisit,
   ActivePlanWorkout,
+  ExercisePreference,
   EntitlementRecord,
   Gamification,
   GuideWorkout,

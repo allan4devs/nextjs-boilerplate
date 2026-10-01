@@ -25,7 +25,19 @@ export type WorkoutExerciseDetail = {
   reps: number;
   weightKg: number;
   seconds: number;
+  targetSeconds?: number;
   notes: string;
+};
+
+export type ExercisePreference = {
+  key: string;
+  assetId?: string;
+  machineId: string;
+  favoriteWeightKg?: number;
+  lastWeightKg?: number;
+  favoriteSeconds?: number;
+  lastSeconds?: number;
+  updatedAt: Date;
 };
 
 export type WorkoutEntry = {
@@ -173,6 +185,7 @@ export type MemberDoc = {
   trainingPlan?: TrainingPlan;
   trainingProgramAssignment?: TrainingProgramAssignment;
   activePlanWorkout?: ActivePlanWorkout;
+  exercisePreferences?: ExercisePreference[];
   weeklyGoal?: number;
   earnedBadges?: EarnedBadge[];
   freezeHistory?: string[];

@@ -30,7 +30,19 @@ export type WorkoutExerciseDetail = {
   reps: number;
   weightKg: number;
   seconds: number;
+  targetSeconds?: number;
   notes: string;
+};
+
+export type ExercisePreference = {
+  key: string;
+  assetId?: string;
+  machineId: string;
+  favoriteWeightKg?: number;
+  lastWeightKg?: number;
+  favoriteSeconds?: number;
+  lastSeconds?: number;
+  updatedAt: string;
 };
 
 export type PlanExercisePrescription = {
@@ -179,6 +191,7 @@ export type Member = {
   trainingPlan: MemberPlan | null;
   trainingProgramAssignment: TrainingProgramAssignment | null;
   activePlanWorkout: ActivePlanWorkout | null;
+  exercisePreferences: ExercisePreference[];
   notificationPrefs?: NotificationPrefs;
   tourDone?: boolean;
   pinnedBadges?: string[];

@@ -1348,6 +1348,28 @@ export function useMemberOs() {
     }
   }
 
+  async function saveExercisePreference(
+    exercise: Pick<WorkoutExerciseDetail, "assetId" | "machineId">,
+    preference: { favoriteWeightKg?: number; favoriteSeconds?: number },
+  ) {
+    if (!unlocked || !exercise.machineId) return false;
+    setError("");
+    try {
+      const response = await fetch("/api/xtreme/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action: "exercisePreference", ...exercise, ...preference }),
+      });
+      const data = await readJson<MembersResponse>(response);
+      setMember(data.member);
+      return true;
+    } catch (err) {
+      requirePinAgain(err, "No se pudo guardar tu peso o tiempo favorito.");
+      return false;
+    }
+  }
+
   async function finishPlanWorkout(exercises: WorkoutExerciseDetail[]) {
     if (!unlocked) return false;
     setError("");
@@ -1585,6 +1607,7 @@ export function useMemberOs() {
     togglePlanItem,
     startPlanWorkout,
     savePlanWorkout,
+    saveExercisePreference,
     finishPlanWorkout,
     cancelPlanWorkout,
     uploadPhoto,

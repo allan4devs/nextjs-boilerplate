@@ -7,6 +7,11 @@ import { buildMemberGamification } from "./gamification-service";
 import { membershipWithStatus, toPublicTrainingPlan } from "./membership";
 import type { XtremeMemberDoc } from "./types";
 
+function safeIsoDate(value: Date | string | undefined) {
+  const date = value ? new Date(value) : null;
+  return date && Number.isFinite(date.getTime()) ? date.toISOString() : "";
+}
+
 /** Maps persistence data to the Member OS response without reading or writing I/O. */
 export function toPublicMember(
   doc: XtremeMemberDoc | null,
@@ -57,6 +62,10 @@ export function toPublicMember(
         }
       : null,
     activePlanWorkout: doc?.activePlanWorkout ?? null,
+    exercisePreferences: (doc?.exercisePreferences ?? []).map((preference) => ({
+      ...preference,
+      updatedAt: safeIsoDate(preference.updatedAt),
+    })),
     notificationPrefs: mergeNotificationPrefs(doc?.notificationPrefs),
     tourDone: Boolean(doc?.tourDoneAt),
     pinnedBadges: gamification.pinnedBadges,

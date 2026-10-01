@@ -1,6 +1,7 @@
 import type { EarnedBadge } from "@/lib/xtreme/gamification";
 import type {
   ActivePlanWorkout,
+  ExercisePreference,
   NotificationPrefs,
   PlanExercisePrescription,
   TrainingProgramAssignment,
@@ -85,6 +86,7 @@ export type XtremeMemberDoc = {
   trainingPlan?: TrainingPlan;
   trainingProgramAssignment?: TrainingProgramAssignment;
   activePlanWorkout?: ActivePlanWorkout;
+  exercisePreferences?: ExercisePreference[];
   weeklyGoal?: number;
   earnedBadges?: EarnedBadge[];
   freezeHistory?: string[];

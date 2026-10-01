@@ -219,4 +219,3 @@ export const DEFAULT_TRAINING_PROGRAMS = [
 ] as const satisfies readonly TrainingProgramTemplate[];
 
 export type DefaultTrainingProgramId = (typeof DEFAULT_TRAINING_PROGRAMS)[number]["id"];
-
