@@ -21,6 +21,30 @@ import {
 } from "@/lib/xtreme/shared";
 import type { ProductCategory, ProductInventoryDoc, ProductSaleDoc } from "@/lib/xtreme/product-inventory";
 
+type ReportCategory = ProductCategory | "otros";
+
+const REPORT_CATEGORY_ORDER: ReportCategory[] = [...PRODUCT_CATEGORIES, "otros"];
+
+function normalizedProductName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function reportCategoryFor(category: unknown, productName: string): ReportCategory {
+  if (PRODUCT_CATEGORIES.includes(category as ProductCategory)) return category as ProductCategory;
+
+  const name = normalizedProductName(productName);
+  if (/agua|monster|powerade|redcon|\busn\b|c4 en lata|amino energy lata/.test(name)) return "bebidas";
+  if (/barra|barrita|batido/.test(name)) return "proteinas";
+  if (/creatina/.test(name)) return "creatinas";
+  if (/\bc4\b|electrolito|hidrat/.test(name)) return "hidratantes";
+  if (/chicle|pina/.test(name)) return "chicles";
+  return "otros";
+}
+
 async function receptionSession(req: NextRequest) {
   return resolveStaffSession(req, "reception", true);
 }
@@ -93,7 +117,7 @@ export async function GET(req: NextRequest) {
       db.collection<AuditDoc>(AUDIT_COLLECTION).countDocuments(adjustmentRange),
       db.collection<ProductSaleDoc>(PRODUCT_SALES_COLLECTION)
         .aggregate<{
-          _id: string;
+          _id: { productId: string; category?: ProductCategory };
           name: string;
           unitsSold: number;
           totalIncome: number;
@@ -103,12 +127,33 @@ export async function GET(req: NextRequest) {
           { $sort: { createdAt: 1 } },
           { $unwind: "$items" },
           {
+            $lookup: {
+              from: PRODUCT_INVENTORY_COLLECTION,
+              localField: "items.productId",
+              foreignField: "id",
+              as: "inventoryProduct",
+            },
+          },
+          {
+            $set: {
+              reportCategory: {
+                $ifNull: [
+                  "$items.category",
+                  { $arrayElemAt: ["$inventoryProduct.category", 0] },
+                ],
+              },
+            },
+          },
+          {
             $group: {
               _id: {
-                $ifNull: [
-                  "$items.productId",
-                  { $toLower: { $trim: { input: "$items.name" } } },
-                ],
+                productId: {
+                  $ifNull: [
+                    "$items.productId",
+                    { $toLower: { $trim: { input: "$items.name" } } },
+                  ],
+                },
+                category: "$reportCategory",
               },
               name: { $last: "$items.name" },
               unitsSold: { $sum: "$items.quantity" },
@@ -125,6 +170,58 @@ export async function GET(req: NextRequest) {
     const totalIncome = totals?.totalIncome ?? 0;
     const saleCount = totals?.saleCount ?? 0;
     const unitsSold = totals?.unitsSold ?? 0;
+    const categoryBuckets = new Map<ReportCategory, {
+      unitsSold: number;
+      totalIncome: number;
+      saleIds: Set<string>;
+      products: Array<{
+        productId: string;
+        name: string;
+        unitsSold: number;
+        saleCount: number;
+        totalIncome: number;
+        averageUnitPrice: number;
+      }>;
+    }>();
+
+    for (const product of productSummary) {
+      const category = reportCategoryFor(product._id.category, product.name);
+      const bucket = categoryBuckets.get(category) ?? {
+        unitsSold: 0,
+        totalIncome: 0,
+        saleIds: new Set<string>(),
+        products: [],
+      };
+      bucket.unitsSold += product.unitsSold;
+      bucket.totalIncome += product.totalIncome;
+      for (const saleId of product.saleIds) bucket.saleIds.add(saleId);
+      bucket.products.push({
+        productId: product._id.productId,
+        name: product.name,
+        unitsSold: product.unitsSold,
+        saleCount: product.saleIds.length,
+        totalIncome: product.totalIncome,
+        averageUnitPrice: product.unitsSold
+          ? Math.round(product.totalIncome / product.unitsSold)
+          : 0,
+      });
+      categoryBuckets.set(category, bucket);
+    }
+
+    const categorySummary = REPORT_CATEGORY_ORDER.flatMap((category) => {
+      const bucket = categoryBuckets.get(category);
+      if (!bucket) return [];
+      return [{
+        category,
+        unitsSold: bucket.unitsSold,
+        saleCount: bucket.saleIds.size,
+        totalIncome: bucket.totalIncome,
+        products: bucket.products.sort((a, b) =>
+          b.unitsSold - a.unitsSold || b.totalIncome - a.totalIncome || a.name.localeCompare(b.name, "es"),
+        ),
+      }];
+    });
+
     return NextResponse.json({
       range: { from: safeFrom, to: safeTo },
       summary: {
@@ -139,16 +236,7 @@ export async function GET(req: NextRequest) {
         mixedSaleCount: totals?.mixedSaleCount ?? 0,
         adjustmentCount,
       },
-      productSummary: productSummary.map((product) => ({
-        productId: product._id,
-        name: product.name,
-        unitsSold: product.unitsSold,
-        saleCount: product.saleIds.length,
-        totalIncome: product.totalIncome,
-        averageUnitPrice: product.unitsSold
-          ? Math.round(product.totalIncome / product.unitsSold)
-          : 0,
-      })),
+      categorySummary,
       sales,
       adjustments: adjustments.map((entry) => ({
         id: entry.id,

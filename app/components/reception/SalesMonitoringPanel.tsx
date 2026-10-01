@@ -26,6 +26,17 @@ type Adjustment = {
   meta: { productName?: string; before?: AdjustmentValues; after?: AdjustmentValues; delta?: AdjustmentValues };
 };
 
+type ReportCategory = "bebidas" | "proteinas" | "creatinas" | "hidratantes" | "chicles" | "otros";
+
+type ProductSummary = {
+  productId: string;
+  name: string;
+  unitsSold: number;
+  saleCount: number;
+  totalIncome: number;
+  averageUnitPrice: number;
+};
+
 type Dashboard = {
   range: { from: string; to: string };
   summary: {
@@ -40,13 +51,12 @@ type Dashboard = {
     mixedSaleCount: number;
     adjustmentCount: number;
   };
-  productSummary: Array<{
-    productId: string;
-    name: string;
+  categorySummary: Array<{
+    category: ReportCategory;
     unitsSold: number;
     saleCount: number;
     totalIncome: number;
-    averageUnitPrice: number;
+    products: ProductSummary[];
   }>;
   sales: Sale[];
   adjustments: Adjustment[];
@@ -55,6 +65,14 @@ type Dashboard = {
 const crc = new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 0 });
 const dateTime = new Intl.DateTimeFormat("es-CR", { dateStyle: "short", timeStyle: "short" });
 const dateOnly = new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" });
+const CATEGORY_LABEL: Record<ReportCategory, string> = {
+  bebidas: "Bebidas",
+  proteinas: "Proteínas",
+  creatinas: "Creatinas",
+  hidratantes: "Hidratantes",
+  chicles: "Chicles",
+  otros: "Otros productos",
+};
 
 function localInputValue(date: Date) {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -215,13 +233,14 @@ export default function SalesMonitoringPanel() {
             <div>
               <GameLabel tone="lime">Resumen completo del período</GameLabel>
               <h3 className="mt-2 flex items-center gap-2 text-2xl font-black uppercase">
-                <PackageCheck className="h-6 w-6 text-[#d8ff3e]" /> Productos vendidos
+                <PackageCheck className="h-6 w-6 text-[#d8ff3e]" /> Ventas por categoría
               </h3>
               <p className="mt-1 text-xs font-bold text-white/40">
-                {dateOnly.format(new Date(data.range.from))} al {dateOnly.format(new Date(data.range.to))} · agrupado por producto
+                {dateOnly.format(new Date(data.range.from))} al {dateOnly.format(new Date(data.range.to))} · unidades y monto por producto
               </p>
+              <p className="mt-2 text-xs font-bold text-amber-200/70">Los montos son ingresos por ventas, no ganancia neta: aquí no se descuenta el costo del producto.</p>
             </div>
-            <GameChip tone="lime">{data.productSummary.length} productos</GameChip>
+            <GameChip tone="lime">{data.categorySummary.length} categorías</GameChip>
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -242,51 +261,16 @@ export default function SalesMonitoringPanel() {
             </div>
           </div>
 
-          {data.productSummary.length === 0 ? <div className="mt-4"><Empty text="No hay productos vendidos en este período." /></div> : (
-            <div className="mt-4 overflow-x-auto border-2 border-white/10">
-              <table className="w-full min-w-[760px] border-collapse text-left">
-                <thead className="bg-white/[0.06] text-[10px] font-black uppercase tracking-[.12em] text-white/45">
-                  <tr>
-                    <th scope="col" className="px-3 py-3">Producto</th>
-                    <th scope="col" className="px-3 py-3 text-right">Unidades</th>
-                    <th scope="col" className="px-3 py-3 text-right">Ventas</th>
-                    <th scope="col" className="px-3 py-3 text-right">Precio promedio</th>
-                    <th scope="col" className="px-3 py-3 text-right">Total vendido</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.productSummary.map((product, index) => {
-                    const maxUnits = data.productSummary[0]?.unitsSold || 1;
-                    const width = `${Math.max(5, Math.round((product.unitsSold / maxUnits) * 100))}%`;
-                    return (
-                      <tr key={product.productId} className="border-t-2 border-white/10 align-top">
-                        <th scope="row" className="px-3 py-3">
-                          <div className="flex items-start gap-3">
-                            <span className="grid h-7 w-7 shrink-0 place-items-center border-2 border-white/15 text-[10px] font-black text-white/45">{index + 1}</span>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-black text-white">{product.name}</p>
-                              <div className="mt-2 h-1.5 bg-white/10"><div className="h-full bg-[#d8ff3e]" style={{ width }} /></div>
-                            </div>
-                          </div>
-                        </th>
-                        <td className="px-3 py-3 text-right text-xl font-black text-[#d8ff3e]">{product.unitsSold}</td>
-                        <td className="px-3 py-3 text-right font-bold text-white/60">{product.saleCount}</td>
-                        <td className="px-3 py-3 text-right font-bold text-white/60">{crc.format(product.averageUnitPrice)}</td>
-                        <td className="px-3 py-3 text-right font-black text-white">{crc.format(product.totalIncome)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="border-t-[3px] border-[#d8ff3e]/55 bg-[#d8ff3e]/10 font-black">
-                  <tr>
-                    <th scope="row" className="px-3 py-3 uppercase">Total del período</th>
-                    <td className="px-3 py-3 text-right text-[#d8ff3e]">{data.summary.unitsSold}</td>
-                    <td className="px-3 py-3 text-right">{data.summary.saleCount}</td>
-                    <td className="px-3 py-3" />
-                    <td className="px-3 py-3 text-right text-[#d8ff3e]">{crc.format(data.summary.totalIncome)}</td>
-                  </tr>
-                </tfoot>
-              </table>
+          {data.categorySummary.length === 0 ? <div className="mt-4"><Empty text="No hay productos vendidos en este período." /></div> : (
+            <div className="mt-5 space-y-5">
+              {data.categorySummary.map((category) => (
+                <CategorySalesTable key={category.category} category={category} />
+              ))}
+              <div className="grid gap-3 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] p-4 text-black sm:grid-cols-3 sm:items-center">
+                <p className="text-sm font-black uppercase">Total de todas las categorías</p>
+                <p className="text-xl font-black sm:text-center">{data.summary.unitsSold} unidades</p>
+                <p className="text-2xl font-black sm:text-right">{crc.format(data.summary.totalIncome)}</p>
+              </div>
             </div>
           )}
         </section>
@@ -364,6 +348,66 @@ export default function SalesMonitoringPanel() {
         </div>
       )}
     </div>
+  );
+}
+
+function CategorySalesTable({ category }: { category: Dashboard["categorySummary"][number] }) {
+  const maxUnits = category.products[0]?.unitsSold || 1;
+  return (
+    <article className="border-[3px] border-white/15 bg-black/35">
+      <div className="grid gap-2 border-b-[3px] border-white/15 bg-white/[0.055] p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-5">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[.16em] text-[#d8ff3e]">Categoría</p>
+          <h4 className="mt-1 text-xl font-black uppercase">{CATEGORY_LABEL[category.category]}</h4>
+        </div>
+        <p className="text-sm font-black text-white/65 sm:text-right">{category.unitsSold} unidades · {category.saleCount} ventas</p>
+        <p className="text-2xl font-black text-[#d8ff3e] sm:text-right">{crc.format(category.totalIncome)}</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] border-collapse text-left">
+          <thead className="text-[10px] font-black uppercase tracking-[.12em] text-white/45">
+            <tr>
+              <th scope="col" className="px-3 py-3">Producto</th>
+              <th scope="col" className="px-3 py-3 text-right">Unidades</th>
+              <th scope="col" className="px-3 py-3 text-right">Ventas</th>
+              <th scope="col" className="px-3 py-3 text-right">Precio promedio</th>
+              <th scope="col" className="px-3 py-3 text-right">Total vendido</th>
+            </tr>
+          </thead>
+          <tbody>
+            {category.products.map((product, index) => {
+              const width = `${Math.max(5, Math.round((product.unitsSold / maxUnits) * 100))}%`;
+              return (
+                <tr key={product.productId} className="border-t-2 border-white/10 align-top">
+                  <th scope="row" className="px-3 py-3">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center border-2 border-white/15 text-[10px] font-black text-white/45">{index + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-black text-white">{product.name}</p>
+                        <div className="mt-2 h-1.5 bg-white/10"><div className="h-full bg-[#d8ff3e]" style={{ width }} /></div>
+                      </div>
+                    </div>
+                  </th>
+                  <td className="px-3 py-3 text-right text-xl font-black text-[#d8ff3e]">{product.unitsSold}</td>
+                  <td className="px-3 py-3 text-right font-bold text-white/60">{product.saleCount}</td>
+                  <td className="px-3 py-3 text-right font-bold text-white/60">{crc.format(product.averageUnitPrice)}</td>
+                  <td className="px-3 py-3 text-right font-black text-white">{crc.format(product.totalIncome)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot className="border-t-[3px] border-white/20 bg-white/[0.045] font-black">
+            <tr>
+              <th scope="row" className="px-3 py-3 uppercase">Total {CATEGORY_LABEL[category.category]}</th>
+              <td className="px-3 py-3 text-right text-[#d8ff3e]">{category.unitsSold}</td>
+              <td className="px-3 py-3 text-right">{category.saleCount}</td>
+              <td className="px-3 py-3" />
+              <td className="px-3 py-3 text-right text-[#d8ff3e]">{crc.format(category.totalIncome)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </article>
   );
 }
 
