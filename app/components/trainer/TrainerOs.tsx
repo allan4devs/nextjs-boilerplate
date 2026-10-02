@@ -8,6 +8,15 @@ import { GameButton, GameLabel } from "@/app/components/GameOS";
 import { TRAINER_TABS } from "./constants";
 import { useTrainerOs } from "./hooks/useTrainerOs";
 import { TrainerOverview } from "./ui/TrainerOverview";
+import dynamic from "next/dynamic";
+
+import { TRAINER_TABS } from "./constants";
+import { useTrainerOs } from "./hooks/useTrainerOs";
+import { TrainerOverview } from "./ui/TrainerOverview";
+import { TrainerProgramsPanel } from "./ui/TrainerProgramsPanel";
+import { TrainerRoster } from "./ui/TrainerRoster";
+
+const TrainerPlanEditor = dynamic(() => import("./ui/TrainerPlanEditor").then((module) => module.TrainerPlanEditor));
 import { TrainerRoster } from "./ui/TrainerRoster";
 
 const TrainerPlanEditor = dynamic(() => import("./ui/TrainerPlanEditor").then((module) => module.TrainerPlanEditor));
@@ -38,6 +47,8 @@ export default function TrainerOs() {
         <Kpi icon={Gauge} label="Progreso promedio" value={`${os.stats.averageProgress}%`} hint="planes asignados" tone="lime" wide />
       </section>
 
+      <TrainerTodayClasses os={os} />
+      <TrainerProgramsPanel os={os} />
       <div className="grid min-h-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]">
         <TrainerRoster os={os} />
         {os.selected ? <section className="min-w-0 space-y-4">
@@ -60,7 +71,7 @@ function MemberHeader({ os }: { os: ReturnType<typeof useTrainerOs> }) {
   const member = os.selected!;
   const signal = os.selectedSignal!;
   const tone = { lime: "border-[#d8ff3e] text-[#d8ff3e]", cyan: "border-cyan-300 text-cyan-300", orange: "border-orange-300 text-orange-300", red: "border-red-400 text-red-300", muted: "border-white/15 text-white/40" }[signal.tone];
-  return <section className={`relative overflow-hidden border-[3px] bg-[#0c0c0c] p-4 ${tone}`}><div aria-hidden className="absolute -right-10 -top-20 h-48 w-48 rounded-full bg-current/10 blur-3xl" /><div className="relative flex flex-wrap items-center gap-4"><span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden border-[3px] border-current/35 bg-black/35">{member.photoUrl ? <Image unoptimized src={member.photoUrl} alt="" width={64} height={64} sizes="64px" className="h-full w-full object-cover" /> : <UserRound className="h-7 w-7" />}</span><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[.18em] opacity-70">Socio seleccionado</p><h2 className="truncate text-2xl font-black uppercase text-white sm:text-3xl">{member.memberName}</h2><p className="mt-1 text-sm font-bold text-white/45">Meta: {member.goal || "Sin definir"} · Coach: {member.coach || "Sin asignar"}</p></div><div className="border-[3px] border-current/35 bg-black/30 px-3 py-2 text-right"><p className="text-[9px] font-black uppercase opacity-60">Prioridad</p><p className="mt-1 font-black uppercase">{signal.label}</p><p className="text-[10px] font-bold text-white/40">{signal.detail}</p></div></div></section>;
+  return <section className={`relative overflow-hidden border-[3px] bg-[#0c0c0c] p-4 ${tone}`}><div aria-hidden className="absolute -right-10 -top-20 h-48 w-48 rounded-full bg-current/10 blur-3xl" /><div className="relative flex flex-wrap items-center gap-4"><span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden border-[3px] border-current/35 bg-black/35">{member.photoUrl ? <Image unoptimized src={member.photoUrl} alt="" width={64} height={64} sizes="64px" className="h-full w-full object-cover" /> : <UserRound className="h-7 w-7" />}</span><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[.18em] opacity-70">Socio seleccionado</p><h2 className="truncate text-2xl font-black uppercase text-white sm:text-3xl">{member.memberName}</h2><p className="mt-1 text-sm font-bold text-white/45">Meta: {member.goal || "Sin definir"} · Coach: {member.coach || "Sin asignar"}</p>{member.trainingProgramAssignment && <p className="mt-1 text-[10px] font-black uppercase tracking-[.14em] text-cyan-300">Grupo {member.trainingProgramAssignment.programName} · {member.trainingProgramAssignment.cohort}</p>}</div><div className="border-[3px] border-current/35 bg-black/30 px-3 py-2 text-right"><p className="text-[9px] font-black uppercase opacity-60">Prioridad</p><p className="mt-1 font-black uppercase">{signal.label}</p><p className="text-[10px] font-bold text-white/40">{signal.detail}</p></div></div></section>;
 }
 
 function Kpi({ icon: Icon, label, value, hint, tone = "default", wide = false }: { icon: typeof Users; label: string; value: string | number; hint: string; tone?: "default" | "lime" | "cyan" | "orange" | "red"; wide?: boolean }) {

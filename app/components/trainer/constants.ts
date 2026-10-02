@@ -1,4 +1,4 @@
-import type { PlanTemplate, TrainerFilter, TrainerTab } from "./types";
+import type { TrainerFilter, TrainerTab } from "./types";
 
 export const DEFAULT_COACH_NAME = "Entrenador Xtreme";
 

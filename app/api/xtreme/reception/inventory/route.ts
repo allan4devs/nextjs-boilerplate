@@ -20,6 +20,7 @@ import {
   type AuditDoc,
 } from "@/lib/xtreme/shared";
 import type { ProductCategory, ProductInventoryDoc, ProductSaleDoc } from "@/lib/xtreme/product-inventory";
+import { getProductSalesReport } from "@/lib/xtreme/product-sales-report";
 
 async function receptionSession(req: NextRequest) {
   return resolveStaffSession(req, "reception", true);
@@ -41,62 +42,7 @@ export async function GET(req: NextRequest) {
     const to = Number.isNaN(parsedTo.getTime()) ? now : parsedTo;
     const safeFrom = from <= to ? from : to;
     const safeTo = from <= to ? to : from;
-
-    const [sales, totals, adjustments] = await Promise.all([
-      db.collection<ProductSaleDoc>(PRODUCT_SALES_COLLECTION)
-        .find({ createdAt: { $gte: safeFrom, $lte: safeTo } })
-        .sort({ createdAt: -1 })
-        .limit(100)
-        .toArray(),
-      db.collection<ProductSaleDoc>(PRODUCT_SALES_COLLECTION)
-        .aggregate<{ totalIncome: number; saleCount: number; unitsSold: number }>([
-          { $match: { createdAt: { $gte: safeFrom, $lte: safeTo } } },
-          {
-            $group: {
-              _id: null,
-              totalIncome: { $sum: "$total" },
-              saleCount: { $sum: 1 },
-              unitsSold: {
-                $sum: {
-                  $reduce: {
-                    input: "$items",
-                    initialValue: 0,
-                    in: { $add: ["$$value", "$$this.quantity"] },
-                  },
-                },
-              },
-            },
-          },
-        ])
-        .next(),
-      db.collection<AuditDoc>(AUDIT_COLLECTION)
-        .find({ action: "product_inventory_adjusted", at: { $gte: safeFrom, $lte: safeTo } })
-        .sort({ at: -1 })
-        .limit(100)
-        .toArray(),
-    ]);
-    const totalIncome = totals?.totalIncome ?? 0;
-    const saleCount = totals?.saleCount ?? 0;
-    const unitsSold = totals?.unitsSold ?? 0;
-    return NextResponse.json({
-      range: { from: safeFrom, to: safeTo },
-      summary: {
-        totalIncome,
-        saleCount,
-        unitsSold,
-        averageTicket: saleCount ? Math.round(totalIncome / saleCount) : 0,
-        adjustmentCount: adjustments.length,
-      },
-      sales,
-      adjustments: adjustments.map((entry) => ({
-        id: entry.id,
-        at: entry.at,
-        actorRole: entry.actorRole,
-        summary: entry.summary,
-        productId: entry.targetId,
-        meta: entry.meta ?? {},
-      })),
-    });
+    return NextResponse.json(await getProductSalesReport(db, safeFrom, safeTo));
   }
   const includeInactive = req.nextUrl.searchParams.get("status") === "all";
   const products = await listProducts(db, { includeInactive });

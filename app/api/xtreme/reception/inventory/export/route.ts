@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getDb } from "@/lib/helpers/mongodb";
+import { PRODUCT_CATEGORY_LABEL } from "@/lib/xtreme/product-catalog";
 import { listProducts } from "@/lib/xtreme/product-inventory";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 
 export const dynamic = "force-dynamic";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  bebidas: "Bebidas",
-  proteinas: "Proteínas",
-  creatinas: "Creatinas",
-  hidratantes: "Hidratantes",
-  chicles: "Chicles",
-};
 
 export async function GET(req: NextRequest) {
   const session = await resolveStaffSession(req, "reception", true);
@@ -49,7 +42,7 @@ export async function GET(req: NextRequest) {
   for (const product of products) {
     const unitsPerPackage = product.unitsPerPackage ?? 1;
     sheet.addRow([
-      CATEGORY_LABEL[product.category] ?? product.category,
+      PRODUCT_CATEGORY_LABEL[product.category] ?? product.category,
       product.name,
       product.id,
       product.cameraQuantity ?? product.quantity,

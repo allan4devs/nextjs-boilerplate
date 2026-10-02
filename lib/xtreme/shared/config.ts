@@ -48,6 +48,8 @@ export const MEMBER_NOTES_COLLECTION = "xtreme_gym_member_notes";
 export const EQUIPMENT_ASSETS_COLLECTION = "xtreme_gym_equipment_assets";
 /** Video y fotos de piso por máquina del catálogo (`MACHINE_GUIDE`), editables desde el admin. */
 export const MACHINE_MEDIA_COLLECTION = "xtreme_gym_machine_media";
+/** Programas reutilizables que agrupan socios y materializan sus planes. */
+export const TRAINING_PROGRAMS_COLLECTION = "xtreme_gym_training_programs";
 
 export const FREE_FIRST_DAY_OFFER_ID = "free-first-day";
 export const FREE_FIRST_DAY_PLAN_LABEL = "Primer día gratis";

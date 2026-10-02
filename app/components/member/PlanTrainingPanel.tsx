@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Check,
   ClipboardList,
   Dumbbell,
+  ExternalLink,
   Loader2,
+  MapPin,
   Play,
   Plus,
   Save,
@@ -14,8 +17,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { physicalMachinePath } from "@/app/lib/physical-machine-links";
 import { MACHINE_GUIDE } from "./catalog/machines";
-import type { WorkoutExerciseDetail } from "./types";
+import type { PlanExercisePrescription, WorkoutExerciseDetail } from "./types";
 import type { MemberOs } from "./useMemberOs";
 
 function durationLabel(totalSeconds: number) {
@@ -26,6 +30,39 @@ function durationLabel(totalSeconds: number) {
   return hours > 0
     ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
     : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function machineHref(exercise: Pick<WorkoutExerciseDetail, "assetId" | "machineId">) {
+  if (exercise.assetId) return physicalMachinePath(exercise.assetId);
+  return exercise.machineId ? `/maquinas/${encodeURIComponent(exercise.machineId)}` : "/maquinas";
+}
+
+function PlanMachineCard({ exercise }: { exercise: PlanExercisePrescription }) {
+  return (
+    <Link
+      href={machineHref(exercise)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group border border-white/10 bg-black/25 p-2.5 transition hover:border-[#d8ff3e]/55"
+    >
+      <span className="flex items-start justify-between gap-2">
+        <span className="font-black text-white/75 group-hover:text-[#d8ff3e]">
+          {exercise.machineCode ? `${exercise.machineCode} · ` : ""}{exercise.machineName || exercise.exerciseName}
+        </span>
+        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/25 group-hover:text-[#d8ff3e]" />
+      </span>
+      <span className="mt-1 block text-[11px] font-bold text-white/45">
+        {exercise.exerciseName} · {exercise.sets}x{exercise.reps}{exercise.weightKg > 0 ? ` · ${exercise.weightKg} kg` : ""}
+      </span>
+      {(exercise.machineArea || exercise.machineLocation) && (
+        <span className="mt-1 flex items-start gap-1 text-[10px] font-semibold text-white/35">
+          <MapPin className="mt-0.5 h-3 w-3 shrink-0" /> Piso {exercise.machineFloor ?? 1}
+          {exercise.machineArea ? ` · ${exercise.machineArea}` : ""}
+          {exercise.machineLocation ? ` · ${exercise.machineLocation}` : ""}
+        </span>
+      )}
+    </Link>
+  );
 }
 
 export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
@@ -39,6 +76,7 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
     cancelPlanWorkout,
   } = os;
   const plan = currentMember.trainingPlan;
+  const assignment = currentMember.trainingProgramAssignment;
   const active = currentMember.activePlanWorkout;
   const activeDraftKey = active ? `${active.id}:${JSON.stringify(active.exercises)}` : "";
   const activeExercises = active?.exercises ?? [];
@@ -159,7 +197,9 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
                       aria-label="Ejercicio"
                       className="w-full bg-transparent font-black uppercase outline-none focus:text-[#d8ff3e]"
                     />
-                    <p className="truncate text-xs font-bold text-white/40">{entry.machineName || "Ejercicio libre"}</p>
+                    <p className="truncate text-xs font-bold text-white/40">{entry.machineCode ? `${entry.machineCode} · ` : ""}{entry.machineName || "Ejercicio libre"}</p>
+                    {(entry.machineArea || entry.machineLocation) && <p className="mt-1 flex items-start gap-1 text-[11px] font-semibold text-white/35"><MapPin className="mt-0.5 h-3 w-3 shrink-0 text-[#d8ff3e]" /> Piso {entry.machineFloor ?? 1}{entry.machineArea ? ` · ${entry.machineArea}` : ""}{entry.machineLocation ? ` · ${entry.machineLocation}` : ""}</p>}
+                    {(entry.assetId || entry.machineId) && <Link href={machineHref(entry)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs font-black uppercase text-[#d8ff3e] hover:text-white">Ver máquina y cómo usarla <ExternalLink className="h-3.5 w-3.5" /></Link>}
                   </div>
                   <button
                     type="button"
@@ -246,7 +286,7 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center bg-[#d8ff3e] text-black"><ClipboardList className="h-5 w-5" /></span>
-          <div><p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">Plan de tu entrenador</p><h2 className="text-xl font-black uppercase">{plan.title}</h2></div>
+          <div><p className="text-xs font-black uppercase tracking-[0.18em] text-[#d8ff3e]">{assignment?.source === "auto_default" ? "Programa inicial Xtreme" : "Plan de tu entrenador"}</p><h2 className="text-xl font-black uppercase">{plan.title}</h2>{assignment && <p className="mt-1 text-[10px] font-black uppercase tracking-[.12em] text-white/35">Grupo {assignment.cohort} · por {assignment.assignedBy}</p>}</div>
         </div>
         <span className="text-sm font-black text-[#eaff93]">{plan.doneItems}/{plan.totalItems} · {plan.progressPct}%</span>
       </div>
@@ -260,7 +300,7 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2"><h3 className={`font-black uppercase ${item.done ? "text-white/55" : "text-white"}`}>{item.day || `Sesion ${index + 1}`}</h3>{item.focus && <span className="bg-white/10 px-2 py-0.5 text-[11px] font-black uppercase text-white/60">{item.focus}</span>}{item.targetMinutes > 0 && <span className="text-[11px] font-bold text-white/40">{item.targetMinutes} min</span>}</div>
                 {item.exercises && <p className="mt-1 text-sm font-semibold text-white/55">{item.exercises}</p>}
-                {!!item.prescribedExercises?.length && <div className="mt-2 flex flex-wrap gap-1.5">{item.prescribedExercises.map((exercise) => <span key={exercise.id} className="border border-white/10 px-2 py-1 text-[10px] font-bold text-white/50">{exercise.exerciseName} · {exercise.sets}x{exercise.reps}</span>)}</div>}
+                {!!item.prescribedExercises?.length && <div className="mt-3 grid gap-2 sm:grid-cols-2">{item.prescribedExercises.map((exercise) => <PlanMachineCard key={exercise.id} exercise={exercise} />)}</div>}
                 {item.done && item.doneDate && <p className="mt-2 text-[11px] font-black uppercase text-[#eaff93]">Completado · {item.doneDate}</p>}
               </div>
               <button type="button" disabled={!unlocked || item.done || Boolean(savingTrainingId)} onClick={() => void startPlanWorkout(item)} className={`inline-flex min-h-11 items-center gap-2 px-4 text-xs font-black uppercase ${item.done ? "bg-[#d8ff3e] text-black" : "bg-orange-300 text-black hover:bg-white"} disabled:opacity-45`}>

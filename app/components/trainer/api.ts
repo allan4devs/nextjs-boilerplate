@@ -36,6 +36,8 @@ export async function fetchTrainerMembers() {
       date: "",
       members: [] as TrainerMember[],
       todayClasses: [] as TrainerDashboardResponse["todayClasses"],
+      equipment: [] as TrainerDashboardResponse["equipment"],
+      programs: [] as TrainerDashboardResponse["programs"],
     };
   }
   const data = await payload<Partial<TrainerDashboardResponse>>(response);
@@ -44,6 +46,8 @@ export async function fetchTrainerMembers() {
     date: data.date ?? "",
     members: data.members ?? [],
     todayClasses: data.todayClasses ?? [],
+    equipment: data.equipment ?? [],
+    programs: data.programs ?? [],
   };
 }
 
@@ -83,4 +87,31 @@ export async function persistTrainerPlan(memberName: string, coachName: string, 
     body: JSON.stringify({ memberName, coachName, plan }),
   });
   return payload<SavePlanResponse>(response);
+}
+
+export async function assignDefaultPrograms() {
+  const response = await fetch("/api/xtreme/trainer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "assign_default_programs" }),
+  });
+  return payload<{ ok: boolean; matched: number; assigned: number }>(response);
+}
+
+export async function assignMemberProgram(memberKey: string, programId: string) {
+  const response = await fetch("/api/xtreme/trainer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "assign_program", memberKey, programId }),
+  });
+  return payload<SavePlanResponse>(response);
+}
+
+export async function persistTrainingProgram(programId: string, plan: TrainerPlan) {
+  const response = await fetch("/api/xtreme/trainer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "update_training_program", programId, plan }),
+  });
+  return payload<{ ok: boolean; synced: number; deferred: number }>(response);
 }

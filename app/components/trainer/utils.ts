@@ -1,14 +1,15 @@
 import { MACHINE_GUIDE } from "@/app/components/member/catalog/machines";
-import { DEFAULT_COACH_NAME, PLAN_TEMPLATES } from "./constants";
+import type { TrainingProgramTemplate } from "@/lib/xtreme/training-program-catalog";
+import { DEFAULT_COACH_NAME } from "./constants";
 import type {
   MemberSignal,
   PlanExercisePrescription,
   PlanItem,
-  PlanTemplateId,
   TrainerFilter,
   TrainerMember,
   TrainerPlan,
   TrainerStats,
+  TrainingMachine,
 } from "./types";
 
 export function todayIso() {
@@ -34,20 +35,53 @@ export function createPlanItem(overrides: Partial<PlanItem> = {}): PlanItem {
   };
 }
 
-export function createPrescription(machineId: string, overrides: Partial<PlanExercisePrescription> = {}): PlanExercisePrescription {
-  const machine = MACHINE_GUIDE.find((entry) => entry.id === machineId) ?? MACHINE_GUIDE[0];
+function machineSnapshot(machine: TrainingMachine) {
   return {
-    machineId: machine?.id ?? "", machineName: machine?.name ?? "Ejercicio libre",
-    exerciseName: machine?.name ?? "Ejercicio", sets: 3, reps: 10, weightKg: 0, targetSeconds: 0, notes: "", ...overrides, id: uid("exercise"),
+    assetId: machine.assetId,
+    machineId: machine.machineGuideId ?? "",
+    machineName: machine.name,
+    machineCode: machine.code,
+    machineArea: machine.area,
+    machineLocation: machine.location,
+    machineFloor: machine.floor,
   };
 }
 
-export function planFromTemplate(templateId: PlanTemplateId): TrainerPlan {
-  const template = PLAN_TEMPLATES.find((entry) => entry.id === templateId) ?? PLAN_TEMPLATES[0];
+export function attachPrescriptionToMachine(
+  exercise: PlanExercisePrescription,
+  machine: TrainingMachine,
+): PlanExercisePrescription {
+  return { ...exercise, ...machineSnapshot(machine) };
+}
+
+export function createPrescription(
+  machineId: string,
+  overrides: Partial<PlanExercisePrescription> = {},
+  equipment: TrainingMachine[] = [],
+): PlanExercisePrescription {
+  const machine = MACHINE_GUIDE.find((entry) => entry.id === machineId) ?? MACHINE_GUIDE[0];
+  const physicalMachine = equipment.find((entry) => entry.assetId === overrides.assetId)
+    ?? equipment.find((entry) => entry.machineGuideId === machineId && entry.status !== "fuera_de_servicio");
+  const prescription: PlanExercisePrescription = {
+    machineId: machine?.id ?? "", machineName: machine?.name ?? "Ejercicio libre",
+    exerciseName: machine?.name ?? "Ejercicio", sets: 3, reps: 10, weightKg: 0, targetSeconds: 0, notes: "", ...overrides, id: uid("exercise"),
+  };
+  return physicalMachine ? attachPrescriptionToMachine(prescription, physicalMachine) : prescription;
+}
+
+export function createEquipmentPrescription(machine: TrainingMachine): PlanExercisePrescription {
+  const guide = MACHINE_GUIDE.find((entry) => entry.id === machine.machineGuideId);
+  return attachPrescriptionToMachine({
+    ...createPrescription(machine.machineGuideId ?? ""),
+    exerciseName: guide?.name ?? machine.name,
+  }, machine);
+}
+
+export function planFromTemplate(template: TrainingProgramTemplate, equipment: TrainingMachine[] = []): TrainerPlan {
   return {
     title: template.name,
     objective: template.objective,
-    coachNote: "Revisar cargas y técnica al finalizar la primera semana.",
+    coachNote: template.coachNote,
     startDate: todayIso(),
     endDate: "",
     weeklySessions: template.weeklySessions,
@@ -56,7 +90,7 @@ export function planFromTemplate(templateId: PlanTemplateId): TrainerPlan {
       focus: session.focus,
       targetMinutes: session.targetMinutes,
       exercises: session.exercises,
-      prescribedExercises: session.machines.map((machine) => createPrescription(machine.machineId, machine)),
+      prescribedExercises: session.machines.map((machine) => createPrescription(machine.machineId, machine, equipment)),
     })),
   };
 }
@@ -70,6 +104,12 @@ export function validatePlan(plan: TrainerPlan) {
   if (!plan.objective.trim()) return "Definí el objetivo para que el socio entienda el enfoque.";
   if (!plan.items.length) return "Agregá al menos una sesión.";
   if (plan.items.some((item) => !item.day.trim() || !item.focus.trim())) return "Cada sesión necesita nombre y enfoque.";
+  if (plan.items.some((item) => !item.prescribedExercises?.length)) {
+    return "Cada sesión necesita al menos una máquina prescrita.";
+  }
+  if (plan.items.some((item) => item.prescribedExercises?.some((exercise) => !exercise.assetId))) {
+    return "Vinculá cada ejercicio prescrito con una máquina física del piso.";
+  }
   if (plan.endDate && plan.endDate < plan.startDate) return "La fecha final no puede ser anterior al inicio.";
   return null;
 }

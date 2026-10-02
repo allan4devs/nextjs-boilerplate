@@ -4,12 +4,17 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ALargeSmall, Banknote, Check, CheckCircle2, Contrast, Download, Eye, EyeOff, Flame, Loader2, Minus, PackageOpen, Plus, Printer, ReceiptText, Save, Search, Smartphone, Split, Trash2, X } from "lucide-react";
+import {
+  PRODUCT_CATEGORIES,
+  PRODUCT_CATEGORY_LABEL,
+  type ProductCategory,
+} from "@/lib/xtreme/product-catalog";
 import { GameChip, GameLabel, GameModal } from "../GameOS";
 import InventoryReporterPages from "./InventoryReporterPages";
 import ProductSaleReceipt, { type SaleReceiptData } from "./ProductSaleReceipt";
 import { Field } from "./ui";
 
-type Category = "bebidas" | "proteinas" | "creatinas" | "hidratantes" | "chicles";
+type Category = ProductCategory;
 type Product = {
   id: string;
   name: string;
@@ -24,13 +29,7 @@ type Product = {
 
 const CASH_BILLS = [1000, 2000, 5000, 10000, 20000, 50000] as const;
 
-const CATEGORY_LABEL: Record<Category, string> = {
-  bebidas: "Bebidas",
-  proteinas: "Proteínas",
-  creatinas: "Creatinas",
-  hidratantes: "Hidratantes",
-  chicles: "Chicles",
-};
+const CATEGORY_FILTERS = ["all", ...PRODUCT_CATEGORIES] as const;
 
 const PAYMENT_OPTIONS = [
   { id: "cash" as const, label: "Efectivo", icon: Banknote },
@@ -64,7 +63,7 @@ type ProductDraft = {
   image: string;
 };
 
-const EMPTY_NEW_PRODUCT = { name: "", category: "bebidas" as Category, price: "", cameraQuantity: "0", warehouseQuantity: "0", image: "" };
+const EMPTY_NEW_PRODUCT = { name: "", category: "aguas" as Category, price: "", cameraQuantity: "0", warehouseQuantity: "0", image: "" };
 
 export default function ReceptionStorefront({ mode, operatorName }: { mode: "inventory" | "sales"; operatorName?: string }) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -221,7 +220,7 @@ export default function ReceptionStorefront({ mode, operatorName }: { mode: "inv
       if (stock === "low" && (product.quantity <= 0 || product.quantity > 2)) return false;
       if (stock === "out" && product.quantity > 0) return false;
       if (!term) return true;
-      return searchable(`${product.name} ${product.id} ${CATEGORY_LABEL[product.category]}`).includes(term);
+      return searchable(`${product.name} ${product.id} ${PRODUCT_CATEGORY_LABEL[product.category]}`).includes(term);
     });
   }, [category, mode, products, query, showInactive, stock]);
   const cartLines = products.filter((p) => (cart[p.id] ?? 0) > 0);
@@ -257,7 +256,7 @@ export default function ReceptionStorefront({ mode, operatorName }: { mode: "inv
       .filter((product) => {
         if (category !== "all" && product.category !== category) return false;
         if (!term) return true;
-        return searchable(`${product.name} ${product.id} ${CATEGORY_LABEL[product.category]}`).includes(term);
+        return searchable(`${product.name} ${product.id} ${PRODUCT_CATEGORY_LABEL[product.category]}`).includes(term);
       })
       .sort((a, b) => {
         const aOut = a.quantity <= 0;
@@ -632,7 +631,7 @@ export default function ReceptionStorefront({ mode, operatorName }: { mode: "inv
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-black uppercase leading-tight">{product.name}</span>
-          <span className="mt-0.5 block text-[10px] font-bold text-white/40">{soldOut ? "Agotado" : `${product.quantity} disp · ${CATEGORY_LABEL[product.category]}`}</span>
+          <span className="mt-0.5 block text-[10px] font-bold text-white/40">{soldOut ? "Agotado" : `${product.quantity} disp · ${PRODUCT_CATEGORY_LABEL[product.category]}`}</span>
         </span>
         <span className="shrink-0 text-xs font-black text-[#d8ff3e]">{money(product.price)}</span>
         {selected > 0 ? (
@@ -753,7 +752,7 @@ export default function ReceptionStorefront({ mode, operatorName }: { mode: "inv
             </Field>
             <Field label="Categoría" required>
               <select value={newProduct.category} onChange={(event) => setNewProduct((current) => ({ ...current, category: event.target.value as Category }))} className="w-full border-[3px] border-white/15 bg-black px-3 py-3 text-sm font-bold text-white outline-none focus:border-[#d8ff3e]">
-                {(Object.keys(CATEGORY_LABEL) as Category[]).map((id) => <option key={id} value={id} className="text-black">{CATEGORY_LABEL[id]}</option>)}
+                {PRODUCT_CATEGORIES.map((id) => <option key={id} value={id} className="text-black">{PRODUCT_CATEGORY_LABEL[id]}</option>)}
               </select>
             </Field>
             <Field label="Precio ₡" required>
@@ -799,9 +798,9 @@ export default function ReceptionStorefront({ mode, operatorName }: { mode: "inv
 
       {mode === "inventory" && (
         <div className="xg-mobile-scroll mt-5 flex gap-2 overflow-x-auto pb-1">
-          {(["all", "bebidas", "proteinas", "creatinas", "hidratantes", "chicles"] as const).map((id) => (
+          {CATEGORY_FILTERS.map((id) => (
             <button key={id} type="button" onClick={() => setCategory(id)} className={`min-h-10 shrink-0 border-[3px] px-3 text-xs font-black uppercase ${category === id ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/15 text-white/55"}`}>
-              {id === "all" ? "Todo" : CATEGORY_LABEL[id]}
+              {id === "all" ? "Todo" : PRODUCT_CATEGORY_LABEL[id]}
             </button>
           ))}
         </div>
@@ -834,9 +833,9 @@ export default function ReceptionStorefront({ mode, operatorName }: { mode: "inv
                 )}
               </label>
               <div className="xg-mobile-scroll mt-2 flex gap-1.5 overflow-x-auto pb-1">
-                {(["all", "bebidas", "proteinas", "creatinas", "hidratantes", "chicles"] as const).map((id) => (
+                {CATEGORY_FILTERS.map((id) => (
                   <button key={id} type="button" onClick={() => setCategory(id)} className={`min-h-10 shrink-0 border-2 px-2.5 text-[10px] font-black uppercase ${category === id ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/15 text-white/55 hover:text-white"}`}>
-                    {id === "all" ? "Todo" : CATEGORY_LABEL[id]}
+                    {id === "all" ? "Todo" : PRODUCT_CATEGORY_LABEL[id]}
                   </button>
                 ))}
               </div>
@@ -897,7 +896,7 @@ export default function ReceptionStorefront({ mode, operatorName }: { mode: "inv
                       onChange={(e) => setDrafts((d) => ({ ...d, [product.id]: { ...d[product.id], category: e.target.value as Category } }))}
                       className="border-2 border-white/15 bg-black px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white/70 outline-none focus:border-[#d8ff3e]"
                     >
-                      {(Object.keys(CATEGORY_LABEL) as Category[]).map((id) => <option key={id} value={id} className="text-black">{CATEGORY_LABEL[id]}</option>)}
+                      {PRODUCT_CATEGORIES.map((id) => <option key={id} value={id} className="text-black">{PRODUCT_CATEGORY_LABEL[id]}</option>)}
                     </select>
                     <input
                       value={drafts[product.id]?.name ?? product.name}

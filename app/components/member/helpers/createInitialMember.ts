@@ -31,7 +31,9 @@ export function initialMember(name = ""): Member {
     bodyMetrics: [],
     latestBodyMetric: null,
     trainingPlan: null,
+    trainingProgramAssignment: null,
     activePlanWorkout: null,
+    exercisePreferences: [],
     notificationPrefs: { ...DEFAULT_NOTIF_PREFS },
     pinnedBadges: [],
   };

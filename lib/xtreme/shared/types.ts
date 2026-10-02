@@ -19,14 +19,32 @@ export type WorkoutExerciseDetail = {
   };
   completed?: boolean;
   id: string;
+  /** Stable identity of the physical unit on the gym floor. */
+  assetId?: string;
   machineId: string;
   machineName: string;
+  machineCode?: string;
+  machineArea?: string;
+  machineLocation?: string;
+  machineFloor?: number;
   exerciseName: string;
   sets: number;
   reps: number;
   weightKg: number;
   seconds: number;
+  targetSeconds?: number;
   notes: string;
+};
+
+export type ExercisePreference = {
+  key: string;
+  assetId?: string;
+  machineId: string;
+  favoriteWeightKg?: number;
+  lastWeightKg?: number;
+  favoriteSeconds?: number;
+  lastSeconds?: number;
+  updatedAt: Date;
 };
 
 export type WorkoutEntry = {
@@ -46,8 +64,15 @@ export type WorkoutEntry = {
 
 export type PlanExercisePrescription = {
   id: string;
+  programExerciseId?: string;
+  /** Stable identity of the physical unit selected by the trainer. */
+  assetId?: string;
   machineId: string;
   machineName: string;
+  machineCode?: string;
+  machineArea?: string;
+  machineLocation?: string;
+  machineFloor?: number;
   exerciseName: string;
   sets: number;
   reps: number;
@@ -87,6 +112,7 @@ export type WorkoutHistoryItem = {
 
 export type PlanItem = {
   id: string;
+  programSessionId?: string;
   day: string;
   focus: string;
   exercises: string;
@@ -98,6 +124,12 @@ export type PlanItem = {
 };
 
 export type TrainingPlan = {
+  programId?: string;
+  programName?: string;
+  programRevision?: number;
+  groupId?: string;
+  assignmentSource?: "group" | "custom";
+  cycle?: number;
   title: string;
   objective: string;
   coachNote: string;
@@ -107,6 +139,18 @@ export type TrainingPlan = {
   items: PlanItem[];
   createdAt?: Date;
   updatedAt?: Date;
+};
+
+export type TrainingProgramAssignment = {
+  programId: string;
+  programName: string;
+  programRevision: number;
+  groupId: string;
+  cohort: string;
+  source: "auto_default" | "trainer_group" | "trainer_custom";
+  cycle: number;
+  assignedBy: string;
+  assignedAt: Date;
 };
 
 export type NotificationPrefs = {
@@ -146,7 +190,9 @@ export type MemberDoc = {
   membership?: Membership;
   bodyMetrics?: BodyMetric[];
   trainingPlan?: TrainingPlan;
+  trainingProgramAssignment?: TrainingProgramAssignment;
   activePlanWorkout?: ActivePlanWorkout;
+  exercisePreferences?: ExercisePreference[];
   weeklyGoal?: number;
   earnedBadges?: EarnedBadge[];
   freezeHistory?: string[];

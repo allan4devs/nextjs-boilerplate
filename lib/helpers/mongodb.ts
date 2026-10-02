@@ -104,6 +104,9 @@ async function ensureIndexes(db: Db) {
     db.collection("xtreme_gym_class_templates").createIndex({ trainingId: 1 }),
     db.collection("xtreme_gym_class_sessions").createIndex({ id: 1 }, { unique: true }),
     db.collection("xtreme_gym_class_sessions").createIndex({ date: 1, trainingId: 1 }),
+    db.collection("xtreme_gym_training_programs").createIndex({ id: 1 }, { unique: true }),
+    db.collection("xtreme_gym_training_programs").createIndex({ active: 1, defaultPool: 1 }),
+    db.collection("xtreme_gym_members").createIndex({ "trainingProgramAssignment.programId": 1 }),
     db.collection("xtreme_gym_bookings").createIndex({ id: 1 }, { unique: true }),
     db
       .collection("xtreme_gym_bookings")

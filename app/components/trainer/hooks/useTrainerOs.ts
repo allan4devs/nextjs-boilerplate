@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  assignDefaultPrograms,
+  assignMemberProgram,
   expelClassAttendee,
   fetchTrainerClasses,
   fetchTrainerClassesForDate,
@@ -9,6 +11,7 @@ import {
   loginTrainer,
   logoutTrainer,
   persistTrainerPlan,
+  persistTrainingProgram,
   toggleClassStatus,
   trainerSession,
 } from "../api";
@@ -16,19 +19,22 @@ import { DEFAULT_COACH_NAME } from "../constants";
 import type {
   PlanExercisePrescription,
   PlanItem,
-  PlanTemplateId,
   TrainerFilter,
   TrainerMember,
   TrainerNotice,
   TrainerPlan,
+  TrainerProgram,
   TrainerTab,
   TrainerTodayClass,
+  TrainingMachine,
 } from "../types";
 import {
+  attachPrescriptionToMachine,
   clonePlan,
   coachFor,
   createEmptyPlan,
   createPlanItem,
+  createEquipmentPrescription,
   createPrescription,
   filterTrainerMembers,
   memberSignal,
@@ -45,6 +51,8 @@ export function useTrainerOs() {
   const [staffName, setStaffName] = useState("");
   const [members, setMembers] = useState<TrainerMember[]>([]);
   const [todayClasses, setTodayClasses] = useState<TrainerTodayClass[]>([]);
+  const [equipment, setEquipment] = useState<TrainingMachine[]>([]);
+  const [programs, setPrograms] = useState<TrainerProgram[]>([]);
   const [agendaDate, setAgendaDate] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
   const [query, setQuery] = useState("");
@@ -54,6 +62,7 @@ export function useTrainerOs() {
   const [coachName, setCoachName] = useState(DEFAULT_COACH_NAME);
   const [notice, setNotice] = useState<TrainerNotice>(null);
   const [saving, setSaving] = useState(false);
+  const [assigningPrograms, setAssigningPrograms] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [healthDirty, setHealthDirty] = useState(false);
   const [healthBusy, setHealthBusy] = useState(false);
@@ -87,11 +96,15 @@ export function useTrainerOs() {
         setAuthenticated(false);
         setMembers([]);
         setTodayClasses([]);
+        setEquipment([]);
+        setPrograms([]);
         setAgendaDate("");
         return;
       }
       setMembers(result.members);
       setTodayClasses(result.todayClasses);
+      setEquipment(result.equipment);
+      setPrograms(result.programs);
       setAgendaDate(result.date);
       const priorityMember = filterTrainerMembers(result.members, "", "attention")[0] ?? result.members[0];
       setSelectedKey((current) => preserveSelection && result.members.some((member) => member.normalizedName === current)
@@ -186,6 +199,8 @@ export function useTrainerOs() {
     setStaffName("");
     setMembers([]);
     setTodayClasses([]);
+    setEquipment([]);
+    setPrograms([]);
     setAgendaDate("");
     setSelectedKey("");
     setDirty(false);
@@ -246,11 +261,11 @@ export function useTrainerOs() {
         done: false,
         doneDate: null,
         doneWorkoutId: null,
-        prescribedExercises: (source.prescribedExercises ?? []).map((exercise) => createPrescription(exercise.machineId, exercise)),
+        prescribedExercises: (source.prescribedExercises ?? []).map((exercise) => createPrescription(exercise.machineId, exercise, equipment)),
       });
       return { ...current, items: [...current.items.slice(0, index + 1), copy, ...current.items.slice(index + 1)] };
     });
-  }, [mutateDraft]);
+  }, [equipment, mutateDraft]);
 
   const moveItem = useCallback((index: number, direction: -1 | 1) => {
     mutateDraft((current) => {
@@ -267,23 +282,38 @@ export function useTrainerOs() {
     updateItem(itemIndex, { prescribedExercises: exercises.map((exercise, index) => index === exerciseIndex ? { ...exercise, ...patch } : exercise) });
   }, [draft.items, updateItem]);
 
-  const addExercise = useCallback((itemIndex: number, machineId: string) => {
+  const addExercise = useCallback((itemIndex: number, assetId: string) => {
+    const machine = equipment.find((entry) => entry.assetId === assetId);
+    if (!machine) return;
     const exercises = draft.items[itemIndex]?.prescribedExercises ?? [];
-    updateItem(itemIndex, { prescribedExercises: [...exercises, createPrescription(machineId)] });
-  }, [draft.items, updateItem]);
+    updateItem(itemIndex, { prescribedExercises: [...exercises, createEquipmentPrescription(machine)] });
+  }, [draft.items, equipment, updateItem]);
+
+  const selectExerciseMachine = useCallback((itemIndex: number, exerciseIndex: number, assetId: string) => {
+    const machine = equipment.find((entry) => entry.assetId === assetId);
+    const exercises = draft.items[itemIndex]?.prescribedExercises ?? [];
+    if (!machine || !exercises[exerciseIndex]) return;
+    updateItem(itemIndex, {
+      prescribedExercises: exercises.map((exercise, index) => index === exerciseIndex
+        ? attachPrescriptionToMachine(exercise, machine)
+        : exercise),
+    });
+  }, [draft.items, equipment, updateItem]);
 
   const deleteExercise = useCallback((itemIndex: number, exerciseIndex: number) => {
     const exercises = draft.items[itemIndex]?.prescribedExercises ?? [];
     updateItem(itemIndex, { prescribedExercises: exercises.filter((_, index) => index !== exerciseIndex) });
   }, [draft.items, updateItem]);
 
-  const applyTemplate = useCallback((templateId: PlanTemplateId) => {
+  const applyTemplate = useCallback((templateId: string) => {
     if (dirty && draft.items.length && !window.confirm("¿Reemplazar el borrador con esta plantilla?")) return;
-    setDraft(planFromTemplate(templateId));
+    const template = programs.find((entry) => entry.id === templateId);
+    if (!template) return;
+    setDraft(planFromTemplate(template, equipment));
     setDirty(true);
     setNotice(null);
     setTab("plan");
-  }, [dirty, draft.items.length]);
+  }, [dirty, draft.items.length, equipment, programs]);
 
   const resetDraft = useCallback(() => resetWorkspace(selected), [resetWorkspace, selected]);
 
@@ -310,6 +340,87 @@ export function useTrainerOs() {
       setSaving(false);
     }
   }, [coachName, draft, selected]);
+
+  const saveGroup = useCallback(async () => {
+    if (!selected?.trainingProgramAssignment) return;
+    const program = programs.find((entry) => entry.id === selected.trainingProgramAssignment?.programId);
+    if (!program) return;
+    const invalid = validatePlan(draft);
+    if (invalid) {
+      setNotice({ tone: "error", text: invalid });
+      return;
+    }
+    if (!window.confirm(`¿Actualizar ${program.name} para sus ${program.memberCount} socios? Los entrenos activos se actualizarán al terminar.`)) return;
+    setSaving(true);
+    setNotice(null);
+    try {
+      const result = await persistTrainingProgram(program.id, draft);
+      const refreshed = await fetchTrainerMembers();
+      if (refreshed.authenticated) {
+        setMembers(refreshed.members);
+        setPrograms(refreshed.programs);
+        setEquipment(refreshed.equipment);
+        const member = refreshed.members.find((entry) => entry.normalizedName === selected.normalizedName) ?? null;
+        if (member) resetWorkspace(member);
+      }
+      setNotice({
+        tone: "success",
+        text: `${program.name} actualizado para ${result.synced} socios${result.deferred ? `; ${result.deferred} lo recibirá al terminar su entreno activo` : ""}.`,
+      });
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "No se pudo actualizar el grupo." });
+    } finally {
+      setSaving(false);
+    }
+  }, [draft, programs, resetWorkspace, selected]);
+
+  const assignDefaults = useCallback(async () => {
+    if (dirty && !window.confirm("¿Asignar programas y descartar los cambios sin guardar?")) return;
+    setAssigningPrograms(true);
+    setNotice(null);
+    try {
+      const result = await assignDefaultPrograms();
+      await load(true);
+      setNotice({
+        tone: "success",
+        text: result.assigned
+          ? `${result.assigned} socios recibieron un programa base automáticamente.`
+          : "Todos los socios ya tienen un plan.",
+      });
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "No se pudieron repartir los programas." });
+    } finally {
+      setAssigningPrograms(false);
+    }
+  }, [dirty, load]);
+
+  const assignProgram = useCallback(async (programId: string) => {
+    if (!selected) return;
+    const program = programs.find((entry) => entry.id === programId);
+    if (!program) return;
+    if ((selected.trainingPlan || dirty) && !window.confirm(`¿Reemplazar el plan actual de ${selected.memberName} por ${program.name}?`)) return;
+    setAssigningPrograms(true);
+    setNotice(null);
+    try {
+      const result = await assignMemberProgram(selected.normalizedName, programId);
+      if (result.member) {
+        setMembers((current) => current.map((member) => member.normalizedName === result.member!.normalizedName ? result.member! : member));
+        resetWorkspace(result.member);
+      }
+      const refreshed = await fetchTrainerMembers();
+      if (refreshed.authenticated) {
+        setMembers(refreshed.members);
+        setPrograms(refreshed.programs);
+        setEquipment(refreshed.equipment);
+      }
+      setNotice({ tone: "success", text: `${selected.memberName} ahora entrena con ${program.name}.` });
+      setTab("overview");
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "No se pudo cambiar el programa." });
+    } finally {
+      setAssigningPrograms(false);
+    }
+  }, [dirty, programs, resetWorkspace, selected]);
 
   const changeAgendaDate = useCallback(async (targetDate: string) => {
     setChecking(true);
@@ -352,13 +463,14 @@ export function useTrainerOs() {
 
   return {
     checking, authenticated, code, setCode, staffName, members, todayClasses, agendaDate,
+    equipment, programs,
     selected, selectedSignal, stats,
     query, setQuery, filter, setFilter, filteredMembers, tab, setTab, draft, coachName,
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
-    saving, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,
+    saving, assigningPrograms, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,
     healthDirty, setHealthDirty, healthBusy, setHealthBusy, healthRefresh,
-    updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise,
-    deleteExercise, applyTemplate, resetDraft, save,
+    updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise, selectExerciseMachine,
+    deleteExercise, applyTemplate, resetDraft, save, saveGroup, assignDefaults, assignProgram,
     changeAgendaDate, toggleClass, expelAttendee,
   };
 }
