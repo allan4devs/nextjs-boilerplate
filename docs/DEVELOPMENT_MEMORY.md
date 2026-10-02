@@ -15,8 +15,9 @@ conserva el alias del paquete Human a su implementación de navegador para evita
 que Webpack intente compilar el backend nativo de TensorFlow.
 
 `npm run dev:turbo` conserva una alternativa explícita para investigar Turbopack.
-Su objetivo de memoria es de 2 GiB; este objetivo no limita el RSS total del
-proceso ni la suma de los trabajadores. No usarlo como garantía contra un bloqueo.
+La versión instalada no acepta `experimental.turbopackMemoryLimit`; se retiró
+esa opción al reconciliar las dos copias. El lanzador conserva el límite de
+heap de 4 GiB por proceso, que no limita el RSS total ni la suma de los trabajadores.
 
 En la revisión del 2 de octubre de 2026, el log de desarrollo mostraba unos
 47 segundos compilando `/entrenador` y 94 segundos escribiendo la caché de
@@ -29,6 +30,9 @@ Para revisar las correcciones sin abrir servidores:
 ```powershell
 node scripts/check-memory-lifecycle.mjs
 node scripts/check-trainer-health.mjs
+npm run check:merge
+npm run check:training
+npm run check:workout-preferences
 npx tsc --noEmit
 npm run build
 ```
@@ -39,3 +43,17 @@ de 60 eventos, el timeout de entrega, la liberación de los tracks y la herencia
 del límite de heap. La segunda verifica la ficha Trainer, incluidos permisos y
 conflictos entre actualizaciones. Son pruebas aisladas; no sustituyen una
 medición del navegador real durante una sesión de uso.
+
+## Reconciliación de las dos copias
+
+El merge `0c71cbd` incorporó `30d8d68` de `nextjs-boilerplate` y las
+adiciones locales `89fe569` y `9eac462` de `xtremecr`. Se conservaron los
+programas actuales, la agenda, las preferencias de ejercicio y los reportes
+de ventas, junto con la ficha de salud, Grupo A y el registro de inversiones.
+
+Se corrigieron imports y campos duplicados, las rutas de scripts trasladados
+a `scripts/dedup`, la inclusión del lanzador en `.vercelignore` y la dependencia
+del escáner. Grupo A tiene acceso desde Trainer OS y el escáner desde la sesión
+de entrenamiento. La selección conserva las prescripciones y el `assetId`;
+las pruebas verifican también que un guardado fallido no agregue un ejercicio
+local y que un borrador del grupo proteja la actualización y el cierre de sesión.

@@ -10,7 +10,6 @@ export type Membership = {
 };
 
 export type WorkoutExerciseDetail = {
-  assetId?: string;
   tracking?: {
     elapsedSeconds: number;
     startedAt: string | null;

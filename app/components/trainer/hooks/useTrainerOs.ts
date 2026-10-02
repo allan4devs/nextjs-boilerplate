@@ -67,6 +67,10 @@ export function useTrainerOs() {
   const [healthDirty, setHealthDirty] = useState(false);
   const [healthBusy, setHealthBusy] = useState(false);
   const [healthRefresh, setHealthRefresh] = useState(0);
+  const [groupActive, setGroupActive] = useState(false);
+  const [groupDirty, setGroupDirty] = useState(false);
+  const [groupBusy, setGroupBusy] = useState(false);
+  const [groupRefresh, setGroupRefresh] = useState(0);
 
   const selected = useMemo(
     () => members.find((member) => member.normalizedName === selectedKey) ?? null,
@@ -168,11 +172,11 @@ export function useTrainerOs() {
   }, [resetWorkspace, selectedKey]); // selectedKey is the deliberate workspace boundary.
 
   useEffect(() => {
-    if (!dirty && !healthDirty) return;
+    if (!dirty && !healthDirty && !groupDirty) return;
     const beforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener("beforeunload", beforeUnload);
     return () => window.removeEventListener("beforeunload", beforeUnload);
-  }, [dirty, healthDirty]);
+  }, [dirty, healthDirty, groupDirty]);
 
   const login = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
@@ -192,8 +196,8 @@ export function useTrainerOs() {
   }, [code, load]);
 
   const logout = useCallback(async () => {
-    if (healthBusy) return;
-    if ((dirty || healthDirty) && !window.confirm("¿Salir y descartar los cambios sin guardar?")) return;
+    if (healthBusy || groupBusy) return;
+    if ((dirty || healthDirty || groupDirty) && !window.confirm("¿Salir y descartar los cambios sin guardar?")) return;
     await logoutTrainer();
     setAuthenticated(false);
     setStaffName("");
@@ -205,29 +209,34 @@ export function useTrainerOs() {
     setSelectedKey("");
     setDirty(false);
     setHealthDirty(false);
-  }, [dirty, healthDirty, healthBusy]);
+    setGroupDirty(false);
+    setGroupActive(false);
+  }, [dirty, healthDirty, healthBusy, groupDirty, groupBusy]);
 
   const chooseMember = useCallback((key: string) => {
-    if (key === selectedKey) return;
-    if (healthBusy) return;
+    if (healthBusy || groupBusy) return;
+    if (key === selectedKey) { setGroupActive(false); return; }
     if ((dirty || healthDirty) && !window.confirm("¿Cambiar de socio y descartar los cambios sin guardar?")) return;
     setHealthDirty(false);
     setSelectedKey(key);
     setTab("overview");
-  }, [dirty, healthDirty, healthBusy, selectedKey]);
+    setGroupActive(false);
+  }, [dirty, healthDirty, healthBusy, groupBusy, selectedKey]);
 
   const refresh = useCallback(async () => {
-    if (healthBusy) return;
-    if ((dirty || healthDirty) && !window.confirm("¿Actualizar y descartar los cambios sin guardar?")) return;
+    if (healthBusy || groupBusy) return;
+    if ((dirty || healthDirty || groupDirty) && !window.confirm("¿Actualizar y descartar los cambios sin guardar?")) return;
     const updatedMembers = await load(true);
     if (!updatedMembers) return;
+    setGroupDirty(false);
+    setGroupRefresh((current) => current + 1);
     const refreshed = updatedMembers.find((member) => member.normalizedName === selectedKey) ?? updatedMembers[0] ?? null;
     if (refreshed) {
       setSelectedKey(refreshed.normalizedName);
       resetWorkspace(refreshed);
       setHealthRefresh((current) => current + 1);
     }
-  }, [dirty, healthDirty, healthBusy, load, resetWorkspace, selectedKey]);
+  }, [dirty, healthDirty, healthBusy, groupDirty, groupBusy, load, resetWorkspace, selectedKey]);
 
   const mutateDraft = useCallback((mutator: (current: TrainerPlan) => TrainerPlan) => {
     setDraft((current) => normalizeDraft(mutator(current)));
@@ -469,6 +478,7 @@ export function useTrainerOs() {
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
     saving, assigningPrograms, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,
     healthDirty, setHealthDirty, healthBusy, setHealthBusy, healthRefresh,
+    groupActive, setGroupActive, groupDirty, setGroupDirty, groupBusy, setGroupBusy, groupRefresh,
     updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise, selectExerciseMachine,
     deleteExercise, applyTemplate, resetDraft, save, saveGroup, assignDefaults, assignProgram,
     changeAgendaDate, toggleClass, expelAttendee,

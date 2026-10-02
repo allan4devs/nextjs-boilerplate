@@ -91,5 +91,5 @@ Flujo de sesión del socio: cédula (lector de barras USB tipo teclado o digitad
 
 **Reconocimiento facial.** Dos sistemas distintos, no confundir:
 
-- **Webcam en el navegador** (recepción e ingreso): motor Human en el cliente, comparación contra plantillas en Mongo. Se prende con `NEXT_PUBLIC_FACE_RECOGNITION=1` (chequeo estricto `=== "1"`). Config en `lib/xtreme/face/config.ts`; pesos servidos desde `public/models/human/` (los copia `scripts/sync-face-models.mjs` en `predev`/`prebuild`).
+- **Webcam en el navegador** (recepción e ingreso): motor Human en el cliente, comparación contra plantillas en Mongo. Se prende con `NEXT_PUBLIC_FACE_RECOGNITION=1` (chequeo estricto `=== "1"`). Config en `lib/xtreme/face/config.ts`; pesos servidos desde `public/models/human/` (los copia `scripts/dedup/sync-face-models.mjs` en `predev`/`prebuild`).
 - **Terminal física de la puerta** (control de acceso OEM, serie AXTE): equipo en la LAN que expone `POST http://<host>/api` y entrega el feed de ingresos con `cmd:"getrtlog"`. Config **solo de servidor** en `lib/xtreme/face/terminal.ts`: `XTREME_FACE_TERMINAL_ENABLED` (`1` prende), `XTREME_FACE_TERMINAL_HOST`, `XTREME_FACE_TERMINAL_USER`, `XTREME_FACE_TERMINAL_PASSWORD` (secreto, sin default), `XTREME_FACE_TERMINAL_SERIAL`, y opcionales `_API_PATH`/`_POLL_MS`/`_TIMEOUT_MS`. La contraseña nunca lleva `NEXT_PUBLIC_`.

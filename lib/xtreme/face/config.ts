@@ -22,7 +22,7 @@ export const FACE_RECOGNITION_ENABLED =
  */
 export const FACE_ENGINE_ID = "human-faceres-v1";
 
-/** Pesos servidos desde el mismo origen (los copia scripts/sync-face-models.mjs). */
+/** Pesos servidos desde el mismo origen (los copia scripts/dedup/sync-face-models.mjs). */
 export const FACE_MODEL_BASE_PATH =
   process.env.NEXT_PUBLIC_FACE_MODEL_PATH || "/models/human/";
 

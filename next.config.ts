@@ -26,8 +26,6 @@ const nextConfig: NextConfig = {
     // El alias personalizado desactiva este worker por defecto; reactivarlo
     // permite liberar cada compilación antes de pasar a la siguiente.
     webpackBuildWorker: true,
-    // Objetivo de memoria de Turbopack; no es un límite del RSS total.
-    turbopackMemoryLimit: 2 * 1024 * 1024 * 1024,
     // Vercel restaura .next/cache entre builds; Turbopack reutiliza el grafo
     // compilado y reduce de forma importante los builds consecutivos.
     turbopackFileSystemCacheForBuild: true,

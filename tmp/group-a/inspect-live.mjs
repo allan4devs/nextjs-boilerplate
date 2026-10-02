@@ -1,4 +1,4 @@
-﻿import { createRequire } from 'node:module';
+import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import { MongoClient } from 'mongodb';
 const require=createRequire(import.meta.url);require('@next/env').loadEnvConfig(process.cwd());

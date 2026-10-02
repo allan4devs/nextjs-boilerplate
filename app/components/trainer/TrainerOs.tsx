@@ -8,20 +8,14 @@ import { GameButton, GameLabel } from "@/app/components/GameOS";
 import { TRAINER_TABS } from "./constants";
 import { useTrainerOs } from "./hooks/useTrainerOs";
 import { TrainerOverview } from "./ui/TrainerOverview";
-import dynamic from "next/dynamic";
-
-import { TRAINER_TABS } from "./constants";
-import { useTrainerOs } from "./hooks/useTrainerOs";
-import { TrainerOverview } from "./ui/TrainerOverview";
 import { TrainerProgramsPanel } from "./ui/TrainerProgramsPanel";
 import { TrainerRoster } from "./ui/TrainerRoster";
-
-const TrainerPlanEditor = dynamic(() => import("./ui/TrainerPlanEditor").then((module) => module.TrainerPlanEditor));
-import { TrainerRoster } from "./ui/TrainerRoster";
+import { TrainerTodayClasses } from "./ui/TrainerTodayClasses";
 
 const TrainerPlanEditor = dynamic(() => import("./ui/TrainerPlanEditor").then((module) => module.TrainerPlanEditor));
 const TrainerHistory = dynamic(() => import("./ui/TrainerHistory").then((module) => module.TrainerHistory));
 const TrainerHealthRecord = dynamic(() => import("./ui/TrainerHealthRecord").then((module) => module.TrainerHealthRecord));
+const TrainerGroupA = dynamic(() => import("./ui/TrainerGroupA").then((module) => module.TrainerGroupA));
 
 export default function TrainerOs() {
   const os = useTrainerOs();
@@ -49,13 +43,20 @@ export default function TrainerOs() {
 
       <TrainerTodayClasses os={os} />
       <TrainerProgramsPanel os={os} />
-      <div className="grid min-h-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]">
+      <nav aria-label="Área de trabajo del entrenador" className="my-4 flex flex-wrap gap-2">
+        <GameButton variant={os.groupActive ? "ghost" : "cyan"} disabled={os.healthBusy || os.groupBusy} aria-pressed={!os.groupActive} onClick={() => os.setGroupActive(false)}>Socios y planes</GameButton>
+        <GameButton variant={os.groupActive ? "cyan" : "ghost"} disabled={os.healthBusy || os.groupBusy} aria-pressed={os.groupActive} onClick={() => os.setGroupActive(true)}>Grupo A</GameButton>
+      </nav>
+      <div hidden={!os.groupActive}>
+        <TrainerGroupA active={os.groupActive} members={os.members} refreshKey={os.groupRefresh} onDirtyChange={os.setGroupDirty} onBusyChange={os.setGroupBusy} onOpenMember={os.chooseMember} />
+      </div>
+      <div className={os.groupActive ? "hidden" : "grid min-h-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]"}>
         <TrainerRoster os={os} />
         {os.selected ? <section className="min-w-0 space-y-4">
           <MemberHeader os={os} />
           {os.notice && <div className={`flex items-center gap-3 border-[3px] p-3 text-sm font-bold ${os.notice.tone === "success" ? "border-[#d8ff3e]/45 bg-[#d8ff3e]/10 text-[#eaff93]" : "border-red-400/45 bg-red-500/10 text-red-200"}`}>{os.notice.tone === "success" ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertTriangle className="h-5 w-5 shrink-0" />}{os.notice.text}</div>}
           <nav className="flex gap-2 overflow-x-auto border-[3px] border-white/10 bg-[#0c0c0c] p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{TRAINER_TABS.map((entry) => <button key={entry.id} onClick={() => os.setTab(entry.id)} className={`min-h-11 shrink-0 border-[3px] px-4 text-[10px] font-black uppercase transition ${os.tab === entry.id ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/10 text-white/45 hover:border-white/30"}`}>{entry.label}{entry.id === "plan" && os.dirty ? " •" : ""}</button>)}</nav>
-          <TrainerHealthRecord key={os.selected.memberId} member={os.selected} active={os.tab === "health"} refreshKey={os.healthRefresh} onDirtyChange={os.setHealthDirty} onBusyChange={os.setHealthBusy} />
+          <TrainerHealthRecord key={os.selected.memberId} member={os.selected} active={!os.groupActive && os.tab === "health"} refreshKey={os.healthRefresh} onDirtyChange={os.setHealthDirty} onBusyChange={os.setHealthBusy} />
           {os.tab === "overview" ? <TrainerOverview os={os} /> : os.tab === "plan" ? <TrainerPlanEditor os={os} /> : os.tab === "history" ? <TrainerHistory os={os} /> : null}
         </section> : <div className="grid min-h-[480px] place-items-center border-[3px] border-dashed border-white/15 bg-white/[.02] text-center"><div><UserRound className="mx-auto h-12 w-12 text-white/20" /><p className="mt-4 font-black uppercase text-white/45">Seleccioná un socio</p><p className="mt-1 text-sm font-bold text-white/25">Su radiografía aparece acá.</p></div></div>}
       </div>

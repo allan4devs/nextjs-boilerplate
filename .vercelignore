@@ -6,6 +6,7 @@
 cv
 flyers
 scripts/*
+!scripts/next-memory.mjs
 !scripts/dedup/
 scripts/dedup/*
 !scripts/dedup/sync-face-models.mjs

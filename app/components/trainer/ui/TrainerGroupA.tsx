@@ -21,9 +21,9 @@ async function groupRequest(body?: Record<string, unknown>): Promise<GroupDashbo
   return data;
 }
 
-export function TrainerGroupA({ active, members, refreshKey, onDirtyChange, onOpenMember }: {
+export function TrainerGroupA({ active, members, refreshKey, onDirtyChange, onBusyChange, onOpenMember }: {
   active: boolean; members: TrainerMember[]; refreshKey: number;
-  onDirtyChange: (dirty: boolean) => void; onOpenMember: (key: string) => void;
+  onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void; onOpenMember: (key: string) => void;
 }) {
   const [data, setData] = useState<GroupDashboard | null>(null);
   const [profileId, setProfileId] = useState("tiffany");
@@ -32,6 +32,7 @@ export function TrainerGroupA({ active, members, refreshKey, onDirtyChange, onOp
   const [dirty, setDirty] = useState(false);
   const [loadedKey, setLoadedKey] = useState(-1);
   const setDraftDirty = useCallback((value: boolean) => { setDirty(value); onDirtyChange(value); }, [onDirtyChange]);
+  useEffect(() => { onBusyChange(busy); return () => onBusyChange(false); }, [busy, onBusyChange]);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -78,7 +79,7 @@ export function TrainerGroupA({ active, members, refreshKey, onDirtyChange, onOp
 
   if (!data) return <section className="border-[3px] border-cyan-300/30 bg-[#0c0c0c] p-6"><p role="status">{message?.text || "Cargando rutinas del Grupo A..."}</p><GameButton className="mt-4" disabled={busy} onClick={() => void load()}>Volver a intentar</GameButton></section>;
 
-  return <div className="space-y-4">
+  return <div hidden={!active} className="space-y-4">
     <section className="border-[3px] border-cyan-300/40 bg-[#0c0c0c] p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><GameLabel tone="cyan">Seguimiento cercano</GameLabel><h2 className="mt-2 flex items-center gap-2 text-2xl font-black uppercase"><Users /> Grupo A</h2><p className="mt-2 text-sm text-white/60">6 personas · 5 rutinas originales · Kengie Araya. Yuslin y Lauren comparten rutina y tienen registros separados.</p></div><GameButton variant="ghost" disabled={busy} onClick={() => { if (permitSwitch()) { setDraftDirty(false); void load(); } }}><RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} /> Actualizar grupo</GameButton></div>
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">

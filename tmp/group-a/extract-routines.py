@@ -1,4 +1,4 @@
-﻿import pymupdf as f,json,re,bisect
+import pymupdf as f,json,re,bisect
 from pathlib import Path
 files=[('tiffany','Tiffany Salazar.pdf','bajar de peso, movilidad','2026-09-30','2026-12-30'),('chermey','Chermey Ocampo.pdf','bajar grasa','2026-08-05','2026-11-05'),('yuslin-lauren','Yuslin Lopez, Lauren RUT2.pdf','bajar grasa','2026-08-25','2026-11-25'),('melissa','Melissa Arce.pdf','Recomposición corporal','2026-07-07','2026-10-07'),('yadilet','Yadilet Arroyo.pdf','salud','2026-08-17','2026-11-17')]
 result=[]

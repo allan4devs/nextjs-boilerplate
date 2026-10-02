@@ -8,6 +8,7 @@ import { physicalMachinePath } from "@/app/lib/physical-machine-links";
 import { MACHINE_GUIDE } from "../catalog/machines";
 import type { ExercisePreference, WorkoutExerciseDetail } from "../types";
 import type { MemberOs } from "../useMemberOs";
+import MachineScanner, { type ScannedMachine } from "./MachineScanner";
 
 type MediaResponse = { videoUrl?: string; videoLabel?: string };
 
@@ -82,7 +83,7 @@ function WorkoutSteps({ os, initial }: { os: MemberOs; initial: WorkoutExerciseD
   const plan = os.currentMember.activePlanWorkout;
   const active = plan ?? os.journey?.workout;
   const preferences = os.currentMember.exercisePreferences ?? [];
-  const [draft, setDraft] = useState(() => applySavedDefaults(initial, preferences));
+  const [draft, setDraft] = useState<WorkoutExerciseDetail[]>(() => applySavedDefaults(initial, preferences));
   const [selectedId, setSelectedId] = useState("");
   const [machineId, setMachineId] = useState("");
   const [customName, setCustomName] = useState("");
@@ -196,6 +197,30 @@ function WorkoutSteps({ os, initial }: { os: MemberOs; initial: WorkoutExerciseD
     setBusy(false);
   }
 
+  async function selectScannedMachine(asset: ScannedMachine) {
+    if (busy) return;
+    const existing = draft.find((entry) => entry.assetId === asset.id)
+      ?? draft.find((entry) => !entry.assetId && entry.machineId === asset.machineGuideId);
+    if (!existing && draft.length >= 40) throw new Error("Ya tenés 40 ejercicios en esta sesión.");
+    const exercise: WorkoutExerciseDetail = existing
+      ? { ...existing, assetId: asset.id, machineName: asset.name, machineCode: asset.code }
+      : applySavedDefaults([{
+        id: crypto.randomUUID(), assetId: asset.id, machineId: asset.machineGuideId,
+        machineName: asset.name, machineCode: asset.code, exerciseName: asset.name,
+        sets: 3, reps: 10, weightKg: 0, seconds: 0, targetSeconds: 0, notes: "", completed: false,
+      }], preferences)[0];
+    const updated = existing
+      ? draft.map((entry) => entry.id === existing.id ? exercise : entry)
+      : [...draft, exercise];
+    setBusy(true);
+    try {
+      if (!await save(updated)) throw new Error("No se guardó la máquina. Volvé a intentar.");
+      setDraft(updated);
+      setSelectedId(exercise.id);
+      setMessage("Máquina seleccionada y guardada.");
+    } finally { setBusy(false); }
+  }
+
   if (!active) return null;
 
   const weightStep = next && next.weightKg > 0 && next.weightKg < 10 ? 1 : 2.5;
@@ -227,6 +252,7 @@ function WorkoutSteps({ os, initial }: { os: MemberOs; initial: WorkoutExerciseD
     </header>
 
     <fieldset disabled={busy || Boolean(os.journeyBusy)} className="space-y-4 disabled:opacity-60">
+      {!running ? <MachineScanner onSelect={selectScannedMachine} /> : null}
       {next ? <section className="overflow-hidden rounded-xl border border-white/15 bg-white/[.03]">
         <div className="flex flex-wrap items-start justify-between gap-2 p-4">
           <div>
