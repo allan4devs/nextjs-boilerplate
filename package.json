@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "predev": "node scripts/sync-face-models.mjs",
-    "dev": "next dev",
+    "dev": "node --max-old-space-size=4096 scripts/next-memory.mjs dev --webpack",
+    "predev:turbo": "node scripts/sync-face-models.mjs",
+    "dev:turbo": "node --max-old-space-size=4096 scripts/next-memory.mjs dev --turbopack",
     "prebuild": "node scripts/sync-face-models.mjs && node scripts/build-video-library.mjs",
-    "build": "next build",
+    "build": "node --max-old-space-size=4096 scripts/next-memory.mjs build --webpack",
     "face:models": "node scripts/sync-face-models.mjs",
     "start": "next start",
     "lint": "eslint",

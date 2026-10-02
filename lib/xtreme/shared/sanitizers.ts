@@ -1,3 +1,4 @@
+import { sanitizeTracking } from "../workout-tracking";
 import { isoDateOrEmpty } from "./dates";
 import type {
   PlanExercisePrescription,
@@ -11,6 +12,8 @@ export function sanitizeWorkoutExercises(input: unknown): WorkoutExerciseDetail[
   return input.slice(0, 40).map((entry, index) => {
     const raw = (entry ?? {}) as Record<string, unknown>;
     return {
+      assetId: String(raw.assetId ?? "").trim().slice(0, 80),
+      ...(raw.tracking ? { tracking: sanitizeTracking(raw.tracking) } : {}),
       ...(typeof raw.completed === "boolean" ? { completed: raw.completed } : {}),
       id: String(raw.id ?? "").trim().slice(0, 80) || `exercise-${index + 1}`,
       machineId: String(raw.machineId ?? "").trim().slice(0, 80),

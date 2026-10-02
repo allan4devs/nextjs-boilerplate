@@ -507,8 +507,8 @@
 }
 
 @media print {
-  :global(header),
-  :global(footer),
+  :global(body):has(.editorPage) :global(header),
+  :global(body):has(.editorPage) :global(footer),
   .pageHeader,
   .toolbar,
   .inventoryPanel,
@@ -518,7 +518,7 @@
     display: none !important;
   }
 
-  :global(body) {
+  :global(body):has(.editorPage) {
     background: white !important;
   }
 

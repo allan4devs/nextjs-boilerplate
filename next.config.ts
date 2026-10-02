@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { dirname, join } from "node:path";
 
 const nextConfig: NextConfig = {
   // Build standalone: server mínimo con solo los node_modules necesarios,
@@ -18,9 +19,23 @@ const nextConfig: NextConfig = {
     },
   },
   experimental: {
+    // Evitar un trabajador por núcleo durante el build de todas las rutas.
+    cpus: 2,
+    // Reducir el pico de compilación de Webpack usado en desarrollo.
+    webpackMemoryOptimizations: true,
+    // El alias personalizado desactiva este worker por defecto; reactivarlo
+    // permite liberar cada compilación antes de pasar a la siguiente.
+    webpackBuildWorker: true,
+    // Objetivo de memoria de Turbopack; no es un límite del RSS total.
+    turbopackMemoryLimit: 2 * 1024 * 1024 * 1024,
     // Vercel restaura .next/cache entre builds; Turbopack reutiliza el grafo
     // compilado y reduce de forma importante los builds consecutivos.
     turbopackFileSystemCacheForBuild: true,
+  },
+  webpack(config) {
+    // Conservar la resolución web de Human al usar Webpack en desarrollo.
+    config.resolve.alias["@vladmandic/human$"] = join(dirname(require.resolve("@vladmandic/human")), "human.esm.js");
+    return config;
   },
   images: {
     formats: ["image/avif", "image/webp"],

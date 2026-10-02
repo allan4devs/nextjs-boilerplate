@@ -16,6 +16,13 @@ export type Workout = {
 };
 
 export type WorkoutExerciseDetail = {
+  assetId?: string;
+  tracking?: {
+    elapsedSeconds: number;
+    startedAt: string | null;
+    restUntil: string | null;
+    logs: { reps: number; seconds: number; weightKg: number }[];
+  };
   completed?: boolean;
   id: string;
   machineId: string;

@@ -24,6 +24,7 @@ export function useUserCamera({
 }: UseUserCameraOptions): UserCamera {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const requestRef = useRef(0);
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState("");
 
@@ -32,6 +33,8 @@ export function useUserCamera({
   }, []);
 
   const stopCamera = useCallback(() => {
+    // Invalidate permissions/play requests that may finish after leaving a tab.
+    requestRef.current += 1;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
@@ -46,9 +49,11 @@ export function useUserCamera({
       );
       return false;
     }
+    stopCamera();
+    const request = requestRef.current;
+    let stream: MediaStream | null = null;
     try {
-      stopCamera();
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: facingMode },
           width: { ideal: idealWidth },
@@ -56,6 +61,10 @@ export function useUserCamera({
         },
         audio: false,
       });
+      if (request !== requestRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return false;
+      }
       streamRef.current = stream;
       const video = videoRef.current;
       if (!video) {
@@ -64,9 +73,16 @@ export function useUserCamera({
       }
       video.srcObject = stream;
       await video.play();
+      if (request !== requestRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return false;
+      }
       setCameraOn(true);
       return true;
     } catch (cause) {
+      stream?.getTracks().forEach((track) => track.stop());
+      if (request !== requestRef.current) return false;
+      stopCamera();
       const name = cause instanceof DOMException ? cause.name : "";
       const message =
         name === "NotAllowedError" || name === "SecurityError"

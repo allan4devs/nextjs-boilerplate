@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { WithId } from "mongodb";
 import { getDb } from "@/lib/helpers/mongodb";
 import { writeAudit } from "@/lib/xtreme/audit";
 import { expelClassAttendee, toggleClassAvailability } from "@/lib/xtreme/inventory";
@@ -23,7 +24,7 @@ async function requireTrainer(req: NextRequest) {
   return session?.role === "trainer" ? session : null;
 }
 
-function trainerMemberView(member: MemberDoc) {
+function trainerMemberView(member: WithId<MemberDoc>) {
   const membership = membershipStatus(member.membership);
   const workouts = [...(member.workouts ?? [])]
     .sort((a, b) => String(b.completedAt ?? "").localeCompare(String(a.completedAt ?? "")))
@@ -37,6 +38,7 @@ function trainerMemberView(member: MemberDoc) {
       exercises: workout.exercises ?? [],
     }));
   return {
+    memberId: member._id?.toString() ?? "",
     memberName: member.memberName ?? "",
     normalizedName: member.normalizedName ?? normalizeKey(member.memberName ?? ""),
     goal: member.goal ?? "",

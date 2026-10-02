@@ -121,6 +121,7 @@ export async function flushUsageQueue(): Promise<void> {
         client: clientMeta(),
       }),
       keepalive: true,
+      signal: AbortSignal.timeout(15_000),
     });
   } catch {
     // Reencolar un poco si falló (sin crecer sin límite)
@@ -135,6 +136,8 @@ export async function flushUsageQueue(): Promise<void> {
 function enqueue(event: ClientAnalyticsEvent) {
   if (typeof window === "undefined") return;
   queue.push(event);
+  // Un flush lento no debe retener todos los clicks/heartbeats indefinidamente.
+  if (queue.length > MAX_QUEUE) queue.splice(0, queue.length - MAX_QUEUE);
   if (queue.length >= 12) {
     void flushUsageQueue();
   } else {

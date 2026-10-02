@@ -2,15 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { AlertTriangle, CheckCircle2, Dumbbell, Gauge, Loader2, Lock, LogOut, RefreshCw, Target, UserRound, Users, Zap } from "lucide-react";
 import { GameButton, GameLabel } from "@/app/components/GameOS";
 import { TRAINER_TABS } from "./constants";
 import { useTrainerOs } from "./hooks/useTrainerOs";
-import { TrainerHistory } from "./ui/TrainerHistory";
 import { TrainerOverview } from "./ui/TrainerOverview";
-import { TrainerPlanEditor } from "./ui/TrainerPlanEditor";
 import { TrainerRoster } from "./ui/TrainerRoster";
-import { TrainerTodayClasses } from "./ui/TrainerTodayClasses";
+
+const TrainerPlanEditor = dynamic(() => import("./ui/TrainerPlanEditor").then((module) => module.TrainerPlanEditor));
+const TrainerHistory = dynamic(() => import("./ui/TrainerHistory").then((module) => module.TrainerHistory));
+const TrainerHealthRecord = dynamic(() => import("./ui/TrainerHealthRecord").then((module) => module.TrainerHealthRecord));
 
 export default function TrainerOs() {
   const os = useTrainerOs();
@@ -36,15 +38,14 @@ export default function TrainerOs() {
         <Kpi icon={Gauge} label="Progreso promedio" value={`${os.stats.averageProgress}%`} hint="planes asignados" tone="lime" wide />
       </section>
 
-      <TrainerTodayClasses os={os} />
-
       <div className="grid min-h-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]">
         <TrainerRoster os={os} />
         {os.selected ? <section className="min-w-0 space-y-4">
           <MemberHeader os={os} />
           {os.notice && <div className={`flex items-center gap-3 border-[3px] p-3 text-sm font-bold ${os.notice.tone === "success" ? "border-[#d8ff3e]/45 bg-[#d8ff3e]/10 text-[#eaff93]" : "border-red-400/45 bg-red-500/10 text-red-200"}`}>{os.notice.tone === "success" ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertTriangle className="h-5 w-5 shrink-0" />}{os.notice.text}</div>}
           <nav className="flex gap-2 overflow-x-auto border-[3px] border-white/10 bg-[#0c0c0c] p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{TRAINER_TABS.map((entry) => <button key={entry.id} onClick={() => os.setTab(entry.id)} className={`min-h-11 shrink-0 border-[3px] px-4 text-[10px] font-black uppercase transition ${os.tab === entry.id ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/10 text-white/45 hover:border-white/30"}`}>{entry.label}{entry.id === "plan" && os.dirty ? " •" : ""}</button>)}</nav>
-          {os.tab === "overview" ? <TrainerOverview os={os} /> : os.tab === "plan" ? <TrainerPlanEditor os={os} /> : <TrainerHistory os={os} />}
+          <TrainerHealthRecord key={os.selected.memberId} member={os.selected} active={os.tab === "health"} refreshKey={os.healthRefresh} onDirtyChange={os.setHealthDirty} onBusyChange={os.setHealthBusy} />
+          {os.tab === "overview" ? <TrainerOverview os={os} /> : os.tab === "plan" ? <TrainerPlanEditor os={os} /> : os.tab === "history" ? <TrainerHistory os={os} /> : null}
         </section> : <div className="grid min-h-[480px] place-items-center border-[3px] border-dashed border-white/15 bg-white/[.02] text-center"><div><UserRound className="mx-auto h-12 w-12 text-white/20" /><p className="mt-4 font-black uppercase text-white/45">Seleccioná un socio</p><p className="mt-1 text-sm font-bold text-white/25">Su radiografía aparece acá.</p></div></div>}
       </div>
     </div>

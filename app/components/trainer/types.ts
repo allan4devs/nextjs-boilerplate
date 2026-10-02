@@ -38,6 +38,7 @@ export type TrainerPlan = {
 };
 
 export type TrainerMember = {
+  memberId: string;
   memberName: string;
   normalizedName: string;
   goal: string;
@@ -79,7 +80,7 @@ export type TrainerTodayClass = {
 };
 
 export type TrainerFilter = "all" | "attention" | "active" | "without-plan" | "completed";
-export type TrainerTab = "overview" | "plan" | "history";
+export type TrainerTab = "overview" | "health" | "plan" | "history";
 
 export type TrainerStats = {
   total: number;

@@ -55,6 +55,9 @@ export function useTrainerOs() {
   const [notice, setNotice] = useState<TrainerNotice>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [healthDirty, setHealthDirty] = useState(false);
+  const [healthBusy, setHealthBusy] = useState(false);
+  const [healthRefresh, setHealthRefresh] = useState(0);
 
   const selected = useMemo(
     () => members.find((member) => member.normalizedName === selectedKey) ?? null,
@@ -152,11 +155,11 @@ export function useTrainerOs() {
   }, [resetWorkspace, selectedKey]); // selectedKey is the deliberate workspace boundary.
 
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !healthDirty) return;
     const beforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener("beforeunload", beforeUnload);
     return () => window.removeEventListener("beforeunload", beforeUnload);
-  }, [dirty]);
+  }, [dirty, healthDirty]);
 
   const login = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
@@ -176,7 +179,8 @@ export function useTrainerOs() {
   }, [code, load]);
 
   const logout = useCallback(async () => {
-    if (dirty && !window.confirm("¿Salir y descartar los cambios del plan?")) return;
+    if (healthBusy) return;
+    if ((dirty || healthDirty) && !window.confirm("¿Salir y descartar los cambios sin guardar?")) return;
     await logoutTrainer();
     setAuthenticated(false);
     setStaffName("");
@@ -185,25 +189,30 @@ export function useTrainerOs() {
     setAgendaDate("");
     setSelectedKey("");
     setDirty(false);
-  }, [dirty]);
+    setHealthDirty(false);
+  }, [dirty, healthDirty, healthBusy]);
 
   const chooseMember = useCallback((key: string) => {
     if (key === selectedKey) return;
-    if (dirty && !window.confirm("¿Cambiar de socio y descartar este borrador?")) return;
+    if (healthBusy) return;
+    if ((dirty || healthDirty) && !window.confirm("¿Cambiar de socio y descartar los cambios sin guardar?")) return;
+    setHealthDirty(false);
     setSelectedKey(key);
     setTab("overview");
-  }, [dirty, selectedKey]);
+  }, [dirty, healthDirty, healthBusy, selectedKey]);
 
   const refresh = useCallback(async () => {
-    if (dirty && !window.confirm("¿Actualizar y descartar los cambios sin guardar?")) return;
+    if (healthBusy) return;
+    if ((dirty || healthDirty) && !window.confirm("¿Actualizar y descartar los cambios sin guardar?")) return;
     const updatedMembers = await load(true);
     if (!updatedMembers) return;
     const refreshed = updatedMembers.find((member) => member.normalizedName === selectedKey) ?? updatedMembers[0] ?? null;
     if (refreshed) {
       setSelectedKey(refreshed.normalizedName);
       resetWorkspace(refreshed);
+      setHealthRefresh((current) => current + 1);
     }
-  }, [dirty, load, resetWorkspace, selectedKey]);
+  }, [dirty, healthDirty, healthBusy, load, resetWorkspace, selectedKey]);
 
   const mutateDraft = useCallback((mutator: (current: TrainerPlan) => TrainerPlan) => {
     setDraft((current) => normalizeDraft(mutator(current)));
@@ -347,6 +356,7 @@ export function useTrainerOs() {
     query, setQuery, filter, setFilter, filteredMembers, tab, setTab, draft, coachName,
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
     saving, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,
+    healthDirty, setHealthDirty, healthBusy, setHealthBusy, healthRefresh,
     updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise,
     deleteExercise, applyTemplate, resetDraft, save,
     changeAgendaDate, toggleClass, expelAttendee,

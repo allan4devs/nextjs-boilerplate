@@ -12,6 +12,7 @@ export const TRAINER_FILTERS: Array<{ id: TrainerFilter; label: string }> = [
 
 export const TRAINER_TABS: Array<{ id: TrainerTab; label: string }> = [
   { id: "overview", label: "Radiografía" },
+  { id: "health", label: "Ficha personal y salud" },
   { id: "plan", label: "Plan de trabajo" },
   { id: "history", label: "Ejecución" },
 ];
@@ -67,4 +68,3 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
     ],
   },
 ];
-
