@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, CalendarDays, Clock3, Loader2, PackageCheck, Printer, RefreshCw, SlidersHorizontal, WalletCards } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, Clock3, Download, Loader2, PackageCheck, Printer, RefreshCw, SlidersHorizontal, WalletCards } from "lucide-react";
 import { GameChip, GameLabel, GameModal } from "../GameOS";
 import ProductSaleReceipt from "./ProductSaleReceipt";
 
@@ -188,9 +188,20 @@ export default function SalesMonitoringPanel() {
           <h2 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">Reporte de ventas</h2>
           <p className="mt-2 text-sm font-bold text-white/45">Revisá por mes cuánto se vendió de cada producto, los ingresos y cada movimiento.</p>
         </div>
-        <button type="button" onClick={() => void load()} disabled={loading} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-4 text-xs font-black uppercase text-white/65 hover:border-[#d8ff3e]/60 hover:text-[#d8ff3e] disabled:opacity-40">
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Actualizar
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {month ? (
+            <a href={`/api/xtreme/reception/inventory/report?month=${encodeURIComponent(month)}`} download className="inline-flex min-h-11 items-center gap-2 border-[3px] border-[#d8ff3e] bg-[#d8ff3e] px-4 text-xs font-black uppercase text-black hover:bg-white">
+              <Download className="h-4 w-4" /> Descargar PDF del mes
+            </a>
+          ) : (
+            <span title="Elegí un mes para descargar el PDF" className="inline-flex min-h-11 cursor-not-allowed items-center gap-2 border-[3px] border-white/10 px-4 text-xs font-black uppercase text-white/25">
+              <Download className="h-4 w-4" /> Elegí un mes para PDF
+            </span>
+          )}
+          <button type="button" onClick={() => void load()} disabled={loading} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/20 px-4 text-xs font-black uppercase text-white/65 hover:border-[#d8ff3e]/60 hover:text-[#d8ff3e] disabled:opacity-40">
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Actualizar
+          </button>
+        </div>
       </div>
 
       <div className="mt-5 border-[3px] border-white/15 bg-black/35 p-4">
