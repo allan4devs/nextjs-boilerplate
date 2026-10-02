@@ -211,7 +211,8 @@ export async function buildMonthlySalesReportPdf(
     }
     function investorHeader() {
       comparisonPage.drawRectangle({ x: MARGIN, y: iy - 20, width: PAGE_WIDTH - MARGIN * 2, height: 25, color: COLORS.soft });
-      [["INVERSIONISTA", MARGIN + 10], ["REGISTROS", MARGIN + 325], ["SIN MONTO", MARGIN + 410], ["ENTREGAS PEND.", MARGIN + 500]].forEach(([label, x]) => comparisonPage.drawText(String(label), { x: Number(x), y: iy - 10, size: 7.2, font: bold, color: COLORS.muted }));
+      comparisonPage.drawText("INVERSIONISTA", { x: MARGIN + 10, y: iy - 10, size: 7.2, font: bold, color: COLORS.muted });
+      [["REGISTROS", MARGIN + 365], ["SIN MONTO", MARGIN + 452], ["ENTREGAS PEND.", MARGIN + 554]].forEach(([label, right]) => rightText(comparisonPage, String(label), Number(right), iy - 10, 7.2, bold));
       rightText(comparisonPage, "INVERSIÓN", PAGE_WIDTH - MARGIN - 10, iy - 10, 8, bold); iy -= 25;
     }
     investorHeader();
@@ -241,14 +242,15 @@ export async function buildMonthlySalesReportPdf(
         const heading = `${investor} - ${entry.concept}`;
         const date = entry.purchaseDate?.split("-").reverse().join("/") ?? "Fecha de compra por confirmar";
         const metadata = `${date} | ${INVESTMENT_STATUS_LABEL[entry.status]}${entry.needsVerification ? " | Por verificar" : ""}${entry.quantity !== null ? ` | ${entry.quantity} unidades` : ""}`;
-        const textLines = wrapText([metadata, entry.invoiceReference ? `Factura: ${entry.invoiceReference}` : "", entry.note].filter(Boolean).join("\n"), PAGE_WIDTH - MARGIN * 2 - 22);
+        const shortHeading = fitText(heading, bold, 9, PAGE_WIDTH - MARGIN * 2 - 150);
+        const textLines = wrapText([shortHeading !== safeText(heading) ? heading : "", metadata, entry.invoiceReference ? `Factura: ${entry.invoiceReference}` : "", entry.note].filter(Boolean).join("\n"), PAGE_WIDTH - MARGIN * 2 - 22);
         const firstHeight = Math.min(90, 35 + textLines.length * 11);
         if (dy - firstHeight < 55) { detail = addPage("DETALLE DE INVERSIONES"); dy = PAGE_HEIGHT - 102; }
         detail.drawRectangle({ x: MARGIN, y: dy - 24, width: PAGE_WIDTH - MARGIN * 2, height: 29, color: COLORS.soft });
-        detail.drawText(fitText(heading, bold, 9, PAGE_WIDTH - MARGIN * 2 - 150), { x: MARGIN + 10, y: dy - 14, size: 9, font: bold, color: COLORS.ink });
+        detail.drawText(shortHeading, { x: MARGIN + 10, y: dy - 14, size: 9, font: bold, color: COLORS.ink });
         rightText(detail, entry.amountCrc === null ? "Monto pendiente" : crc(entry.amountCrc), PAGE_WIDTH - MARGIN - 10, dy - 14, 9, bold); dy -= 39;
         for (const line of textLines) {
-          if (dy < 63) { detail = addPage("DETALLE DE INVERSIONES"); dy = PAGE_HEIGHT - 102; detail.drawText(fitText(`${heading} - continuación`, bold, 9, PAGE_WIDTH - MARGIN * 2), { x: MARGIN + 10, y: dy, size: 9, font: bold, color: COLORS.ink }); dy -= 20; }
+          if (dy < 63) { detail = addPage("DETALLE DE INVERSIONES"); dy = PAGE_HEIGHT - 102; detail.drawText(fitText(`Continuación: ${heading}`, bold, 9, PAGE_WIDTH - MARGIN * 2 - 20), { x: MARGIN + 10, y: dy, size: 9, font: bold, color: COLORS.ink }); dy -= 20; }
           detail.drawText(line, { x: MARGIN + 10, y: dy, size: 8, font: regular, color: COLORS.muted }); dy -= 11;
         }
         dy -= 18;
@@ -256,7 +258,7 @@ export async function buildMonthlySalesReportPdf(
     }
   }
 
-  let page = addPage("DETALLE POR CATEGORÍA");
+  let page = report.categorySummary.length ? addPage("DETALLE POR CATEGORÍA") : cover;
   let y = PAGE_HEIGHT - 102;
 
   function drawCategoryHeading(category: MonthlySalesReportPdfData["categorySummary"][number], continuation = false) {
