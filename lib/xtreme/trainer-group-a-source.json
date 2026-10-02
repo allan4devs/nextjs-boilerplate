@@ -1,0 +1,2893 @@
+[
+  {
+    "id": "tiffany",
+    "sourceFile": "Tiffany Salazar.pdf",
+    "objective": "bajar de peso, movilidad",
+    "startDate": "2026-09-30",
+    "endDate": "2026-12-30",
+    "coach": "Kengie Araya",
+    "days": [
+      {
+        "id": "tiffany-day-1",
+        "label": "Día 1",
+        "focus": "pierna completa",
+        "exercises": [
+          {
+            "id": "tiffany-day-1-ex-1",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-2",
+            "muscle": "cuadriceps",
+            "name": "sentadilla acostada",
+            "equipment": "maquina",
+            "sourceMachine": "24",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-3",
+            "muscle": "gluteo",
+            "name": "hip thrust",
+            "equipment": "maquina",
+            "sourceMachine": "33",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-4",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "01:00",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-5",
+            "muscle": "gluteo",
+            "name": "abdyadd",
+            "equipment": "maquina",
+            "sourceMachine": "19y20",
+            "sets": 3,
+            "reps": 15,
+            "time": "1:30min",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-6",
+            "muscle": "cuadriceps",
+            "name": "ext de rodilla 2s up",
+            "equipment": "maquina",
+            "sourceMachine": "25",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-7",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "1:30min",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-8",
+            "muscle": "isquios",
+            "name": "flex de rodilla acostada",
+            "equipment": "maquina",
+            "sourceMachine": "28",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "escaladora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-1-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "escaladora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "15min",
+            "sourcePage": 1
+          }
+        ]
+      },
+      {
+        "id": "tiffany-day-2",
+        "label": "Día 2",
+        "focus": "tren superior",
+        "exercises": [
+          {
+            "id": "tiffany-day-2-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-3",
+            "muscle": "espalda",
+            "name": "remo cerrado neutro",
+            "equipment": "maquina",
+            "sourceMachine": "1",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-4",
+            "muscle": "espalda",
+            "name": "jalon abierto prono",
+            "equipment": "maquina",
+            "sourceMachine": "3",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-5",
+            "muscle": "cardiovascular",
+            "name": "bici",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "1:30min",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-6",
+            "muscle": "pecho",
+            "name": "press inclinado",
+            "equipment": "maquina",
+            "sourceMachine": "9",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-7",
+            "muscle": "biceps",
+            "name": "curl supino predicador",
+            "equipment": "maquina",
+            "sourceMachine": "12",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-8",
+            "muscle": "cardiovascular",
+            "name": "bici",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "1:30min",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-9",
+            "muscle": "triceps",
+            "name": "ext de codo",
+            "equipment": "maquina",
+            "sourceMachine": "13",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "tiffany-day-2-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25min",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "tiffany-day-3",
+        "label": "Día 3",
+        "focus": "pierna completa",
+        "exercises": [
+          {
+            "id": "tiffany-day-3-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-3",
+            "muscle": "gluteo",
+            "name": "desplante cangrejo",
+            "equipment": "banda",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-4",
+            "muscle": "cuadriceps",
+            "name": "prensa inclinada",
+            "equipment": "maquina",
+            "sourceMachine": "22",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-5",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "1:30min",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-6",
+            "muscle": "cuadriceps",
+            "name": "ext de rodilla",
+            "equipment": "maquina",
+            "sourceMachine": "25",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-7",
+            "muscle": "isquios",
+            "name": "flex de rodilla sentada",
+            "equipment": "maquina",
+            "sourceMachine": "26",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-8",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "1:30min",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-9",
+            "muscle": "pantorrilla",
+            "name": "prensa pantorrilla",
+            "equipment": "maquina",
+            "sourceMachine": "31",
+            "sets": 3,
+            "reps": 15,
+            "time": "60",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "escaladora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-3-ex-11",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "15min",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "tiffany-day-4",
+        "label": "Día 4",
+        "focus": "tren superior",
+        "exercises": [
+          {
+            "id": "tiffany-day-4-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-3",
+            "muscle": "pecho",
+            "name": "press plano",
+            "equipment": "maquina",
+            "sourceMachine": "10",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-4",
+            "muscle": "espalda",
+            "name": "jalon abierto neutro",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-5",
+            "muscle": "cardiovascular",
+            "name": "bici",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "1:30min",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-6",
+            "muscle": "espalda",
+            "name": "remo unilateral",
+            "equipment": "maquina",
+            "sourceMachine": "6",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-7",
+            "muscle": "hombro",
+            "name": "posteriores",
+            "equipment": "maquina",
+            "sourceMachine": "11",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-8",
+            "muscle": "cardiovascular",
+            "name": "bici",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "1:30min",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-9",
+            "muscle": "triceps",
+            "name": "fondos",
+            "equipment": "maquina",
+            "sourceMachine": "13",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "tiffany-day-4-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chermey",
+    "sourceFile": "Chermey Ocampo.pdf",
+    "objective": "bajar grasa",
+    "startDate": "2026-08-05",
+    "endDate": "2026-11-05",
+    "coach": "Kengie Araya",
+    "days": [
+      {
+        "id": "chermey-day-1",
+        "label": "Día 1",
+        "focus": "gluteo,isquios",
+        "exercises": [
+          {
+            "id": "chermey-day-1-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-3",
+            "muscle": "gluteo",
+            "name": "hip thrust",
+            "equipment": "maquina",
+            "sourceMachine": "33",
+            "sets": 4,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-4",
+            "muscle": "gluteo",
+            "name": "patada gluteo",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-5",
+            "muscle": "gluteo/isquio",
+            "name": "peso muerto",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-6",
+            "muscle": "isquios",
+            "name": "flex de rodilla acostada",
+            "equipment": "maquina",
+            "sourceMachine": "28",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-7",
+            "muscle": "abductores",
+            "name": "abduccion de cadera",
+            "equipment": "maquina",
+            "sourceMachine": "19",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-8",
+            "muscle": "aductores",
+            "name": "aduccion de cadera",
+            "equipment": "maquina",
+            "sourceMachine": "20",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "escaladora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-1-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 1
+          }
+        ]
+      },
+      {
+        "id": "chermey-day-2",
+        "label": "Día 2",
+        "focus": "espalda, biceps,posteriores",
+        "exercises": [
+          {
+            "id": "chermey-day-2-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-3",
+            "muscle": "espalda",
+            "name": "jalon al pecho prono",
+            "equipment": "maquina",
+            "sourceMachine": "3",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-4",
+            "muscle": "espalda",
+            "name": "remo cerrado neutro",
+            "equipment": "maquina",
+            "sourceMachine": "1",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-5",
+            "muscle": "espalda",
+            "name": "remo unilateral",
+            "equipment": "maquina",
+            "sourceMachine": "6",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-6",
+            "muscle": "Core",
+            "name": "lumbar",
+            "equipment": "maquina",
+            "sourceMachine": "16",
+            "sets": 3,
+            "reps": 15,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-7",
+            "muscle": "posteriores",
+            "name": "posteriores",
+            "equipment": "maquina",
+            "sourceMachine": "11",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-8",
+            "muscle": "biceps",
+            "name": "curl martillo",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-9",
+            "muscle": "biceps",
+            "name": "curl supino predicador",
+            "equipment": "maquina",
+            "sourceMachine": "12",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "chermey-day-2-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "chermey-day-3",
+        "label": "Día 3",
+        "focus": "cuadriceps,isquios,pantorrilla",
+        "exercises": [
+          {
+            "id": "chermey-day-3-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-3",
+            "muscle": "cuadriceps",
+            "name": "sentadilla hack",
+            "equipment": "maquina",
+            "sourceMachine": "35",
+            "sets": 4,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-4",
+            "muscle": "cuadriceps",
+            "name": "desplantes estaticos",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-5",
+            "muscle": "cuadriceps",
+            "name": "prensa inclinada",
+            "equipment": "maquina",
+            "sourceMachine": "22",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-6",
+            "muscle": "cuadriceps",
+            "name": "ext de rodilla",
+            "equipment": "maquina",
+            "sourceMachine": "25",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-7",
+            "muscle": "isquios",
+            "name": "flex de rodilla sentada",
+            "equipment": "maquina",
+            "sourceMachine": "26",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-8",
+            "muscle": "pantorrilla",
+            "name": "prensa pantorrilla",
+            "equipment": "maquina",
+            "sourceMachine": "31",
+            "sets": 3,
+            "reps": 15,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "gradas",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-3-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "chermey-day-4",
+        "label": "Día 4",
+        "focus": "pecho, hombro y triceps",
+        "exercises": [
+          {
+            "id": "chermey-day-4-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-4-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-4-ex-3",
+            "muscle": "pecho",
+            "name": "press inclinado",
+            "equipment": "maquina",
+            "sourceMachine": "9",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-4-ex-4",
+            "muscle": "pecho",
+            "name": "aperturas",
+            "equipment": "maquina",
+            "sourceMachine": "11",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-4-ex-5",
+            "muscle": "hombro",
+            "name": "press miliotar",
+            "equipment": "maquina",
+            "sourceMachine": "14",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-4-ex-6",
+            "muscle": "hombro",
+            "name": "laterales",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-4-ex-7",
+            "muscle": "triceps",
+            "name": "ext de codo",
+            "equipment": "maquina",
+            "sourceMachine": "13",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-4-ex-8",
+            "muscle": "triceps",
+            "name": "fondos",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-4-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "chermey-day-5",
+        "label": "Día 5",
+        "focus": "gluteo,isquios",
+        "exercises": [
+          {
+            "id": "chermey-day-5-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-5-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "lc/pc",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "chermey-day-5-ex-3",
+            "muscle": "gluteo",
+            "name": "sentadilla sumo",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "chermey-day-5-ex-4",
+            "muscle": "gluteo",
+            "name": "bulgaras",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "chermey-day-5-ex-5",
+            "muscle": "gluteo",
+            "name": "patada lateral",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "chermey-day-5-ex-6",
+            "muscle": "aductores",
+            "name": "add y abd",
+            "equipment": "maquina",
+            "sourceMachine": "19y20",
+            "sets": 3,
+            "reps": 15,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "chermey-day-5-ex-7",
+            "muscle": "isquio",
+            "name": "flex de pie",
+            "equipment": "maquina",
+            "sourceMachine": "27",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "chermey-day-5-ex-8",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "escaladora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 3
+          },
+          {
+            "id": "chermey-day-5-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10MIN",
+            "sourcePage": 3
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "yuslin-lauren",
+    "sourceFile": "Yuslin Lopez, Lauren RUT2.pdf",
+    "objective": "bajar grasa",
+    "startDate": "2026-08-25",
+    "endDate": "2026-11-25",
+    "coach": "Kengie Araya",
+    "days": [
+      {
+        "id": "yuslin-lauren-day-1",
+        "label": "Día 1",
+        "focus": "gluteo,isquios",
+        "exercises": [
+          {
+            "id": "yuslin-lauren-day-1-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-3",
+            "muscle": "gluteo",
+            "name": "hip thrust",
+            "equipment": "maquina",
+            "sourceMachine": "33",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-4",
+            "muscle": "gluteo",
+            "name": "caminata cangrejo",
+            "equipment": "banda",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 24,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-5",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-6",
+            "muscle": "isquios",
+            "name": "flex de rodilla acostada",
+            "equipment": "maquina",
+            "sourceMachine": "28",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-7",
+            "muscle": "abductores",
+            "name": "abduccion de cadera",
+            "equipment": "maquina",
+            "sourceMachine": "19",
+            "sets": 3,
+            "reps": 16,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-8",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-9",
+            "muscle": "aductores",
+            "name": "aduccion de cadera",
+            "equipment": "maquina",
+            "sourceMachine": "20",
+            "sets": 3,
+            "reps": 16,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-1-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25min",
+            "sourcePage": 1
+          }
+        ]
+      },
+      {
+        "id": "yuslin-lauren-day-2",
+        "label": "Día 2",
+        "focus": "espalda, biceps,posteriores",
+        "exercises": [
+          {
+            "id": "yuslin-lauren-day-2-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-3",
+            "muscle": "espalda",
+            "name": "jalon al pecho unilateral",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-4",
+            "muscle": "espalda",
+            "name": "remo neutro",
+            "equipment": "maquina",
+            "sourceMachine": "1",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-5",
+            "muscle": "cardiovascular",
+            "name": "pique caminadora",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-6",
+            "muscle": "posteriores",
+            "name": "face pull",
+            "equipment": "polrea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-7",
+            "muscle": "biceps",
+            "name": "curl martillo mecate",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-8",
+            "muscle": "cardiovascular",
+            "name": "pique caminadora",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-9",
+            "muscle": "biceps",
+            "name": "curl supino barra corta",
+            "equipment": "polea",
+            "sourceMachine": "12",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yuslin-lauren-day-2-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "yuslin-lauren-day-3",
+        "label": "Día 3",
+        "focus": "cuadriceps,isquios,pantorrilla",
+        "exercises": [
+          {
+            "id": "yuslin-lauren-day-3-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-3",
+            "muscle": "cuadriceps",
+            "name": "sentadilla hack",
+            "equipment": "maquina",
+            "sourceMachine": "35",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-4",
+            "muscle": "cuadriceps",
+            "name": "prensa inclinada",
+            "equipment": "maquina",
+            "sourceMachine": "22",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-5",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-6",
+            "muscle": "cuadriceps",
+            "name": "ext de rodilla 2s up",
+            "equipment": "maquina",
+            "sourceMachine": "25",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-7",
+            "muscle": "isquios",
+            "name": "flex de rodilla sentada",
+            "equipment": "maquina",
+            "sourceMachine": "26",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-8",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-9",
+            "muscle": "pantorrilla",
+            "name": "prensa pantorrilla",
+            "equipment": "maquina",
+            "sourceMachine": "31",
+            "sets": 3,
+            "reps": 15,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-3-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25min",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "yuslin-lauren-day-4",
+        "label": "Día 4",
+        "focus": "pecho, hombro y triceps",
+        "exercises": [
+          {
+            "id": "yuslin-lauren-day-4-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-3",
+            "muscle": "pecho",
+            "name": "press plano",
+            "equipment": "maquina",
+            "sourceMachine": "10",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-4",
+            "muscle": "pecho",
+            "name": "aperturas inclinadas",
+            "equipment": "maquina nueva",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-5",
+            "muscle": "cardiovascular",
+            "name": "pique caminadora",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-6",
+            "muscle": "hombro",
+            "name": "press militar",
+            "equipment": "maquina",
+            "sourceMachine": "14",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-7",
+            "muscle": "triceps",
+            "name": "ext de codo agarre V",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-8",
+            "muscle": "cardiovascular",
+            "name": "pique caminadora",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-9",
+            "muscle": "triceps",
+            "name": "ext codo supino barra corta",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-4-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "yuslin-lauren-day-5",
+        "label": "Día 5",
+        "focus": "pierna completa",
+        "exercises": [
+          {
+            "id": "yuslin-lauren-day-5-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 3
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-3",
+            "muscle": "gluteo",
+            "name": "sentadilla sumo",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-4",
+            "muscle": "cuadriceps",
+            "name": "sentadilla acostada",
+            "equipment": "maquina",
+            "sourceMachine": "324",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-5",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 3
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-6",
+            "muscle": "cuadriceps",
+            "name": "ext de rodilla",
+            "equipment": "maquina",
+            "sourceMachine": "25",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-7",
+            "muscle": "isquios",
+            "name": "flex de rodilla de pie",
+            "equipment": "maquina",
+            "sourceMachine": "27",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-8",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 3
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-9",
+            "muscle": "aductores",
+            "name": "aduccion de cadera",
+            "equipment": "maquina",
+            "sourceMachine": "20",
+            "sets": 3,
+            "reps": 15,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yuslin-lauren-day-5-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 3
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "melissa",
+    "sourceFile": "Melissa Arce.pdf",
+    "objective": "Recomposición corporal",
+    "startDate": "2026-07-07",
+    "endDate": "2026-10-07",
+    "coach": "Kengie Araya",
+    "days": [
+      {
+        "id": "melissa-day-1",
+        "label": "Día 1",
+        "focus": "cuadriceps,isquios,pantorrilla",
+        "exercises": [
+          {
+            "id": "melissa-day-1-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-3",
+            "muscle": "cuadriceps",
+            "name": "sentadilla perfecta",
+            "equipment": "maquina",
+            "sourceMachine": "37",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-4",
+            "muscle": "cuadriceps",
+            "name": "desplantes estaticos",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-5",
+            "muscle": "cuadriceps",
+            "name": "prensa inclinada",
+            "equipment": "maquina",
+            "sourceMachine": "22",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-6",
+            "muscle": "cuadriceps",
+            "name": "ext de rodilla",
+            "equipment": "maquina",
+            "sourceMachine": "25",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-7",
+            "muscle": "isquios",
+            "name": "flex de rodilla acostada",
+            "equipment": "maquina",
+            "sourceMachine": "28",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-8",
+            "muscle": "pantorrilla",
+            "name": "prensa pantorrilla",
+            "equipment": "maquina",
+            "sourceMachine": "31",
+            "sets": 3,
+            "reps": 15,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "gradas",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-1-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 1
+          }
+        ]
+      },
+      {
+        "id": "melissa-day-2",
+        "label": "Día 2",
+        "focus": "pecho, hombro y triceps",
+        "exercises": [
+          {
+            "id": "melissa-day-2-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-2-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-2-ex-3",
+            "muscle": "pecho",
+            "name": "press inclinado",
+            "equipment": "maquina",
+            "sourceMachine": "9",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-2-ex-4",
+            "muscle": "pecho",
+            "name": "aperturas",
+            "equipment": "maquina",
+            "sourceMachine": "11",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-2-ex-5",
+            "muscle": "hombro",
+            "name": "frontales",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-2-ex-6",
+            "muscle": "hombro",
+            "name": "laterales",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-2-ex-7",
+            "muscle": "triceps",
+            "name": "ext de codo",
+            "equipment": "maquina",
+            "sourceMachine": "13",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "melissa-day-2-ex-8",
+            "muscle": "triceps",
+            "name": "fondos",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-2-ex-9",
+            "muscle": "CORE",
+            "name": "lumbar",
+            "equipment": "maquina",
+            "sourceMachine": "17",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-2-ex-10",
+            "muscle": "CORE",
+            "name": "abdominal",
+            "equipment": "maquina",
+            "sourceMachine": "16",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-2-ex-11",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "20MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "melissa-day-3",
+        "label": "Día 3",
+        "focus": "gluteo,isquios",
+        "exercises": [
+          {
+            "id": "melissa-day-3-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-3",
+            "muscle": "gluteo",
+            "name": "hip thrust",
+            "equipment": "maquina",
+            "sourceMachine": "33",
+            "sets": 4,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-4",
+            "muscle": "gluteo",
+            "name": "sentadilla sumo",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-5",
+            "muscle": "gluteo",
+            "name": "patada gluteo",
+            "equipment": "maquina",
+            "sourceMachine": "18",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-6",
+            "muscle": "isquios",
+            "name": "peso muerto",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-7",
+            "muscle": "isquios",
+            "name": "flex de rodilla sentada",
+            "equipment": "maquina",
+            "sourceMachine": "26",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-8",
+            "muscle": "abductores",
+            "name": "abduccion de cadera",
+            "equipment": "maquina",
+            "sourceMachine": "19",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-9",
+            "muscle": "aductores",
+            "name": "aduccion de cadera",
+            "equipment": "maquina",
+            "sourceMachine": "20",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "escaladora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-3-ex-11",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "melissa-day-4",
+        "label": "Día 4",
+        "focus": "espalda, biceps,posteriores",
+        "exercises": [
+          {
+            "id": "melissa-day-4-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-3",
+            "muscle": "espalda",
+            "name": "jalon al pecho prono",
+            "equipment": "maquina",
+            "sourceMachine": "3",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-4",
+            "muscle": "espalda",
+            "name": "remo cerrado neutro",
+            "equipment": "maquina",
+            "sourceMachine": "1",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-5",
+            "muscle": "espalda",
+            "name": "remo T prono",
+            "equipment": "maquina",
+            "sourceMachine": "7",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-6",
+            "muscle": "posteriores",
+            "name": "posteriores",
+            "equipment": "maquina",
+            "sourceMachine": "11",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-7",
+            "muscle": "biceps",
+            "name": "curl supino banca inclinada",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-8",
+            "muscle": "biceps",
+            "name": "curl martillo",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-9",
+            "muscle": "biceps",
+            "name": "curl supino predicador",
+            "equipment": "maquina",
+            "sourceMachine": "12",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "melissa-day-4-ex-10",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "20MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "melissa-day-5",
+        "label": "Día 5",
+        "focus": "full body",
+        "exercises": [
+          {
+            "id": "melissa-day-5-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "lc/pc",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 12,
+            "time": "",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-3",
+            "muscle": "cuadriceps",
+            "name": "sentadilla Sissy",
+            "equipment": "maquina",
+            "sourceMachine": "37",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-4",
+            "muscle": "gluteo",
+            "name": "hip thrust",
+            "equipment": "maquina",
+            "sourceMachine": "33",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-5",
+            "muscle": "isquio",
+            "name": "flex acostada",
+            "equipment": "maquina",
+            "sourceMachine": "28",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-6",
+            "muscle": "pantorrila",
+            "name": "potro",
+            "equipment": "maquina",
+            "sourceMachine": "30",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-7",
+            "muscle": "espalda",
+            "name": "jalon agarre V",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-8",
+            "muscle": "pecho",
+            "name": "press plano",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-9",
+            "muscle": "hombro",
+            "name": "press militar",
+            "equipment": "maquina",
+            "sourceMachine": "14",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-10",
+            "muscle": "biceps",
+            "name": "curl supino barra corta",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-11",
+            "muscle": "triceps",
+            "name": "copa",
+            "equipment": "mancuernas",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-12",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "escaladora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10min",
+            "sourcePage": 3
+          },
+          {
+            "id": "melissa-day-5-ex-13",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "10MIN",
+            "sourcePage": 3
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "yadilet",
+    "sourceFile": "Yadilet Arroyo.pdf",
+    "objective": "salud",
+    "startDate": "2026-08-17",
+    "endDate": "2026-11-17",
+    "coach": "Kengie Araya",
+    "days": [
+      {
+        "id": "yadilet-day-1",
+        "label": "Día 1",
+        "focus": "pierna completa",
+        "exercises": [
+          {
+            "id": "yadilet-day-1-ex-1",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-1-ex-2",
+            "muscle": "cuadriceps",
+            "name": "sentadilla perfecta",
+            "equipment": "maquina",
+            "sourceMachine": "37",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-1-ex-3",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "maquina",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": null,
+            "time": "2min",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-1-ex-4",
+            "muscle": "cuadriceps",
+            "name": "ext de rodilla 2s up",
+            "equipment": "maquina",
+            "sourceMachine": "25",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-1-ex-5",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "maquina",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": null,
+            "time": "2min",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-1-ex-6",
+            "muscle": "gluteo",
+            "name": "abdyadd",
+            "equipment": "maquina",
+            "sourceMachine": "19y20",
+            "sets": 3,
+            "reps": 15,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-1-ex-7",
+            "muscle": "isquios",
+            "name": "flex de rodilla de pie",
+            "equipment": "maquina",
+            "sourceMachine": "27",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-1-ex-8",
+            "muscle": "pantorrilla",
+            "name": "potro",
+            "equipment": "maquina",
+            "sourceMachine": "30",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-1-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 1
+          }
+        ]
+      },
+      {
+        "id": "yadilet-day-2",
+        "label": "Día 2",
+        "focus": "tren superior",
+        "exercises": [
+          {
+            "id": "yadilet-day-2-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-3",
+            "muscle": "espalda",
+            "name": "jalon al pecho neutro",
+            "equipment": "maquina",
+            "sourceMachine": "3",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-4",
+            "muscle": "espalda",
+            "name": "Pull dowm",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-5",
+            "muscle": "pecho",
+            "name": "aperturas",
+            "equipment": "maquina",
+            "sourceMachine": "11",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-6",
+            "muscle": "cardiovascular",
+            "name": "bici",
+            "equipment": "bici",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-7",
+            "muscle": "posteriores",
+            "name": "posteriores",
+            "equipment": "maquina",
+            "sourceMachine": "11",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-8",
+            "muscle": "biceps",
+            "name": "curl supino predicador",
+            "equipment": "maquina",
+            "sourceMachine": "12",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-9",
+            "muscle": "cardiovascular",
+            "name": "bici",
+            "equipment": "bici",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-10",
+            "muscle": "triceps",
+            "name": "ext de codo maquina",
+            "equipment": "maquina",
+            "sourceMachine": "12",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 1
+          },
+          {
+            "id": "yadilet-day-2-ex-11",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "yadilet-day-3",
+        "label": "Día 3",
+        "focus": "pierna completa",
+        "exercises": [
+          {
+            "id": "yadilet-day-3-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-3-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-3-ex-3",
+            "muscle": "gluteo",
+            "name": "hip thrust",
+            "equipment": "maquina",
+            "sourceMachine": "33",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-3-ex-4",
+            "muscle": "gluteo",
+            "name": "desplante cangrejo",
+            "equipment": "peso corporal",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 24,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-3-ex-5",
+            "muscle": "cardiovascular",
+            "name": "eliptica",
+            "equipment": "maquina",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": null,
+            "time": "3min",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-3-ex-6",
+            "muscle": "cuadriceps",
+            "name": "prensa inclinada",
+            "equipment": "maquina",
+            "sourceMachine": "22",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-3-ex-7",
+            "muscle": "cuadriceps",
+            "name": "ext de rodilla 2s up",
+            "equipment": "maquina",
+            "sourceMachine": "25",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-3-ex-8",
+            "muscle": "isquios",
+            "name": "flex acostada",
+            "equipment": "maquina",
+            "sourceMachine": "24",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-3-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "yadilet-day-4",
+        "label": "Día 4",
+        "focus": "tren superior",
+        "exercises": [
+          {
+            "id": "yadilet-day-4-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "5MIN",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "liga elastica",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-3",
+            "muscle": "espalda",
+            "name": "Dominadas asistidas",
+            "equipment": "maquina",
+            "sourceMachine": "2",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-4",
+            "muscle": "espalda",
+            "name": "remo unilateral",
+            "equipment": "maquina",
+            "sourceMachine": "6",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-5",
+            "muscle": "pecho",
+            "name": "press inclinado",
+            "equipment": "maquina",
+            "sourceMachine": "9",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-6",
+            "muscle": "cardiovascular",
+            "name": "bici",
+            "equipment": "bici",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-7",
+            "muscle": "hombro",
+            "name": "press militar",
+            "equipment": "maquina",
+            "sourceMachine": "14",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-8",
+            "muscle": "cardiovascular",
+            "name": "bici",
+            "equipment": "bici",
+            "sourceMachine": "",
+            "sets": 1,
+            "reps": 1,
+            "time": "2min",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-9",
+            "muscle": "biceps",
+            "name": "Curl supino barra corta",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-10",
+            "muscle": "triceps",
+            "name": "fondos",
+            "equipment": "maquina",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 2
+          },
+          {
+            "id": "yadilet-day-4-ex-11",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 2
+          }
+        ]
+      },
+      {
+        "id": "yadilet-day-5",
+        "label": "Día 5",
+        "focus": "full body",
+        "exercises": [
+          {
+            "id": "yadilet-day-5-ex-1",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "MIN",
+            "sourcePage": 3
+          },
+          {
+            "id": "yadilet-day-5-ex-2",
+            "muscle": "articulacion",
+            "name": "movilidad articular",
+            "equipment": "pc/liga",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "",
+            "sourcePage": 3
+          },
+          {
+            "id": "yadilet-day-5-ex-3",
+            "muscle": "gluteo",
+            "name": "hip thrust",
+            "equipment": "maquina",
+            "sourceMachine": "33",
+            "sets": 3,
+            "reps": 10,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yadilet-day-5-ex-4",
+            "muscle": "isquios",
+            "name": "flex acostada",
+            "equipment": "maquina",
+            "sourceMachine": "28",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yadilet-day-5-ex-5",
+            "muscle": "cuadriceps",
+            "name": "Prensa unilateral",
+            "equipment": "maquina",
+            "sourceMachine": "23",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yadilet-day-5-ex-6",
+            "muscle": "hombro",
+            "name": "laterales",
+            "equipment": "maquina gris",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yadilet-day-5-ex-7",
+            "muscle": "hombro",
+            "name": "Pull dowm",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yadilet-day-5-ex-8",
+            "muscle": "biceps",
+            "name": "curl martillo mecate",
+            "equipment": "polea",
+            "sourceMachine": "",
+            "sets": 3,
+            "reps": 12,
+            "time": "60s",
+            "sourcePage": 3
+          },
+          {
+            "id": "yadilet-day-5-ex-9",
+            "muscle": "cardiovascular",
+            "name": "aerobico",
+            "equipment": "caminadora",
+            "sourceMachine": "",
+            "sets": null,
+            "reps": null,
+            "time": "25MIN",
+            "sourcePage": 3
+          }
+        ]
+      }
+    ]
+  }
+]

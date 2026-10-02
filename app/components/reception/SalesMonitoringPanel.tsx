@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Clock3, Loader2, Printer, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { GameChip, GameLabel, GameModal } from "../GameOS";
 import ProductSaleReceipt from "./ProductSaleReceipt";
+import ProductInvestmentPanel from "./ProductInvestmentPanel";
 
 type Sale = {
   id: string;
@@ -198,6 +199,8 @@ export default function SalesMonitoringPanel() {
           </section>
         </div>
       </>}
+
+      <ProductInvestmentPanel />
 
       <GameModal open={Boolean(deletion)} onClose={() => { if (!deleting) { setDeletion(null); setAdminCode(""); } }} title="Eliminar registro" size="sm">
         <form onSubmit={(event) => { event.preventDefault(); void deleteRecord(); }} className="space-y-4">

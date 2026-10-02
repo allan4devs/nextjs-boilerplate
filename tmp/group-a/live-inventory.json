@@ -1,0 +1,597 @@
+[
+  {
+    "id": "eq-001",
+    "code": "PI-18",
+    "machineGuideId": "glute-hip-extension",
+    "name": "Patada de glúteo",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-002",
+    "code": "PI-19",
+    "machineGuideId": "hip-abductor",
+    "name": "Abductores de cadera",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-003",
+    "code": "PI-20-19",
+    "machineGuideId": "hip-abductor-aductor-dual",
+    "name": "Abductores y aductores",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-015",
+    "code": "PI-31",
+    "machineGuideId": "calf-press-horizontal",
+    "name": "PRENSA PANTORRILLA",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-006",
+    "code": "PI-23",
+    "machineGuideId": "horizontal-leg-press",
+    "name": "Prensa de piernas horizontal",
+    "status": "fuera_de_servicio"
+  },
+  {
+    "id": "eq-010",
+    "code": "PI-26A",
+    "machineGuideId": "leg-curl",
+    "name": "Curl femoral sentado",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-005",
+    "code": "PI-05",
+    "machineGuideId": "leg-press-incline",
+    "name": "Prensa de piernas inclinada",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-011",
+    "code": "PI-26B",
+    "machineGuideId": "leg-curl",
+    "name": "flexion sentado",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-022",
+    "code": "PI-20",
+    "machineGuideId": "hip-adductor",
+    "name": "aductores de  cadera",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-004",
+    "code": "PI-21",
+    "machineGuideId": "pendulum-squat",
+    "name": "Sentadilla péndulo",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-012",
+    "code": "PI-28",
+    "machineGuideId": "lying-leg-curl",
+    "name": "Curl femoral acostado",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-018",
+    "code": "PI-37",
+    "machineGuideId": "sentadilla-perfecta",
+    "name": "Sentadilla perfecta",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-007",
+    "code": "PI-24",
+    "machineGuideId": "lying-squat",
+    "name": "Sentadilla acostada",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-013",
+    "code": "PI-13",
+    "machineGuideId": "smith-machine",
+    "name": "Máquina Smith",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-014",
+    "code": "PI-30",
+    "machineGuideId": "donkey-calf-raise",
+    "name": "PANTORRILLA POTRO",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-016",
+    "code": "PI-32",
+    "machineGuideId": "sissy-squat",
+    "name": "Sentadilla sissy",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-017",
+    "code": "PI-35",
+    "machineGuideId": "hack-squat",
+    "name": "Sentadilla hack",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-008",
+    "code": "PI-25A",
+    "machineGuideId": "leg-extension",
+    "name": "Extensión de piernas",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-009",
+    "code": "PI-25B",
+    "machineGuideId": "leg-extension",
+    "name": "Extensión de piernas",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-021",
+    "code": "PI-33",
+    "machineGuideId": "hip-thrust",
+    "name": "Empuje de cadera (hip thrust)",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-020",
+    "code": "PI-27",
+    "machineGuideId": "standing-leg-curl",
+    "name": "FLEXION DE PIE",
+    "status": "pendiente"
+  },
+  {
+    "id": "eq-078",
+    "code": "TS-10",
+    "machineGuideId": "chest-press",
+    "name": "Press Plano",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-079",
+    "code": "CA-02",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "fuera_de_servicio"
+  },
+  {
+    "id": "eq-080",
+    "code": "CA-03",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-081",
+    "code": "CA-04",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-082",
+    "code": "CA-05",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "fuera_de_servicio"
+  },
+  {
+    "id": "eq-083",
+    "code": "CA-06",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "fuera_de_servicio"
+  },
+  {
+    "id": "eq-084",
+    "code": "CA-07",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-085",
+    "code": "CA-08",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-086",
+    "code": "CA-09",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-087",
+    "code": "CA-10",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-088",
+    "code": "CA-11",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-089",
+    "code": "CA-12",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "pendiente"
+  },
+  {
+    "id": "eq-090",
+    "code": "CA-13",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-091",
+    "code": "CA-14",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-092",
+    "code": "CA-15",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "fuera_de_servicio"
+  },
+  {
+    "id": "eq-093",
+    "code": "CA-16",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "fuera_de_servicio"
+  },
+  {
+    "id": "eq-094",
+    "code": "CA-17",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "fuera_de_servicio"
+  },
+  {
+    "id": "eq-095",
+    "code": "CA-18",
+    "machineGuideId": "treadmill",
+    "name": "Caminadora",
+    "status": "fuera_de_servicio"
+  },
+  {
+    "id": "eq-096",
+    "code": "CA-19",
+    "machineGuideId": "stair-stepper",
+    "name": "Escaladora de pedales",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-097",
+    "code": "CA-20",
+    "machineGuideId": "stair-stepper",
+    "name": "Escaladora de pedales",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-098",
+    "code": "CA-21",
+    "machineGuideId": "stair-stepper",
+    "name": "Escaladora de pedales",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-099",
+    "code": "CA-22",
+    "machineGuideId": "stair-climber",
+    "name": "Escaladora",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-100",
+    "code": "CA-23",
+    "machineGuideId": "stair-climber",
+    "name": "Escaladora",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-101",
+    "code": "TS-01",
+    "machineGuideId": "remo-hammer-strength",
+    "name": "Remo cerrado",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-102",
+    "code": "TS-02A",
+    "machineGuideId": "dominada-asistida",
+    "name": "Dominada asistida A",
+    "status": "bueno"
+  },
+  {
+    "id": "eq-103",
+    "code": "TS-02B",
+    "machineGuideId": "dominada-asistida",
+    "name": "Dominada asistida B",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-104",
+    "code": "TS-03",
+    "machineGuideId": "lat-pulldown",
+    "name": "Jalón Abierto/cerrado",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-106",
+    "code": "TS-07",
+    "machineGuideId": "remo-t",
+    "name": "Remo en T",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-105",
+    "code": "TS-06",
+    "machineGuideId": "remo-hammer",
+    "name": "Remo Hammer",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-107",
+    "code": "TS-14A",
+    "machineGuideId": "shoulder-press",
+    "name": "PRESS MILITAR",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-111",
+    "code": "ES-01",
+    "machineGuideId": "stair-stepper",
+    "name": "Escaladora de pedales",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-110",
+    "code": "TS-08",
+    "machineGuideId": "seated-row",
+    "name": "Estacion REMO",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-112",
+    "code": "ES-02",
+    "machineGuideId": "stair-stepper",
+    "name": "Escaladora de pedales",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-109",
+    "code": "EL-01",
+    "machineGuideId": "elliptical",
+    "name": "Eliptica",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-108",
+    "code": "BI-01",
+    "machineGuideId": "bicicleta-estatica",
+    "name": "Bicicleta estática",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-113",
+    "code": "TS-11",
+    "machineGuideId": "pec-deck-rear-delt-dual",
+    "name": "Aperturas/posterior",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-114",
+    "code": "TS-39",
+    "machineGuideId": "incline-shoulder-press-dual",
+    "name": "PRESS INCLINADO/MILITAR",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-115",
+    "code": "TS-14B",
+    "machineGuideId": "overhead-press-machine",
+    "name": "Press militar",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-116",
+    "code": "TS-15",
+    "machineGuideId": "torso-rotation",
+    "name": "Rotación de tronco",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-117",
+    "code": "TS-16",
+    "machineGuideId": "ab-machine",
+    "name": "Abdominales en máquina",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-118",
+    "code": "TS-17",
+    "machineGuideId": "back-extension",
+    "name": "Extensión lumbar",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-120",
+    "code": "TS-40",
+    "machineGuideId": "incline-fly-machine",
+    "name": "Aperturas Inclinadas",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-121",
+    "code": "TS-09",
+    "machineGuideId": "incline-chest-press",
+    "name": "Press de pecho inclinado",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-122",
+    "code": "TS-41",
+    "machineGuideId": "press-station",
+    "name": "Estacion PRESS",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-123",
+    "code": "TS-12A",
+    "machineGuideId": "preacher-curl",
+    "name": "Curl de bíceps (Pressure Curve)",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-128",
+    "code": "PA-02",
+    "machineGuideId": "cable-station",
+    "name": "Polea B",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-126",
+    "code": "TS-38",
+    "machineGuideId": "dip-machine",
+    "name": "Fondos en máquina",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-125",
+    "code": "TS-13",
+    "machineGuideId": "elbow-extension",
+    "name": "Extensión de tríceps",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-127",
+    "code": "PA-01",
+    "machineGuideId": "polea-crossover",
+    "name": "Polea A",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-124",
+    "code": "TS-12B",
+    "machineGuideId": "preacher-curl",
+    "name": "Curl de bíceps (amarilla)",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-129",
+    "code": "PA-03",
+    "machineGuideId": "cable-station",
+    "name": "Polea C",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-130",
+    "code": "PA-04",
+    "machineGuideId": "cable-station",
+    "name": "Polea D",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-131",
+    "code": "PA-05",
+    "machineGuideId": "cable-station",
+    "name": "Polea E",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-f2-bike-1",
+    "code": "P2-BI-01",
+    "machineGuideId": "bicicleta-estatica",
+    "name": "Bicicleta estática",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-f2-bike-2",
+    "code": "P2-BI-02",
+    "machineGuideId": "bicicleta-estatica",
+    "name": "Bicicleta estática",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-f2-bike-3",
+    "code": "P2-BI-03",
+    "machineGuideId": "bicicleta-estatica",
+    "name": "Bicicleta estática",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-f2-pulldown-1",
+    "code": "P2-JA-01",
+    "machineGuideId": "lat-pulldown",
+    "name": "Jalón al pecho",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-f2-pulldown-2",
+    "code": "P2-JA-02",
+    "machineGuideId": "lat-pulldown",
+    "name": "Jalón al pecho",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-plan-3ef26ebf-64aa-45f1-92ff-e9611c8606e9",
+    "code": "PI-39",
+    "name": "EXTENSION RODILLA",
+    "machineGuideId": "leg-extension",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-plan-2d525987-52f6-4090-a87f-59971dcee5de",
+    "code": "TS-22",
+    "name": "laterales  vuelos",
+    "machineGuideId": "lateral-raise-machine",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-plan-c898335a-b969-44d0-88d1-0c8b7cad0598",
+    "code": "CA-26",
+    "name": "BICICLETA",
+    "machineGuideId": "bicicleta-estatica",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-plan-0e1f5c67-5262-4a16-8e5f-b6bb420b8a67",
+    "code": "PI-38",
+    "name": "Maquina Smith",
+    "machineGuideId": "smith-machine",
+    "status": "sin_dato"
+  },
+  {
+    "id": "eq-019",
+    "code": "PI-19",
+    "machineGuideId": "tubo-pesas-pendiente",
+    "name": "Tubo con pesas (por identificar)",
+    "status": "pendiente"
+  },
+  {
+    "id": "eq-119",
+    "code": "TS-42",
+    "machineGuideId": "incline-chest-press",
+    "name": "Press de pecho inclinado",
+    "status": "sin_dato"
+  }
+]

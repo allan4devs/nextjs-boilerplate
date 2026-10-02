@@ -1,0 +1,15 @@
+{
+  "accountingMonth": "2026-09",
+  "source": "Xtremegym · mensaje del 02/10/2026 a las 11:29 a. m.; imputado a setiembre por solicitud del usuario",
+  "reportedAt": "2026-10-02T11:29:00-06:00",
+  "entries": [
+    { "id": "investment-2026-09-bebidas-alberto", "concept": "Bebidas Alberto", "amountCrc": 117720, "quantity": null, "needsVerification": false, "note": "Fecha de compra y factura por confirmar." },
+    { "id": "investment-2026-09-c4", "concept": "C4", "amountCrc": 147500, "quantity": 100, "needsVerification": false, "note": "Compra de 100 unidades. Fecha de compra y factura por confirmar." },
+    { "id": "investment-2026-09-galletas", "concept": "Galletas proteicas", "amountCrc": 35000, "quantity": null, "needsVerification": false, "note": "Fecha de compra y factura por confirmar." },
+    { "id": "investment-2026-09-pina", "concept": "Piña deshidratada", "amountCrc": 18000, "quantity": null, "needsVerification": false, "note": "Fecha de compra y factura por confirmar." },
+    { "id": "investment-2026-09-femsa", "concept": "Coca-Cola / FEMSA", "amountCrc": 130000, "quantity": null, "needsVerification": true, "note": "El mensaje pregunta si este monto ya estaba anotado. Verificar contra la factura y evitar duplicarlo." },
+    { "id": "investment-2026-09-barritas", "concept": "Barritas", "amountCrc": null, "quantity": null, "needsVerification": true, "note": "Monto de factura pendiente." },
+    { "id": "investment-2026-09-panos", "concept": "Paños", "amountCrc": null, "quantity": null, "needsVerification": true, "note": "Monto de factura pendiente." },
+    { "id": "investment-2026-09-otros", "concept": "Otros productos", "amountCrc": null, "quantity": null, "needsVerification": true, "note": "Detalle y monto de factura pendientes." }
+  ]
+}
