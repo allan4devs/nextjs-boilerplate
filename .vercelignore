@@ -6,8 +6,10 @@
 cv
 flyers
 scripts/*
-!scripts/sync-face-models.mjs
-!scripts/build-video-library.mjs
+!scripts/dedup/
+scripts/dedup/*
+!scripts/dedup/sync-face-models.mjs
+!scripts/dedup/build-video-library.mjs
 
 # Documentación y residuos locales.
 *.md
