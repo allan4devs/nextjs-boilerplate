@@ -1,6 +1,7 @@
 import { PDFDocument, PageSizes, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { PRODUCT_CATEGORY_LABEL, type ProductCategory } from "./product-catalog";
 
-type PdfCategory = "bebidas" | "proteinas" | "creatinas" | "hidratantes" | "chicles" | "otros";
+type PdfCategory = ProductCategory | "otros";
 
 export type MonthlySalesReportPdfData = {
   summary: {
@@ -29,11 +30,7 @@ export type MonthlySalesReportPdfData = {
 };
 
 const CATEGORY_LABEL: Record<PdfCategory, string> = {
-  bebidas: "Bebidas",
-  proteinas: "Proteínas",
-  creatinas: "Creatinas",
-  hidratantes: "Hidratantes",
-  chicles: "Chicles",
+  ...PRODUCT_CATEGORY_LABEL,
   otros: "Otros productos",
 };
 
@@ -126,12 +123,16 @@ export async function buildMonthlySalesReportPdf(
   });
 
   cover.drawText("DISTRIBUCIÓN POR CATEGORÍA", { x: MARGIN, y: PAGE_HEIGHT - 247, size: 11, font: bold, color: COLORS.ink });
-  cover.drawText("Monto vendido durante el mes", { x: MARGIN, y: PAGE_HEIGHT - 262, size: 8, font: regular, color: COLORS.muted });
-
   const sortedCategories = [...report.categorySummary].sort((a, b) => b.totalIncome - a.totalIncome);
+  const chartCategories = sortedCategories.slice(0, 8);
+  const chartSubtitle = sortedCategories.length > chartCategories.length
+    ? `${chartCategories.length} categorías con mayor venta; ${sortedCategories.length - chartCategories.length} adicionales en el detalle`
+    : "Monto vendido durante el mes";
+  cover.drawText(chartSubtitle, { x: MARGIN, y: PAGE_HEIGHT - 262, size: 8, font: regular, color: COLORS.muted });
+
   const maxCategoryIncome = sortedCategories[0]?.totalIncome || 1;
   let chartY = PAGE_HEIGHT - 290;
-  for (const category of sortedCategories) {
+  for (const category of chartCategories) {
     const label = CATEGORY_LABEL[category.category];
     const barX = MARGIN + 112;
     const barWidth = 410 * (category.totalIncome / maxCategoryIncome);
@@ -147,7 +148,7 @@ export async function buildMonthlySalesReportPdf(
     category.products.map((product) => ({ ...product, category: category.category })),
   );
   const topProduct = [...allProducts].sort((a, b) => b.unitsSold - a.unitsSold || b.totalIncome - a.totalIncome)[0];
-  const insightY = 76;
+  const insightY = 55;
   cover.drawRectangle({ x: MARGIN, y: insightY, width: PAGE_WIDTH - MARGIN * 2, height: 66, color: COLORS.black });
   cover.drawText("LECTURA RÁPIDA", { x: MARGIN + 14, y: insightY + 46, size: 8, font: bold, color: COLORS.lime });
   cover.drawText(

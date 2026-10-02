@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, CalendarDays, Clock3, Download, Loader2, PackageCheck, Printer, RefreshCw, SlidersHorizontal, WalletCards } from "lucide-react";
+import { PRODUCT_CATEGORY_LABEL, type ProductCategory } from "@/lib/xtreme/product-catalog";
 import { GameChip, GameLabel, GameModal } from "../GameOS";
 import ProductSaleReceipt from "./ProductSaleReceipt";
 
@@ -26,7 +27,7 @@ type Adjustment = {
   meta: { productName?: string; before?: AdjustmentValues; after?: AdjustmentValues; delta?: AdjustmentValues };
 };
 
-type ReportCategory = "bebidas" | "proteinas" | "creatinas" | "hidratantes" | "chicles" | "otros";
+type ReportCategory = ProductCategory | "otros";
 
 type ProductSummary = {
   productId: string;
@@ -66,11 +67,7 @@ const crc = new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC",
 const dateTime = new Intl.DateTimeFormat("es-CR", { dateStyle: "short", timeStyle: "short" });
 const dateOnly = new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" });
 const CATEGORY_LABEL: Record<ReportCategory, string> = {
-  bebidas: "Bebidas",
-  proteinas: "Proteínas",
-  creatinas: "Creatinas",
-  hidratantes: "Hidratantes",
-  chicles: "Chicles",
+  ...PRODUCT_CATEGORY_LABEL,
   otros: "Otros productos",
 };
 

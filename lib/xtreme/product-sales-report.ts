@@ -1,9 +1,12 @@
 import type { Db } from "mongodb";
 import {
+  canonicalProductIdentity,
   PRODUCT_CATEGORIES,
+  PRODUCT_CATEGORY_LABEL,
+  productSearchKey,
   type ProductCategory,
-  type ProductSaleDoc,
-} from "@/lib/xtreme/product-inventory";
+} from "@/lib/xtreme/product-catalog";
+import type { ProductSaleDoc } from "@/lib/xtreme/product-inventory";
 import {
   AUDIT_COLLECTION,
   PRODUCT_INVENTORY_COLLECTION,
@@ -53,35 +56,11 @@ export type ProductSalesReport = {
 };
 
 export const REPORT_CATEGORY_LABEL: Record<ReportCategory, string> = {
-  bebidas: "Bebidas",
-  proteinas: "Proteínas",
-  creatinas: "Creatinas",
-  hidratantes: "Hidratantes",
-  chicles: "Chicles",
+  ...PRODUCT_CATEGORY_LABEL,
   otros: "Otros productos",
 };
 
 const REPORT_CATEGORY_ORDER: ReportCategory[] = [...PRODUCT_CATEGORIES, "otros"];
-
-function normalizedProductName(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-function reportCategoryFor(category: unknown, productName: string): ReportCategory {
-  if (PRODUCT_CATEGORIES.includes(category as ProductCategory)) return category as ProductCategory;
-
-  const name = normalizedProductName(productName);
-  if (/agua|monster|powerade|redcon|\busn\b|c4 en lata|amino energy lata/.test(name)) return "bebidas";
-  if (/barra|barrita|batido/.test(name)) return "proteinas";
-  if (/creatina/.test(name)) return "creatinas";
-  if (/\bc4\b|electrolito|hidrat/.test(name)) return "hidratantes";
-  if (/chicle|pina/.test(name)) return "chicles";
-  return "otros";
-}
 
 export async function getProductSalesReport(db: Db, from: Date, to: Date): Promise<ProductSalesReport> {
   const safeFrom = from <= to ? from : to;
@@ -196,9 +175,35 @@ export async function getProductSalesReport(db: Db, from: Date, to: Date): Promi
     saleIds: Set<string>;
     products: ProductSalesReport["categorySummary"][number]["products"];
   }>();
+  const normalizedProducts = new Map<string, {
+    productId: string;
+    category: ReportCategory;
+    name: string;
+    unitsSold: number;
+    totalIncome: number;
+    saleIds: Set<string>;
+  }>();
 
   for (const product of productSummary) {
-    const category = reportCategoryFor(product._id.category, product.name);
+    const canonical = canonicalProductIdentity(product.name, product._id.category);
+    const category: ReportCategory = canonical.category ?? "otros";
+    const key = `${category}:${productSearchKey(canonical.name)}`;
+    const normalized = normalizedProducts.get(key) ?? {
+      productId: product._id.productId,
+      category,
+      name: canonical.name,
+      unitsSold: 0,
+      totalIncome: 0,
+      saleIds: new Set<string>(),
+    };
+    normalized.unitsSold += product.unitsSold;
+    normalized.totalIncome += product.totalIncome;
+    for (const saleId of product.saleIds) normalized.saleIds.add(saleId);
+    normalizedProducts.set(key, normalized);
+  }
+
+  for (const product of normalizedProducts.values()) {
+    const category = product.category;
     const bucket = categoryBuckets.get(category) ?? {
       unitsSold: 0,
       totalIncome: 0,
@@ -209,10 +214,10 @@ export async function getProductSalesReport(db: Db, from: Date, to: Date): Promi
     bucket.totalIncome += product.totalIncome;
     for (const saleId of product.saleIds) bucket.saleIds.add(saleId);
     bucket.products.push({
-      productId: product._id.productId,
+      productId: product.productId,
       name: product.name,
       unitsSold: product.unitsSold,
-      saleCount: product.saleIds.length,
+      saleCount: product.saleIds.size,
       totalIncome: product.totalIncome,
       averageUnitPrice: product.unitsSold
         ? Math.round(product.totalIncome / product.unitsSold)
@@ -250,7 +255,17 @@ export async function getProductSalesReport(db: Db, from: Date, to: Date): Promi
       adjustmentCount,
     },
     categorySummary,
-    sales,
+    sales: sales.map((sale) => ({
+      ...sale,
+      items: sale.items.map((item) => {
+        const canonical = canonicalProductIdentity(item.name, item.category);
+        return {
+          ...item,
+          name: canonical.name || item.name,
+          ...(canonical.category ? { category: canonical.category } : {}),
+        };
+      }),
+    })),
     adjustments: adjustments.map((entry) => ({
       id: entry.id,
       at: entry.at,

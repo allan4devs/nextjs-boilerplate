@@ -6,10 +6,14 @@ import {
   PRODUCT_SALES_COLLECTION,
   type AuditDoc,
 } from "./shared";
+import {
+  canonicalProductIdentity,
+  normalizeProductDisplayName,
+  PRODUCT_CATEGORIES,
+  type ProductCategory,
+} from "./product-catalog";
 
-export type ProductCategory = "bebidas" | "proteinas" | "creatinas" | "hidratantes" | "chicles";
-
-export const PRODUCT_CATEGORIES: ProductCategory[] = ["bebidas", "proteinas", "creatinas", "hidratantes", "chicles"];
+export { PRODUCT_CATEGORIES, type ProductCategory } from "./product-catalog";
 
 export type ProductInventoryDoc = {
   id: string;
@@ -22,6 +26,7 @@ export type ProductInventoryDoc = {
   price: number;
   unitsPerPackage?: number;
   inventoryCountVersion?: string;
+  catalogNormalizationVersion?: string;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -50,41 +55,42 @@ const DEFAULT_PRODUCTS: Array<Pick<ProductInventoryDoc, "id" | "name" | "categor
   { id: "electrolytes-extra-strength", name: "Electrolytes Extra Strength", category: "hidratantes", image: "/xtreme/products/electrolytes-extra-strength.jpeg" },
   { id: "vega-all-in-one-chocolate", name: "Vega All-in-One Chocolate", category: "proteinas", image: "/xtreme/products/vega-all-in-one-chocolate.jpeg" },
   { id: "biosteel-plant-protein", name: "BioSteel Plant-Based Protein", category: "proteinas", image: "/xtreme/products/biosteel-plant-protein.jpeg" },
-  { id: "ruthless-pre-workout", name: "Ruthless Pre-Workout", category: "hidratantes", image: "/xtreme/products/ruthless-pre-workout.jpeg" },
-  { id: "c4-sport-fruit-punch", name: "C4 Sport Fruit Punch", category: "hidratantes", image: "/xtreme/products/c4-sport-fruit-punch.jpeg" },
+  { id: "ruthless-pre-workout", name: "Ruthless Pre-Workout", category: "preentrenos", image: "/xtreme/products/ruthless-pre-workout.jpeg" },
+  { id: "c4-sport-fruit-punch", name: "C4 Sport Fruit Punch", category: "preentrenos", image: "/xtreme/products/c4-sport-fruit-punch.jpeg" },
   { id: "ans-keto-cocoa", name: "ANS Keto Cocoa", category: "proteinas", image: "/xtreme/products/ans-keto-cocoa.jpeg" },
   { id: "ghost-bcaa-sour-patch", name: "Ghost BCAA Sour Patch", category: "hidratantes", image: "/xtreme/products/ghost-bcaa-sour-patch.jpeg" },
-  { id: "c4-sport-mango-nectar", name: "C4 Sport Mango Nectar", category: "hidratantes", image: "/xtreme/products/c4-sport-mango-nectar.jpeg" },
-  { id: "freakmaker-gxs", name: "FreakMaker GXS Amino", category: "hidratantes", image: "/xtreme/products/freakmaker-gxs.jpeg" },
+  { id: "c4-sport-mango-nectar", name: "C4 Sport Mango Nectar", category: "preentrenos", image: "/xtreme/products/c4-sport-mango-nectar.jpeg" },
+  { id: "freakmaker-gxs", name: "FreakMaker GXS Amino", category: "preentrenos", image: "/xtreme/products/freakmaker-gxs.jpeg" },
   { id: "re-lyte-hydration-mango", name: "Re-Lyte Hydration Mango", category: "hidratantes", image: "/xtreme/products/re-lyte-hydration-mango.jpeg" },
   { id: "on-amino-energy", name: "Optimum Nutrition Amino Energy", category: "hidratantes", image: "/xtreme/products/on-amino-energy.jpeg" },
   { id: "naka-creatine-3000", name: "Naka Creatine 3000 mg", category: "creatinas", image: "/xtreme/products/naka-creatine-3000.jpeg" },
   { id: "ryse-jet-puffed-protein", name: "Ryse Jet-Puffed Protein", category: "proteinas", image: "/xtreme/products/ryse-jet-puffed-protein.jpeg" },
-  { id: "agua", name: "Agua Alpina 600 ml", category: "bebidas", image: "/xtreme/products/agua-alpina-600ml.jpeg" },
-  { id: "agua-1-litro", name: "Agua Alpina 1 litro", category: "bebidas", image: "/xtreme/products/agua-alpina-1l.jpeg" },
-  { id: "powerade-zero", name: "Powerade Zero Mixed Berry", category: "bebidas", image: "/xtreme/products/powerade-zero-mixed-berry.jpeg" },
-  { id: "powerade-zero-grape", name: "Powerade Zero Grape", category: "bebidas", image: "/xtreme/products/powerade-zero-grape.jpeg" },
-  { id: "powerade-zero-fruit-punch", name: "Powerade Zero Fruit Punch", category: "bebidas", image: "/xtreme/products/powerade-zero-fruit-punch.jpeg" },
-  { id: "redcon1-energy-drink", name: "Redcon1 Energy Sour Gummy Blast", category: "bebidas", image: "/xtreme/products/redcon1-energy-sour-gummy-blast.jpeg" },
-  { id: "redcon1-energy-freedom-frost", name: "Redcon1 Energy Freedom Frost", category: "bebidas", image: "/xtreme/products/redcon1-energy-freedom-frost.jpeg" },
-  { id: "redcon1-energy-vice-city", name: "Redcon1 Energy Vice City", category: "bebidas", image: "/xtreme/products/redcon1-energy-vice-city.jpeg" },
-  { id: "monster-white", name: "Monster Energy Ultra White", category: "bebidas", image: "/xtreme/products/monster-white.jpeg" },
-  { id: "barrita-mani", name: "Barrita de maní", category: "proteinas", defaultPrice: 500 },
-  { id: "barrita-fresa", name: "Barrita de fresa", category: "proteinas", defaultPrice: 500 },
+  { id: "agua", name: "Agua Alpina 600 ml", category: "aguas", image: "/xtreme/products/agua-alpina-600ml.jpeg" },
+  { id: "agua-1-litro", name: "Agua Alpina 1 litro", category: "aguas", image: "/xtreme/products/agua-alpina-1l.jpeg" },
+  { id: "powerade-zero", name: "Powerade Zero Mixed Berry", category: "hidratantes", image: "/xtreme/products/powerade-zero-mixed-berry.jpeg" },
+  { id: "powerade-zero-grape", name: "Powerade Zero Grape", category: "hidratantes", image: "/xtreme/products/powerade-zero-grape.jpeg" },
+  { id: "powerade-zero-fruit-punch", name: "Powerade Zero Fruit Punch", category: "hidratantes", image: "/xtreme/products/powerade-zero-fruit-punch.jpeg" },
+  { id: "redcon1-energy-drink", name: "Redcon1 Energy Sour Gummy Blast", category: "energizantes", image: "/xtreme/products/redcon1-energy-sour-gummy-blast.jpeg" },
+  { id: "redcon1-energy-freedom-frost", name: "Redcon1 Energy Freedom Frost", category: "energizantes", image: "/xtreme/products/redcon1-energy-freedom-frost.jpeg" },
+  { id: "redcon1-energy-vice-city", name: "Redcon1 Energy Vice City", category: "energizantes", image: "/xtreme/products/redcon1-energy-vice-city.jpeg" },
+  { id: "monster-white", name: "Monster Energy Ultra White", category: "energizantes", image: "/xtreme/products/monster-white.jpeg" },
+  { id: "barrita-mani", name: "Barrita de maní", category: "snacks", defaultPrice: 500 },
+  { id: "barrita-fresa", name: "Barrita de fresa", category: "snacks", defaultPrice: 500 },
   // Inventario "por unidad": los chicles se venden y cuentan individualmente,
   // no como paquete de 5. Sin unitsPerPackage => cada existencia es una unidad.
-  { id: "chicle-verde", name: "Chicle verde", category: "chicles" },
+  { id: "chicle-verde", name: "Chicle verde", category: "dulces" },
   // Precio real ₡400 confirmado en el conteo físico del 28/08/2026 (antes solo
   // vivía en Mongo vía script suelto); se codifica acá para no perderlo si el
   // documento se recrea.
-  { id: "chicle-gris", name: "Chicle gris", category: "chicles", defaultPrice: 400 },
+  { id: "chicle-gris", name: "Chicle gris", category: "dulces", defaultPrice: 400 },
   // Se vendía desde el 28/08/2026 (script suelto que la creó directo en Mongo,
   // sin quedar en este catálogo). Se agrega acá para que el seed la reconozca
   // y quede disponible aunque el documento se recree.
-  { id: "pinas", name: "Piñas", category: "chicles", defaultPrice: 1200 },
+  { id: "pinas", name: "Piñas", category: "dulces", defaultPrice: 1200 },
 ];
 
 const PHYSICAL_COUNT_VERSION = "physical-count-2026-08-04";
+const CATALOG_NORMALIZATION_VERSION = "product-taxonomy-2026-10-v1";
 const PHYSICAL_COUNTS = [
   { id: "barrita-fresa", quantity: 23, cameraQuantity: 12, warehouseQuantity: 11 },
   { id: "barrita-mani", quantity: 12, cameraQuantity: 12, warehouseQuantity: 0 },
@@ -103,6 +109,8 @@ export async function ensureDefaultProducts(db: Db) {
         update: {
           $set: {
             name: product.name,
+            category: product.category,
+            catalogNormalizationVersion: CATALOG_NORMALIZATION_VERSION,
             ...(product.image ? { image: product.image } : {}),
             // Todo producto del catálogo debe quedar disponible para la venta.
             // No hay UI para desactivar productos hoy, así que forzarlo acá
@@ -111,7 +119,6 @@ export async function ensureDefaultProducts(db: Db) {
           },
           $setOnInsert: {
             id: product.id,
-            category: product.category,
             quantity: 0,
             price: product.defaultPrice ?? 0,
             ...(product.unitsPerPackage ? { unitsPerPackage: product.unitsPerPackage } : {}),
@@ -123,6 +130,27 @@ export async function ensureDefaultProducts(db: Db) {
       },
     })),
   );
+  const productsToNormalize = await collection
+    .find({ catalogNormalizationVersion: { $ne: CATALOG_NORMALIZATION_VERSION } })
+    .toArray();
+  if (productsToNormalize.length) {
+    await collection.bulkWrite(productsToNormalize.map((product) => {
+      const canonical = canonicalProductIdentity(product.name, product.category);
+      return {
+        updateOne: {
+          filter: { id: product.id, catalogNormalizationVersion: { $ne: CATALOG_NORMALIZATION_VERSION } },
+          update: {
+            $set: {
+              name: canonical.name || product.name,
+              category: canonical.category ?? product.category,
+              catalogNormalizationVersion: CATALOG_NORMALIZATION_VERSION,
+              updatedAt: now,
+            },
+          },
+        },
+      };
+    }));
+  }
   // Compatibilidad con el producto genérico creado antes de separar presentaciones.
   await collection.updateOne(
     { id: "agua", name: "Agua" },
@@ -245,7 +273,7 @@ export async function updateProductInventory(
   const safeWarehouseQuantity = hasLocations ? Math.max(0, Math.floor(values.warehouseQuantity ?? 0)) : 0;
   const safeQuantity = safeCameraQuantity + safeWarehouseQuantity;
   const safePrice = Math.max(0, Math.round(values.price));
-  const name = values.name?.trim();
+  const name = values.name ? normalizeProductDisplayName(values.name) : undefined;
   const trimmedImage = values.image?.trim();
   const clearImage = values.image !== undefined && !trimmedImage;
   // Sin filtro por active: un producto inactivo también se puede editar (por
@@ -304,7 +332,7 @@ export async function createProduct(
     image?: string;
   },
 ) {
-  const name = input.name.trim();
+  const name = normalizeProductDisplayName(input.name);
   if (!name) throw new Error("product_name_required");
   if (!PRODUCT_CATEGORIES.includes(input.category)) throw new Error("product_category_required");
 
@@ -334,6 +362,7 @@ export async function createProduct(
     cameraQuantity,
     warehouseQuantity,
     price: Math.max(0, Math.round(input.price)),
+    catalogNormalizationVersion: CATALOG_NORMALIZATION_VERSION,
     active: true,
     createdAt: now,
     updatedAt: now,
