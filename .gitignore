@@ -42,6 +42,10 @@ next-env.d.ts
 .next-dev.log
 .next-dev.err.log
 .env*.local
+
+# Originales de video: conservarlos en disco; publicar las versiones comprimidas.
+/public/**/*.[mM][oO][vV]
+/public/ecu/hero-mechanic-pexels.mp4
 scripts/email-recovery-report.json
 /tmp/pdfs/
 
