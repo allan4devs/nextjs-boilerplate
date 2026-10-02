@@ -10,7 +10,6 @@ import { useTrainerOs } from "./hooks/useTrainerOs";
 import { TrainerOverview } from "./ui/TrainerOverview";
 import { TrainerProgramsPanel } from "./ui/TrainerProgramsPanel";
 import { TrainerRoster } from "./ui/TrainerRoster";
-import { TrainerTodayClasses } from "./ui/TrainerTodayClasses";
 
 const TrainerPlanEditor = dynamic(() => import("./ui/TrainerPlanEditor").then((module) => module.TrainerPlanEditor));
 const TrainerHistory = dynamic(() => import("./ui/TrainerHistory").then((module) => module.TrainerHistory));
@@ -41,7 +40,7 @@ export default function TrainerOs() {
         <Kpi icon={Gauge} label="Progreso promedio" value={`${os.stats.averageProgress}%`} hint="planes asignados" tone="lime" wide />
       </section>
 
-      <TrainerTodayClasses os={os} />
+    
       <TrainerProgramsPanel os={os} />
       <nav aria-label="Área de trabajo del entrenador" className="my-4 flex flex-wrap gap-2">
         <GameButton variant={os.groupActive ? "ghost" : "cyan"} disabled={os.healthBusy || os.groupBusy} aria-pressed={!os.groupActive} onClick={() => os.setGroupActive(false)}>Socios y planes</GameButton>

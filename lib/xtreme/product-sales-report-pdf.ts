@@ -1,9 +1,11 @@
 import { PDFDocument, PageSizes, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { PRODUCT_CATEGORY_LABEL, type ProductCategory } from "./product-catalog";
+import { INVESTMENT_STATUS_LABEL, type ProductInvestmentReport } from "./product-investment-model";
 
 type PdfCategory = ProductCategory | "otros";
 
 export type MonthlySalesReportPdfData = {
+  investments?: ProductInvestmentReport;
   summary: {
     totalIncome: number;
     saleCount: number;
@@ -57,7 +59,10 @@ function safeText(value: string) {
     .replace(/‑/g, "-")
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
-    .replace(/…/g, "...");
+    .replace(/…/g, "...")
+    // Standard PDF fonts use WinAnsi. Keep Spanish text and replace unsupported
+    // characters in free-form names/notes instead of failing the whole report.
+    .replace(/[^\x20-\x7E\xA0-\xFF\r\n\u0152\u0153\u0160\u0161\u0178\u017D\u017E\u0192\u02C6\u02DC\u2020\u2021\u2022\u2030\u2039\u203A\u20AC]/gu, "?");
 }
 
 function crc(value: number) {
@@ -159,6 +164,97 @@ export async function buildMonthlySalesReportPdf(
   );
   cover.drawText(`Pagos mixtos: ${report.summary.mixedSaleCount}`, { x: PAGE_WIDTH - 250, y: insightY + 25, size: 10, font: bold, color: COLORS.white });
   cover.drawText("Los montos son ingresos brutos por ventas; no representan ganancia neta.", { x: MARGIN + 14, y: insightY + 9, size: 7.5, font: regular, color: COLORS.white });
+
+  function rightText(current: PDFPage, value: string, right: number, baseline: number, size = 9, font = regular) {
+    const text = safeText(value);
+    current.drawText(text, { x: right - font.widthOfTextAtSize(text, size), y: baseline, size, font, color: COLORS.ink });
+  }
+  function wrapText(value: string, width: number, size = 8) {
+    const lines: string[] = [];
+    for (const paragraph of safeText(value).split(/\r?\n/)) {
+      let line = "";
+      for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+        if (line && regular.widthOfTextAtSize(`${line} ${word}`, size) > width) { lines.push(line); line = ""; }
+        let rest = word;
+        while (regular.widthOfTextAtSize(rest, size) > width) {
+          if (line) { lines.push(line); line = ""; }
+          let cut = rest.length - 1;
+          while (cut > 1 && regular.widthOfTextAtSize(rest.slice(0, cut), size) > width) cut--;
+          lines.push(rest.slice(0, cut)); rest = rest.slice(cut);
+        }
+        line = line ? `${line} ${rest}` : rest;
+      }
+      if (line) lines.push(line);
+    }
+    return lines.length ? lines : [""];
+  }
+  if (report.investments) {
+    const investment = report.investments;
+    const summary = investment.summary;
+    let comparisonPage = addPage("INVERSIÓN Y VENTAS DEL MES");
+    const gap = 8;
+    const width = (PAGE_WIDTH - MARGIN * 2 - gap * 3) / 4;
+    [
+      ["Ventas del mes", summary.totalIncome], ["Inversión registrada", summary.reportedInvestment],
+      ["Falta recuperar", summary.remainingToRecover], ["Ventas menos inversión", summary.balance],
+    ].forEach(([label, value], index) => drawCard(comparisonPage, MARGIN + index * (width + gap), PAGE_HEIGHT - 156, width, String(label), crc(Number(value)), index === 1));
+    let iy = PAGE_HEIGHT - 178;
+    const notes = [
+      "Comparación de recuperación del mes. No es utilidad contable: no incluye el costo de lo vendido ni otros gastos.",
+      ...(summary.pendingAmounts || summary.investmentToVerify ? [`Comparación incompleta: ${summary.pendingAmounts} registros sin monto y ${crc(summary.investmentToVerify)} por verificar.`] : []),
+      ...(summary.unassignedCount ? [`Sin inversionista asignado: ${summary.unassignedCount} registros (${crc(summary.unassignedInvestment)}), incluidos una sola vez en la inversión total.`] : []),
+      ...(!investment.entries.length ? ["No hay inversiones registradas en este mes. Los montos de otros meses no se incluyen."] : []),
+    ];
+    for (const note of notes) {
+      for (const line of wrapText(note, PAGE_WIDTH - MARGIN * 2)) { comparisonPage.drawText(line, { x: MARGIN, y: iy, size: 8, font: regular, color: COLORS.muted }); iy -= 12; }
+      iy -= 4;
+    }
+    function investorHeader() {
+      comparisonPage.drawRectangle({ x: MARGIN, y: iy - 20, width: PAGE_WIDTH - MARGIN * 2, height: 25, color: COLORS.soft });
+      [["INVERSIONISTA", MARGIN + 10], ["REGISTROS", MARGIN + 325], ["SIN MONTO", MARGIN + 410], ["ENTREGAS PEND.", MARGIN + 500]].forEach(([label, x]) => comparisonPage.drawText(String(label), { x: Number(x), y: iy - 10, size: 7.2, font: bold, color: COLORS.muted }));
+      rightText(comparisonPage, "INVERSIÓN", PAGE_WIDTH - MARGIN - 10, iy - 10, 8, bold); iy -= 25;
+    }
+    investorHeader();
+    const rows = [
+      ...investment.byInvestor.filter((person) => person.active || person.entryCount > 0),
+      ...(summary.unassignedCount ? [{ name: "Sin asignar", entryCount: summary.unassignedCount, pendingAmounts: investment.entries.filter((entry) => !investment.investors.some((person) => person.id === entry.investorId) && entry.amountCrc === null).length, pendingDeliveries: investment.entries.filter((entry) => !investment.investors.some((person) => person.id === entry.investorId) && entry.status === "pending_delivery").length, reportedInvestment: summary.unassignedInvestment }] : []),
+    ];
+    for (const person of rows) {
+      if (iy < 85) { comparisonPage = addPage("INVERSIÓN POR INVERSIONISTA"); iy = PAGE_HEIGHT - 102; investorHeader(); }
+      comparisonPage.drawText(fitText(person.name, bold, 9, 300), { x: MARGIN + 10, y: iy - 12, size: 9, font: bold, color: COLORS.ink });
+      rightText(comparisonPage, String(person.entryCount), MARGIN + 365, iy - 12);
+      rightText(comparisonPage, String(person.pendingAmounts), MARGIN + 452, iy - 12);
+      rightText(comparisonPage, String(person.pendingDeliveries), MARGIN + 554, iy - 12);
+      rightText(comparisonPage, crc(person.reportedInvestment), PAGE_WIDTH - MARGIN - 10, iy - 12, 9, bold);
+      comparisonPage.drawLine({ start: { x: MARGIN, y: iy - 22 }, end: { x: PAGE_WIDTH - MARGIN, y: iy - 22 }, thickness: 0.5, color: COLORS.line }); iy -= 29;
+    }
+    if (iy < 78) { comparisonPage = addPage("INVERSIÓN POR INVERSIONISTA"); iy = PAGE_HEIGHT - 102; }
+    comparisonPage.drawRectangle({ x: MARGIN, y: iy - 24, width: PAGE_WIDTH - MARGIN * 2, height: 29, color: COLORS.lime });
+    comparisonPage.drawText("TOTAL INVERSIÓN REGISTRADA", { x: MARGIN + 10, y: iy - 13, size: 9, font: bold, color: COLORS.ink });
+    rightText(comparisonPage, crc(summary.reportedInvestment), PAGE_WIDTH - MARGIN - 10, iy - 13, 10, bold);
+
+    if (investment.entries.length) {
+      let detail = addPage("DETALLE DE INVERSIONES");
+      let dy = PAGE_HEIGHT - 102;
+      for (const entry of investment.entries) {
+        const investor = investment.investors.find((person) => person.id === entry.investorId)?.name ?? "Sin asignar";
+        const heading = `${investor} - ${entry.concept}`;
+        const date = entry.purchaseDate?.split("-").reverse().join("/") ?? "Fecha de compra por confirmar";
+        const metadata = `${date} | ${INVESTMENT_STATUS_LABEL[entry.status]}${entry.needsVerification ? " | Por verificar" : ""}${entry.quantity !== null ? ` | ${entry.quantity} unidades` : ""}`;
+        const textLines = wrapText([metadata, entry.invoiceReference ? `Factura: ${entry.invoiceReference}` : "", entry.note].filter(Boolean).join("\n"), PAGE_WIDTH - MARGIN * 2 - 22);
+        const firstHeight = Math.min(90, 35 + textLines.length * 11);
+        if (dy - firstHeight < 55) { detail = addPage("DETALLE DE INVERSIONES"); dy = PAGE_HEIGHT - 102; }
+        detail.drawRectangle({ x: MARGIN, y: dy - 24, width: PAGE_WIDTH - MARGIN * 2, height: 29, color: COLORS.soft });
+        detail.drawText(fitText(heading, bold, 9, PAGE_WIDTH - MARGIN * 2 - 150), { x: MARGIN + 10, y: dy - 14, size: 9, font: bold, color: COLORS.ink });
+        rightText(detail, entry.amountCrc === null ? "Monto pendiente" : crc(entry.amountCrc), PAGE_WIDTH - MARGIN - 10, dy - 14, 9, bold); dy -= 39;
+        for (const line of textLines) {
+          if (dy < 63) { detail = addPage("DETALLE DE INVERSIONES"); dy = PAGE_HEIGHT - 102; detail.drawText(fitText(`${heading} - continuación`, bold, 9, PAGE_WIDTH - MARGIN * 2), { x: MARGIN + 10, y: dy, size: 9, font: bold, color: COLORS.ink }); dy -= 20; }
+          detail.drawText(line, { x: MARGIN + 10, y: dy, size: 8, font: regular, color: COLORS.muted }); dy -= 11;
+        }
+        dy -= 18;
+      }
+    }
+  }
 
   let page = addPage("DETALLE POR CATEGORÍA");
   let y = PAGE_HEIGHT - 102;

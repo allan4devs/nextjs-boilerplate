@@ -326,7 +326,7 @@ export default function SalesMonitoringPanel() {
         </div>
       </>}
 
-      <ProductInvestmentPanel />
+      <ProductInvestmentPanel month={month} onMonthChange={applyMonth} />
 
       <GameModal open={Boolean(deletion)} onClose={() => { if (!deleting) { setDeletion(null); setAdminCode(""); } }} title="Eliminar registro" size="sm">
         <form onSubmit={(event) => { event.preventDefault(); void deleteRecord(); }} className="space-y-4">

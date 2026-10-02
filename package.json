@@ -17,7 +17,8 @@
     "check:encoding": "node scripts/dedup/check-encoding.mjs",
     "check:training": "node scripts/dedup/check-training-programs.mjs",
     "check:workout-preferences": "node scripts/dedup/check-workout-preferences.mjs",
-    "check:merge": "node scripts/check-merge-integration.mjs"
+    "check:merge": "node scripts/check-merge-integration.mjs",
+    "check:investments": "node scripts/check-product-investments.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
