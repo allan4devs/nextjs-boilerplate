@@ -3,13 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Dumbbell, Gauge, Loader2, Lock, LogOut, RefreshCw, Target, UserRound, Users, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Dumbbell, Loader2, Lock, LogOut, RefreshCw, UserRound } from "lucide-react";
 import { GameButton, GameLabel } from "@/app/components/GameOS";
 import StaffThemeToggle from "@/app/components/StaffThemeToggle";
 import { TRAINER_TABS } from "./constants";
 import { useTrainerOs } from "./hooks/useTrainerOs";
 import { TrainerOverview } from "./ui/TrainerOverview";
-import { TrainerProgramsPanel } from "./ui/TrainerProgramsPanel";
 import { TrainerRoster } from "./ui/TrainerRoster";
 
 const TrainerPlanEditor = dynamic(() => import("./ui/TrainerPlanEditor").then((module) => module.TrainerPlanEditor));
@@ -33,16 +32,6 @@ export default function TrainerOs() {
     </header>
 
     <div className="mx-auto max-w-[1680px] p-3 sm:p-4 lg:p-6">
-      {!os.memberFocus && <section className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
-        <Kpi icon={Users} label="Socios" value={os.stats.total} hint={`${os.stats.withPlan} con plan`} />
-        <Kpi icon={AlertTriangle} label="Necesitan atención" value={os.stats.needsAttention} hint="prioridades y sesiones en vivo" tone="orange" />
-        <Kpi icon={Zap} label="Entrenando ahora" value={os.stats.activeNow} hint="sesiones en vivo" tone="cyan" />
-        <Kpi icon={Target} label="Sin plan" value={os.stats.withoutPlan} hint="por prescribir" tone="red" />
-        <Kpi icon={Gauge} label="Progreso promedio" value={`${os.stats.averageProgress}%`} hint="planes asignados" tone="lime" wide />
-      </section>}
-
-    
-      {!os.memberFocus && <TrainerProgramsPanel os={os} />}
       {!os.memberFocus && <nav aria-label="Área de trabajo del entrenador" className="my-4 flex flex-wrap gap-2">
         <GameButton variant={os.groupActive ? "ghost" : "cyan"} disabled={os.healthBusy || os.groupBusy} aria-pressed={!os.groupActive} onClick={() => os.setGroupActive(false)}>Socios y planes</GameButton>
         <GameButton variant={os.groupActive ? "cyan" : "ghost"} disabled={os.healthBusy || os.groupBusy} aria-pressed={os.groupActive} onClick={() => os.setGroupActive(true)}>Grupo A</GameButton>
@@ -64,11 +53,9 @@ export default function TrainerOs() {
     </div>
   </main>;
 }
-
 function TrainerLogin({ os }: { os: ReturnType<typeof useTrainerOs> }) {
   return <main className="xg-os-login-shell grid bg-[#050505] text-white"><form onSubmit={(event) => void os.login(event)} className="w-full max-w-md border-[3px] border-cyan-300 bg-[#0c0c0c] p-6 shadow-[7px_7px_0_rgba(103,232,249,.18)] sm:p-8"><div className="grid h-14 w-14 place-items-center bg-cyan-300 text-black"><Dumbbell className="h-7 w-7" /></div><GameLabel tone="cyan" className="mt-5">Trainer OS 2.0</GameLabel><h1 className="mt-2 text-3xl font-black uppercase">Centro de rendimiento</h1><p className="mt-2 text-sm font-bold leading-6 text-white/45">Prescribí, seguí ejecuciones y detectá quién necesita tu atención.</p><div className="relative mt-6"><Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" /><input type="password" autoComplete="current-password" value={os.code} onChange={(event) => os.setCode(event.target.value)} placeholder="Código de entrenador" className="min-h-12 w-full border-[3px] border-white/20 bg-black/45 pl-10 pr-4 font-bold outline-none focus:border-cyan-300" /></div>{os.notice && <p className="mt-3 border border-red-400/40 bg-red-500/10 p-3 text-sm font-bold text-red-300">{os.notice.text}</p>}<GameButton type="submit" full className="mt-5" disabled={os.checking || !os.code.trim()}>{os.checking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar como entrenador"}</GameButton><p className="mt-5 flex justify-center gap-5 text-xs font-bold text-white/30"><Link href="/app">Member OS</Link><Link href="/admin">Admin OS</Link></p></form></main>;
 }
-
 function MemberHeader({ os }: { os: ReturnType<typeof useTrainerOs> }) {
   const member = os.selected!;
   const signal = os.selectedSignal!;
@@ -76,7 +63,3 @@ function MemberHeader({ os }: { os: ReturnType<typeof useTrainerOs> }) {
   return <section className={`relative overflow-hidden border-[3px] bg-[#0c0c0c] p-4 ${tone}`}><div aria-hidden className="absolute -right-10 -top-20 h-48 w-48 rounded-full bg-current/10 blur-3xl" /><div className="relative flex flex-wrap items-center gap-4"><span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden border-[3px] border-current/35 bg-black/35">{member.photoUrl ? <Image unoptimized src={member.photoUrl} alt="" width={64} height={64} sizes="64px" className="h-full w-full object-cover" /> : <UserRound className="h-7 w-7" />}</span><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[.18em] opacity-70">Socio seleccionado</p><h2 className="truncate text-2xl font-black uppercase text-white sm:text-3xl">{member.memberName}</h2><p className="mt-1 text-sm font-bold text-white/45">Meta: {member.goal || "Sin definir"} · Coach: {member.coach || "Sin asignar"}</p>{member.trainingProgramAssignment && <p className="mt-1 text-[10px] font-black uppercase tracking-[.14em] text-cyan-300">Grupo {member.trainingProgramAssignment.programName} · {member.trainingProgramAssignment.cohort}</p>}</div><div className="border-[3px] border-current/35 bg-black/30 px-3 py-2 text-right"><p className="text-[9px] font-black uppercase opacity-60">Prioridad</p><p className="mt-1 font-black uppercase">{signal.label}</p><p className="text-[10px] font-bold text-white/40">{signal.detail}</p></div></div></section>;
 }
 
-function Kpi({ icon: Icon, label, value, hint, tone = "default", wide = false }: { icon: typeof Users; label: string; value: string | number; hint: string; tone?: "default" | "lime" | "cyan" | "orange" | "red"; wide?: boolean }) {
-  const color = { default: "border-white/15 text-white", lime: "border-[#d8ff3e]/35 text-[#d8ff3e]", cyan: "border-cyan-300/35 text-cyan-300", orange: "border-orange-300/35 text-orange-300", red: "border-red-400/35 text-red-300" }[tone];
-  return <div className={`border-[3px] bg-[#0c0c0c] p-3 ${color} ${wide ? "col-span-2 lg:col-span-1" : ""}`}><div className="flex items-start justify-between gap-2"><div><p className="text-[8px] font-black uppercase tracking-[.15em] text-white/35">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></div><Icon className="h-5 w-5" /></div><p className="mt-2 truncate text-[10px] font-bold text-white/30">{hint}</p></div>;
-}

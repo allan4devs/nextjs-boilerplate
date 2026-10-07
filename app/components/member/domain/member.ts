@@ -36,6 +36,10 @@ export type WorkoutExerciseDetail = {
   reps: number;
   weightKg: number;
   seconds: number;
+  prescribedSets?: number;
+  prescribedReps?: number;
+  prescribedWeightKg?: number;
+  prescribedSeconds?: number;
   targetSeconds?: number;
   notes: string;
 };

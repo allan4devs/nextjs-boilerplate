@@ -4,11 +4,31 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { MEMBERS_COLLECTION, type MemberDoc } from "@/lib/xtreme/shared";
 import { businessDate } from "@/lib/xtreme/business-date";
-import { GROUP_A_PROFILES, alignGroupExercise, isGroupEquipmentAvailable, validGroupDate, type GroupLog } from "@/lib/xtreme/trainer-group-a-model";
+import { GROUP_A_PROFILES, alignGroupExercise, isGroupEquipmentAvailable, validGroupDate, type GroupExercisePatch, type GroupLog } from "@/lib/xtreme/trainer-group-a-model";
 import { GROUP_A_ROUTINES, GROUP_A_COLLECTION, getGroupDashboard, groupInventory, saveGroupRecord, type GroupRecord } from "@/lib/xtreme/trainer-group-a";
 
 export const dynamic = "force-dynamic";
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
+
+function parseExercisePatch(value: unknown): GroupExercisePatch | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const patch: GroupExercisePatch = {};
+  const textFields = ["muscle", "name", "equipment", "sourceMachine", "time"] as const;
+  for (const key of textFields) {
+    if (raw[key] !== undefined) {
+      if (typeof raw[key] !== "string") return null;
+      patch[key] = raw[key].trim().slice(0, key === "time" ? 40 : 160);
+    }
+  }
+  for (const key of ["sets", "reps"] as const) {
+    if (raw[key] !== undefined) {
+      if (raw[key] !== null && (typeof raw[key] !== "number" || !Number.isInteger(raw[key]) || Number(raw[key]) < 0 || Number(raw[key]) > 500)) return null;
+      patch[key] = raw[key] === null ? null : Number(raw[key]);
+    }
+  }
+  return Object.keys(patch).length ? patch : null;
+}
 
 export async function GET(req: NextRequest) {
   const session = await resolveStaffSession(req, "trainer");
@@ -37,6 +57,14 @@ export async function POST(req: NextRequest) {
       if (!asset || !isGroupEquipmentAvailable(asset)) return fail("Elegí una unidad compatible que esté disponible.");
       saved = await saveGroupRecord(db, `mapping:${exercise.id}`, revision, {
         kind: "mapping", exerciseId: exercise.id, assetId: asset.id, updatedBy: trainer, updatedAt,
+      });
+    } else if (body.action === "exercise") {
+      const exerciseId = typeof body.exerciseId === "string" ? body.exerciseId.trim() : "";
+      const exercise = GROUP_A_ROUTINES.flatMap((routine) => routine.days.flatMap((day) => day.exercises)).find((entry) => entry.id === exerciseId);
+      const patch = parseExercisePatch(body.patch);
+      if (!exercise || !patch) return fail("Ejercicio o valores inválidos.");
+      saved = await saveGroupRecord(db, `exercise:${exercise.id}`, revision, {
+        kind: "exercise", exerciseId: exercise.id, exercisePatch: patch, updatedBy: trainer, updatedAt,
       });
     } else {
       const profile = GROUP_A_PROFILES.find((p) => p.id === body.profileId);

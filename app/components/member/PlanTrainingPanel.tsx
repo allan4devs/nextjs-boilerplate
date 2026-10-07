@@ -4,21 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Check,
+  ClipboardCheck,
   ClipboardList,
   Dumbbell,
   ExternalLink,
   Loader2,
   MapPin,
   Play,
-  Plus,
   Save,
   Square,
   Timer,
-  Trash2,
   X,
 } from "lucide-react";
 import { physicalMachinePath } from "@/app/lib/physical-machine-links";
-import { MACHINE_GUIDE } from "./catalog/machines";
 import type { PlanExercisePrescription, WorkoutExerciseDetail } from "./types";
 import type { MemberOs } from "./useMemberOs";
 
@@ -98,7 +96,6 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
       };
     });
   };
-  const [selectedMachine, setSelectedMachine] = useState(MACHINE_GUIDE[0]?.id ?? "");
   const [now, setNow] = useState(() => Date.now());
   const activeId = active?.id ?? null;
   const [timerState, setTimerState] = useState<{
@@ -134,25 +131,6 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
     setDraft((current) => current.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)));
   }
 
-  function addMachine() {
-    const machine = MACHINE_GUIDE.find((entry) => entry.id === selectedMachine);
-    if (!machine) return;
-    setDraft((current) => [
-      ...current,
-      {
-        id: `machine-${Date.now()}`,
-        machineId: machine.id,
-        machineName: machine.name,
-        exerciseName: machine.name,
-        sets: 3,
-        reps: 10,
-        weightKg: 0,
-        seconds: 0,
-        notes: "",
-      },
-    ]);
-  }
-
   function stopExerciseTimer(entries = draft) {
     if (!exerciseTimer) return entries;
     const elapsed = Math.max(1, Math.round((now - exerciseTimer.startedAt) / 1000));
@@ -182,41 +160,41 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
         </header>
 
         <div className="space-y-3 p-3 sm:p-5">
+          <div className="border border-orange-300/35 bg-orange-300/10 p-3 text-sm font-semibold text-orange-100">
+            <p className="flex items-center gap-2 font-black uppercase"><ClipboardCheck className="h-4 w-4" /> Tu entrenador indicó esta sesión</p>
+            <p className="mt-1 text-xs text-white/55">La columna naranja muestra lo indicado. Abajo anotás lo que realmente hiciste y marcás cada ejercicio listo.</p>
+          </div>
           {draft.map((entry, index) => {
             const timing = exerciseTimer?.index === index;
             const liveSeconds = timing
               ? entry.seconds + Math.max(0, Math.floor((now - exerciseTimer.startedAt) / 1000))
               : entry.seconds;
+            const prescribedSets = entry.prescribedSets ?? entry.sets;
+            const prescribedReps = entry.prescribedReps ?? entry.reps;
+            const prescribedWeight = entry.prescribedWeightKg ?? 0;
+            const prescribedSeconds = entry.prescribedSeconds ?? entry.targetSeconds ?? 0;
             return (
               <article key={entry.id} className="border-[3px] border-white/15 bg-[#0b0b0b] p-3">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <input
-                      value={entry.exerciseName}
-                      onChange={(event) => updateExercise(index, { exerciseName: event.target.value })}
-                      aria-label="Ejercicio"
-                      className="w-full bg-transparent font-black uppercase outline-none focus:text-[#d8ff3e]"
-                    />
+                    <p className="font-black uppercase">{entry.exerciseName}</p>
                     <p className="truncate text-xs font-bold text-white/40">{entry.machineCode ? `${entry.machineCode} · ` : ""}{entry.machineName || "Ejercicio libre"}</p>
                     {(entry.machineArea || entry.machineLocation) && <p className="mt-1 flex items-start gap-1 text-[11px] font-semibold text-white/35"><MapPin className="mt-0.5 h-3 w-3 shrink-0 text-[#d8ff3e]" /> Piso {entry.machineFloor ?? 1}{entry.machineArea ? ` · ${entry.machineArea}` : ""}{entry.machineLocation ? ` · ${entry.machineLocation}` : ""}</p>}
                     {(entry.assetId || entry.machineId) && <Link href={machineHref(entry)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs font-black uppercase text-[#d8ff3e] hover:text-white">Ver máquina y cómo usarla <ExternalLink className="h-3.5 w-3.5" /></Link>}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (timing) stopExerciseTimer();
-                      setDraft((current) => current.filter((_, i) => i !== index));
-                    }}
-                    className="p-2 text-white/35 hover:text-red-300"
-                    aria-label="Quitar ejercicio"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <span className={`shrink-0 border px-2 py-1 text-[10px] font-black uppercase ${entry.completed ? "border-[#d8ff3e]/50 bg-[#d8ff3e]/10 text-[#eaff93]" : "border-white/15 text-white/40"}`}>{entry.completed ? "Listo" : "Pendiente"}</span>
                 </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 border border-orange-300/20 bg-orange-300/[0.06] p-2 text-xs sm:grid-cols-4">
+                  <TargetValue label="Indicado · series" value={prescribedSets || "—"} />
+                  <TargetValue label="Indicado · reps" value={prescribedReps || "—"} />
+                  <TargetValue label="Indicado · peso" value={prescribedWeight > 0 ? `${prescribedWeight} kg` : "A criterio"} />
+                  <TargetValue label="Indicado · tiempo" value={prescribedSeconds > 0 ? durationLabel(prescribedSeconds) : "A criterio"} />
+                </div>
+                <p className="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-[#d8ff3e]">Lo que hiciste</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <NumberField label="Series" value={entry.sets} onChange={(sets) => updateExercise(index, { sets })} />
-                  <NumberField label="Reps" value={entry.reps} onChange={(reps) => updateExercise(index, { reps })} />
-                  <NumberField label="Peso kg" value={entry.weightKg} step="0.5" onChange={(weightKg) => updateExercise(index, { weightKg })} />
+                  <NumberField label="Series reales" value={entry.sets} onChange={(sets) => updateExercise(index, { sets, completed: false })} />
+                  <NumberField label="Reps reales" value={entry.reps} onChange={(reps) => updateExercise(index, { reps, completed: false })} />
+                  <NumberField label="Peso real kg" value={entry.weightKg} step="0.5" onChange={(weightKg) => updateExercise(index, { weightKg, completed: false })} />
                   <div className="border border-white/15 bg-black/40 p-2">
                     <span className="block text-[9px] font-black uppercase text-white/35">Tiempo</span>
                     <span className="mt-1 block font-mono text-lg font-black text-orange-200">{durationLabel(liveSeconds)}</span>
@@ -239,22 +217,12 @@ export default function PlanTrainingPanel({ os }: { os: MemberOs }) {
                     className="min-h-10 min-w-[220px] flex-1 border border-white/15 bg-black/40 px-3 text-sm font-semibold outline-none focus:border-[#d8ff3e]"
                   />
                 </div>
+                <button type="button" onClick={() => updateExercise(index, { completed: !entry.completed })} className={`mt-3 inline-flex min-h-11 items-center gap-2 border-[3px] px-3 text-xs font-black uppercase ${entry.completed ? "border-[#d8ff3e] bg-[#d8ff3e] text-black" : "border-white/20 text-white/70 hover:border-[#d8ff3e] hover:text-[#eaff93]"}`}>
+                  <Check className="h-4 w-4" /> {entry.completed ? "Ejercicio registrado" : "Marcar ejercicio listo"}
+                </button>
               </article>
             );
           })}
-
-          <div className="flex flex-col gap-2 border-[3px] border-dashed border-white/15 p-3 sm:flex-row">
-            <select
-              value={selectedMachine}
-              onChange={(event) => setSelectedMachine(event.target.value)}
-              className="min-h-11 flex-1 bg-white px-3 font-bold text-black"
-            >
-              {MACHINE_GUIDE.map((machine) => <option key={machine.id} value={machine.id}>{machine.name} · {machine.zone}</option>)}
-            </select>
-            <button type="button" onClick={addMachine} className="inline-flex min-h-11 items-center justify-center gap-2 bg-white px-4 font-black uppercase text-black hover:bg-[#d8ff3e]">
-              <Plus className="h-4 w-4" /> Agregar maquina
-            </button>
-          </div>
 
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => void savePlanWorkout(stopExerciseTimer())} className="inline-flex min-h-12 items-center justify-center gap-2 border-[3px] border-white/20 font-black uppercase text-white/70 hover:border-white/50">
@@ -321,5 +289,14 @@ function NumberField({ label, value, step = "1", onChange }: { label: string; va
       <span className="block text-[9px] font-black uppercase text-white/35">{label}</span>
       <input type="number" min="0" step={step} value={value} onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))} className="mt-1 w-full bg-transparent text-lg font-black outline-none" />
     </label>
+  );
+}
+
+function TargetValue({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div>
+      <span className="block text-[9px] font-black uppercase text-orange-200/60">{label}</span>
+      <span className="mt-1 block font-black text-orange-100">{value}</span>
+    </div>
   );
 }

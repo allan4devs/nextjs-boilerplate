@@ -27,6 +27,10 @@ export function sanitizeWorkoutExercises(input: unknown): WorkoutExerciseDetail[
       reps: Math.max(0, Math.min(500, Math.round(Number(raw.reps) || 0))),
       weightKg: Math.max(0, Math.min(1000, Math.round((Number(raw.weightKg) || 0) * 10) / 10)),
       seconds: Math.max(0, Math.min(8 * 60 * 60, Math.round(Number(raw.seconds) || 0))),
+      ...(Number.isFinite(Number(raw.prescribedSets)) ? { prescribedSets: Math.max(0, Math.min(20, Math.round(Number(raw.prescribedSets)))) } : {}),
+      ...(Number.isFinite(Number(raw.prescribedReps)) ? { prescribedReps: Math.max(0, Math.min(500, Math.round(Number(raw.prescribedReps)))) } : {}),
+      ...(Number.isFinite(Number(raw.prescribedWeightKg)) ? { prescribedWeightKg: Math.max(0, Math.min(1000, Math.round(Number(raw.prescribedWeightKg) * 10) / 10)) } : {}),
+      ...(Number.isFinite(Number(raw.prescribedSeconds)) ? { prescribedSeconds: Math.max(0, Math.min(8 * 60 * 60, Math.round(Number(raw.prescribedSeconds)))) } : {}),
       ...(Number.isFinite(Number(raw.targetSeconds)) ? { targetSeconds: Math.max(0, Math.min(8 * 60 * 60, Math.round(Number(raw.targetSeconds)))) } : {}),
       notes: String(raw.notes ?? "").trim().slice(0, 300),
     };

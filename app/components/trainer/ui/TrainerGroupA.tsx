@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle2, RefreshCw, Users } from "lucide-react";
 import { GameButton, GameLabel } from "@/app/components/GameOS";
 import {
   alignGroupExercise, normalizeGroupName, isGroupEquipmentAvailable,
-  type GroupDashboard, type GroupDay, type GroupExercise, type GroupLog, type GroupProfile, type GroupRoutine,
+  type GroupDashboard, type GroupDay, type GroupExercise, type GroupExercisePatch, type GroupLog, type GroupProfile, type GroupRoutine,
 } from "@/lib/xtreme/trainer-group-a-model";
 import type { TrainerMember } from "../types";
 
@@ -49,7 +49,7 @@ export function TrainerGroupA({ active, members, refreshKey, onDirtyChange, onBu
       if (body.action === "log") setDraftDirty(false);
       const fresh = await groupRequest() as GroupDashboard;
       // Mapping/link changes must not replace an unsaved session draft.
-      setData((current) => body.action === "log" || !current ? fresh : { ...current, mappings: fresh.mappings, links: fresh.links, inventory: fresh.inventory });
+      setData((current) => body.action === "log" || body.action === "exercise" || !current ? fresh : { ...current, mappings: fresh.mappings, links: fresh.links, inventory: fresh.inventory });
       setMessage({ error: false, text });
       return true;
     } catch (error) {
@@ -170,7 +170,8 @@ function SessionForm({ profile, day, date, data, saved, busy, setDirty, mutate }
   const markDirty = () => { setChanged(true); setDirty(true); };
   return <form className="mt-4" onSubmit={(e) => { e.preventDefault(); void mutate({ action: "log", profileId: profile.id, dayId: day.id, date, completedIds: checked, weights, note, revision: saved?.revision ?? 0 }, "Seguimiento guardado para esta persona y fecha."); }}>
     <div className="mb-3 flex flex-wrap justify-between gap-2"><h4 className="font-black uppercase">{day.focus}</h4><p className="text-sm text-cyan-200">{checked.length}/{day.exercises.length} realizados{changed ? " · Sin guardar" : saved ? " · Guardado" : ""}</p></div>
-    <div className="mt-3 overflow-x-auto border-2 border-white/15"><table className="w-full min-w-[920px] border-collapse text-left text-xs"><thead className="bg-white/[.06] text-[9px] font-black uppercase tracking-[.1em] text-white/50"><tr className="border-b-2 border-white/15"><th className="w-10 px-2 py-2">OK</th><th className="px-2 py-2">Grupo muscular</th><th className="px-2 py-2">Ejercicio</th><th className="px-2 py-2">Equipo / unidad</th><th className="w-16 px-2 py-2">Maq #</th><th className="w-14 px-2 py-2">Sets</th><th className="w-14 px-2 py-2">Reps</th><th className="w-24 px-2 py-2">Tiempo</th><th className="w-28 px-2 py-2">Carga kg</th></tr></thead><tbody>{day.exercises.map((exercise, index) => <ExerciseRow key={exercise.id} exercise={exercise} index={index} data={data} busy={busy} checked={checked.includes(exercise.id)} weight={weights[exercise.id] ?? null} onCheck={(value) => { markDirty(); setChecked((current) => value ? [...new Set([...current, exercise.id])] : current.filter((id) => id !== exercise.id)); }} onWeight={(value) => { markDirty(); setWeights((current) => ({ ...current, [exercise.id]: value })); }} mutate={mutate} />)}</tbody></table></div>
+    <div className="mt-3 overflow-x-auto border-2 border-white/15"><table className="w-full min-w-[1040px] border-collapse text-left text-xs"><thead className="bg-white/[.06] text-[9px] font-black uppercase tracking-[.1em] text-white/50"><tr className="border-b-2 border-white/15"><th className="w-10 px-2 py-2">OK</th><th className="min-w-32 px-2 py-2">Grupo muscular</th><th className="min-w-44 px-2 py-2">Ejercicio</th><th className="min-w-56 px-2 py-2">Equipo / unidad</th><th className="w-20 px-2 py-2">Maq #</th><th className="w-16 px-2 py-2">Sets</th><th className="w-16 px-2 py-2">Reps</th><th className="w-28 px-2 py-2">Tiempo</th><th className="w-28 px-2 py-2">Carga kg</th></tr></thead><tbody>{day.exercises.map((exercise, index) => <ExerciseRow key={exercise.id} exercise={exercise} index={index} data={data} busy={busy} checked={checked.includes(exercise.id)} weight={weights[exercise.id] ?? null} onCheck={(value) => { markDirty(); setChecked((current) => value ? [...new Set([...current, exercise.id])] : current.filter((id) => id !== exercise.id)); }} onWeight={(value) => { markDirty(); setWeights((current) => ({ ...current, [exercise.id]: value })); }} mutate={mutate} />)}</tbody></table></div>
+    <details className="mt-3 border border-white/15 bg-black/20 p-3"><summary className="cursor-pointer text-[10px] font-black uppercase tracking-[.12em] text-cyan-200">Editar nombre y equipo de las filas</summary><div className="mt-3 grid gap-2 sm:grid-cols-2">{day.exercises.map((exercise) => { const edit = data.routineEdits.find((entry) => entry.exerciseId === exercise.id); const savePatch = (patch: GroupExercisePatch) => void mutate({ action: "exercise", exerciseId: exercise.id, patch, revision: edit?.revision ?? 0 }, "Valor de la rutina actualizado."); return <div key={exercise.id} className="grid gap-2 border border-white/10 p-2 sm:grid-cols-2"><InlineText value={exercise.name} ariaLabel={`Nombre editable de ${exercise.name}`} disabled={busy} onCommit={(value) => savePatch({ name: value })} /><InlineText value={exercise.equipment} ariaLabel={`Equipo editable de ${exercise.name}`} disabled={busy} onCommit={(value) => savePatch({ equipment: value })} /></div>; })}</div></details>
     <label className="mt-4 block text-xs text-white/60">Observación del entrenador<textarea rows={3} maxLength={2000} className={`${field} mt-1`} disabled={busy} value={note} onChange={(e) => { markDirty(); setNote(e.target.value); }} placeholder="Técnica, avances, dificultades y próximo paso" /></label>
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-white/40">Registrar acá conserva el plan y el historial del socio en Member OS.</p><GameButton type="submit" disabled={busy || !date || !changed || (!checked.length && !note.trim())}><CheckCircle2 className="h-4 w-4" />{busy ? "Guardando..." : saved ? "Actualizar seguimiento" : "Guardar seguimiento"}</GameButton></div>
   </form>;
@@ -181,14 +182,28 @@ function ExerciseRow({ exercise, index, data, busy, checked, weight, onCheck, on
   onCheck: (checked: boolean) => void; onWeight: (weight: number | null) => void; mutate: Mutate;
 }) {
   const mapping = data.mappings.find((m) => m.exerciseId === exercise.id);
+  const edit = data.routineEdits.find((entry) => entry.exerciseId === exercise.id);
   const alignment = alignGroupExercise(exercise, data.inventory, mapping);
   const pending = alignment.status === "review" || alignment.status === "unavailable";
+  const savePatch = (patch: GroupExercisePatch) => mutate({ action: "exercise", exerciseId: exercise.id, patch, revision: edit?.revision ?? 0 }, "Valor de la rutina actualizado.");
   return <tr className={`border-b border-white/10 align-middle ${pending ? "bg-orange-300/[.05]" : "bg-black/20"}`}>
     <td className="px-2 py-2"><input aria-label={`Realizado: ${exercise.name}, ejercicio ${index + 1}`} type="checkbox" className="h-5 w-5 accent-cyan-300" checked={checked} disabled={busy || (pending && !checked)} onChange={(e) => onCheck(e.target.checked)} /></td>
-    <td className="px-2 py-2 font-bold text-white/65">{exercise.muscle}</td>
+    <td className="px-2 py-2"><InlineText value={exercise.muscle} ariaLabel={`Grupo muscular para ${exercise.name}`} disabled={busy} onCommit={(value) => void savePatch({ muscle: value })} /></td>
     <td className="px-2 py-2"><span className="font-bold">{index + 1}. {exercise.name}</span><span className="block text-[10px] text-white/35">PDF pág. {exercise.sourcePage}{alignment.issues.length ? " · revisar" : ""}</span></td>
     <td className="min-w-56 px-2 py-2">{alignment.candidates.length > 0 ? <select aria-label={`Unidad para ${exercise.name}`} className="min-h-9 w-full border border-white/20 bg-[#111] px-2 text-[11px] text-white outline-none focus:border-cyan-300" value={alignment.asset?.id ?? ""} disabled={busy} onChange={(e) => { if (e.target.value) void mutate({ action: "mapping", exerciseId: exercise.id, assetId: e.target.value, revision: mapping?.revision ?? 0 }, "Máquina vinculada a la rutina."); }}><option value="">Elegí unidad</option>{alignment.candidates.map((asset) => <option key={asset.id} value={asset.id} disabled={!isGroupEquipmentAvailable(asset)}>{asset.code} · {asset.name}</option>)}</select> : <span className="text-white/55">{exercise.equipment || "Sin equipo"}</span>}{alignment.asset && <Link href={`/maquinas/equipo/${encodeURIComponent(alignment.asset.id)}`} target="_blank" rel="noopener noreferrer" className="mt-1 block text-[10px] text-cyan-200 underline">Ficha de {alignment.asset.code} ↗</Link>}</td>
-    <td className="px-2 py-2 text-white/60">{exercise.sourceMachine || "-"}</td><td className="px-2 py-2 font-bold">{exercise.sets ?? "-"}</td><td className="px-2 py-2 font-bold">{exercise.reps ?? "-"}</td><td className="px-2 py-2 italic text-white/70">{exercise.time || "-"}</td>
+    <td className="px-2 py-2"><InlineText value={exercise.sourceMachine} ariaLabel={`Número de máquina para ${exercise.name}`} disabled={busy} onCommit={(value) => void savePatch({ sourceMachine: value })} /></td><td className="px-2 py-2"><InlineNumber value={exercise.sets} ariaLabel={`Series para ${exercise.name}`} disabled={busy} onCommit={(value) => void savePatch({ sets: value })} /></td><td className="px-2 py-2"><InlineNumber value={exercise.reps} ariaLabel={`Repeticiones para ${exercise.name}`} disabled={busy} onCommit={(value) => void savePatch({ reps: value })} /></td><td className="px-2 py-2"><InlineText value={exercise.time} ariaLabel={`Tiempo para ${exercise.name}`} disabled={busy} onCommit={(value) => void savePatch({ time: value })} /></td>
     <td className="px-2 py-2"><input aria-label={`Carga real para ${exercise.name}`} type="number" min={0} max={1000} step="0.5" className="min-h-9 w-24 border border-white/20 bg-[#111] px-2 text-xs text-white outline-none focus:border-cyan-300" disabled={busy} value={weight ?? ""} placeholder="-" onChange={(e) => onWeight(e.target.value === "" ? null : Number(e.target.value))} /></td>
   </tr>;
+}
+
+function InlineText({ value, ariaLabel, disabled, onCommit }: { value: string; ariaLabel: string; disabled: boolean; onCommit: (value: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  return <input aria-label={ariaLabel} className="min-h-9 w-full min-w-20 border border-white/20 bg-[#111] px-2 text-[11px] text-white outline-none focus:border-cyan-300 disabled:opacity-40" disabled={disabled} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={() => { if (draft.trim() !== value) onCommit(draft.trim()); }} />;
+}
+
+function InlineNumber({ value, ariaLabel, disabled, onCommit }: { value: number | null; ariaLabel: string; disabled: boolean; onCommit: (value: number | null) => void }) {
+  const [draft, setDraft] = useState(value === null ? "" : String(value));
+  useEffect(() => setDraft(value === null ? "" : String(value)), [value]);
+  return <input aria-label={ariaLabel} type="number" min={0} max={500} className="min-h-9 w-16 border border-white/20 bg-[#111] px-2 text-[11px] text-white outline-none focus:border-cyan-300 disabled:opacity-40" disabled={disabled} value={draft} placeholder="-" onChange={(event) => setDraft(event.target.value)} onBlur={() => { const next = draft.trim() === "" ? null : Math.max(0, Math.min(500, Math.round(Number(draft) || 0))); if (next !== value) onCommit(next); }} />;
 }

@@ -31,6 +31,11 @@ export type WorkoutExerciseDetail = {
   reps: number;
   weightKg: number;
   seconds: number;
+  /** Valores que el entrenador indicó; los campos anteriores son el resultado real. */
+  prescribedSets?: number;
+  prescribedReps?: number;
+  prescribedWeightKg?: number;
+  prescribedSeconds?: number;
   targetSeconds?: number;
   notes: string;
 };

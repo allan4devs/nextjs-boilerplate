@@ -3,6 +3,8 @@ export type GroupExercise = {
   id: string; muscle: string; name: string; equipment: string; sourceMachine: string;
   sets: number | null; reps: number | null; time: string; sourcePage: number;
 };
+export type GroupExercisePatch = Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time">>;
+export type GroupExerciseEdit = { exerciseId: string; revision: number };
 export type GroupDay = { id: string; label: string; focus: string; exercises: GroupExercise[] };
 export type GroupRoutine = {
   id: string; sourceFile: string; objective: string; startDate: string; endDate: string;
@@ -30,7 +32,7 @@ export type GroupLog = {
 };
 export type GroupDashboard = {
   date: string; profiles: GroupProfile[]; routines: GroupRoutine[]; inventory: GroupEquipment[];
-  mappings: GroupMapping[]; links: GroupLink[]; logs: GroupLog[];
+  mappings: GroupMapping[]; links: GroupLink[]; logs: GroupLog[]; routineEdits: GroupExerciseEdit[];
 };
 export function normalizeGroupName(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();

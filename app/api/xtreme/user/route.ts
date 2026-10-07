@@ -820,9 +820,13 @@ export async function PATCH(req: NextRequest) {
             ...(exercise.machineLocation ? { machineLocation: exercise.machineLocation } : {}),
             ...(exercise.machineFloor ? { machineFloor: exercise.machineFloor } : {}),
             exerciseName: exercise.exerciseName,
-            sets: exercise.sets,
-            reps: exercise.reps,
-            weightKg: exercise.weightKg || preference?.favoriteWeightKg || preference?.lastWeightKg || 0,
+            prescribedSets: exercise.sets,
+            prescribedReps: exercise.reps,
+            prescribedWeightKg: exercise.weightKg,
+            prescribedSeconds: exercise.targetSeconds,
+            sets: 0,
+            reps: 0,
+            weightKg: 0,
             seconds: 0,
             targetSeconds: exercise.targetSeconds || preference?.favoriteSeconds || preference?.lastSeconds || 0,
             notes: exercise.notes,
@@ -880,7 +884,7 @@ export async function PATCH(req: NextRequest) {
       const exercises = body.exercises === undefined
         ? active.exercises
         : preservePhysicalMachineIdentity(sanitizeWorkoutExercises(body.exercises), active.exercises);
-      if (exercises.some((exercise) => exercise.completed !== undefined) && exercises.some((exercise) => !exercise.completed || !((exercise.sets > 0 && exercise.reps > 0) || exercise.seconds > 0))) return NextResponse.json({ error: "Completá y registrá cada ejercicio antes de finalizar." }, { status: 400 });
+      if (!exercises.length || exercises.some((exercise) => !exercise.completed || !((exercise.sets > 0 && exercise.reps > 0) || exercise.seconds > 0))) return NextResponse.json({ error: "Completá y registrá cada ejercicio antes de finalizar." }, { status: 400 });
       const startedAt = new Date(active.startedAt);
       const elapsedMinutes = Math.max(1, Math.min(240, Math.round((Date.now() - startedAt.getTime()) / 60_000)));
       const previouslySaved = member.workouts.find((workout) => workout.planItemId === active.planItemId && workout.startedAt && new Date(workout.startedAt).getTime() === startedAt.getTime());

@@ -12,6 +12,7 @@ import {
   Camera,
   CreditCard,
   Goal,
+  HeartPulse,
   HelpCircle,
   Loader2,
   Pin,
@@ -24,6 +25,7 @@ import {
 import { GameButton } from "../../GameOS";
 import Avatar from "../Avatar";
 import MemberQrCode from "../MemberQrCode";
+import MemberHealthForm from "../MemberHealthForm";
 import PanelHub, { type HubPanel } from "../PanelHub";
 import PaymentHistory from "../PaymentHistory";
 import PushNotificationsCard from "../PushNotificationsCard";
@@ -232,6 +234,14 @@ export default function PerfilTab({ os }: { os: MemberOs }) {
           </GameButton>
         </div>
       ),
+    },
+    {
+      id: "salud",
+      label: "Ficha de salud",
+      hint: "La completás vos",
+      icon: HeartPulse,
+      tone: "cyan",
+      content: <MemberHealthForm unlocked={unlocked} />,
     },
     {
       id: "badges",
