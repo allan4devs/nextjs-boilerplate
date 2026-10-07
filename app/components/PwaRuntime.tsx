@@ -8,12 +8,9 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
-/** Solo Member OS y Reception OS muestran el banner de instalar. */
+/** La instalación guiada está disponible únicamente en Trainer OS. */
 function isInstallSurface(pathname: string) {
   if (pathname === "/entrenador" || pathname.startsWith("/entrenador/")) return true;
-  if (pathname === "/app" || pathname.startsWith("/app/")) return true;
-  if (pathname === "/recepcion" || pathname.startsWith("/recepcion/")) return true;
-  if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) return true;
   return false;
 }
 
@@ -118,7 +115,7 @@ export default function PwaRuntime() {
     return () => window.removeEventListener("beforeinstallprompt", onInstallPrompt);
   }, []);
 
-  // Decidir si mostrar el banner únicamente en superficies operativas.
+  // Decidir si mostrar el banner únicamente en Trainer OS.
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (!onOsSurface) {
