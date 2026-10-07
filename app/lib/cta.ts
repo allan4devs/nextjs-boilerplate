@@ -3,9 +3,8 @@ import { XTREME_CHECKOUT_OPTIONS } from "@/lib/constants/checkout";
 /**
  * Fuente única de los destinos de conversión del sitio público.
  *
- * Regla: todo CTA de servicio termina en una superficie donde se puede pagar o
- * registrarse dentro del sitio. WhatsApp y teléfono quedan como apoyo, nunca
- * como el único camino de un servicio que sí se puede contratar en línea.
+ * Regla: los planes se coordinan por WhatsApp. El sitio conserva la selección
+ * de opciones y el primer día gratis, pero no procesa cobros en línea.
  */
 
 export type CtaLocale = "es" | "en";
@@ -45,17 +44,17 @@ export const CTA_COPY: Record<
   { pay: string; free: string; support: string; trust: readonly string[] }
 > = {
   es: {
-    pay: "Inscribirme y pagar",
+    pay: "Consultar por WhatsApp",
     free: "Primer día gratis",
     support:
-      "Elegí tu plan y pagá en línea desde esta misma página: el acceso queda activo apenas se confirma el cobro.",
-    trust: ["Pago en línea seguro", "Acceso al confirmar", "Sin contratos"],
+      "Elegí tu plan y escribinos por WhatsApp; recepción te ayuda a completar la inscripción.",
+    trust: ["Atención por WhatsApp", "Planes claros", "Sin contratos"],
   },
   en: {
-    pay: "Join and pay online",
+    pay: "Ask on WhatsApp",
     free: "Free first day",
     support:
-      "Pick your plan and pay online right here: your access is active as soon as the payment is confirmed.",
-    trust: ["Secure online payment", "Access on confirmation", "No contracts"],
+      "Pick your plan and message us on WhatsApp; reception will help you complete your membership.",
+    trust: ["WhatsApp support", "Clear plans", "No contracts"],
   },
 };

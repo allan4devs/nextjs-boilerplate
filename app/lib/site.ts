@@ -238,9 +238,9 @@ export const FAQS = [
       "Sí. Tu primer día es gratis: registrate con tu correo, completá el perfil y el PIN, y presentate en el gym. Después podés elegir semana, quincena o mensualidad.",
   },
   {
-    question: "¿Cómo pago mi plan?",
+    question: "¿Cómo activo mi plan?",
     answer:
-      "En línea desde Precios o desde la app: elegís día, semana, quincena o mes, pagás de forma segura y el acceso se activa al confirmar el cobro.",
+      "Elegí día, semana, quincena o mes y escribinos por WhatsApp. Recepción te indica cómo completar la inscripción y activar el acceso.",
   },
   {
     question: "¿La clase de adultos mayores es para principiantes?",
@@ -273,9 +273,9 @@ export const FAQS = [
       "Ropa cómoda, tenis de entrenamiento, toalla y botella de agua. Con eso ya podés hacer tu primera sesión sin problema.",
   },
   {
-    question: "¿Puedo pagar en línea?",
+    question: "¿Puedo activar mi plan por WhatsApp?",
     answer:
-      "Sí. Entrá a Precios o usá el checkout dentro de la app, elegí el plan y completá el pago en línea.",
+      "Sí. Entrá a Precios o a la app, elegí el plan y tocá el botón de WhatsApp para coordinarlo con recepción.",
   },
   {
     question: "¿Cuál es el horario del gimnasio?",

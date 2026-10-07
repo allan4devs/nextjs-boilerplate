@@ -9,7 +9,7 @@ import { ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
 export const metadata: Metadata = pageMetadata({
   title: "Precios y planes",
   description:
-    "Costos de Xtreme Gym en Ciudad Quesada: primer día gratis, semana, quincena y mensualidad. Inscripción y pago en línea.",
+    "Costos de Xtreme Gym en Ciudad Quesada: primer día gratis, semana, quincena y mensualidad. Inscripción por WhatsApp.",
   path: "/precios",
 });
 

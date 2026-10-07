@@ -67,7 +67,7 @@ const FAQ = [
   ["What member benefits are available?", "Members have instructor support, free body assessments, customer parking, a snack area, equipment variety and a kids area, subject to availability and gym policies."],
   ["Does the kids area include childcare?", "No. It is a space designed for children, but they must remain supervised by their responsible adult."],
   ["Can I try the gym for one day?", "Yes. Your first day is free after registration, so you can experience the gym before choosing a plan."],
-  ["Can I pay online?", "Yes. Weekly, fortnightly and monthly plans can be paid online from our prices page."],
+  ["How do I activate a plan?", "Choose weekly, fortnightly or monthly and message reception on WhatsApp to complete your membership."],
   ["Do I need previous experience?", "No. Beginners are welcome and our team can guide you through the equipment and training areas."],
   ["What should I bring?", "Comfortable workout clothes, training shoes, a towel and a water bottle."],
   ["Are senior classes beginner-friendly?", "Yes. Classes focus on safe mobility, gradual strength, balance and confidence."],
@@ -87,7 +87,7 @@ function TrainingPage() {
 function PricesPage() {
   return (
     <>
-      <PageHero eyebrow="Memberships" title="Flexible plans." highlight="No guesswork." text="Choose the amount of time that works for you. Pay online or speak with reception if you need help." image="/xtreme/piso-maquinas-panoramica.webp" imageAlt="Gym training floor" />
+      <PageHero eyebrow="Memberships" title="Flexible plans." highlight="No guesswork." text="Choose the amount of time that works for you, then message reception on WhatsApp." image="/xtreme/piso-maquinas-panoramica.webp" imageAlt="Gym training floor" />
       <section className="px-5 py-16 sm:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -95,7 +95,7 @@ function PricesPage() {
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6c400]">Prices</p>
               <h2 className="mt-2 text-3xl font-black uppercase leading-none sm:text-4xl">Current options.</h2>
               <p className="mt-2 max-w-2xl text-sm font-semibold text-white/58">
-                Start free, then choose a week, fortnight or month. Paid plans are activated securely with online checkout.
+                Start free, then choose a week, fortnight or month. Message reception on WhatsApp to activate your plan.
               </p>
             </div>
             <a href="#inscripcion" className="inline-flex min-h-12 items-center gap-2 bg-[#f6c400] px-5 font-black uppercase text-black transition hover:bg-white">
@@ -146,7 +146,7 @@ function PricesPage() {
           <div className="mt-8 flex items-start gap-3 border border-[#f6c400]/40 bg-[#f6c400]/10 p-5">
             <ShieldCheck className="h-6 w-6 shrink-0 text-[#f6c400]" />
             <p className="font-bold text-white/70">
-              Online checkout is processed securely. Your first free day stays outside the payment flow.
+              Plan activation is coordinated by reception on WhatsApp. Your first free day stays available outside that process.
             </p>
           </div>
         </div>
@@ -157,7 +157,7 @@ function PricesPage() {
       <CtaBand
         locale="en"
         eyebrow="Find your plan"
-        title="Try your first day free or join today with instant online checkout."
+        title="Try your first day free or message us to join today."
         href="#inscripcion"
       />
     </>

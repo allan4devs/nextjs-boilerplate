@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { AlertTriangle, CheckCircle2, Dumbbell, Gauge, Loader2, Lock, LogOut, RefreshCw, Target, UserRound, Users, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Dumbbell, Gauge, Loader2, Lock, LogOut, RefreshCw, Target, UserRound, Users, Zap } from "lucide-react";
 import { GameButton, GameLabel } from "@/app/components/GameOS";
+import StaffThemeToggle from "@/app/components/StaffThemeToggle";
 import { TRAINER_TABS } from "./constants";
 import { useTrainerOs } from "./hooks/useTrainerOs";
 import { TrainerOverview } from "./ui/TrainerOverview";
@@ -27,31 +28,32 @@ export default function TrainerOs() {
     <header className="sticky top-0 z-40 border-b-[3px] border-cyan-300/35 bg-[#050505]/95 backdrop-blur">
       <div className="mx-auto flex max-w-[1680px] flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-6">
         <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center bg-cyan-300 text-black"><Dumbbell className="h-6 w-6" /></span><div><GameLabel tone="cyan">Trainer OS 2.0</GameLabel><h1 className="text-lg font-black uppercase sm:text-2xl">Centro de rendimiento</h1>{os.staffName && <p className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">Sesión de {os.staffName}</p>}</div></div>
-        <div className="flex gap-2"><button onClick={() => void os.refresh()} disabled={os.checking} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase transition hover:border-cyan-300 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${os.checking ? "animate-spin" : ""}`} /> Actualizar</button><button onClick={() => void os.logout()} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase text-white/45 transition hover:border-red-300 hover:text-red-200"><LogOut className="h-4 w-4" /> Salir</button></div>
+        <div className="flex flex-wrap justify-end gap-2"><StaffThemeToggle />{os.memberFocus && <button onClick={os.leaveMember} disabled={os.healthBusy || os.groupBusy} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-cyan-300/50 px-3 text-[10px] font-black uppercase text-cyan-200 transition hover:border-cyan-300"><ArrowLeft className="h-4 w-4" /> Socios</button>}<button onClick={() => void os.refresh()} disabled={os.checking} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase transition hover:border-cyan-300 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${os.checking ? "animate-spin" : ""}`} /> Actualizar</button><button onClick={() => void os.logout()} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase text-white/45 transition hover:border-red-300 hover:text-red-200"><LogOut className="h-4 w-4" /> Salir</button></div>
       </div>
     </header>
 
     <div className="mx-auto max-w-[1680px] p-3 sm:p-4 lg:p-6">
-      <section className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
+      {!os.memberFocus && <section className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
         <Kpi icon={Users} label="Socios" value={os.stats.total} hint={`${os.stats.withPlan} con plan`} />
         <Kpi icon={AlertTriangle} label="Necesitan atención" value={os.stats.needsAttention} hint="prioridades y sesiones en vivo" tone="orange" />
         <Kpi icon={Zap} label="Entrenando ahora" value={os.stats.activeNow} hint="sesiones en vivo" tone="cyan" />
         <Kpi icon={Target} label="Sin plan" value={os.stats.withoutPlan} hint="por prescribir" tone="red" />
         <Kpi icon={Gauge} label="Progreso promedio" value={`${os.stats.averageProgress}%`} hint="planes asignados" tone="lime" wide />
-      </section>
+      </section>}
 
     
-      <TrainerProgramsPanel os={os} />
-      <nav aria-label="Área de trabajo del entrenador" className="my-4 flex flex-wrap gap-2">
+      {!os.memberFocus && <TrainerProgramsPanel os={os} />}
+      {!os.memberFocus && <nav aria-label="Área de trabajo del entrenador" className="my-4 flex flex-wrap gap-2">
         <GameButton variant={os.groupActive ? "ghost" : "cyan"} disabled={os.healthBusy || os.groupBusy} aria-pressed={!os.groupActive} onClick={() => os.setGroupActive(false)}>Socios y planes</GameButton>
         <GameButton variant={os.groupActive ? "cyan" : "ghost"} disabled={os.healthBusy || os.groupBusy} aria-pressed={os.groupActive} onClick={() => os.setGroupActive(true)}>Grupo A</GameButton>
-      </nav>
-      <div hidden={!os.groupActive}>
+      </nav>}
+      {!os.memberFocus && <div hidden={!os.groupActive}>
         <TrainerGroupA active={os.groupActive} members={os.members} refreshKey={os.groupRefresh} onDirtyChange={os.setGroupDirty} onBusyChange={os.setGroupBusy} onOpenMember={os.chooseMember} />
-      </div>
-      <div className={os.groupActive ? "hidden" : "grid min-h-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]"}>
-        <TrainerRoster os={os} />
-        {os.selected ? <section className="min-w-0 space-y-4">
+      </div>}
+      <div className={os.memberFocus ? "space-y-4" : os.groupActive ? "hidden" : "grid min-h-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]"}>
+        {!os.memberFocus && <TrainerRoster os={os} />}
+        {os.memberFocus && os.selected ? <section className="min-w-0 space-y-4">
+          <button type="button" onClick={os.leaveMember} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase text-white/55 transition hover:border-cyan-300 hover:text-cyan-200"><ArrowLeft className="h-4 w-4" /> Volver a socios</button>
           <MemberHeader os={os} />
           {os.notice && <div className={`flex items-center gap-3 border-[3px] p-3 text-sm font-bold ${os.notice.tone === "success" ? "border-[#d8ff3e]/45 bg-[#d8ff3e]/10 text-[#eaff93]" : "border-red-400/45 bg-red-500/10 text-red-200"}`}>{os.notice.tone === "success" ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertTriangle className="h-5 w-5 shrink-0" />}{os.notice.text}</div>}
           <nav className="flex gap-2 overflow-x-auto border-[3px] border-white/10 bg-[#0c0c0c] p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{TRAINER_TABS.map((entry) => <button key={entry.id} onClick={() => os.setTab(entry.id)} className={`min-h-11 shrink-0 border-[3px] px-4 text-[10px] font-black uppercase transition ${os.tab === entry.id ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/10 text-white/45 hover:border-white/30"}`}>{entry.label}{entry.id === "plan" && os.dirty ? " •" : ""}</button>)}</nav>

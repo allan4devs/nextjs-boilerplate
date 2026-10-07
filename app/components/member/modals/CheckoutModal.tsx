@@ -1,12 +1,12 @@
 "use client";
 
-import { CreditCard } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import ExtremeGymCheckout from "@/app/ExtremeGymCheckout";
 import { GameModal } from "../../GameOS";
 import type { Member } from "../types";
 
 export type CheckoutModalProps = {
-  /** Plan a cobrar. `null` cierra el modal: sin plan no hay nada que pagar. */
+  /** Plan a consultar. `null` cierra el modal. */
   planId: string | null;
   onClose: () => void;
   member: Member;
@@ -14,7 +14,7 @@ export type CheckoutModalProps = {
 };
 
 /**
- * Pago del plan sin salir del Member OS.
+ * Contacto para activar el plan sin salir del Member OS.
  *
  * El checkout se monta solo cuando hay un plan elegido, y con `key={planId}`
  * para que cambiar de plan arranque un checkout limpio en vez de reutilizar el
@@ -25,9 +25,9 @@ export function CheckoutModal({ planId, onClose, member, onSuccess }: CheckoutMo
     <GameModal
       open={planId !== null}
       onClose={onClose}
-      title="Activar acceso"
-      subtitle="Pago en línea · sin salir del Member OS"
-      icon={CreditCard}
+      title="Activar acceso por WhatsApp"
+      subtitle="Coordiná tu plan con recepción"
+      icon={MessageCircle}
       tone="lime"
       size="full"
     >

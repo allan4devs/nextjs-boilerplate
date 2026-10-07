@@ -1,0 +1,36 @@
+{
+  "name": "Xtreme Trainer OS",
+  "short_name": "Trainer OS",
+  "description": "Superficie de trabajo de entrenadores de Xtreme Gym para gestionar socios, planes y seguimiento.",
+  "id": "/entrenador",
+  "start_url": "/entrenador",
+  "scope": "/entrenador",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#050505",
+  "theme_color": "#67e8f9",
+  "lang": "es-CR",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "fitness"],
+  "icons": [
+    {
+      "src": "/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -55,6 +55,7 @@ export function useTrainerOs() {
   const [programs, setPrograms] = useState<TrainerProgram[]>([]);
   const [agendaDate, setAgendaDate] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
+  const [memberFocus, setMemberFocus] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TrainerFilter>("attention");
   const [tab, setTab] = useState<TrainerTab>("overview");
@@ -207,6 +208,7 @@ export function useTrainerOs() {
     setPrograms([]);
     setAgendaDate("");
     setSelectedKey("");
+    setMemberFocus(false);
     setDirty(false);
     setHealthDirty(false);
     setGroupDirty(false);
@@ -215,13 +217,22 @@ export function useTrainerOs() {
 
   const chooseMember = useCallback((key: string) => {
     if (healthBusy || groupBusy) return;
-    if (key === selectedKey) { setGroupActive(false); return; }
+    if (key === selectedKey) { setGroupActive(false); setMemberFocus(true); return; }
     if ((dirty || healthDirty) && !window.confirm("¿Cambiar de socio y descartar los cambios sin guardar?")) return;
     setHealthDirty(false);
     setSelectedKey(key);
+    setMemberFocus(true);
     setTab("overview");
     setGroupActive(false);
   }, [dirty, healthDirty, healthBusy, groupBusy, selectedKey]);
+
+  const leaveMember = useCallback(() => {
+    if (healthBusy || groupBusy) return;
+    if ((dirty || healthDirty) && !window.confirm("¿Salir de esta ficha y descartar los cambios sin guardar?")) return;
+    setHealthDirty(false);
+    setMemberFocus(false);
+    setGroupActive(false);
+  }, [dirty, healthDirty, healthBusy, groupBusy]);
 
   const refresh = useCallback(async () => {
     if (healthBusy || groupBusy) return;
@@ -473,10 +484,10 @@ export function useTrainerOs() {
   return {
     checking, authenticated, code, setCode, staffName, members, todayClasses, agendaDate,
     equipment, programs,
-    selected, selectedSignal, stats,
+    selected, selectedSignal, stats, memberFocus,
     query, setQuery, filter, setFilter, filteredMembers, tab, setTab, draft, coachName,
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
-    saving, assigningPrograms, dirty, validationError, login, logout, refresh, chooseMember, updateDraft,
+    saving, assigningPrograms, dirty, validationError, login, logout, refresh, chooseMember, leaveMember, updateDraft,
     healthDirty, setHealthDirty, healthBusy, setHealthBusy, healthRefresh,
     groupActive, setGroupActive, groupDirty, setGroupDirty, groupBusy, setGroupBusy, groupRefresh,
     updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise, selectExerciseMachine,

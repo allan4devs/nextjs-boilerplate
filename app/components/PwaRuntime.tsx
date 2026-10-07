@@ -10,6 +10,7 @@ type InstallPromptEvent = Event & {
 
 /** Solo Member OS y Reception OS muestran el banner de instalar. */
 function isInstallSurface(pathname: string) {
+  if (pathname === "/entrenador" || pathname.startsWith("/entrenador/")) return true;
   if (pathname === "/app" || pathname.startsWith("/app/")) return true;
   if (pathname === "/recepcion" || pathname.startsWith("/recepcion/")) return true;
   if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) return true;
@@ -17,6 +18,9 @@ function isInstallSurface(pathname: string) {
 }
 
 function dismissKeyFor(pathname: string) {
+  if (pathname === "/entrenador" || pathname.startsWith("/entrenador/")) {
+    return "xtreme-pwa-install-dismissed-trainer";
+  }
   if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) {
     return "xtreme-pwa-install-dismissed-ingreso";
   }
@@ -27,6 +31,9 @@ function dismissKeyFor(pathname: string) {
 }
 
 function visitsKeyFor(pathname: string) {
+  if (pathname === "/entrenador" || pathname.startsWith("/entrenador/")) {
+    return "xtreme-pwa-visits-trainer";
+  }
   if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) {
     return "xtreme-pwa-visits-ingreso";
   }
@@ -37,6 +44,9 @@ function visitsKeyFor(pathname: string) {
 }
 
 function sessionKeyFor(pathname: string) {
+  if (pathname === "/entrenador" || pathname.startsWith("/entrenador/")) {
+    return "xtreme-pwa-visit-counted-trainer";
+  }
   if (pathname === "/ingreso" || pathname.startsWith("/ingreso/")) {
     return "xtreme-pwa-visit-counted-ingreso";
   }
@@ -53,6 +63,7 @@ export default function PwaRuntime() {
   const promptRef = useRef<InstallPromptEvent | null>(null);
   const isIos = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
   const onOsSurface = isInstallSurface(pathname);
+  const isTrainer = pathname === "/entrenador" || pathname.startsWith("/entrenador/");
   const isReception = pathname === "/recepcion" || pathname.startsWith("/recepcion/");
   const isIngreso = pathname === "/ingreso" || pathname.startsWith("/ingreso/");
 
@@ -107,7 +118,7 @@ export default function PwaRuntime() {
     return () => window.removeEventListener("beforeinstallprompt", onInstallPrompt);
   }, []);
 
-  // Decidir si mostrar el banner solo en /app y /recepcion.
+  // Decidir si mostrar el banner únicamente en superficies operativas.
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (!onOsSurface) {
@@ -128,7 +139,7 @@ export default function PwaRuntime() {
       localStorage.setItem(visitsKey, String(visits));
       sessionStorage.setItem(sessionKey, "1");
 
-      if (visits < 2) {
+      if (visits < 2 && !isTrainer) {
         setShowInstall(false);
         return;
       }
@@ -160,12 +171,14 @@ export default function PwaRuntime() {
   return (
     <aside className="xg-safe-bottom fixed bottom-20 left-3 right-3 z-[70] mx-auto max-h-[calc(100dvh-6rem)] max-w-md overflow-y-auto border border-[#f6c400]/50 bg-[#111] p-5 text-white shadow-2xl sm:left-4 sm:right-4 md:bottom-5">
       <p className="text-xs font-black uppercase tracking-[.18em] text-[#f6c400]">
-        {isIngreso ? "Ingreso OS" : isReception ? "Reception OS" : "Member OS"}
+        {isTrainer ? "Trainer OS" : isIngreso ? "Ingreso OS" : isReception ? "Reception OS" : "Member OS"}
       </p>
-      <p className="mt-2 font-black uppercase">
+      {isTrainer && <p className="mt-2 font-black uppercase">Instalar Trainer OS</p>}
+      <p className={`mt-2 font-black uppercase ${isTrainer ? "hidden" : ""}`}>
         {isIngreso ? "Instalá Ingreso OS" : isReception ? "Instalá Reception OS" : "Instalá la app de socios"}
       </p>
-      <p className="mt-2 text-sm font-semibold leading-6 text-white/60">
+      {isTrainer && <p className="mt-2 text-sm font-semibold leading-6 text-white/60">Dejá Trainer OS como una app independiente para trabajar con tus socios.</p>}
+      <p className={`mt-2 text-sm font-semibold leading-6 text-white/60 ${isTrainer ? "hidden" : ""}`}>
         {isIos
           ? "Tocá Compartir y luego 'Agregar a pantalla de inicio'."
           : isIngreso
