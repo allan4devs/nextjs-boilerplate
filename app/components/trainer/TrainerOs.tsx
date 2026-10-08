@@ -10,6 +10,7 @@ import { TRAINER_TABS } from "./constants";
 import { useTrainerOs } from "./hooks/useTrainerOs";
 import { TrainerOverview } from "./ui/TrainerOverview";
 import { TrainerRoster } from "./ui/TrainerRoster";
+import { TrainerGroupMembershipPanel } from "./ui/TrainerGroupMembershipPanel";
 
 const TrainerPlanEditor = dynamic(() => import("./ui/TrainerPlanEditor").then((module) => module.TrainerPlanEditor));
 const TrainerHistory = dynamic(() => import("./ui/TrainerHistory").then((module) => module.TrainerHistory));
@@ -44,6 +45,7 @@ export default function TrainerOs() {
         {os.memberFocus && os.selected ? <section className="min-w-0 space-y-4">
           <button type="button" onClick={os.leaveMember} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase text-white/55 transition hover:border-cyan-300 hover:text-cyan-200"><ArrowLeft className="h-4 w-4" /> Volver a socios</button>
           <MemberHeader os={os} />
+          {os.selected && <TrainerGroupMembershipPanel key={os.selected.memberId} member={os.selected} refreshKey={os.groupRefresh} />}
           {os.notice && <div className={`flex items-center gap-3 border-[3px] p-3 text-sm font-bold ${os.notice.tone === "success" ? "border-[#d8ff3e]/45 bg-[#d8ff3e]/10 text-[#eaff93]" : "border-red-400/45 bg-red-500/10 text-red-200"}`}>{os.notice.tone === "success" ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertTriangle className="h-5 w-5 shrink-0" />}{os.notice.text}</div>}
           <nav className="flex gap-2 overflow-x-auto border-[3px] border-white/10 bg-[#0c0c0c] p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{TRAINER_TABS.map((entry) => <button key={entry.id} onClick={() => os.setTab(entry.id)} className={`min-h-11 shrink-0 border-[3px] px-4 text-[10px] font-black uppercase transition ${os.tab === entry.id ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/10 text-white/45 hover:border-white/30"}`}>{entry.label}{entry.id === "plan" && os.dirty ? " •" : ""}</button>)}</nav>
           <TrainerHealthRecord key={os.selected.memberId} member={os.selected} active={!os.groupActive && os.tab === "health"} refreshKey={os.healthRefresh} onDirtyChange={os.setHealthDirty} onBusyChange={os.setHealthBusy} />

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Check, Flag, MapPin } from "lucide-react";
 import { journeyPhase } from "@/lib/xtreme/member-journey";
+import type { GroupAMemberView } from "@/lib/xtreme/trainer-group-a-model";
 import type { MemberOs } from "../useMemberOs";
 import BodyMetricsForm from "../BodyMetricsForm";
+import MemberGroupAHome from "./MemberGroupAHome";
 import WellnessCheck from "./WellnessCheck";
 import WorkoutGuide from "./WorkoutGuide";
 import { todayIso } from "../utils";
@@ -13,6 +15,26 @@ const primary = "inline-flex min-h-12 items-center justify-center gap-2 rounded-
 const secondary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 px-4 text-sm font-bold text-white/75 disabled:opacity-40";
 
 export default function MemberJourneyHome({ os }: { os: MemberOs }) {
+  const [groupA, setGroupA] = useState<GroupAMemberView | null>(null);
+  const [checkedGroup, setCheckedGroup] = useState(false);
+  const memberKey = os.currentMember.normalizedName;
+
+  useEffect(() => {
+    let active = true;
+    setCheckedGroup(false);
+    void fetch("/api/xtreme/member/group-a", { cache: "no-store" })
+      .then(async (response) => response.ok ? await response.json() as { groupA?: GroupAMemberView | null } : { groupA: null })
+      .then((data) => { if (active) { setGroupA(data.groupA ?? null); setCheckedGroup(true); } })
+      .catch(() => { if (active) { setGroupA(null); setCheckedGroup(true); } });
+    return () => { active = false; };
+  }, [memberKey]);
+
+  if (!checkedGroup) return <div className="mx-auto flex min-h-[320px] max-w-6xl items-center justify-center rounded-2xl border border-white/10 bg-[#0c0c0c] p-8 text-sm text-white/55">Cargando tu plan de coach…</div>;
+  if (groupA) return <MemberGroupAHome os={os} initial={groupA} />;
+  return <GenericMemberJourneyHome os={os} />;
+}
+
+function GenericMemberJourneyHome({ os }: { os: MemberOs }) {
   const [editWellness, setEditWellness] = useState(false);
   const [goalDraft, setGoalDraft] = useState("");
   const [editingGoal, setEditingGoal] = useState(false);

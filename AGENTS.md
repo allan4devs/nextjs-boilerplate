@@ -10,3 +10,5 @@ Guía para agentes de código trabajando en este repo. La guía completa del pro
 - Si un servidor quedó corriendo y estorba: `taskkill /F /IM node.exe`, o por puerto: `Get-NetTCPConnection -LocalPort 3000 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`.
 
 tengo varios agentes de codigo corriendo entonces no te extrañes si ves trabajo simultaneo o no comiteado, o se actualiza junto a ti 
+
+no hagas build yo lo hago

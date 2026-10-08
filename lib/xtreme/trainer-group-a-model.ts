@@ -3,6 +3,8 @@ export type GroupExercise = {
   id: string; muscle: string; name: string; equipment: string; sourceMachine: string;
   sets: number | null; reps: number | null; time: string; sourcePage: number;
 };
+export const GROUP_A_ID = "group-a";
+export type TrainerGroup = { id: string; name: string; revision: number };
 export type GroupExercisePatch = Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time">>;
 export type GroupExerciseEdit = { exerciseId: string; revision: number };
 export type GroupDay = { id: string; label: string; focus: string; exercises: GroupExercise[] };
@@ -14,7 +16,7 @@ export type GroupEquipment = {
   id: string; code: string; name: string; status: string; machineGuideId?: string;
   location?: string; floor?: number;
 };
-export type GroupProfile = { id: string; name: string; routineId: string };
+export type GroupProfile = { id: string; name: string; routineId: string; groupId?: string; memberId?: string };
 export const GROUP_A_PROFILES: GroupProfile[] = [
   { id: "tiffany", name: "Tiffany Salazar", routineId: "tiffany" },
   { id: "chermey", name: "Chermey Ocampo", routineId: "chermey" },
@@ -23,7 +25,7 @@ export const GROUP_A_PROFILES: GroupProfile[] = [
   { id: "melissa", name: "Melissa Arce", routineId: "melissa" },
   { id: "yadilet", name: "Yadilet Arroyo", routineId: "yadilet" },
 ];
-export type GroupMapping = { exerciseId: string; assetId: string; revision: number; updatedBy: string };
+export type GroupMapping = { exerciseId: string; assetId: string; machineGuideId?: string; revision: number; updatedBy: string };
 export type GroupLink = { profileId: string; memberId: string; revision: number };
 export type GroupExecution = { exerciseId: string; assetId: string; machineCode: string; machineName: string; weightKg: number | null };
 export type GroupLog = {
@@ -31,8 +33,30 @@ export type GroupLog = {
   executions: GroupExecution[]; note: string; trainer: string; updatedAt: string; revision: number;
 };
 export type GroupDashboard = {
-  date: string; profiles: GroupProfile[]; routines: GroupRoutine[]; inventory: GroupEquipment[];
+  date: string; groups: TrainerGroup[]; profiles: GroupProfile[]; routines: GroupRoutine[]; inventory: GroupEquipment[];
   mappings: GroupMapping[]; links: GroupLink[]; logs: GroupLog[]; routineEdits: GroupExerciseEdit[];
+};
+export type GroupAMemberView = {
+  profileId: string;
+  profileName: string;
+  routine: GroupRoutine;
+  today: {
+    date: string;
+    dayId: string;
+    label: string;
+    focus: string;
+    completedIds: string[];
+    weights: Record<string, number | null>;
+    note: string;
+    revision: number;
+  };
+  recent: Array<{
+    date: string;
+    dayId: string;
+    dayLabel: string;
+    completed: number;
+    total: number;
+  }>;
 };
 export function normalizeGroupName(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -93,7 +117,9 @@ export function isGroupEquipmentAvailable(asset: GroupEquipment) {
 export function alignGroupExercise(exercise: GroupExercise, inventory: GroupEquipment[], mapping?: GroupMapping) {
   const guides = exerciseGuides(exercise);
   const needsMachine = guides.length > 0 || normalizeGroupName(exercise.equipment).includes("maquina");
-  const candidates = inventory.filter((asset) => guides.length ? guides.includes(asset.machineGuideId ?? "") : needsMachine);
+  const candidates = mapping?.machineGuideId
+    ? inventory.filter((asset) => asset.machineGuideId === mapping.machineGuideId)
+    : inventory.filter((asset) => guides.length ? guides.includes(asset.machineGuideId ?? "") : needsMachine);
   const usable = candidates.filter(isGroupEquipmentAvailable);
   const sourceNumbers = exercise.sourceMachine.match(/\d+/g) ?? [];
   const numbered = usable.filter((asset) => {
@@ -103,7 +129,7 @@ export function alignGroupExercise(exercise: GroupExercise, inventory: GroupEqui
   const issues: string[] = [];
   if (exercise.time && !/\d/.test(exercise.time)) issues.push("El PDF no indica cuántos minutos.");
   if (/^\d+$/.test(exercise.time)) issues.push("El tiempo del PDF no tiene unidad.");
-  if (sourceNumbers.length && !candidates.some((asset) => {
+  if (sourceNumbers.length && !mapping?.machineGuideId && !candidates.some((asset) => {
     const numbers = asset.code.match(/\d+/g) ?? [];
     return sourceNumbers.every((n) => numbers.some((x) => Number(x) === Number(n)));
   })) issues.push(`Revisá el número ${exercise.sourceMachine} del PDF: no coincide con este ejercicio en el inventario.`);
