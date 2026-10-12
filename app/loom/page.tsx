@@ -159,7 +159,6 @@ export default function Page() {
     const uploadedVideo = uploadedVideoRef.current;
     if (uploadedVideo && uploadedVideoUrlRef.current && uploadedVideo.src !== uploadedVideoUrlRef.current) {
       uploadedVideo.src = uploadedVideoUrlRef.current;
-      void uploadedVideo.play().catch(() => {});
     }
     startDrawLoop();
   }, [hasWebcam, includeCamera, startDrawLoop, uploadedVideoName, slideReady]);
@@ -273,19 +272,29 @@ export default function Page() {
 
   const startRecording = async () => {
     setError(null);
+    if (document.fullscreenElement !== presentationStageRef.current) {
+      setError('Enter presentation full screen before starting the recording.');
+      return;
+    }
+    const displayStream = screenStreamRef.current;
+    if (!displayStream || displayStream.getVideoTracks().every((track) => track.readyState === 'ended')) {
+      setError('Allow screen capture before entering full screen.');
+      return;
+    }
+    const uploadedVideo = uploadedVideoRef.current;
+    if (uploadedVideo && uploadedVideoUrlRef.current) {
+      uploadedVideo.currentTime = 0;
+      try {
+        // Start playback directly from the Record button gesture so browser autoplay policy allows it.
+        await uploadedVideo.play();
+      } catch {
+        setError('The uploaded video could not play. Check that the file is a supported video format.');
+        return;
+      }
+    }
     chunksRef.current = [];
     try {
       if (!navigator.mediaDevices?.getDisplayMedia || typeof MediaRecorder === 'undefined') throw new Error('Chrome screen recording is not available in this browser.');
-      // Call from the Start button handler so Chrome can show its trusted source picker.
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: 'browser', frameRate: { ideal: 30, max: 60 } },
-        audio: true,
-        preferCurrentTab: true,
-        selfBrowserSurface: 'include',
-        monitorTypeSurfaces: 'exclude',
-      });
-      screenStreamRef.current = displayStream;
-      setHasScreen(true);
       const screenVideo = screenVideoRef.current;
       if (screenVideo) {
         screenVideo.srcObject = displayStream;
@@ -299,10 +308,6 @@ export default function Page() {
       }
       const videoTracks = displayStream.getVideoTracks();
       if (!videoTracks.length) throw new Error('Chrome did not provide a screen video track.');
-      const selectedSurface = videoTracks[0].getSettings().displaySurface;
-      if (selectedSurface !== 'browser') {
-        throw new Error('Choose This tab in Chrome’s picker. Loom records the full-screen presentation tab only.');
-      }
 
       const recordingCanvas = document.createElement('canvas');
       recordingCanvas.width = 1920;
@@ -320,30 +325,6 @@ export default function Page() {
           const drawHeight = screenVideo.videoHeight * scale;
           recordingContext.drawImage(screenVideo, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
         }
-        const uploadedVideo = uploadedVideoRef.current;
-        const camera = webcamVideoRef.current;
-        const bubble = videoIsBubble && uploadedVideo && uploadedVideo.readyState >= 2 && uploadedVideo.videoWidth > 0 ? uploadedVideo : null;
-        const overlay = bubble ?? (includeCamera && hasWebcam && camera && camera.readyState >= 2 && camera.videoWidth > 0 ? camera : null);
-        if (overlay) {
-          const diameter = Math.round(height * 0.25);
-          const margin = Math.round(height * 0.04);
-          const cx = width - margin - diameter / 2;
-          const cy = height - margin - diameter / 2;
-          const scale = Math.max(diameter / overlay.videoWidth, diameter / overlay.videoHeight);
-          const drawWidth = overlay.videoWidth * scale;
-          const drawHeight = overlay.videoHeight * scale;
-          recordingContext.save();
-          recordingContext.beginPath();
-          recordingContext.arc(cx, cy, diameter / 2, 0, Math.PI * 2);
-          recordingContext.clip();
-          recordingContext.drawImage(overlay, cx - drawWidth / 2, cy - drawHeight / 2, drawWidth, drawHeight);
-          recordingContext.restore();
-          recordingContext.beginPath();
-          recordingContext.arc(cx, cy, diameter / 2, 0, Math.PI * 2);
-          recordingContext.strokeStyle = '#ffffff';
-          recordingContext.lineWidth = 7;
-          recordingContext.stroke();
-        }
         recordingFrameRef.current = requestAnimationFrame(drawRecordingFrame);
       };
       drawRecordingFrame();
@@ -357,7 +338,6 @@ export default function Page() {
         const tracks = source.getAudioTracks();
         if (tracks.length) audioCtx.createMediaStreamSource(new MediaStream(tracks)).connect(destination);
       }
-      const uploadedVideo = uploadedVideoRef.current;
       const captureVideoStream = (uploadedVideo as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream;
       if (uploadedVideo && captureVideoStream) {
         videoAudioStreamRef.current = captureVideoStream.call(uploadedVideo);
@@ -435,6 +415,7 @@ export default function Page() {
         };
       });
       recorder.onerror = () => {
+        uploadedVideoRef.current?.pause();
         setError('Recording stopped because the browser encountered an error.');
         if (recordingFrameRef.current !== null) cancelAnimationFrame(recordingFrameRef.current);
         recordingFrameRef.current = null;
@@ -449,13 +430,16 @@ export default function Page() {
         resolveRecordingDoneRef.current = null;
       };
       mediaRecorderRef.current = recorder;
+      if (document.fullscreenElement !== presentationStageRef.current || screenStreamRef.current !== displayStream || videoTracks.every((track) => track.readyState === 'ended')) {
+        throw new Error('Stay in presentation full screen to record.');
+      }
       recorder.start(250);
       setElapsed(0);
       setRecordingBytes(0);
       setFinalizeStep('');
       setStatus('recording');
-      videoTracks[0].addEventListener('ended', () => { void stopRecording(); }, { once: true });
     } catch (cause) {
+      uploadedVideoRef.current?.pause();
       screenStreamRef.current?.getTracks().forEach((track) => track.stop());
       screenStreamRef.current = null;
       setHasScreen(false);
@@ -469,6 +453,7 @@ export default function Page() {
   const stopRecording = useCallback(async () => {
     const recorder = mediaRecorderRef.current;
     if (recorder?.state === 'recording') {
+      uploadedVideoRef.current?.pause();
       setStatus('finalizing');
       setFinalizeStep('Finishing the recording…');
       const pickerWindow = window as Window & {
@@ -490,8 +475,44 @@ export default function Page() {
     }
   }, []);
 
+  const requestScreenPermission = async () => {
+    setError(null);
+    try {
+      if (!navigator.mediaDevices?.getDisplayMedia) throw new Error('Chrome screen recording is not available in this browser.');
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: 'browser', frameRate: { ideal: 30, max: 60 } },
+        audio: true,
+        preferCurrentTab: true,
+        selfBrowserSurface: 'include',
+        monitorTypeSurfaces: 'exclude',
+      } as DisplayMediaStreamOptions & { preferCurrentTab?: boolean; selfBrowserSurface?: string; monitorTypeSurfaces?: string });
+      const videoTrack = displayStream.getVideoTracks()[0];
+      if (!videoTrack) throw new Error('Chrome did not provide a screen video track.');
+      if (videoTrack.getSettings().displaySurface !== 'browser') {
+        displayStream.getTracks().forEach((track) => track.stop());
+        throw new Error('Choose This tab in Chrome’s picker so only the presentation is captured.');
+      }
+      screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = displayStream;
+      setHasScreen(true);
+      videoTrack.addEventListener('ended', () => {
+        if (screenStreamRef.current !== displayStream) return;
+        screenStreamRef.current = null;
+        setHasScreen(false);
+        setError('Screen capture permission ended. Allow it again before entering full screen.');
+        if (mediaRecorderRef.current?.state === 'recording') void stopRecording();
+      }, { once: true });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not get screen capture permission.');
+    }
+  };
+
   const enterPresentationFullscreen = async () => {
     setError(null);
+    if (!screenStreamRef.current) {
+      setError('Allow screen capture before entering full screen.');
+      return;
+    }
     try {
       await presentationStageRef.current?.requestFullscreen();
     } catch {
@@ -507,7 +528,10 @@ export default function Page() {
     const handleFullscreenChange = () => {
       const active = document.fullscreenElement === presentationStageRef.current;
       setIsPresentationFullscreen(active);
-      if (!active && mediaRecorderRef.current?.state === 'recording') void stopRecording();
+      if (!active) {
+        uploadedVideoRef.current?.pause();
+        if (mediaRecorderRef.current?.state === 'recording') void stopRecording();
+      }
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isPresentationFullscreen && mediaRecorderRef.current?.state === 'recording') {
@@ -564,7 +588,7 @@ export default function Page() {
           </a>
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-zinc-400 sm:flex"><span className={`size-1.5 rounded-full ${status === 'recording' ? 'animate-pulse bg-rose-400' : status === 'finalizing' ? 'animate-pulse bg-amber-300' : 'bg-emerald-400'}`} />{status === 'recording' ? `Recording ${formatDuration(elapsed)} · ${(recordingBytes / (1024 * 1024)).toFixed(1)} MB` : status === 'finalizing' ? 'Generating video…' : status === 'stopped' ? 'Video ready' : 'Ready when you are'}</span>
-            {status === 'recording' ? <button onClick={stopRecording} className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-950/30 transition hover:bg-rose-400"><Square className="size-3.5 fill-current" /> Stop</button> : status === 'finalizing' ? <span role="status" className="inline-flex items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-2.5 text-sm text-amber-100"><span className="size-2 animate-pulse rounded-full bg-amber-300" /> Generating…</span> : <button onClick={startRecording} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"><span className="size-2 rounded-full bg-rose-500" /> Start screen recording</button>}
+            {status === 'recording' ? <button onClick={stopRecording} className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-950/30 transition hover:bg-rose-400"><Square className="size-3.5 fill-current" /> Stop</button> : status === 'finalizing' ? <span role="status" className="inline-flex items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-2.5 text-sm text-amber-100"><span className="size-2 animate-pulse rounded-full bg-amber-300" /> Generating…</span> : hasScreen ? <button onClick={enterPresentationFullscreen} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"><span className="size-2 rounded-full bg-rose-500" /> Enter full screen</button> : <button onClick={() => void requestScreenPermission()} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"><span className="size-2 rounded-full bg-rose-500" /> Allow screen capture</button>}
             {recordedUrl && <a href={recordedUrl} download={recordedName ?? 'loom-recording.webm'} title="Download recording" className="inline-flex items-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-400"><Download className="size-4" /><span className="hidden sm:inline">Download video</span></a>}
           </div>
         </header>
@@ -576,23 +600,24 @@ export default function Page() {
               <button onClick={() => void reset()} disabled={!hasSource && !recordedUrl && !error} className="hidden items-center gap-2 rounded-lg px-3 py-2 text-xs text-zinc-500 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-30 sm:inline-flex"><RotateCcw className="size-3.5" /> Reset</button>
             </div>
 
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-[#131419] shadow-2xl shadow-black/40">
+            <div ref={presentationStageRef} className={`relative aspect-video w-full overflow-hidden border border-white/10 bg-[#131419] shadow-2xl shadow-black/40 ${isPresentationFullscreen ? '!h-screen !w-screen !max-w-none !aspect-auto !rounded-none !border-0 shadow-none' : 'rounded-2xl'}`}>
               <video ref={screenVideoRef} autoPlay muted playsInline className="fixed -left-2 -top-2 size-px opacity-0" />
-              <video ref={uploadedVideoRef} autoPlay loop playsInline className="fixed -left-2 -top-2 size-px opacity-0" />
+              <video ref={uploadedVideoRef} loop playsInline className="fixed -left-2 -top-2 size-px opacity-0" />
               <video ref={webcamVideoRef} autoPlay muted playsInline className="fixed -left-2 -top-2 size-px opacity-0" />
               <canvas ref={canvasRef} width={1920} height={1080} className="absolute inset-0 size-full object-contain" />
               {!slideUrl && !slideReady && <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,_rgba(124,58,237,0.12),_transparent_55%)] px-5 text-center"><div className="mb-4 grid size-16 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-zinc-400"><FileVideo2 className="size-7" /></div><p className="text-sm font-medium text-zinc-200">Your stage is ready</p><p className="mt-1 max-w-sm text-xs leading-5 text-zinc-500">Upload a PDF presentation. Your uploaded video appears in a circle.</p></div>}
-              {slideUrl && <div className="absolute inset-x-4 bottom-4 flex items-center justify-between"><button aria-label="Previous slide" disabled={slideIndex <= 0} onClick={() => moveSlide(-1)} className="grid size-12 place-items-center rounded-full bg-black/70 text-white backdrop-blur disabled:opacity-40"><ChevronLeft /></button><span className="rounded-full bg-black/70 px-3 py-1.5 text-xs text-white">{slideIndex + 1} / {slideCount} · ← →</span><button aria-label="Next slide" disabled={slideIndex >= slideCount - 1} onClick={() => moveSlide(1)} className="grid size-12 place-items-center rounded-full bg-black/70 text-white backdrop-blur disabled:opacity-40"><ChevronRight /></button></div>}
-              {hasWebcam && includeCamera && !videoIsBubble && <div className="absolute bottom-[3.5%] right-[3.5%] size-[18%] min-h-[72px] min-w-[72px] overflow-hidden rounded-full border-[3px] border-white bg-zinc-800 shadow-xl shadow-black/40 sm:border-4"><video ref={webcamOverlayRef} autoPlay muted playsInline className="size-full scale-x-[-1] object-cover" /></div>}
+              {isPresentationFullscreen && status !== 'recording' && status !== 'finalizing' && <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-4 bg-gradient-to-b from-black/75 to-transparent p-6"><div><p className="text-sm font-semibold text-white">Presentation full screen</p><p className="mt-1 text-xs text-white/70">Use the arrow keys to navigate slides, then press Esc to stop and save.</p>{error && <p role="alert" className="mt-2 text-xs text-rose-200">{error}</p>}</div><div className="flex items-center gap-2"><button onClick={() => void exitPresentationFullscreen()} className="rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-white">Exit</button><button onClick={startRecording} className="inline-flex items-center gap-2 rounded-lg bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white"><span className="size-2 rounded-full bg-white" /> Start recording</button></div></div>}
+              {slideUrl && status !== 'recording' && status !== 'finalizing' && <div className="absolute inset-x-4 bottom-4 flex items-center justify-between"><button aria-label="Previous slide" disabled={slideIndex <= 0} onClick={() => moveSlide(-1)} className="grid size-12 place-items-center rounded-full bg-black/70 text-white backdrop-blur disabled:opacity-40"><ChevronLeft /></button><span className="rounded-full bg-black/70 px-3 py-1.5 text-xs text-white">{slideIndex + 1} / {slideCount} · ← →</span><button aria-label="Next slide" disabled={slideIndex >= slideCount - 1} onClick={() => moveSlide(1)} className="grid size-12 place-items-center rounded-full bg-black/70 text-white backdrop-blur disabled:opacity-40"><ChevronRight /></button></div>}
+              {hasWebcam && includeCamera && !videoIsBubble && status !== 'recording' && <div className="absolute bottom-[3.5%] right-[3.5%] size-[18%] min-h-[72px] min-w-[72px] overflow-hidden rounded-full border-[3px] border-white bg-zinc-800 shadow-xl shadow-black/40 sm:border-4"><video ref={webcamOverlayRef} autoPlay muted playsInline className="size-full scale-x-[-1] object-cover" /></div>}
               {status === 'stopped' && recordedUrl && <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-950/80 px-3 py-1.5 text-xs font-medium text-emerald-200 backdrop-blur"><span className="size-1.5 rounded-full bg-emerald-400" /> Recording ready</div>}
             </div>
-              {hasWebcam && includeCamera && !videoIsBubble && <div className="absolute bottom-[3.5%] right-[3.5%] size-[18%] min-h-[72px] min-w-[72px] overflow-hidden rounded-full border-[3px] border-white bg-zinc-800 shadow-xl shadow-black/40 sm:border-4"><video ref={webcamOverlayRef} autoPlay muted playsInline className="size-full scale-x-[-1] object-cover" /></div>}
+
           </section>
 
           <aside className="flex flex-col gap-4">
             <section className="rounded-2xl border border-white/[0.08] bg-[#101115] p-4 sm:p-5"><div className="mb-4 flex items-center justify-between"><div><h2 className="text-sm font-semibold">Presentation video</h2><p className="mt-1 text-xs text-zinc-500">Add the content and circular video.</p></div><span className="grid size-8 place-items-center rounded-lg bg-white/[0.05] text-zinc-400"><Share2 className="size-4" /></span></div>
               <div className="space-y-2">
-                <div className="rounded-xl border border-violet-400/20 bg-violet-400/[0.06] px-3.5 py-3 text-[11px] leading-5 text-zinc-300">Start recording, then choose Entire screen in Chrome’s picker. Tabs and individual windows are not recorded. Chrome asks for permission each time.</div>
+                <div className="rounded-xl border border-violet-400/20 bg-violet-400/[0.06] px-3.5 py-3 text-[11px] leading-5 text-zinc-300">First allow screen capture and choose This tab in Chrome. Then enter presentation full screen and press Start recording. Browser chrome and the rest of Loom stay out. Press Esc to stop and save.</div>
                 <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-3 transition hover:border-white/20 hover:bg-white/[0.05]"><span className="grid size-9 place-items-center rounded-lg bg-amber-300/10 text-amber-200"><Upload className="size-4" /></span><span className="min-w-0 flex-1"><span className="block text-xs font-medium">{uploadedDocName || 'Upload PDF slides'}</span><span className="mt-0.5 block text-[11px] text-zinc-500">Use arrow keys while recording</span></span><input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={(event) => void handleDocUpload(event)} /></label>
                 <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-3 transition hover:border-white/20 hover:bg-white/[0.05]"><span className="grid size-9 place-items-center rounded-lg bg-sky-400/10 text-sky-300"><FileVideo2 className="size-4" /></span><span className="min-w-0 flex-1"><span className="block text-xs font-medium">{uploadedVideoName || 'Upload circular video'}</span><span className="mt-0.5 block text-[11px] text-zinc-500">Plays inside a circle on stage</span></span><input type="file" accept="video/*" className="sr-only" onChange={handleVideoUpload} /></label>
               </div>
