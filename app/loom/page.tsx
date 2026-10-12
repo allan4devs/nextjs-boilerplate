@@ -32,7 +32,6 @@ export default function Page() {
   const [elapsed, setElapsed] = useState(0);
 
   const webcamVideoRef = useRef<HTMLVideoElement>(null);
-  const screenVideoRef = useRef<HTMLVideoElement>(null);
   const webcamOverlayRef = useRef<HTMLVideoElement>(null);
   const uploadedVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,7 +42,6 @@ export default function Page() {
   const saveFileHandleRef = useRef<Promise<FileSystemFileHandle | null> | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const animationRef = useRef<number | null>(null);
-  const recordingFrameRef = useRef<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const webcamStreamRef = useRef<MediaStream | null>(null);
@@ -79,8 +77,6 @@ export default function Page() {
     cleanupRecording();
     if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
     animationRef.current = null;
-    if (recordingFrameRef.current !== null) cancelAnimationFrame(recordingFrameRef.current);
-    recordingFrameRef.current = null;
   }, [cleanupRecording]);
 
   useEffect(() => () => {
@@ -295,56 +291,31 @@ export default function Page() {
     chunksRef.current = [];
     try {
       if (!navigator.mediaDevices?.getDisplayMedia || typeof MediaRecorder === 'undefined') throw new Error('Chrome screen recording is not available in this browser.');
-      const screenVideo = screenVideoRef.current;
-      if (screenVideo) {
-        screenVideo.srcObject = displayStream;
-        await screenVideo.play().catch(() => {});
-        if (screenVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-          await new Promise<void>((resolve, reject) => {
-            const timeout = window.setTimeout(() => reject(new Error('Chrome screen capture did not start.')), 10000);
-            screenVideo.addEventListener('loadeddata', () => { window.clearTimeout(timeout); resolve(); }, { once: true });
-          });
-        }
-      }
       const videoTracks = displayStream.getVideoTracks();
       if (!videoTracks.length) throw new Error('Chrome did not provide a screen video track.');
-
-      const recordingCanvas = document.createElement('canvas');
-      recordingCanvas.width = 1920;
-      recordingCanvas.height = 1080;
-      const recordingContext = recordingCanvas.getContext('2d');
-      if (!recordingContext || !recordingCanvas.captureStream) throw new Error('Canvas recording is not supported by this browser.');
-      const drawRecordingFrame = () => {
-        const width = recordingCanvas.width;
-        const height = recordingCanvas.height;
-        recordingContext.fillStyle = '#101116';
-        recordingContext.fillRect(0, 0, width, height);
-        if (screenVideo && screenVideo.videoWidth > 0 && screenVideo.videoHeight > 0) {
-          const scale = Math.min(width / screenVideo.videoWidth, height / screenVideo.videoHeight);
-          const drawWidth = screenVideo.videoWidth * scale;
-          const drawHeight = screenVideo.videoHeight * scale;
-          recordingContext.drawImage(screenVideo, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
-        }
-        recordingFrameRef.current = requestAnimationFrame(drawRecordingFrame);
-      };
-      drawRecordingFrame();
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const stageCanvas = canvasRef.current;
+      if (!stageCanvas?.captureStream) throw new Error('Canvas recording is not supported by this browser.');
+      // Record the presentation canvas directly to avoid a screen-capture-to-canvas feedback loop.
+      const stream = stageCanvas.captureStream(30);
 
       const audioCtx = new AudioContext();
       audioCtxRef.current = audioCtx;
       const destination = audioCtx.createMediaStreamDestination();
-      const audioStreams = [displayStream, webcamStreamRef.current].filter((source): source is MediaStream => Boolean(source));
+      const displayAudioTracks = displayStream.getAudioTracks();
+      const audioStreams = [
+        ...(displayAudioTracks.length ? [displayStream] : []),
+        webcamStreamRef.current,
+      ].filter((source): source is MediaStream => Boolean(source));
       for (const source of audioStreams) {
         const tracks = source.getAudioTracks();
         if (tracks.length) audioCtx.createMediaStreamSource(new MediaStream(tracks)).connect(destination);
       }
       const captureVideoStream = (uploadedVideo as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream;
-      if (uploadedVideo && captureVideoStream) {
+      if (uploadedVideo && captureVideoStream && displayAudioTracks.length === 0) {
         videoAudioStreamRef.current = captureVideoStream.call(uploadedVideo);
         const videoAudio = videoAudioStreamRef.current.getAudioTracks();
         if (videoAudio.length) audioCtx.createMediaStreamSource(new MediaStream(videoAudio)).connect(destination);
       }
-      const stream = recordingCanvas.captureStream(30);
       for (const track of destination.stream.getAudioTracks()) stream.addTrack(track);
       recordingStreamRef.current = stream;
       if (audioCtx.state === 'suspended') await audioCtx.resume();
@@ -401,13 +372,10 @@ export default function Page() {
             downloadLink.click();
             downloadLink.remove();
           }
-          if (recordingFrameRef.current !== null) cancelAnimationFrame(recordingFrameRef.current);
-          recordingFrameRef.current = null;
           cleanupRecording();
           displayStream.getTracks().forEach((track) => track.stop());
           screenStreamRef.current = null;
           setHasScreen(false);
-          if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
           setFinalizeStep('Video ready. Download it below.');
           setStatus('stopped');
           resolveRecordingDoneRef.current?.();
@@ -417,13 +385,10 @@ export default function Page() {
       recorder.onerror = () => {
         uploadedVideoRef.current?.pause();
         setError('Recording stopped because the browser encountered an error.');
-        if (recordingFrameRef.current !== null) cancelAnimationFrame(recordingFrameRef.current);
-        recordingFrameRef.current = null;
         cleanupRecording();
         displayStream.getTracks().forEach((track) => track.stop());
         screenStreamRef.current = null;
         setHasScreen(false);
-        if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
         setStatus('error');
         setFinalizeStep('');
         resolveRecordingDoneRef.current?.();
@@ -443,7 +408,6 @@ export default function Page() {
       screenStreamRef.current?.getTracks().forEach((track) => track.stop());
       screenStreamRef.current = null;
       setHasScreen(false);
-      if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
       cleanupRecording();
       setError(cause instanceof Error ? cause.message : 'Could not start recording.');
       setStatus('error');
@@ -601,7 +565,6 @@ export default function Page() {
             </div>
 
             <div ref={presentationStageRef} className={`relative aspect-video w-full overflow-hidden border border-white/10 bg-[#131419] shadow-2xl shadow-black/40 ${isPresentationFullscreen ? '!h-screen !w-screen !max-w-none !aspect-auto !rounded-none !border-0 shadow-none' : 'rounded-2xl'}`}>
-              <video ref={screenVideoRef} autoPlay muted playsInline className="fixed -left-2 -top-2 size-px opacity-0" />
               <video ref={uploadedVideoRef} loop playsInline className="fixed -left-2 -top-2 size-px opacity-0" />
               <video ref={webcamVideoRef} autoPlay muted playsInline className="fixed -left-2 -top-2 size-px opacity-0" />
               <canvas ref={canvasRef} width={1920} height={1080} className="absolute inset-0 size-full object-contain" />
