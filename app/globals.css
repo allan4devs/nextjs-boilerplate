@@ -298,6 +298,22 @@ html.xg-staff-light .xg-theme-toggle {
   background: #fff !important;
 }
 
+/* Trainer OS también usa el tema de staff. Estos tokens quedaron fuera de
+ * los reemplazos genéricos porque son específicos de sus controles y estados. */
+html.xg-staff-light [data-staff-app="trainer"] [class*="bg-[#111]"] {
+  background-color: #fff !important;
+}
+
+html.xg-staff-light [data-staff-app="trainer"] [class*="text-red-100"],
+html.xg-staff-light [data-staff-app="trainer"] [class*="text-red-200"],
+html.xg-staff-light [data-staff-app="trainer"] [class*="text-red-300"] {
+  color: #a9322d !important;
+}
+
+html.xg-staff-light [data-staff-app="trainer"] [class*="text-orange-200"] {
+  color: #8f4515 !important;
+}
+
 /*
  * Impresión del comprobante de recepción — impresora térmica AON Printer.
  * Especificación real del papel (driver "AON Printer", puerto USB, monocromo):
