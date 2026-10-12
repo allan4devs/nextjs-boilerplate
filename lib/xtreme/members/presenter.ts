@@ -4,7 +4,7 @@ import {
   mergeNotificationPrefs,
 } from "@/lib/xtreme/shared";
 import { buildMemberGamification } from "./gamification-service";
-import { membershipWithStatus, toPublicTrainingPlan } from "./membership";
+import { membershipWithStatus } from "./membership";
 import type { XtremeMemberDoc } from "./types";
 
 function safeIsoDate(value: Date | string | undefined) {
@@ -54,14 +54,10 @@ export function toPublicMember(
     membership: membershipWithStatus(doc?.membership, today),
     bodyMetrics,
     latestBodyMetric: bodyMetrics.at(-1) ?? null,
-    trainingPlan: toPublicTrainingPlan(doc?.trainingPlan),
-    trainingProgramAssignment: doc?.trainingProgramAssignment
-      ? {
-          ...doc.trainingProgramAssignment,
-          assignedAt: new Date(doc.trainingProgramAssignment.assignedAt).toISOString(),
-        }
-      : null,
-    activePlanWorkout: doc?.activePlanWorkout ?? null,
+    // Los planes anteriores se conservan en datos históricos, pero Member OS solo muestra rutinas activas asignadas por grupo.
+    trainingPlan: null,
+    trainingProgramAssignment: null,
+    activePlanWorkout: null,
     exercisePreferences: (doc?.exercisePreferences ?? []).map((preference) => ({
       ...preference,
       updatedAt: safeIsoDate(preference.updatedAt),

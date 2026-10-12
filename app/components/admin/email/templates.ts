@@ -345,7 +345,6 @@ export const CAMPAIGN_TEMPLATES: Record<AudienceId, CampaignTemplate> = {
     title: "Para vos que ya usás la app",
     message:
       "Hola. Gracias por estar activo en la app de Xtreme Gym. Sos de los que le meten de verdad.\n\n" +
-      "Ideas rápidas para sacarle más jugo esta semana:\n" +
       "• Marcá cada entreno al salir del gym (racha y XP)\n" +
       "• Reservá clase de funcional o lo que te guste con anticipación\n" +
       "• Revisá tu perfil y medidas si querés ver progreso\n" +

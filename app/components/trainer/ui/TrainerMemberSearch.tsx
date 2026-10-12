@@ -7,6 +7,7 @@ import type { TrainerMember } from "../types";
 import { memberSignal } from "../utils";
 
 const signalClass = { lime: "bg-[#d8ff3e] text-black", cyan: "bg-cyan-300 text-black", orange: "bg-orange-300 text-black", red: "bg-red-400 text-black", muted: "bg-white/10 text-white/45" };
+const normalizeSearch = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
 
 export function TrainerMemberSearch({ members, query, onQueryChange, selectedKey, onSelect, renderAction, placeholder = "Buscar por nombre, meta o entrenador", emptyText = "No hay socios con esta búsqueda.", compact = false }: {
   members: TrainerMember[];
@@ -19,10 +20,15 @@ export function TrainerMemberSearch({ members, query, onQueryChange, selectedKey
   emptyText?: string;
   compact?: boolean;
 }) {
+  const needle = normalizeSearch(query);
+  const visibleMembers = needle ? members.filter((member) => normalizeSearch([
+    member.memberName, member.normalizedName, member.goal, member.coach,
+  ].filter(Boolean).join(" ")).includes(needle)) : members;
+
   return <div className="min-w-0">
     <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={placeholder} className="min-h-11 w-full bg-black/50 pl-10 pr-3 font-bold outline-none ring-cyan-300 focus:ring-2" /></div>
     <div className={`mt-2 overflow-y-auto ${compact ? "max-h-64" : "max-h-[420px] lg:max-h-none lg:flex-1"}`}>
-      {members.map((member) => {
+      {visibleMembers.map((member) => {
         const signal = memberSignal(member);
         const active = selectedKey === member.normalizedName;
         const row = <div className={`flex items-center gap-3 border-b border-white/10 p-3 transition ${active ? "bg-cyan-300 text-black" : "hover:bg-white/[.045]"}`}>
@@ -35,7 +41,7 @@ export function TrainerMemberSearch({ members, query, onQueryChange, selectedKey
         </div>;
         return <div key={member.memberId}>{row}</div>;
       })}
-      {!members.length && <p className="p-6 text-center text-sm font-bold text-white/35">{emptyText}</p>}
+      {!visibleMembers.length && <p className="p-6 text-center text-sm font-bold text-white/35">{emptyText}</p>}
     </div>
   </div>;
 }

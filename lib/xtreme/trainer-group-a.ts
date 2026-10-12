@@ -10,11 +10,13 @@ import {
 export const GROUP_A_COLLECTION = "xtreme_gym_trainer_group_a";
 export const GROUP_A_ROUTINES: GroupRoutine[] = source;
 export type GroupRecord = {
-  _id: string; kind: "mapping" | "link" | "log" | "exercise" | "group" | "membership"; revision: number;
+  _id: string; kind: "mapping" | "link" | "log" | "exercise" | "group" | "membership" | "routine" | "day" | "routine_assignment"; revision: number;
   profileId?: string; exerciseId?: string; assetId?: string; memberId?: string; groupId?: string;
   groupName?: string; name?: string; routineId?: string; dayId?: string; active?: boolean; isCustom?: boolean; machineGuideId?: string;
   exercise?: GroupExercise;
-  exercisePatch?: Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time">>;
+  routine?: GroupRoutine;
+  day?: GroupRoutine["days"][number];
+  exercisePatch?: Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time" | "weightKg">>;
   log?: GroupLog; updatedBy: string; updatedAt: string;
 };
 export async function groupInventory(db: Db) {
@@ -26,7 +28,7 @@ export async function groupInventory(db: Db) {
 export async function getGroupDashboard(db: Db): Promise<GroupDashboard> {
   const records = db.collection<GroupRecord>(GROUP_A_COLLECTION);
   const [inventory, settings, logs] = await Promise.all([
-    groupInventory(db), records.find({ kind: { $in: ["mapping", "link", "exercise", "group", "membership"] } }).toArray(),
+    groupInventory(db), records.find({ kind: { $in: ["mapping", "link", "exercise", "group", "membership", "routine", "day", "routine_assignment"] } }).toArray(),
     records.find({ kind: "log" }).sort({ "log.date": -1, updatedAt: -1 }).toArray(),
   ]);
   const groupRecords = settings.filter((r) => r.kind === "group");
@@ -36,23 +38,29 @@ export async function getGroupDashboard(db: Db): Promise<GroupDashboard> {
   ];
   const links = settings.filter((r) => r.kind === "link").map((r): GroupLink => ({ profileId: r.profileId!, memberId: r.memberId!, revision: r.revision }));
   const memberships = settings.filter((r) => r.kind === "membership");
+  const routineAssignments = new Map(settings.filter((r) => r.kind === "routine_assignment" && r.profileId && r.routineId).map((r) => [r.profileId!, { routineId: r.routineId!, routineRevision: r.revision }]));
   const disabledProfiles = new Set(memberships.filter((r) => r.active === false).map((r) => r.profileId));
   const staticProfiles = GROUP_A_PROFILES
     .filter((profile) => !disabledProfiles.has(profile.id))
-    .map((profile) => ({ ...profile, groupId: GROUP_A_ID, memberId: links.find((link) => link.profileId === profile.id)?.memberId }));
+    .map((profile) => ({ ...profile, ...(routineAssignments.get(profile.id) ? { ...routineAssignments.get(profile.id)! } : {}), groupId: GROUP_A_ID, memberId: links.find((link) => link.profileId === profile.id)?.memberId }));
   const dynamicProfiles = memberships
     .filter((r) => r.active !== false && r.profileId && r.groupId && r.memberId)
-    .map((r) => ({ id: r.profileId!, name: r.name || r.memberId!, routineId: r.routineId || GROUP_A_ROUTINES[0].id, groupId: r.groupId!, memberId: r.memberId! }));
+    .map((r) => ({ id: r.profileId!, name: r.name || r.memberId!, routineId: routineAssignments.get(r.profileId!)?.routineId || r.routineId || GROUP_A_ROUTINES[0].id, routineRevision: routineAssignments.get(r.profileId!)?.routineRevision ?? 0, groupId: r.groupId!, memberId: r.memberId! }));
   const profiles = [...staticProfiles, ...dynamicProfiles];
   const exerciseEdits = settings.filter((r) => r.kind === "exercise");
   const editsById = new Map(exerciseEdits.filter((r) => !r.isCustom).map((r) => [r.exerciseId!, r.exercisePatch ?? {}]));
-  const routines = GROUP_A_ROUTINES.map((routine) => ({
+  const customRoutines = settings.filter((r) => r.kind === "routine" && r.routine).map((r) => r.routine!);
+  const routines = [...GROUP_A_ROUTINES, ...customRoutines].map((routine) => ({
     ...routine,
     days: routine.days.map((day) => ({
       ...day,
       exercises: day.exercises.map((exercise) => ({ ...exercise, ...(editsById.get(exercise.id) ?? {}) })),
     })),
   }));
+  for (const record of settings.filter((r) => r.kind === "day" && r.routineId && r.day)) {
+    const routine = routines.find((entry) => entry.id === record.routineId);
+    if (routine && record.day && !routine.days.some((day) => day.id === record.day!.id)) routine.days.push(record.day);
+  }
   for (const record of exerciseEdits.filter((entry) => entry.isCustom && entry.exercise && entry.routineId && entry.dayId)) {
     const day = routines.find((routine) => routine.id === record.routineId)?.days.find((entry) => entry.id === record.dayId);
     if (day && record.exercise) day.exercises.push({ ...record.exercise, ...(record.exercisePatch ?? {}) });
@@ -68,31 +76,38 @@ export async function getGroupDashboard(db: Db): Promise<GroupDashboard> {
   };
 }
 
-export async function getGroupAMemberView(db: Db, memberId: string, date = businessDate()): Promise<GroupAMemberView | null> {
+export async function getGroupAMemberView(db: Db, memberId: string, date = businessDate(), requestedDayId?: string): Promise<GroupAMemberView | null> {
   const dashboard = await getGroupDashboard(db);
-  const profile = dashboard.profiles.find((entry) => entry.groupId === GROUP_A_ID && entry.memberId === memberId);
+  const profile = dashboard.profiles.find((entry) => entry.memberId === memberId);
   if (!profile) return null;
+  const group = dashboard.groups.find((entry) => entry.id === profile.groupId);
   const routine = dashboard.routines.find((entry) => entry.id === profile.routineId);
   if (!routine || !routine.days.length) return null;
 
   const profileLogs = dashboard.logs
     .filter((entry) => entry.profileId === profile.id)
     .sort((a, b) => `${b.date}:${b.updatedAt}`.localeCompare(`${a.date}:${a.updatedAt}`));
-  const loggedToday = profileLogs.find((entry) => entry.date === date);
-  const day = routine.days.find((entry) => entry.id === loggedToday?.dayId) ?? routine.days[0];
-  const todayLog = profileLogs.find((entry) => entry.date === date && entry.dayId === day.id);
+  const loggedToday = profileLogs.find((entry) => entry.date === date && (!entry.routineId || entry.routineId === routine.id));
+  const day = routine.days.find((entry) => entry.id === requestedDayId)
+    ?? routine.days.find((entry) => entry.id === loggedToday?.dayId)
+    ?? routine.days[0];
+  const todayLog = profileLogs.find((entry) => entry.date === date && entry.dayId === day.id && (!entry.routineId || entry.routineId === routine.id));
   const weights = Object.fromEntries(
     (todayLog?.executions ?? []).map((execution) => [execution.exerciseId, execution.weightKg]),
   );
   const recent = profileLogs.slice(0, 14).map((entry) => ({
     date: entry.date,
+    routineId: entry.routineId,
+    routineLabel: dashboard.routines.find((candidate) => candidate.id === entry.routineId)?.objective ?? routine.objective,
     dayId: entry.dayId,
-    dayLabel: routine.days.find((candidate) => candidate.id === entry.dayId)?.label ?? entry.dayId,
+    dayLabel: dashboard.routines.find((candidate) => candidate.id === (entry.routineId ?? routine.id))?.days.find((candidate) => candidate.id === entry.dayId)?.label ?? entry.dayId,
     completed: entry.completedIds.length,
     total: routine.days.find((candidate) => candidate.id === entry.dayId)?.exercises.length ?? entry.completedIds.length,
   }));
 
   return {
+    groupId: profile.groupId || GROUP_A_ID,
+    groupName: group?.name || "Grupo",
     profileId: profile.id,
     profileName: profile.name,
     routine,

@@ -1,11 +1,11 @@
 /** Shared types and pure alignment rules. PDF data is only imported by the authenticated API. */
 export type GroupExercise = {
   id: string; muscle: string; name: string; equipment: string; sourceMachine: string;
-  sets: number | null; reps: number | null; time: string; sourcePage: number;
+  sets: number | null; reps: number | null; time: string; weightKg?: number | null; sourcePage: number;
 };
 export const GROUP_A_ID = "group-a";
 export type TrainerGroup = { id: string; name: string; revision: number };
-export type GroupExercisePatch = Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time">>;
+export type GroupExercisePatch = Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time" | "weightKg">>;
 export type GroupExerciseEdit = { exerciseId: string; revision: number };
 export type GroupDay = { id: string; label: string; focus: string; exercises: GroupExercise[] };
 export type GroupRoutine = {
@@ -16,7 +16,7 @@ export type GroupEquipment = {
   id: string; code: string; name: string; status: string; machineGuideId?: string;
   location?: string; floor?: number;
 };
-export type GroupProfile = { id: string; name: string; routineId: string; groupId?: string; memberId?: string };
+export type GroupProfile = { id: string; name: string; routineId: string; routineRevision?: number; groupId?: string; memberId?: string };
 export const GROUP_A_PROFILES: GroupProfile[] = [
   { id: "tiffany", name: "Tiffany Salazar", routineId: "tiffany" },
   { id: "chermey", name: "Chermey Ocampo", routineId: "chermey" },
@@ -29,7 +29,7 @@ export type GroupMapping = { exerciseId: string; assetId: string; machineGuideId
 export type GroupLink = { profileId: string; memberId: string; revision: number };
 export type GroupExecution = { exerciseId: string; assetId: string; machineCode: string; machineName: string; weightKg: number | null };
 export type GroupLog = {
-  id: string; profileId: string; dayId: string; date: string; completedIds: string[];
+  id: string; profileId: string; routineId?: string; dayId: string; date: string; completedIds: string[];
   executions: GroupExecution[]; note: string; trainer: string; updatedAt: string; revision: number;
 };
 export type GroupDashboard = {
@@ -37,6 +37,8 @@ export type GroupDashboard = {
   mappings: GroupMapping[]; links: GroupLink[]; logs: GroupLog[]; routineEdits: GroupExerciseEdit[];
 };
 export type GroupAMemberView = {
+  groupId: string;
+  groupName: string;
   profileId: string;
   profileName: string;
   routine: GroupRoutine;
@@ -52,6 +54,8 @@ export type GroupAMemberView = {
   };
   recent: Array<{
     date: string;
+    routineId?: string;
+    routineLabel?: string;
     dayId: string;
     dayLabel: string;
     completed: number;

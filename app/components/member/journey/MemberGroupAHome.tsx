@@ -14,6 +14,7 @@ type Props = { os: MemberOs; initial: GroupAMemberView };
 
 export default function MemberGroupAHome({ os, initial }: Props) {
   const [view, setView] = useState(initial);
+  const [selectedDayId, setSelectedDayId] = useState(initial.today.dayId);
   const [completedIds, setCompletedIds] = useState<string[]>(initial.today.completedIds);
   const [weights, setWeights] = useState<Record<string, number | null>>(initial.today.weights);
   const [note, setNote] = useState(initial.today.note);
@@ -22,16 +23,34 @@ export default function MemberGroupAHome({ os, initial }: Props) {
   const [showWellness, setShowWellness] = useState(false);
   const today = todayIso();
   const wellness = os.lifestyle.today?.date === today ? os.lifestyle.today : null;
-  const day = view.routine.days.find((entry) => entry.id === view.today.dayId) ?? view.routine.days[0];
+  const day = view.routine.days.find((entry) => entry.id === selectedDayId) ?? view.routine.days[0];
   const completed = useMemo(() => new Set(completedIds), [completedIds]);
   const progress = day.exercises.length ? Math.round((completed.size / day.exercises.length) * 100) : 0;
   const canSave = Boolean(os.activeVisit) && !saving;
 
   useEffect(() => {
+    setSelectedDayId(view.today.dayId);
     setCompletedIds(view.today.completedIds);
     setWeights(view.today.weights);
     setNote(view.today.note);
   }, [view]);
+
+  async function selectModule(dayId: string) {
+    if (dayId === selectedDayId) return;
+    setSelectedDayId(dayId);
+    setRefreshing(true);
+    try {
+      const response = await fetch(`/api/xtreme/member/group-a?dayId=${encodeURIComponent(dayId)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("refresh");
+      const data = await response.json() as { groupA?: GroupAMemberView | null };
+      if (data.groupA) setView(data.groupA);
+    } catch {
+      os.setError("No se pudo cargar el avance de este módulo. Intentá de nuevo.");
+      setSelectedDayId(view.today.dayId);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function refresh() {
     setRefreshing(true);
@@ -67,7 +86,7 @@ export default function MemberGroupAHome({ os, initial }: Props) {
       const data = await response.json().catch(() => null) as { groupA?: GroupAMemberView | null; error?: string } | null;
       if (!response.ok || !data?.groupA) throw new Error(data?.error || "save");
       setView(data.groupA);
-      os.setMessage("Tu avance del Grupo A quedó guardado.");
+      os.setMessage(`Tu avance de ${view.groupName} quedó guardado.`);
     } catch (error) {
       os.setError(error instanceof Error ? error.message : "No se pudo guardar tu avance.");
     } finally {
@@ -82,7 +101,7 @@ export default function MemberGroupAHome({ os, initial }: Props) {
         <button type="button" onClick={() => void refresh()} disabled={refreshing} className="inline-flex min-h-10 items-center gap-2 text-xs font-bold text-white/55"><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />Actualizar plan</button>
       </div>
       <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-4xl">{os.activeVisit ? `Seguimos con tu plan, ${os.memberName.split(" ")[0]}` : "Primero registrá tu ingreso"}</h1>
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">Sos parte de <strong className="text-white">Grupo A</strong>. Acá vas a ver únicamente la rutina que te asignó tu coach y el avance que ya llevás.</p>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">Sos parte de <strong className="text-white">{view.groupName}</strong>. Acá vas a ver únicamente la rutina nueva que te asignó tu coach y el avance que ya llevás.</p>
       {!os.activeVisit && <button type="button" onClick={() => void os.registerCheckin()} disabled={os.isRegisteringCheckin} className={`${primary} mt-5`}><LogIn className="h-4 w-4" />{os.isRegisteringCheckin ? "Registrando ingreso…" : "Ingresar al gym"}</button>}
       {os.activeVisit && <button type="button" onClick={() => os.setOsModal({ kind: "gym-session" })} className="mt-4 min-h-10 text-xs font-bold text-white/45">Terminar visita / registrar salida</button>}
     </header>
@@ -107,6 +126,8 @@ export default function MemberGroupAHome({ os, initial }: Props) {
           <p className="text-xs text-white/45">ejercicios marcados hoy</p>
         </div>
       </div>
+
+      {view.routine.days.length > 1 && <div className="mt-4"><p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">Módulo de hoy</p><div className="flex flex-wrap gap-2">{view.routine.days.map((entry) => <button key={entry.id} type="button" disabled={refreshing || saving} onClick={() => void selectModule(entry.id)} className={`min-h-10 rounded-lg border px-3 text-xs font-bold transition ${entry.id === day.id ? "border-[#d8ff3e] bg-[#d8ff3e]/10 text-[#d8ff3e]" : "border-white/15 text-white/55 hover:border-[#d8ff3e]/50"}`}>{entry.label}</button>)}</div></div>}
 
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-[#d8ff3e] transition-all" style={{ width: `${progress}%` }} /></div>
       <p className="mt-2 text-xs text-white/45">{progress === 100 ? "Sesión completa. Excelente trabajo." : "Marcá cada ejercicio conforme lo terminés y guardá tu avance."}</p>
@@ -138,8 +159,8 @@ export default function MemberGroupAHome({ os, initial }: Props) {
     <section className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
       <div className="rounded-2xl border border-white/15 bg-[#0c0c0c] p-5">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/45"><ClipboardCheck className="h-4 w-4" />Cómo vas</p>
-        <h2 className="mt-2 text-lg font-black">Tu historial reciente del Grupo A</h2>
-        {view.recent.length ? <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-white/40"><tr><th className="pb-2">Fecha</th><th className="pb-2">Día</th><th className="pb-2 text-right">Avance</th></tr></thead><tbody>{view.recent.map((entry) => <tr key={`${entry.date}-${entry.dayId}`} className="border-t border-white/10"><td className="py-3 text-white/65">{entry.date}</td><td className="py-3 text-white/65">{entry.dayLabel}</td><td className="py-3 text-right font-bold text-[#d8ff3e]">{entry.completed}/{entry.total}</td></tr>)}</tbody></table></div> : <p className="mt-3 text-sm leading-6 text-white/55">Todavía no hay sesiones guardadas. Tu primer registro aparecerá acá y también en la tabla de tu coach.</p>}
+        <h2 className="mt-2 text-lg font-black">Tu historial reciente de {view.groupName}</h2>
+        {view.recent.length ? <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-white/40"><tr><th className="pb-2">Fecha</th><th className="pb-2">Rutina · módulo</th><th className="pb-2 text-right">Avance</th></tr></thead><tbody>{view.recent.map((entry) => <tr key={`${entry.date}-${entry.routineId ?? "legacy"}-${entry.dayId}`} className="border-t border-white/10"><td className="py-3 text-white/65">{entry.date}</td><td className="py-3 text-white/65">{entry.routineLabel} · {entry.dayLabel}</td><td className="py-3 text-right font-bold text-[#d8ff3e]">{entry.completed}/{entry.total}</td></tr>)}</tbody></table></div> : <p className="mt-3 text-sm leading-6 text-white/55">Todavía no hay sesiones guardadas. Tu primer registro aparecerá acá y también en la tabla de tu coach.</p>}
       </div>
       <div className="rounded-2xl border border-[#d8ff3e]/20 bg-[#d8ff3e]/[.04] p-5">
         <p className="text-xs font-bold uppercase tracking-widest text-[#d8ff3e]">Tu siguiente paso</p>
