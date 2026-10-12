@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
   try {
     const context = await memberContext(req);
     if ("response" in context) return context.response;
-    const groupA = await getGroupAMemberView(context.db, context.memberId);
+    const requestedDayId = req.nextUrl.searchParams.get("dayId")?.trim();
+    const groupA = await getGroupAMemberView(context.db, context.memberId, businessDate(), requestedDayId);
     return NextResponse.json({ groupA }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("XTREME MEMBER GROUP A GET", error);
@@ -69,10 +70,10 @@ export async function POST(req: NextRequest) {
     }
 
     const dashboard = await getGroupDashboard(context.db);
-    const profile = dashboard.profiles.find((entry) => entry.groupId === "group-a" && entry.memberId === context.memberId);
+    const profile = dashboard.profiles.find((entry) => entry.memberId === context.memberId);
     const routine = profile && dashboard.routines.find((entry) => entry.id === profile.routineId);
     const day = routine?.days.find((entry) => entry.id === dayId);
-    if (!profile || !routine || !day) return fail("No encontramos tu rutina del Grupo A.", 404);
+    if (!profile || !routine || !day) return fail("No encontramos la rutina de tu grupo.", 404);
     if (completedIds.length > day.exercises.length || completedIds.some((id) => !day.exercises.some((exercise) => exercise.id === id))) {
       return fail("Hay ejercicios inválidos en la sesión.");
     }
@@ -91,6 +92,7 @@ export async function POST(req: NextRequest) {
     const log: GroupLog = {
       id,
       profileId: profile.id,
+      routineId: routine.id,
       dayId: day.id,
       date,
       completedIds: uniqueCompletedIds,
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest) {
     });
     if (!saved) return fail("Tu plan cambió en otra pantalla. Actualizá e intentá de nuevo.", 409);
 
-    const groupA = await getGroupAMemberView(context.db, context.memberId, date);
+    const groupA = await getGroupAMemberView(context.db, context.memberId, date, day.id);
     return NextResponse.json({ ok: true, groupA }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("XTREME MEMBER GROUP A POST", error);

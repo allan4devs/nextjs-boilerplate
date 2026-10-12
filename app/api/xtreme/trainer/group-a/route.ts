@@ -5,7 +5,7 @@ import { getDb } from "@/lib/helpers/mongodb";
 import { resolveStaffSession } from "@/lib/xtreme/staff-session";
 import { MEMBERS_COLLECTION, type MemberDoc } from "@/lib/xtreme/shared";
 import { businessDate } from "@/lib/xtreme/business-date";
-import { GROUP_A_ID, alignGroupExercise, isGroupEquipmentAvailable, validGroupDate, type GroupExercise, type GroupExercisePatch, type GroupLog } from "@/lib/xtreme/trainer-group-a-model";
+import { GROUP_A_ID, alignGroupExercise, isGroupEquipmentAvailable, validGroupDate, type GroupExercise, type GroupExercisePatch, type GroupLog, type GroupRoutine } from "@/lib/xtreme/trainer-group-a-model";
 import { GROUP_A_COLLECTION, getGroupDashboard, groupInventory, saveGroupRecord, type GroupRecord } from "@/lib/xtreme/trainer-group-a";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +27,10 @@ function parseExercisePatch(value: unknown): GroupExercisePatch | null {
       if (raw[key] !== null && (typeof raw[key] !== "number" || !Number.isInteger(raw[key]) || Number(raw[key]) < 0 || Number(raw[key]) > 500)) return null;
       patch[key] = raw[key] === null ? null : Number(raw[key]);
     }
+  }
+  if (raw.weightKg !== undefined) {
+    if (raw.weightKg !== null && (typeof raw.weightKg !== "number" || !Number.isFinite(raw.weightKg) || raw.weightKg < 0 || raw.weightKg > 1000)) return null;
+    patch.weightKg = raw.weightKg === null ? null : Number(raw.weightKg);
   }
   return Object.keys(patch).length ? patch : null;
 }
@@ -55,6 +59,8 @@ export async function POST(req: NextRequest) {
     const db = await getDb();
     let saved = false;
     const dashboard = await getGroupDashboard(db);
+    let createdRoutineId = "";
+    let createdDayId = "";
     if (body.action === "create_group") {
       const name = typeof body.name === "string" ? body.name.trim().slice(0, 80) : "";
       if (name.length < 2) return fail("El grupo necesita un nombre.");
@@ -62,6 +68,37 @@ export async function POST(req: NextRequest) {
       const groupId = `group-${randomUUID().slice(0, 8)}`;
       saved = await saveGroupRecord(db, `group:${groupId}`, 0, {
         kind: "group", groupId, groupName: name, updatedBy: trainer, updatedAt,
+      });
+    } else if (body.action === "create_routine") {
+      const objective = typeof body.objective === "string" ? body.objective.trim().slice(0, 120) : "";
+      const startDate = typeof body.startDate === "string" ? body.startDate : "";
+      const endDate = typeof body.endDate === "string" ? body.endDate : "";
+      const dayLabel = typeof body.dayLabel === "string" ? body.dayLabel.trim().slice(0, 80) : "";
+      const focus = typeof body.focus === "string" ? body.focus.trim().slice(0, 120) : "";
+      if (objective.length < 2) return fail("La rutina necesita un nombre u objetivo.");
+      if (!validGroupDate(startDate, "9999-12-31") || !validGroupDate(endDate, "9999-12-31") || endDate < startDate) return fail("Revisá las fechas de la rutina.");
+      if (dayLabel.length < 2) return fail("Agregá el nombre del primer día o módulo.");
+      createdRoutineId = `routine-${randomUUID().slice(0, 8)}`;
+      const routine: GroupRoutine = {
+        id: createdRoutineId, sourceFile: "Creada en Trainer OS", objective, startDate, endDate,
+        coach: trainer, days: [{ id: `day-${randomUUID().slice(0, 8)}`, label: dayLabel, focus: focus || dayLabel, exercises: [] }],
+      };
+      saved = await saveGroupRecord(db, `routine:${createdRoutineId}`, 0, {
+        kind: "routine", routineId: createdRoutineId, routine, updatedBy: trainer, updatedAt,
+      });
+    } else if (body.action === "add_day") {
+      const routineId = typeof body.routineId === "string" ? body.routineId.trim() : "";
+      const label = typeof body.label === "string" ? body.label.trim().slice(0, 80) : "";
+      const focus = typeof body.focus === "string" ? body.focus.trim().slice(0, 120) : "";
+      const routine = dashboard.routines.find((entry) => entry.id === routineId);
+      if (!routine) return fail("Rutina inválida.");
+      if (label.length < 2) return fail("El módulo necesita un nombre.");
+      if (routine.days.some((day) => day.label.toLowerCase() === label.toLowerCase())) return fail("Ya existe un módulo con ese nombre.");
+      createdDayId = `day-${randomUUID().slice(0, 8)}`;
+      saved = await saveGroupRecord(db, `day:${routineId}:${createdDayId}`, 0, {
+        kind: "day", routineId, dayId: createdDayId,
+        day: { id: createdDayId, label, focus: focus || label, exercises: [] },
+        updatedBy: trainer, updatedAt,
       });
     } else if (body.action === "add_member") {
       const groupId = typeof body.groupId === "string" ? body.groupId.trim() : "";
@@ -91,6 +128,18 @@ export async function POST(req: NextRequest) {
         kind: "membership", groupId, profileId, memberId, name: member.memberName || memberId,
         routineId, active: true, updatedBy: trainer, updatedAt,
       });
+    } else if (body.action === "assign_routine") {
+      const groupId = typeof body.groupId === "string" ? body.groupId.trim() : "";
+      const profileId = typeof body.profileId === "string" ? body.profileId.trim() : "";
+      const routineId = typeof body.routineId === "string" ? body.routineId.trim() : "";
+      const profile = dashboard.profiles.find((entry) => entry.groupId === groupId && entry.id === profileId);
+      if (!dashboard.groups.some((entry) => entry.id === groupId) || !profile) return fail("Persona o grupo inválido.");
+      if (!dashboard.routines.some((entry) => entry.id === routineId)) return fail("Elegí una rutina válida.");
+      const current = await db.collection<GroupRecord>(GROUP_A_COLLECTION).findOne({ _id: `routine-assignment:${profileId}`, kind: "routine_assignment" });
+      if ((current?.revision ?? 0) !== revision) return fail("La asignación cambió en otra pantalla. Actualizá el grupo e intentá de nuevo.", 409);
+      saved = await saveGroupRecord(db, `routine-assignment:${profileId}`, revision, {
+        kind: "routine_assignment", profileId, groupId, routineId, updatedBy: trainer, updatedAt,
+      });
     } else if (body.action === "remove_member") {
       const groupId = typeof body.groupId === "string" ? body.groupId.trim() : "";
       const profileId = typeof body.profileId === "string" ? body.profileId.trim() : "";
@@ -112,16 +161,16 @@ export async function POST(req: NextRequest) {
       const exercise: GroupExercise = {
         id, muscle: patch.muscle ?? "general", name: patch.name.trim(), equipment: patch.equipment ?? "",
         sourceMachine: patch.sourceMachine ?? "", sets: patch.sets ?? null, reps: patch.reps ?? null,
-        time: patch.time ?? "", sourcePage: 0,
+        time: patch.time ?? "", weightKg: patch.weightKg ?? null, sourcePage: 0,
       };
       saved = await saveGroupRecord(db, `exercise:${id}`, 0, {
         kind: "exercise", exerciseId: id, routineId, dayId, isCustom: true, exercise, exercisePatch: patch,
         updatedBy: trainer, updatedAt,
       });
     }
-    if (body.action === "create_group" || body.action === "add_member" || body.action === "remove_member" || body.action === "add_exercise") {
+    if (body.action === "create_group" || body.action === "create_routine" || body.action === "add_day" || body.action === "add_member" || body.action === "assign_routine" || body.action === "remove_member" || body.action === "add_exercise") {
       if (!saved) return fail("Otro entrenador actualizo este registro. Actualiza el grupo antes de guardar.", 409);
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, ...(createdRoutineId ? { routineId: createdRoutineId } : {}), ...(createdDayId ? { dayId: createdDayId } : {}) });
     }
     if (body.action === "mapping") {
       const exercise = allExercises(dashboard).find((e) => e.id === body.exerciseId);
@@ -182,13 +231,13 @@ export async function POST(req: NextRequest) {
         ]);
         const id = `log:${profile.id}:${body.date}:${day.id}`;
         const log: GroupLog = {
-          id, profileId: profile.id, dayId: day.id, date: body.date, completedIds, note: body.note.trim(),
+          id, profileId: profile.id, routineId: profile.routineId, dayId: day.id, date: body.date, completedIds, note: body.note.trim(),
           trainer, updatedAt, revision: revision + 1,
           executions: completedIds.map((exerciseId) => {
             const exercise = day.exercises.find((e) => e.id === exerciseId)!;
             const mapping = mappings.find((r) => r.exerciseId === exerciseId);
             const result = alignGroupExercise(exercise, inventory, mapping ? { exerciseId, assetId: mapping.assetId!, revision: mapping.revision, updatedBy: mapping.updatedBy } : undefined);
-            if (result.status === "review" || result.status === "unavailable") throw new Error("ALIGNMENT_REQUIRED");
+            if (result.status === "review") throw new Error("ALIGNMENT_REQUIRED");
             const asset = result.asset;
             return { exerciseId, assetId: asset?.id ?? "", machineCode: asset?.code ?? "", machineName: asset?.name ?? exercise.equipment,
               weightKg: typeof weights[exerciseId] === "number" ? weights[exerciseId] as number : null };

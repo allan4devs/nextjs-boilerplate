@@ -68,7 +68,7 @@ export function useTrainerOs() {
   const [healthDirty, setHealthDirty] = useState(false);
   const [healthBusy, setHealthBusy] = useState(false);
   const [healthRefresh, setHealthRefresh] = useState(0);
-  const [groupActive, setGroupActive] = useState(false);
+  const [groupActive, setGroupActive] = useState(true);
   const [groupDirty, setGroupDirty] = useState(false);
   const [groupBusy, setGroupBusy] = useState(false);
   const [groupRefresh, setGroupRefresh] = useState(0);
@@ -212,7 +212,7 @@ export function useTrainerOs() {
     setDirty(false);
     setHealthDirty(false);
     setGroupDirty(false);
-    setGroupActive(false);
+    setGroupActive(true);
   }, [dirty, healthDirty, healthBusy, groupDirty, groupBusy]);
 
   const chooseMember = useCallback((key: string) => {
@@ -222,7 +222,7 @@ export function useTrainerOs() {
     setHealthDirty(false);
     setSelectedKey(key);
     setMemberFocus(true);
-    setTab("overview");
+    setTab("health");
     setGroupActive(false);
   }, [dirty, healthDirty, healthBusy, groupBusy, selectedKey]);
 
@@ -231,7 +231,7 @@ export function useTrainerOs() {
     if ((dirty || healthDirty) && !window.confirm("¿Salir de esta ficha y descartar los cambios sin guardar?")) return;
     setHealthDirty(false);
     setMemberFocus(false);
-    setGroupActive(false);
+    setGroupActive(true);
   }, [dirty, healthDirty, healthBusy, groupBusy]);
 
   const refresh = useCallback(async () => {
