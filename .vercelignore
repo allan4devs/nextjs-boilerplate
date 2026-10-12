@@ -5,9 +5,15 @@
 .vscode
 cv
 flyers
-scripts/*
-!scripts/next-memory.mjs
-!scripts/dedup/
+# Excluir scripts de trabajo y datos; dejar disponibles los dos hooks de prebuild.
+scripts/pcitures
+scripts/proposal
+scripts/cv
+scripts/flyers
+scripts/migrations
+scripts/excel
+scripts/xtreme
+scripts/check-*.mjs
 scripts/dedup/*
 !scripts/dedup/sync-face-models.mjs
 !scripts/dedup/build-video-library.mjs

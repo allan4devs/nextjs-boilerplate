@@ -283,18 +283,6 @@ function ExerciseRow({ exercise, index, data, busy, checked, weight, onCheck, on
   </tr>;
 }
 
-function InlineText({ value, ariaLabel, disabled, onCommit }: { value: string; ariaLabel: string; disabled: boolean; onCommit: (value: string) => void }) {
-  const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
-  return <input aria-label={ariaLabel} className="min-h-9 w-full min-w-20 border border-white/20 bg-[#111] px-2 text-[11px] text-white outline-none focus:border-cyan-300 disabled:opacity-40" disabled={disabled} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={() => { if (draft.trim() !== value) onCommit(draft.trim()); }} />;
-}
-
-function InlineNumber({ value, ariaLabel, disabled, onCommit }: { value: number | null; ariaLabel: string; disabled: boolean; onCommit: (value: number | null) => void }) {
-  const [draft, setDraft] = useState(value === null ? "" : String(value));
-  useEffect(() => setDraft(value === null ? "" : String(value)), [value]);
-  return <input aria-label={ariaLabel} type="number" min={0} max={500} className="min-h-9 w-16 border border-white/20 bg-[#111] px-2 text-[11px] text-white outline-none focus:border-cyan-300 disabled:opacity-40" disabled={disabled} value={draft} placeholder="-" onChange={(event) => setDraft(event.target.value)} onBlur={() => { const next = draft.trim() === "" ? null : Math.max(0, Math.min(500, Math.round(Number(draft) || 0))); if (next !== value) onCommit(next); }} />;
-}
-
 function MachineCategoryAssignments({ exercises, data, busy, mutate }: { exercises: GroupExercise[]; data: GroupDashboard; busy: boolean; mutate: Mutate }) {
   const categories = [...new Map(data.inventory.filter((asset) => asset.machineGuideId).map((asset) => [asset.machineGuideId!, asset])).values()];
   return <details className="mt-3 border border-cyan-300/20 bg-black/20 p-3"><summary className="cursor-pointer text-[10px] font-black uppercase tracking-[.12em] text-cyan-200">Elegir categoría y unidad de máquina</summary><p className="mt-2 text-xs text-white/45">Si la sugerencia automática no sirve, elegí otra categoría. Las unidades ocupadas siguen visibles para que la entrenadora decida.</p><div className="mt-3 grid gap-2">{exercises.map((exercise) => <MachineCategoryRow key={exercise.id} exercise={exercise} data={data} categories={categories} busy={busy} mutate={mutate} />)}</div></details>;
