@@ -427,7 +427,7 @@ function GroupSettings({ data, members, groupId, profiles, busy, mutate, onGroup
   </div>;
 }
 
-function GroupManagerWithSearch({ data, members, groupId, profiles, busy, mutate, onGroupChange }: {
+export function GroupManagerWithSearch({ data, members, groupId, profiles, busy, mutate, onGroupChange }: {
   data: GroupDashboard; members: TrainerMember[]; groupId: string; profiles: GroupProfile[]; busy: boolean;
   mutate: Mutate; onGroupChange: (groupId: string) => void;
 }) {
