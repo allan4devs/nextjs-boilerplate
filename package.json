@@ -8,7 +8,6 @@
     "predev:turbo": "node scripts/dedup/sync-face-models.mjs",
     "dev:turbo": "node --max-old-space-size=4096 scripts/next-memory.mjs dev --turbopack",
     "prebuild": "node scripts/dedup/sync-face-models.mjs && node scripts/dedup/build-video-library.mjs",
-    "media:migrate": "node scripts/migrate-videos-to-mongo.mjs",
     "build": "node --max-old-space-size=4096 scripts/next-memory.mjs build --webpack",
     "face:models": "node scripts/dedup/sync-face-models.mjs",
     "start": "next start",
