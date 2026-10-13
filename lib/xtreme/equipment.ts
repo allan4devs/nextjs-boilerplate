@@ -251,8 +251,8 @@ export const DEFAULT_EQUIPMENT_ASSETS: SeedRow[] = ORIGINAL_EQUIPMENT_ASSETS.map
   areaCounts.set(area, sequence);
   return { ...row, name: migrateMachineName(row.name), area, code: `${EQUIPMENT_AREA_CODES[area]}-${String(sequence).padStart(2, "0")}` };
 }).filter(row => row.id !== "eq-019").concat(SECOND_FLOOR_EQUIPMENT);
-export function normalizeEquipmentArea<T extends Pick<EquipmentAssetDoc, "id" | "area" | "code" | "machineGuideId">>(row: T): T {
-  return { ...row, area: currentArea(row), code: migrateEquipmentCode(row.id, row.code) };
+export function normalizeEquipmentArea<T extends Pick<EquipmentAssetDoc, "id" | "area" | "code" | "machineGuideId" | "name">>(row: T): T {
+  return { ...row, name: migrateMachineName(row.name), area: currentArea(row), code: migrateEquipmentCode(row.id, row.code) };
 }
 
 /** Upsert idempotente: no duplica si se corre de nuevo (mismo patrón que `ensureDefaultProducts`). */

@@ -69,19 +69,41 @@ export async function POST(req: NextRequest) {
       saved = await saveGroupRecord(db, `group:${groupId}`, 0, {
         kind: "group", groupId, groupName: name, updatedBy: trainer, updatedAt,
       });
+    } else if (body.action === "delete_group") {
+      const groupId = typeof body.groupId === "string" ? body.groupId.trim() : "";
+      if (!groupId || groupId === GROUP_A_ID) return fail("El Grupo A principal no se puede eliminar.");
+      if (!dashboard.groups.some((group) => group.id === groupId)) return fail("Grupo inválido.");
+      if (dashboard.profiles.some((profile) => profile.groupId === groupId)) return fail("Quitá primero las personas de este grupo.", 409);
+      const result = await db.collection<GroupRecord>(GROUP_A_COLLECTION).deleteOne({ _id: `group:${groupId}`, kind: "group" });
+      if (!result.deletedCount) return fail("No se pudo eliminar el grupo.", 409);
+      saved = true;
     } else if (body.action === "create_routine") {
       const objective = typeof body.objective === "string" ? body.objective.trim().slice(0, 120) : "";
       const startDate = typeof body.startDate === "string" ? body.startDate : "";
       const endDate = typeof body.endDate === "string" ? body.endDate : "";
       const dayLabel = typeof body.dayLabel === "string" ? body.dayLabel.trim().slice(0, 80) : "";
       const focus = typeof body.focus === "string" ? body.focus.trim().slice(0, 120) : "";
+      const moduleCount = Number(body.moduleCount ?? 1);
+      const templateRoutineId = typeof body.templateRoutineId === "string" ? body.templateRoutineId.trim() : "";
+      const templateDayId = typeof body.templateDayId === "string" ? body.templateDayId.trim() : "";
       if (objective.length < 2) return fail("La rutina necesita un nombre u objetivo.");
       if (!validGroupDate(startDate, "9999-12-31") || !validGroupDate(endDate, "9999-12-31") || endDate < startDate) return fail("Revisá las fechas de la rutina.");
-      if (dayLabel.length < 2) return fail("Agregá el nombre del primer día o módulo.");
+      if (dayLabel.length < 2) return fail("Agregá el nombre del Día 1.");
+      if (!Number.isInteger(moduleCount) || moduleCount < 1 || moduleCount > 7) return fail("La rutina debe tener entre 1 y 7 días.");
+      const templateDay = templateRoutineId
+        ? dashboard.routines.find((entry) => entry.id === templateRoutineId)?.days.find((entry) => entry.id === templateDayId)
+        : undefined;
+      if (templateRoutineId && !templateDay) return fail("La rutina base o su día no son válidos.");
       createdRoutineId = `routine-${randomUUID().slice(0, 8)}`;
       const routine: GroupRoutine = {
         id: createdRoutineId, sourceFile: "Creada en Trainer OS", objective, startDate, endDate,
-        coach: trainer, days: [{ id: `day-${randomUUID().slice(0, 8)}`, label: dayLabel, focus: focus || dayLabel, exercises: [] }],
+        coach: trainer,
+        days: Array.from({ length: moduleCount }, (_, index) => ({
+          id: `day-${randomUUID().slice(0, 8)}`,
+          label: `Día ${index + 1}`,
+          focus: index === 0 ? (focus || dayLabel) : `Día ${index + 1}`,
+          exercises: index === 0 && templateDay ? templateDay.exercises.map((exercise) => ({ ...exercise, id: `custom-${randomUUID().slice(0, 12)}` })) : [],
+        })),
       };
       saved = await saveGroupRecord(db, `routine:${createdRoutineId}`, 0, {
         kind: "routine", routineId: createdRoutineId, routine, updatedBy: trainer, updatedAt,
@@ -92,8 +114,8 @@ export async function POST(req: NextRequest) {
       const focus = typeof body.focus === "string" ? body.focus.trim().slice(0, 120) : "";
       const routine = dashboard.routines.find((entry) => entry.id === routineId);
       if (!routine) return fail("Rutina inválida.");
-      if (label.length < 2) return fail("El módulo necesita un nombre.");
-      if (routine.days.some((day) => day.label.toLowerCase() === label.toLowerCase())) return fail("Ya existe un módulo con ese nombre.");
+      if (label.length < 2) return fail("El día necesita un nombre.");
+      if (routine.days.some((day) => day.label.toLowerCase() === label.toLowerCase())) return fail("Ya existe un día con ese nombre.");
       createdDayId = `day-${randomUUID().slice(0, 8)}`;
       saved = await saveGroupRecord(db, `day:${routineId}:${createdDayId}`, 0, {
         kind: "day", routineId, dayId: createdDayId,
@@ -156,7 +178,7 @@ export async function POST(req: NextRequest) {
       const dayId = typeof body.dayId === "string" ? body.dayId.trim() : "";
       const patch = parseExercisePatch(body.patch);
       const day = dashboard.routines.find((routine) => routine.id === routineId)?.days.find((entry) => entry.id === dayId);
-      if (!day || !patch?.name?.trim()) return fail("Rutina, modulo y nombre del ejercicio son requeridos.");
+      if (!day || !patch?.name?.trim()) return fail("Rutina, día y nombre del ejercicio son requeridos.");
       const id = `custom-${randomUUID().slice(0, 12)}`;
       const exercise: GroupExercise = {
         id, muscle: patch.muscle ?? "general", name: patch.name.trim(), equipment: patch.equipment ?? "",
@@ -168,7 +190,7 @@ export async function POST(req: NextRequest) {
         updatedBy: trainer, updatedAt,
       });
     }
-    if (body.action === "create_group" || body.action === "create_routine" || body.action === "add_day" || body.action === "add_member" || body.action === "assign_routine" || body.action === "remove_member" || body.action === "add_exercise") {
+    if (body.action === "create_group" || body.action === "delete_group" || body.action === "create_routine" || body.action === "add_day" || body.action === "add_member" || body.action === "assign_routine" || body.action === "remove_member" || body.action === "add_exercise") {
       if (!saved) return fail("Otro entrenador actualizo este registro. Actualiza el grupo antes de guardar.", 409);
       return NextResponse.json({ ok: true, ...(createdRoutineId ? { routineId: createdRoutineId } : {}), ...(createdDayId ? { dayId: createdDayId } : {}) });
     }
@@ -218,6 +240,7 @@ export async function POST(req: NextRequest) {
       } else if (body.action === "log") {
         const day = dashboard.routines.find((r) => r.id === profile.routineId)?.days.find((d) => d.id === body.dayId);
         if (!day || !validGroupDate(body.date, businessDate())) return fail("Día o fecha inválidos. No se pueden registrar sesiones futuras.");
+        if (new Date(`${body.date}T12:00:00Z`).getUTCDay() === 0) return fail("El domingo el gimnasio no trabaja; no se registran seguimientos.");
         if (!Array.isArray(body.completedIds) || body.completedIds.length > day.exercises.length ||
           body.completedIds.some((id) => typeof id !== "string" || !day.exercises.some((e) => e.id === id))) return fail("Ejercicios realizados inválidos.");
         if (typeof body.note !== "string" || body.note.length > 2000) return fail("La observación admite hasta 2000 caracteres.");

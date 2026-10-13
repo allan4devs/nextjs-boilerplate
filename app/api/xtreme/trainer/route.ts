@@ -66,6 +66,7 @@ function trainerMemberView(member: WithId<MemberDoc>) {
           planTitle: member.activePlanWorkout.planTitle,
           trainingName: member.activePlanWorkout.trainingName,
           startedAt: member.activePlanWorkout.startedAt,
+          exercises: member.activePlanWorkout.exercises ?? [],
         }
       : null,
     recentWorkouts: workouts,

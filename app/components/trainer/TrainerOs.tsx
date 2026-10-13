@@ -15,6 +15,7 @@ const TrainerGroupA = dynamic(() => import("./ui/TrainerGroupA").then((module) =
 export default function TrainerOs() {
   const os = useTrainerOs();
   const [groupView, setGroupView] = useState<"tracking" | "routines" | "settings">("tracking");
+  const [selectedRoutineId, setSelectedRoutineId] = useState<string | undefined>();
 
   if (os.checking && !os.authenticated) return <main data-staff-app="trainer" className="grid min-h-screen place-items-center bg-[#050505] text-cyan-300"><div className="text-center"><Loader2 className="mx-auto h-9 w-9 animate-spin" /><p className="mt-3 text-[10px] font-black uppercase tracking-[.2em] text-white/35">Cargando Trainer OS</p></div></main>;
 
@@ -30,12 +31,12 @@ export default function TrainerOs() {
 
     <div className="mx-auto max-w-[1680px] p-3 sm:p-4 lg:p-6">
       {!os.memberFocus && <nav aria-label="Área de trabajo del entrenador" className="my-4 flex flex-wrap gap-2">
-        <GameButton variant={os.groupActive && groupView === "tracking" ? "cyan" : "ghost"} disabled={os.healthBusy || os.groupBusy} aria-pressed={os.groupActive && groupView === "tracking"} onClick={() => { setGroupView("tracking"); os.setGroupActive(true); }}>Grupo A</GameButton>
+        <GameButton variant={os.groupActive && groupView === "tracking" ? "cyan" : "ghost"} disabled={os.healthBusy || os.groupBusy} aria-pressed={os.groupActive && groupView === "tracking"} onClick={() => { setGroupView("tracking"); os.setGroupActive(true); }}>Seguimiento</GameButton>
         <GameButton variant={os.groupActive && groupView === "routines" ? "cyan" : "ghost"} disabled={os.healthBusy || os.groupBusy} aria-pressed={os.groupActive && groupView === "routines"} onClick={() => { setGroupView("routines"); os.setGroupActive(true); }}><BookOpen className="h-4 w-4" /> Rutinas</GameButton>
-        <GameButton variant={os.groupActive && groupView === "settings" ? "cyan" : "ghost"} disabled={os.healthBusy || os.groupBusy} aria-pressed={os.groupActive && groupView === "settings"} onClick={() => { setGroupView("settings"); os.setGroupActive(true); }}><Settings className="h-4 w-4" /> Configuraciones</GameButton>
+        <GameButton variant={os.groupActive && groupView === "settings" ? "cyan" : "ghost"} disabled={os.healthBusy || os.groupBusy} aria-pressed={os.groupActive && groupView === "settings"} onClick={() => { setGroupView("settings"); os.setGroupActive(true); }}><Settings className="h-4 w-4" /> Grupos</GameButton>
       </nav>}
       {!os.memberFocus && <div hidden={!os.groupActive}>
-        <TrainerGroupA active={os.groupActive} view={groupView} members={os.members} refreshKey={os.groupRefresh} onDirtyChange={os.setGroupDirty} onBusyChange={os.setGroupBusy} onOpenMember={os.chooseMember} />
+        <TrainerGroupA active={os.groupActive} view={groupView} members={os.members} refreshKey={os.groupRefresh} onDirtyChange={os.setGroupDirty} onBusyChange={os.setGroupBusy} onOpenMember={os.chooseMember} initialRoutineId={selectedRoutineId} onRequestView={(nextView, routineId) => { setSelectedRoutineId(routineId); setGroupView(nextView); os.setGroupActive(true); }} />
       </div>}
       {os.memberFocus && os.selected && <section className="min-w-0 space-y-4">
           <button type="button" onClick={os.leaveMember} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase text-white/55 transition hover:border-cyan-300 hover:text-cyan-200"><ArrowLeft className="h-4 w-4" /> Volver al grupo</button>

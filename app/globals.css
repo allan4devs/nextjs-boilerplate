@@ -314,6 +314,60 @@ html.xg-staff-light [data-staff-app="trainer"] [class*="text-orange-200"] {
   color: #8f4515 !important;
 }
 
+/* Superficies compartidas que usan tokens del Member OS y no reciben el
+ * reemplazo genérico de tema claro por llevar fondos elevados o overlays. */
+html.xg-staff-light .xg-game-modal-panel,
+html.xg-staff-light .xg-game-panel,
+html.xg-staff-light .xg-game-stat {
+  background-color: #fbfcf8 !important;
+  color: #172019 !important;
+}
+
+/* Modales propios del Trainer OS (por ejemplo, editar ejercicio) usan un
+ * color de panel distinto al token estándar y necesitan la misma conversión. */
+html.xg-staff-light [data-staff-app="trainer"] [role="dialog"][class*="bg-[#101313]"],
+html.xg-staff-light [data-staff-app="trainer"] [role="dialog"][class*="bg-[#0c0c0c]"],
+html.xg-staff-light [data-staff-app="trainer"] .xg-game-modal-panel {
+  background-color: #fbfcf8 !important;
+  color: #172019 !important;
+}
+
+html.xg-staff-light [data-staff-app="trainer"] [role="dialog"] [class*="text-white"],
+html.xg-staff-light [data-staff-app="trainer"] [role="dialog"] [class*="text-white/"] {
+  color: rgba(23, 32, 25, 0.78) !important;
+}
+
+html.xg-staff-light [data-staff-app="trainer"] [role="dialog"] [class*="border-white"] {
+  border-color: #c7cec5 !important;
+}
+
+html.xg-staff-light .xg-game-modal-panel .xg-game-modal-scroll {
+  background-color: #fbfcf8 !important;
+}
+
+html.xg-staff-light .xg-game-modal-panel > div:last-child {
+  background-color: #f0f4ee !important;
+  border-color: #c7cec5 !important;
+}
+
+html.xg-staff-light .xg-game-modal-panel [class*="bg-black/"],
+html.xg-staff-light .xg-game-panel [class*="bg-black/"],
+html.xg-staff-light .xg-game-stat[class*="bg-black/"] {
+  background-color: rgba(33, 63, 45, 0.055) !important;
+}
+
+html.xg-staff-light .xg-game-modal-panel [class*="text-white"],
+html.xg-staff-light .xg-game-panel [class*="text-white"],
+html.xg-staff-light .xg-game-stat [class*="text-white"] {
+  color: rgba(23, 32, 25, 0.78) !important;
+}
+
+html.xg-staff-light .xg-game-modal-panel [class*="border-white"],
+html.xg-staff-light .xg-game-panel [class*="border-white"],
+html.xg-staff-light .xg-game-stat [class*="border-white"] {
+  border-color: #c7cec5 !important;
+}
+
 /*
  * Impresión del comprobante de recepción — impresora térmica AON Printer.
  * Especificación real del papel (driver "AON Printer", puerto USB, monocromo):

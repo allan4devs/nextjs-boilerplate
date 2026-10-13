@@ -70,7 +70,8 @@ export function normalizeGroupName(value: string) {
 export function exerciseGuides(exercise: GroupExercise): string[] {
   const name = normalizeGroupName(exercise.name);
   const equipment = normalizeGroupName(exercise.equipment);
-  if (exercise.muscle === "cardiovascular") {
+  const muscle = normalizeGroupName(exercise.muscle);
+  if (muscle === "cardiovascular" || muscle === "cardio") {
     if (`${name} ${equipment}`.includes("caminadora")) return ["treadmill"];
     if (`${name} ${equipment}`.includes("eliptica")) return ["elliptical"];
     if (`${name} ${equipment}`.includes("bici")) return ["bicicleta-estatica"];
@@ -79,7 +80,7 @@ export function exerciseGuides(exercise: GroupExercise): string[] {
   }
   if (/polea|polrea/.test(equipment)) return ["cable-station", "polea-crossover"];
   if (!equipment.includes("maquina")) return [];
-  if (/abdyadd|add y abd/.test(name)) return ["hip-abductor-aductor-dual"];
+  if (/abdyadd|add y abd|abduccion y aduccion/.test(name)) return ["hip-abductor-aductor-dual"];
   if (name.includes("abduccion")) return ["hip-abductor"];
   if (name.includes("aduccion")) return ["hip-adductor"];
   if (name.includes("hip thrust")) return ["hip-thrust"];

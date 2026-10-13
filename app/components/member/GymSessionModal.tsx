@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Loader2, LogIn, LogOut, Timer, X } from "lucide-react";
+import { Check, Dumbbell, Loader2, LogIn, LogOut, Timer, X } from "lucide-react";
 import { GameButton, GameModal } from "../GameOS";
 import { FREE_WORKOUT } from "./constants";
 import type { MemberOs } from "./useMemberOs";
@@ -78,9 +78,11 @@ function OpenGymSessionModal({ os }: { os: MemberOs }) {
   const [wantsWorkout, setWantsWorkout] = useState(false);
   const [workoutType, setWorkoutType] = useState<(typeof WORKOUT_TYPES)[number] | "">("");
   const [finishedMinutes, setFinishedMinutes] = useState<number | null>(null);
+  const [finishedPlan, setFinishedPlan] = useState<typeof os.currentMember.activePlanWorkout>(null);
 
   const saveAndCheckout = async () => {
     if (!unlocked || !activeVisit) return;
+    const planSnapshot = os.currentMember.activePlanWorkout;
     if (wantsWorkout && !trainedToday) {
       const minutes = Math.max(1, activeVisit.elapsedMinutes);
       const saved = await completeTraining(
@@ -94,7 +96,10 @@ function OpenGymSessionModal({ os }: { os: MemberOs }) {
       if (!saved) return;
     }
     const duration = await registerCheckout();
-    if (duration !== null) setFinishedMinutes(duration);
+    if (duration !== null) {
+      setFinishedPlan(planSnapshot);
+      setFinishedMinutes(duration);
+    }
   };
 
   const busy = Boolean(savingTrainingId) || isRegisteringCheckout;
@@ -118,6 +123,42 @@ function OpenGymSessionModal({ os }: { os: MemberOs }) {
             </p>
             <p className="mt-1 text-5xl font-black text-white">{durationLabel(finishedMinutes)}</p>
           </div>
+          {finishedPlan ? (
+            <div className="border-[3px] border-white/15 bg-black/30 p-4 text-left">
+              <div className="flex items-start gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center bg-[#d8ff3e] text-black">
+                  <Dumbbell className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[.16em] text-[#d8ff3e]">Rutina del coach</p>
+                  <p className="mt-1 text-base font-black uppercase text-white">{finishedPlan.trainingName || finishedPlan.planTitle}</p>
+                  <p className="mt-1 text-xs font-bold text-white/45">{finishedPlan.planTitle}</p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                {finishedPlan.exercises.map((exercise) => {
+                  const logs = exercise.tracking?.logs ?? [];
+                  const completedSets = logs.length || (exercise.completed ? exercise.sets : 0);
+                  return (
+                    <div key={exercise.id} className="flex items-center justify-between gap-3 border-t border-white/10 pt-2 text-left">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-black uppercase text-white">{exercise.exerciseName || exercise.machineName}</p>
+                        <p className="mt-0.5 text-[11px] font-bold text-white/40">
+                          Meta: {exercise.prescribedSets ?? exercise.sets}×{exercise.prescribedReps ?? exercise.reps}
+                          {exercise.prescribedWeightKg ? ` · ${exercise.prescribedWeightKg} kg` : ""}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 text-[10px] font-black uppercase ${exercise.completed ? "text-[#d8ff3e]" : "text-orange-300"}`}>
+                        {exercise.completed ? `${completedSets} series` : "Pendiente"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm font-bold text-white/50">Tu visita quedó registrada. ¡Buen trabajo!</p>
+          )}
           <GameButton full variant="lime" onClick={closeOsModal}>
             <Check className="h-4 w-4" /> Listo
           </GameButton>

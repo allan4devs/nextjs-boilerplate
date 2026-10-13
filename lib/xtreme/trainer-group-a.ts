@@ -1,7 +1,9 @@
 import type { Db } from "mongodb";
 import source from "./trainer-group-a-source.json";
+import { normalizeGroupExercise } from "./trainer-exercise-catalog";
 import { businessDate } from "./business-date";
 import { EQUIPMENT_ASSETS_COLLECTION } from "./shared";
+import { migrateMachineName } from "./machine-display-names";
 import {
   GROUP_A_PROFILES, type GroupRoutine, type GroupEquipment, type GroupMapping,
   GROUP_A_ID, type GroupLink, type GroupLog, type GroupDashboard, type GroupExercise, type TrainerGroup, type GroupAMemberView,
@@ -23,7 +25,7 @@ export async function groupInventory(db: Db) {
   // Only actual shared assets, never a fallback that could resurrect removed machines.
   return db.collection<GroupEquipment>(EQUIPMENT_ASSETS_COLLECTION).find({ kind: "machine" }, {
     projection: { _id: 0, id: 1, code: 1, name: 1, status: 1, machineGuideId: 1, location: 1, floor: 1 },
-  }).sort({ code: 1 }).toArray();
+  }).sort({ code: 1 }).toArray().then((rows) => rows.map((row) => ({ ...row, name: migrateMachineName(row.name) })));
 }
 export async function getGroupDashboard(db: Db): Promise<GroupDashboard> {
   const records = db.collection<GroupRecord>(GROUP_A_COLLECTION);
@@ -54,16 +56,18 @@ export async function getGroupDashboard(db: Db): Promise<GroupDashboard> {
     ...routine,
     days: routine.days.map((day) => ({
       ...day,
-      exercises: day.exercises.map((exercise) => ({ ...exercise, ...(editsById.get(exercise.id) ?? {}) })),
+      exercises: day.exercises.map((exercise) => normalizeGroupExercise({ ...exercise, ...(editsById.get(exercise.id) ?? {}) })),
     })),
   }));
   for (const record of settings.filter((r) => r.kind === "day" && r.routineId && r.day)) {
     const routine = routines.find((entry) => entry.id === record.routineId);
-    if (routine && record.day && !routine.days.some((day) => day.id === record.day!.id)) routine.days.push(record.day);
+    if (routine && record.day && !routine.days.some((day) => day.id === record.day!.id)) {
+      routine.days.push({ ...record.day, exercises: record.day.exercises.map(normalizeGroupExercise) });
+    }
   }
   for (const record of exerciseEdits.filter((entry) => entry.isCustom && entry.exercise && entry.routineId && entry.dayId)) {
     const day = routines.find((routine) => routine.id === record.routineId)?.days.find((entry) => entry.id === record.dayId);
-    if (day && record.exercise) day.exercises.push({ ...record.exercise, ...(record.exercisePatch ?? {}) });
+    if (day && record.exercise) day.exercises.push(normalizeGroupExercise({ ...record.exercise, ...(record.exercisePatch ?? {}) }));
   }
   return {
     date: businessDate(), groups, profiles, routines, inventory,

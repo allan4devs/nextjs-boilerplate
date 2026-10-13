@@ -64,6 +64,13 @@ import type {
 
 export type MemberOs = ReturnType<typeof useMemberOs>;
 
+function notifyTrainerWorkoutChanged() {
+  if (typeof window === "undefined" || typeof window.BroadcastChannel === "undefined") return;
+  const channel = new window.BroadcastChannel("xtreme-member-workout");
+  channel.postMessage({ type: "workout-updated", at: Date.now() });
+  channel.close();
+}
+
 export function useMemberOs() {
   const [memberNameInput, setMemberNameInput] = useState("");
   const [memberCedulaInput, setMemberCedulaInput] = useState("");
@@ -1340,6 +1347,7 @@ export function useMemberOs() {
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
+      notifyTrainerWorkoutChanged();
       setMessage("Detalle del entreno guardado.");
       return true;
     } catch (err) {
@@ -1385,6 +1393,7 @@ export function useMemberOs() {
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
       setLeaderboard(data.leaderboard ?? []);
+      notifyTrainerWorkoutChanged();
       setMessage("Entreno finalizado y sesion del plan completada.");
       return true;
     } catch (err) {
@@ -1407,6 +1416,7 @@ export function useMemberOs() {
       });
       const data = await readJson<MembersResponse>(response);
       setMember(data.member);
+      notifyTrainerWorkoutChanged();
       setMessage("Entreno activo cancelado.");
     } catch (err) {
       requirePinAgain(err, "No se pudo cancelar el entreno.");

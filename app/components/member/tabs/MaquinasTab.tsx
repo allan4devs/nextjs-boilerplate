@@ -13,6 +13,7 @@ import {
   HeartPulse,
   LayoutGrid,
   Play,
+  Search,
   ShieldCheck,
   Target,
   type LucideIcon,
@@ -35,20 +36,55 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
   const { setOsModal } = os;
   const [activeId, setActiveId] = useState<string | null>("maquinas");
   const [zoneFilter, setZoneFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const zones = useMemo(() => {
     const set = new Set(MACHINE_GUIDE.map((m) => m.zone));
     return Array.from(set);
   }, []);
 
-  const filtered = zoneFilter
-    ? MACHINE_GUIDE.filter((m) => m.zone === zoneFilter)
-    : MACHINE_GUIDE;
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = MACHINE_GUIDE.filter((machine) => {
+    const matchesZone = !zoneFilter || machine.zone === zoneFilter;
+    const searchable = [machine.name, machine.zone, machine.location, ...machine.muscles]
+      .join(" ")
+      .toLowerCase();
+    return matchesZone && (!normalizedQuery || searchable.includes(normalizedQuery));
+  });
 
   const withVideo = MACHINE_GUIDE.filter((m) => m.videoUrl).length;
 
   const machinesContent = (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          ["Guías", MACHINE_GUIDE.length],
+          ["Con video", withVideo],
+          ["Zonas", zones.length],
+        ].map(([label, value]) => (
+          <div key={label} className="border-2 border-white/10 bg-white/[0.04] px-2 py-2.5 text-center">
+            <p className="text-lg font-black leading-none text-[#d8ff3e]">{value}</p>
+            <p className="mt-1 text-[9px] font-black uppercase tracking-[0.12em] text-white/40">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <label className="flex min-h-12 items-center gap-2 border-[3px] border-white/15 bg-black/40 px-3 focus-within:border-[#d8ff3e]">
+        <Search className="h-5 w-5 shrink-0 text-[#d8ff3e]" />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Buscá máquina, músculo o zona"
+          className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/35"
+          aria-label="Buscar máquina"
+        />
+        {query && (
+          <button type="button" onClick={() => setQuery("")} className="px-1 text-xs font-black uppercase text-white/45 hover:text-white">
+            Limpiar
+          </button>
+        )}
+      </label>
+
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
@@ -77,7 +113,18 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 min-[560px]:grid-cols-2 lg:grid-cols-3">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-white/45">
+          {filtered.length} resultado{filtered.length === 1 ? "" : "s"}
+        </p>
+        {(zoneFilter || query) && (
+          <button type="button" onClick={() => { setZoneFilter(null); setQuery(""); }} className="text-[10px] font-black uppercase text-[#d8ff3e] hover:underline">
+            Ver todo
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">
         {filtered.map((machine) => {
           const ZoneIcon = ZONE_ICONS[machine.zone] ?? Dumbbell;
           return (
@@ -85,18 +132,18 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
               key={machine.id}
               type="button"
               onClick={() => setOsModal({ kind: "machine", machineId: machine.id })}
-              className="group relative flex min-h-[190px] flex-col overflow-hidden border-[2px] border-white/25 bg-[#0c0c0c] text-left shadow-[4px_4px_0_rgba(0,0,0,.55)] transition focus-visible:border-[#d8ff3e] focus-visible:outline-none active:translate-x-px active:translate-y-px active:shadow-none hover:border-[#d8ff3e] sm:min-h-[210px]"
+              className="group relative flex min-h-[196px] flex-col overflow-hidden border-[2px] border-white/20 bg-[#0c0c0c] text-left shadow-[3px_3px_0_rgba(0,0,0,.55)] transition focus-visible:border-[#d8ff3e] focus-visible:outline-none active:translate-x-px active:translate-y-px active:shadow-none hover:border-[#d8ff3e] sm:min-h-[218px]"
             >
               <div
                 className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-105"
                 style={{ backgroundImage: `url(${machine.image})` }}
               />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.28)_0%,rgba(0,0,0,.16)_34%,rgba(0,0,0,.88)_68%,rgba(0,0,0,.98)_100%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.18)_0%,rgba(0,0,0,.24)_38%,rgba(0,0,0,.94)_72%,rgba(0,0,0,1)_100%)]" />
               <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${machine.accent}`} />
               <div className="relative flex flex-1 flex-col justify-between p-3.5 sm:p-4">
                 <div className="flex items-start justify-between gap-2">
                   <span
-                    className={`grid h-10 w-10 place-items-center bg-gradient-to-br ${machine.accent} text-black shadow-[2px_2px_0_rgba(0,0,0,.35)] sm:h-11 sm:w-11`}
+                    className={`grid h-9 w-9 place-items-center bg-gradient-to-br ${machine.accent} text-black shadow-[2px_2px_0_rgba(0,0,0,.35)] sm:h-11 sm:w-11`}
                   >
                     <ZoneIcon className="h-5 w-5" />
                   </span>
@@ -111,7 +158,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
                   <GameLabel tone="white">
                     {machine.zone} · {machine.level}
                   </GameLabel>
-                  <h2 className="mt-1.5 text-base font-black uppercase leading-[1.08] text-balance drop-shadow sm:text-lg">
+                  <h2 className="mt-1.5 line-clamp-3 text-sm font-black uppercase leading-[1.08] text-balance drop-shadow sm:text-lg">
                     {machine.name}
                   </h2>
                   <div className="mt-2 flex flex-wrap gap-1">

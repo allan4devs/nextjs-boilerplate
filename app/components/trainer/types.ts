@@ -90,6 +90,7 @@ export type TrainerMember = {
     planTitle?: string;
     trainingName?: string;
     startedAt: string;
+    exercises?: WorkoutExerciseDetail[];
   } | null;
   recentWorkouts: TrainerWorkout[];
   latestMetrics: TrainerMetric[];
