@@ -21,7 +21,7 @@ import OsModals from "./components/member/OsModals";
 import ToastHost from "./components/member/Toasts";
 import ResumenTab from "./components/member/tabs/ResumenTab";
 import EntrenarTab from "./components/member/tabs/EntrenarTab";
-import VidaTab from "./components/member/tabs/VidaTab";
+import KinetiaTab from "./components/member/tabs/KinetiaTab";
 import MaquinasTab from "./components/member/tabs/MaquinasTab";
 import ProgresoTab from "./components/member/tabs/ProgresoTab";
 import PerfilTab from "./components/member/tabs/PerfilTab";
@@ -143,7 +143,7 @@ export default function ExtremeGymSite() {
           <div key={tab} className="space-y-2.5 sm:space-y-3">
             {tab === "resumen" && (unlocked ? <MemberJourneyHome key={currentMember.normalizedName} os={os} /> : <ResumenTab model={resumen.model} actions={resumen.actions} />)}
             {tab === "entrenar" && <EntrenarTab os={os} />}
-            {tab === "vida" && <VidaTab os={os} />}
+            {tab === "vida" && <KinetiaTab os={os} />}
             {tab === "maquinas" && <MaquinasTab os={os} />}
             {tab === "progreso" && <ProgresoTab os={os} />}
             {tab === "perfil" && <PerfilTab os={os} />}
