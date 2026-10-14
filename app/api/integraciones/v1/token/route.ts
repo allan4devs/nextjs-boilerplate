@@ -35,14 +35,16 @@ function errorResponse(status: number, code: string, message: string) {
 
 export async function POST(req: NextRequest) {
   const expectedCode = process.env.XTREME_KINESIA_INTEGRATION_CODE?.trim() ?? "";
-  let body: { cedula?: unknown; codigoIntegracion?: unknown; nombre?: unknown; email?: unknown };
+  let body: { cedula?: unknown; nombre?: unknown; email?: unknown };
   try {
     body = await req.json();
   } catch {
     return errorResponse(422, "HTTP_422", "Datos inválidos.");
   }
 
-  if (!sameSecret(String(body.codigoIntegracion ?? "").trim(), expectedCode)) {
+  const authorization = req.headers.get("authorization") ?? "";
+  const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? "";
+  if (!sameSecret(bearer, expectedCode)) {
     return errorResponse(401, "HTTP_401", "Código de integración inválido.");
   }
 
