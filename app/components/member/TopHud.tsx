@@ -6,8 +6,10 @@ import { Flame, Menu, Star, Target, Zap } from "lucide-react";
 import { GameButton, GameHudPill } from "../GameOS";
 import type { MemberOs } from "./useMemberOs";
 import VisitTimer from "./journey/VisitTimer";
+import { useMemberLanguage } from "./language";
 
 export default function TopHud({ os }: { os: MemberOs }) {
+  const { language, setLanguage, t } = useMemberLanguage();
   const {
     setNavOpen,
     unlocked,
@@ -47,7 +49,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
             )}
             {!os.activeVisit && <><GameHudPill
               icon={Flame}
-              label="Racha"
+              label={t("streak")}
               value={effectiveStreak}
               tone="orange"
               compact
@@ -55,7 +57,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
             />
             <GameHudPill
               icon={Star}
-              label="Nv"
+              label={t("level")}
               value={os.journey?.level ?? 0}
               tone="cyan"
               compact
@@ -63,7 +65,7 @@ export default function TopHud({ os }: { os: MemberOs }) {
             />
             <GameHudPill
               icon={Target}
-              label="Sem"
+              label={t("week")}
               value={`${weekDoneCount}/${weeklyGoal}`}
               tone="lime"
               compact
@@ -72,6 +74,9 @@ export default function TopHud({ os }: { os: MemberOs }) {
             />
             </>}
             {/* Solo desktop: hueco para el atajo flotante "Sistemas" */}
+            <button type="button" onClick={() => setLanguage(language === "es" ? "en" : "es")} className="min-h-8 shrink-0 border-2 border-white/15 px-2 text-[10px] font-black uppercase text-white/60 hover:border-[#d8ff3e] hover:text-white" aria-label={t("language")}>
+              {language === "es" ? "EN" : "ES"}
+            </button>
             <span className="hidden w-28 shrink-0 lg:block" aria-hidden />
           </div>
         )}

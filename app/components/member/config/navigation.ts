@@ -10,7 +10,7 @@ import {
 export const TABS = [
   { id: "resumen", label: "Resumen", icon: Activity },
   { id: "entrenar", label: "Entrenar", icon: Dumbbell },
-  { id: "vida", label: "Kinetia", icon: HeartPulse },
+  { id: "vida", label: "Kinesia", icon: HeartPulse },
   { id: "maquinas", label: "Maquinas", icon: ShieldCheck },
   { id: "progreso", label: "Progreso", icon: TrendingUp },
   { id: "perfil", label: "Perfil", icon: UserRound },

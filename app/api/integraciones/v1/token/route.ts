@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/helpers/mongodb";
 import { createMemberSession, attachSessionCookie } from "@/lib/xtreme/session";
 import { cedulaDigits, matchCedula, MEMBERS_COLLECTION, type MemberDoc } from "@/lib/xtreme/shared";
+import { normalizeMemberKey, normalizeMemberName, normalizeMemberEmail } from "@/lib/xtreme/members/normalizers";
+import { createFreeFirstDayMembership } from "@/lib/xtreme/members/membership";
 
 export const dynamic = "force-dynamic";
 
@@ -54,18 +56,40 @@ export async function POST(req: NextRequest) {
   }
 
   const db = await getDb();
-  const members = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({ cedula: { $exists: true } }).project({ memberName: 1, normalizedName: 1, cedula: 1 }).toArray();
-  const member = members.find((candidate) => matchCedula(candidate.cedula, cedula));
-  if (!member?.normalizedName || !member.memberName) {
-    return errorResponse(404, "NOT_FOUND", "No tenés cuenta en la app del gimnasio. Pedila en recepción.");
-  }
+  const incomingName = normalizeMemberName(body.nombre);
+  const incomingEmail = normalizeMemberEmail(body.email);
+  const members = await db.collection<MemberDoc>(MEMBERS_COLLECTION).find({}).project({ memberName: 1, normalizedName: 1, cedula: 1, email: 1 }).toArray();
+  const member = members.find((candidate) => matchCedula(candidate.cedula, cedula))
+    ?? (incomingName ? members.find((candidate) => candidate.normalizedName === normalizeMemberKey(incomingName)) : undefined);
+  const now = new Date();
+  const memberKey = member?.normalizedName || normalizeMemberKey(incomingName);
+  const memberName = incomingName || member?.memberName || "Socio Xtreme";
+  if (!memberKey) return errorResponse(422, "HTTP_422", "El nombre del socio es requerido para crear el perfil.");
+  await db.collection<MemberDoc>(MEMBERS_COLLECTION).updateOne(
+    { normalizedName: memberKey },
+    {
+      $set: {
+        normalizedName: memberKey,
+        memberName,
+        cedula,
+        ...(incomingEmail ? { email: incomingEmail } : {}),
+        updatedAt: now,
+      },
+      $setOnInsert: {
+        membership: createFreeFirstDayMembership(now.toISOString().slice(0, 10)),
+        workouts: [],
+        bodyMetrics: [],
+        createdAt: now,
+      },
+    },
+    { upsert: true },
+  );
 
   const token = randomBytes(32).toString("base64url");
-  const now = new Date();
   await db.collection<PartnerTokenDoc>(TOKEN_COLLECTION).insertOne({
     tokenHash: hashToken(token),
-    memberKey: member.normalizedName,
-    memberName: member.memberName,
+    memberKey,
+    memberName,
     createdAt: now,
     expiresAt: new Date(now.getTime() + TOKEN_TTL_MS),
     usedAt: null,

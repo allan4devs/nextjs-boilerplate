@@ -9,6 +9,7 @@ const FALLBACK_API_URL = "https://api.kinesiaapp.com";
 
 function errorRedirect(req: NextRequest, message: string) {
   const url = new URL("/app", req.nextUrl.origin);
+  url.searchParams.set("tab", "vida");
   url.searchParams.set("partner_error", message.slice(0, 180));
   return NextResponse.redirect(url);
 }
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
   );
   const cedula = String(member?.cedula ?? "").replace(/\D/g, "");
   const email = String(member?.email ?? "").trim().toLowerCase();
-  if (!cedula || !email) return errorRedirect(req, "Completá tu cédula y correo en Perfil para entrar a Kinesia.");
+  if (!cedula) return errorRedirect(req, "Completá tu cédula en Perfil para entrar a Kinesia.");
 
   const apiUrl = (process.env.KINESIA_API_URL?.trim() || FALLBACK_API_URL).replace(/\/$/, "");
   let response: Response;
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
       cedula,
       codigoIntegracion: integrationCode,
       nombre: member?.memberName ?? session.memberName,
-      email,
+      ...(email ? { email } : {}),
     });
     response = await fetch(`${apiUrl}/integraciones/v1/token`, {
       method: "POST",

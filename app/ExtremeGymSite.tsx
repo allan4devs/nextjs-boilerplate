@@ -29,6 +29,7 @@ import { useResumenViewModel } from "./components/member/view-models/useResumenV
 import ReceptionChatWidget from "./components/ReceptionChatWidget";
 import PushOptInBanner from "./components/member/PushOptInBanner";
 import MemberJourneyHome from "./components/member/journey/MemberJourneyHome";
+import { MemberLanguageProvider } from "./components/member/language";
 
 export default function ExtremeGymSite() {
   const os = useMemberOs();
@@ -67,12 +68,21 @@ export default function ExtremeGymSite() {
     return () => root.classList.remove("xg-member-os-active");
   }, []);
 
+  useEffect(() => {
+    const partnerError = new URLSearchParams(window.location.search).get("partner_error");
+    if (!partnerError) return;
+    setTab("vida");
+    setError(partnerError);
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [setError, setTab]);
+
   const dismissToast = useCallback(() => {
     setMessage("");
     setError("");
   }, [setMessage, setError]);
 
   return (
+    <MemberLanguageProvider>
     <main className="xg-member-os relative min-h-screen bg-[#050505] text-white selection:bg-[#d8ff3e] selection:text-black">
       {/* Fondo ambiental del OS: rejilla HUD + glows */}
       <div aria-hidden className="xg-atmosphere" />
@@ -175,5 +185,6 @@ export default function ExtremeGymSite() {
         <PushOptInBanner unlocked={unlocked} memberName={memberName} />
       )}
     </main>
+    </MemberLanguageProvider>
   );
 }
