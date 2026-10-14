@@ -32,10 +32,20 @@ export async function GET(req: NextRequest) {
   const apiUrl = (process.env.KINESIA_API_URL?.trim() || FALLBACK_API_URL).replace(/\/$/, "");
   let response: Response;
   try {
+    const requestBody = JSON.stringify({
+      cedula,
+      codigoIntegracion: integrationCode,
+      nombre: member?.memberName ?? session.memberName,
+      email,
+    });
     response = await fetch(`${apiUrl}/integraciones/v1/token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cedula, codigoIntegracion: integrationCode, nombre: member?.memberName ?? session.memberName, email }),
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Encoding": "identity",
+      },
+      body: Buffer.from(requestBody, "utf8"),
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),
     });
