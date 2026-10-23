@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { GameButton, GameLabel } from "@/app/components/GameOS";
 import {
@@ -23,9 +23,9 @@ async function groupRequest(body?: Record<string, unknown>): Promise<GroupDashbo
   return data;
 }
 
-export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange, onBusyChange, onOpenMember, onRequestView, initialRoutineId }: {
+export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange, onBusyChange, onRefreshMembers, onOpenMember, onRequestView, initialRoutineId }: {
   active: boolean; view: "tracking" | "routines" | "settings"; members: TrainerMember[]; refreshKey: number;
-  onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void; onOpenMember: (key: string) => void; onRequestView?: (view: "tracking" | "routines" | "settings", routineId?: string) => void; initialRoutineId?: string;
+  onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void; onRefreshMembers: () => Promise<void>; onOpenMember: (key: string) => void; onRequestView?: (view: "tracking" | "routines" | "settings", routineId?: string) => void; initialRoutineId?: string;
 }) {
   const [data, setData] = useState<GroupDashboard | null>(null);
   const [groupId, setGroupId] = useState("group-a");
@@ -37,7 +37,6 @@ export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange
   const [loadedKey, setLoadedKey] = useState(-1);
   const setDraftDirty = useCallback((value: boolean) => { setDirty(value); onDirtyChange(value); }, [onDirtyChange]);
   useEffect(() => { onBusyChange(busy); return () => onBusyChange(false); }, [busy, onBusyChange]);
-
   const load = useCallback(async () => {
     setBusy(true);
     try { setData(await groupRequest() as GroupDashboard); setLoadedKey(refreshKey); }
@@ -48,7 +47,10 @@ export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange
   useEffect(() => {
     if (!active || view !== "tracking") return;
     const refreshIfSafe = () => {
-      if (document.visibilityState === "visible" && !dirty && !busy) void load();
+      if (document.visibilityState === "visible" && !dirty && !busy) {
+        void onRefreshMembers();
+        void load();
+      }
     };
     const interval = window.setInterval(refreshIfSafe, 5_000);
     window.addEventListener("focus", refreshIfSafe);
@@ -61,7 +63,7 @@ export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange
       channel?.removeEventListener("message", onWorkoutUpdated);
       channel?.close();
     };
-  }, [active, busy, dirty, load, view]);
+  }, [active, busy, dirty, load, onRefreshMembers, view]);
   useEffect(() => {
     if (!data?.groups.some((group) => group.id === groupId)) {
       setGroupId(data?.groups[0]?.id ?? "group-a");
@@ -71,20 +73,27 @@ export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange
     if (!data.profiles.some((profile) => profile.groupId === groupId && profile.id === profileId)) setProfileId(nextProfile?.id ?? "");
   }, [data, groupId, profileId]);
 
-  const mutate = async (body: Record<string, unknown>, text: string, onSuccess?: (result: { ok: true; routineId?: string; dayId?: string }) => void) => {
+  const mutate = async (body: Record<string, unknown>, text: string, onSuccess?: (result: { ok: true; routineId?: string; dayId?: string }) => void, onError?: (message: string) => void) => {
     setBusy(true); setMessage(null);
     try {
       const result = await groupRequest(body) as { ok: true; routineId?: string; dayId?: string };
       if (body.action === "log") setDraftDirty(false);
-      const fresh = await groupRequest() as GroupDashboard;
-      // Mapping/link changes must not replace an unsaved session draft.
-      const refreshRoster = ["log", "exercise", "create_group", "create_routine", "add_day", "add_member", "assign_routine", "remove_member", "add_exercise"].includes(String(body.action));
-      setData((current) => refreshRoster || !current ? fresh : { ...current, mappings: fresh.mappings, links: fresh.links, inventory: fresh.inventory });
-      setMessage({ error: false, text });
+      try {
+        const fresh = await groupRequest() as GroupDashboard;
+        // Mapping/link changes must not replace an unsaved session draft.
+        const refreshRoster = ["log", "exercise", "create_group", "create_routine", "add_day", "add_member", "assign_routine", "remove_member", "delete_group", "add_exercise"].includes(String(body.action));
+        setData((current) => refreshRoster || !current ? fresh : { ...current, mappings: fresh.mappings, links: fresh.links, inventory: fresh.inventory });
+        setMessage({ error: false, text });
+      } catch (refreshError) {
+        const refreshMessage = refreshError instanceof Error ? refreshError.message : "No se pudo actualizar la pantalla.";
+        setMessage({ error: false, text: `${text} La operación sí se guardó, pero no se pudo actualizar la pantalla: ${refreshMessage}` });
+      }
       onSuccess?.(result);
       return true;
     } catch (error) {
-      setMessage({ error: true, text: error instanceof Error ? error.message : "No se pudo guardar." });
+      const errorMessage = error instanceof Error ? error.message : "No se pudo guardar.";
+      setMessage({ error: true, text: errorMessage });
+      onError?.(errorMessage);
       return false;
     } finally { setBusy(false); }
   };
@@ -104,14 +113,16 @@ export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange
   })))) : [], [data]);
   const sharedMachines = useMemo(() => {
     const machineMap = new Map<string, { code: string; name: string; people: Set<string> }>();
-    for (const row of aligned) {
+     for (const row of aligned) {
       if (!row.asset || row.status !== "linked") continue;
+       const peopleInGroup = data?.profiles.filter((p) => p.groupId === groupId && p.routineId === row.routine.id) ?? [];
+       if (!peopleInGroup.length) continue;
       const entry = machineMap.get(row.asset.id) ?? { code: row.asset.code, name: row.asset.name, people: new Set<string>() };
-      data?.profiles.filter((p) => p.routineId === row.routine.id).forEach((p) => entry.people.add(p.name));
+       peopleInGroup.forEach((p) => entry.people.add(p.name));
       machineMap.set(row.asset.id, entry);
     }
     return [...machineMap.entries()].sort((a, b) => b[1].people.size - a[1].people.size);
-  }, [aligned, data]);
+   }, [aligned, data, groupId]);
 
   if (!data) return <section className="border-[3px] border-cyan-300/30 bg-[#0c0c0c] p-6"><p role="status">{message?.text || "Cargando seguimiento..."}</p><GameButton className="mt-4" disabled={busy} onClick={() => void load()}>Volver a intentar</GameButton></section>;
 
@@ -157,7 +168,7 @@ export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange
     </div>
     <details className="border-[3px] border-white/15 bg-[#0c0c0c] p-4"><summary className="cursor-pointer font-black uppercase">Máquinas compartidas por el grupo ({sharedMachines.length})</summary><p className="mt-3 text-xs text-white/45">Útil para organizar turnos. Las unidades pendientes aparecen en cada rutina hasta que se elijan.</p><div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">{sharedMachines.map(([assetId, machine]) => <Link key={assetId} href={`/maquinas/equipo/${encodeURIComponent(assetId)}`} target="_blank" rel="noopener noreferrer" className="border-2 border-white/15 p-3 hover:border-cyan-300"><strong className="text-sm">{machine.code} · {machine.name}</strong><p className="mt-1 text-xs text-white/50">{[...machine.people].join(", ")}</p></Link>)}</div></details>
     </>}
-    {view === "routines" && <RoutineLibrary key={initialRoutineId ?? "library"} data={data} members={members} busy={busy} mutate={mutate} initialRoutineId={initialRoutineId} />}
+    {view === "routines" && <RoutineLibrary key={initialRoutineId ?? "library"} data={data} members={members} busy={busy} mutate={mutate} onDirtyChange={setDraftDirty} initialRoutineId={initialRoutineId} />}
     {view === "settings" && <>
       <GroupSettings data={data} members={members} groupId={groupId} profiles={groupProfiles} busy={busy} mutate={mutate} onGroupChange={(nextGroupId) => { setGroupId(nextGroupId); setProfileId(""); }} />
     </>}
@@ -166,6 +177,9 @@ export function TrainerGroupA({ active, view, members, refreshKey, onDirtyChange
 
 function addDays(date: string, days: number) {
   const value = new Date(`${date}T12:00:00Z`); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10);
+}
+function isSunday(date: string) {
+  return Boolean(date) && new Date(`${date}T12:00:00Z`).getUTCDay() === 0;
 }
 function routineDayForDate(routine: GroupRoutine, date: string) {
   const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
@@ -189,7 +203,7 @@ function MemberLinkWithSearch({ profile, members, value, busy, onChange, onOpenM
   const candidates = members.filter((member) => member.memberId === value || normalizeGroupName(member.memberName).includes(normalizeGroupName(query)));
   if (value && !editing) return <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
     <p className="max-w-64 truncate text-sm font-black text-cyan-200" title={linkedMember?.memberName || profile.name}>{linkedMember?.memberName || profile.name}</p>
-    {linkedMember && <GameButton variant="ghost" disabled={busy} onClick={() => onOpenMember(linkedMember.normalizedName)}>Ver historial</GameButton>}
+    {linkedMember && <GameButton variant="ghost" disabled={busy} onClick={() => onOpenMember(linkedMember.normalizedName)}>Ver ficha de salud</GameButton>}
     <button type="button" disabled={busy} onClick={() => { setQuery(profile.name.split(" ")[0]); setEditing(true); }} className="min-h-10 px-2 text-[10px] font-black uppercase text-white/50 underline hover:text-cyan-200 disabled:opacity-40">Cambiar</button>
     <button type="button" disabled={busy} onClick={() => { if (window.confirm(`¿Quitar el vínculo con ${linkedMember?.memberName || profile.name}?`)) { onChange(""); setEditing(true); } }} className="min-h-10 px-2 text-[10px] font-black uppercase text-red-200/75 underline hover:text-red-200 disabled:opacity-40">Quitar</button>
   </div>;
@@ -201,7 +215,7 @@ function MemberLinkWithSearch({ profile, members, value, busy, onChange, onOpenM
 
 type Mutate = RoutineMutation;
 
-function RoutineLibrary({ data, members, busy, mutate, initialRoutineId }: { data: GroupDashboard; members: TrainerMember[]; busy: boolean; mutate: Mutate; initialRoutineId?: string }) {
+function RoutineLibrary({ data, members, busy, mutate, onDirtyChange, initialRoutineId }: { data: GroupDashboard; members: TrainerMember[]; busy: boolean; mutate: Mutate; onDirtyChange: (dirty: boolean) => void; initialRoutineId?: string }) {
   const [routineId, setRoutineId] = useState(initialRoutineId || data.profiles[0]?.routineId || data.routines[0]?.id || "");
   const [personId, setPersonId] = useState(initialRoutineId ? "" : data.profiles[0]?.id ?? "");
   const routine = data.routines.find((entry) => entry.id === routineId) ?? data.routines[0];
@@ -213,14 +227,14 @@ function RoutineLibrary({ data, members, busy, mutate, initialRoutineId }: { dat
   const [targetProfileId, setTargetProfileId] = useState("");
   const [targetQuery, setTargetQuery] = useState("");
   const selectCreatedRoutine = (id: string) => { setRoutineId(id); setPersonId(""); setDayId(""); setAddingModule(false); };
-  if (!routine) return <div className="space-y-4"><TrainerRoutineCreator data={data} busy={busy} mutate={mutate} onCreated={selectCreatedRoutine} /><p className="border-[3px] border-dashed border-white/15 p-6 text-sm text-white/60">Todavía no hay rutinas. Creá la primera desde cero.</p></div>;
+  if (!routine) return <div className="space-y-4"><TrainerRoutineCreator data={data} busy={busy} mutate={mutate} onDirtyChange={onDirtyChange} onCreated={selectCreatedRoutine} /><p className="border-[3px] border-dashed border-white/15 p-6 text-sm text-white/60">Todavía no hay rutinas. Creá la primera desde cero.</p></div>;
   const day = routine.days.find((entry) => entry.id === dayId) ?? routine.days[0];
   const assigned = data.profiles.filter((profile) => profile.routineId === routine.id);
   const targetProfiles = data.profiles.filter((profile) => profile.groupId === targetGroupId);
   const memberIdForProfile = (profile?: GroupProfile) => profile?.memberId || (profile ? data.links.find((link) => link.profileId === profile.id)?.memberId : undefined);
   const selectedTargetProfile = targetProfiles.find((profile) => profile.id === targetProfileId);
   return <div className="min-w-0 space-y-4">
-    <TrainerRoutineCreator data={data} busy={busy} mutate={mutate} onCreated={selectCreatedRoutine} />
+    <TrainerRoutineCreator data={data} busy={busy} mutate={mutate} onDirtyChange={onDirtyChange} onCreated={selectCreatedRoutine} />
     <section className="border-[3px] border-cyan-300/35 bg-[#0c0c0c] p-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(240px,1fr)] lg:items-end"><div><GameLabel tone="cyan">Rutina abierta</GameLabel><h2 className="mt-2 break-words text-xl font-black uppercase">{routine.objective}</h2><p className="mt-1 text-sm text-white/45">Elegí una persona para ver su plan o abrí una rutina de la biblioteca.</p></div><div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-black uppercase tracking-[.12em] text-white/60">Persona<select className={`${field} mt-1 normal-case tracking-normal`} value={personId} disabled={busy} onChange={(event) => { const nextProfile = data.profiles.find((profile) => profile.id === event.target.value); setPersonId(event.target.value); if (nextProfile) { const nextRoutine = data.routines.find((entry) => entry.id === nextProfile.routineId); setRoutineId(nextProfile.routineId); setDayId(nextRoutine?.days[0]?.id ?? ""); } }}><option value="">Biblioteca de rutinas</option>{data.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label className="text-xs font-black uppercase tracking-[.12em] text-white/60">Rutina abierta<select className={`${field} mt-1 normal-case tracking-normal`} value={routine.id} disabled={busy} onChange={(event) => { const next = data.routines.find((entry) => entry.id === event.target.value); setRoutineId(event.target.value); setPersonId(""); setAddingModule(false); setDayId(next?.days[0]?.id ?? ""); }}>{data.routines.map((entry) => <option key={entry.id} value={entry.id}>{entry.objective} · {entry.days.length} {entry.days.length === 1 ? "día" : "días"}</option>)}</select></label></div></div>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/50"><strong className="text-white/75">Personas con esta rutina: {assigned.length}</strong>{assigned.length ? assigned.map((profile) => <span key={profile.id} className="border border-white/15 px-2 py-1">{profile.name}</span>) : <span>Ninguna todavía</span>}</div>
@@ -239,12 +253,17 @@ function RoutineExerciseEditorRow({ exercise, data, busy, mutate }: { exercise: 
   const mapping = data.mappings.find((entry) => entry.exerciseId === exercise.id);
   const edit = data.routineEdits.find((entry) => entry.exerciseId === exercise.id);
   const alignment = alignGroupExercise(exercise, data.inventory, mapping);
-  const savePatch = (patch: GroupExercisePatch) => void mutate({ action: "exercise", exerciseId: exercise.id, patch, revision: edit?.revision ?? 0 }, "Rutina actualizada.");
+  const savePatch = (patch: GroupExercisePatch, onError: (message: string) => void) => mutate({ action: "exercise", exerciseId: exercise.id, patch, revision: edit?.revision ?? 0 }, "Rutina actualizada.", undefined, onError);
   const [editing, setEditing] = useState(false);
   return <><tr className="border-t border-white/10"><td className="px-2 py-2 text-white/70">{exercise.muscle || "—"}</td><td className="px-2 py-2"><strong className="text-white/85">{exercise.name}</strong></td><td className="min-w-56 px-2 py-2 text-white/65">{alignment.asset ? `${alignment.asset.code} · ${alignment.asset.name}` : exercise.equipment || "—"}</td><td className="px-2 py-2 text-white/65">{exercise.sourceMachine || "—"}</td><td className="px-2 py-2 text-white/65">{exercise.sets ?? "—"}</td><td className="px-2 py-2 text-white/65">{exercise.reps ?? "—"}</td><td className="px-2 py-2 text-white/65">{exercise.time || "—"}</td><td className="px-2 py-2 text-white/65">{exercise.weightKg == null ? "—" : `${exercise.weightKg} kg`}</td><td className="px-2 py-2"><button type="button" disabled={busy} onClick={() => setEditing(true)} className="min-h-9 border border-cyan-300/50 px-3 text-[10px] font-black uppercase text-cyan-200 hover:bg-cyan-300/10 disabled:opacity-40">Editar</button></td></tr>{editing && <tr><td colSpan={9}><RoutineLineEditModal exercise={exercise} data={data} busy={busy} onClose={() => setEditing(false)} onSave={savePatch} /></td></tr>}</>;
 }
 
-function RoutineLineEditModal({ exercise, data, busy, onClose, onSave }: { exercise: GroupExercise; data: GroupDashboard; busy: boolean; onClose: () => void; onSave: (patch: GroupExercisePatch) => void }) {
+function RoutineLineEditModal({ exercise, data, busy, onClose, onSave }: { exercise: GroupExercise; data: GroupDashboard; busy: boolean; onClose: () => void; onSave: (patch: GroupExercisePatch, onError: (message: string) => void) => Promise<boolean> }) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeRef = useRef(onClose);
+  const busyRef = useRef(busy);
+  closeRef.current = onClose;
+  busyRef.current = busy;
   const [muscle, setMuscle] = useState(exercise.muscle);
   const [name, setName] = useState(exercise.name);
   const [equipment, setEquipment] = useState(exercise.equipment);
@@ -253,12 +272,33 @@ function RoutineLineEditModal({ exercise, data, busy, onClose, onSave }: { exerc
   const [reps, setReps] = useState(exercise.reps === null ? "" : String(exercise.reps));
   const [time, setTime] = useState(exercise.time);
   const [weight, setWeight] = useState(exercise.weightKg == null ? "" : String(exercise.weightKg));
+  const [saveError, setSaveError] = useState("");
   const muscles = [...new Set(data.routines.flatMap((routine) => routine.days.flatMap((day) => day.exercises.map((entry) => entry.muscle).filter(Boolean))))];
   const inputClass = "min-h-12 w-full border-2 border-white/20 bg-[#111] px-3 text-sm text-white outline-none focus:border-cyan-300";
   const labelClass = "grid gap-1.5 text-[10px] font-black uppercase tracking-[.1em] text-white/55";
   const quickValues = (values: string[], current: string, setValue: (value: string) => void) => <div className="mt-2 flex flex-wrap gap-2">{values.map((value) => <button key={value} type="button" onClick={() => setValue(value)} className={`min-h-10 border px-3 text-xs font-bold ${current === value ? "border-cyan-300 bg-cyan-300/15 text-cyan-100" : "border-white/15 text-white/65 hover:border-cyan-300/50"}`}>{value}</button>)}</div>;
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}><section role="dialog" aria-modal="true" aria-labelledby={`edit-routine-${exercise.id}`} className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto border-2 border-cyan-300/50 bg-[#101313] p-4 shadow-2xl sm:p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-200">Editar ejercicio</p><h3 id={`edit-routine-${exercise.id}`} className="mt-1 text-xl font-black uppercase text-white">{exercise.name}</h3><p className="mt-1 text-xs text-white/45">Actualizá todos los datos de la rutina de una vez.</p></div><button type="button" aria-label="Cerrar" disabled={busy} onClick={onClose} className="grid h-10 w-10 shrink-0 place-items-center border border-white/20 text-xl text-white/70 hover:border-cyan-300">×</button></div>
-    <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); onSave({ muscle: muscle.trim(), name: name.trim(), equipment: equipment.trim(), sourceMachine: machineNumber.trim(), sets: sets === "" ? null : Number(sets), reps: reps === "" ? null : Number(reps), time: time.trim(), weightKg: weight === "" ? null : Number(weight) }); onClose(); }}>
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"));
+    (focusable()[0] ?? dialog).focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); if (!busyRef.current) closeRef.current(); return; }
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      if (!elements.length) { event.preventDefault(); dialog.focus(); return; }
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    dialog.addEventListener("keydown", onKeyDown);
+    return () => { dialog.removeEventListener("keydown", onKeyDown); previous?.focus(); };
+  }, []);
+  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}><section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={`edit-routine-${exercise.id}`} className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto border-2 border-cyan-300/50 bg-[#101313] p-4 shadow-2xl outline-none sm:p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-200">Editar ejercicio</p><h3 id={`edit-routine-${exercise.id}`} className="mt-1 text-xl font-black uppercase text-white">{exercise.name}</h3><p className="mt-1 text-xs text-white/45">Actualizá todos los datos de la rutina de una vez.</p></div><button type="button" aria-label="Cerrar" disabled={busy} onClick={onClose} className="grid h-10 w-10 shrink-0 place-items-center border border-white/20 text-xl text-white/70 hover:border-cyan-300">×</button></div>
+    {saveError && <p role="alert" className="mt-4 border-2 border-red-300/50 bg-red-500/10 p-3 text-sm font-bold text-red-200">{saveError}</p>}
+    <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={async (event) => { event.preventDefault(); setSaveError(""); const saved = await onSave({ muscle: muscle.trim(), name: name.trim(), equipment: equipment.trim(), sourceMachine: machineNumber.trim(), sets: sets === "" ? null : Number(sets), reps: reps === "" ? null : Number(reps), time: time.trim(), weightKg: weight === "" ? null : Number(weight) }, setSaveError); if (!saved) setSaveError((current) => current || "No se pudieron guardar los cambios. Revise los datos e intente de nuevo."); else onClose(); }}>
       <label className={labelClass}>Grupo muscular<input className={inputClass} list={`muscles-${exercise.id}`} value={muscle} disabled={busy} onChange={(event) => setMuscle(event.target.value)} placeholder="Ej. Glúteos" /><datalist id={`muscles-${exercise.id}`}>{muscles.map((value) => <option key={value} value={value} />)}</datalist></label>
       <label className={labelClass}>Nombre del ejercicio<input className={inputClass} required value={name} disabled={busy} onChange={(event) => setName(event.target.value)} /></label>
       <label className={labelClass}>Equipo / máquina<input className={inputClass} value={equipment} disabled={busy} onChange={(event) => setEquipment(event.target.value)} placeholder="Ej. Polea" /></label>
@@ -292,15 +332,17 @@ function SessionTracker({ profile, routine, data, busy, dirty, setDirty, mutate 
   const saved = logs.find((log) => log.dayId === dayId && log.date === date);
   const switchTo = (nextDay: string, nextDate: string) => {
     if (dirty && !window.confirm("¿Cambiar de sesión y descartar los cambios sin guardar?")) return;
+    if (isSunday(nextDate)) { window.alert("El domingo el gimnasio no trabaja; elegí otra fecha para registrar el seguimiento."); return; }
     setDirty(false); setDayId(nextDay); setDate(nextDate);
   };
+  const sunday = isSunday(date);
   return <div className="space-y-4">
     <div className="border-[3px] border-white/15 bg-[#0c0c0c] p-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0 flex-1"><p className="mb-2 text-xs font-black uppercase tracking-[.12em] text-white/60">Día de entrenamiento</p><div className="flex flex-wrap gap-2" aria-label="Días de entrenamiento">{routine.days.map((entry) => <button key={entry.id} type="button" disabled={busy} onClick={() => switchTo(entry.id, date)} className={`min-h-11 border-2 px-4 text-[10px] font-black uppercase ${entry.id === dayId ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/15 text-white/50 hover:border-cyan-300/60"}`}>{entry.label}</button>)}</div></div>
         <div><p className="mb-2 text-xs font-black uppercase tracking-[.12em] text-white/60">Fecha</p><div className="flex flex-wrap items-center gap-2"><button type="button" aria-label="Día anterior" title="Día anterior" disabled={busy} onClick={() => switchTo(dayId, addDays(date, -1))} className="grid min-h-11 min-w-11 place-items-center border-2 border-white/15 text-white/60 hover:border-cyan-300 hover:text-cyan-200 disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button><input aria-label="Fecha del seguimiento" className="min-h-11 border-2 border-cyan-300/60 bg-[#111] px-3 text-sm font-black text-white outline-none focus:border-cyan-300" type="date" value={date} max={data.date} disabled={busy} onChange={(e) => switchTo(dayId, e.target.value)} /><button type="button" aria-label="Día siguiente" title="Día siguiente" disabled={busy || date >= data.date} onClick={() => switchTo(dayId, addDays(date, 1))} className="grid min-h-11 min-w-11 place-items-center border-2 border-white/15 text-white/60 hover:border-cyan-300 hover:text-cyan-200 disabled:opacity-25"><ChevronRight className="h-4 w-4" /></button><button type="button" disabled={busy || date === data.date} onClick={() => switchTo(dayId, data.date)} className="min-h-11 border-2 border-white/15 px-3 text-[10px] font-black uppercase text-white/60 hover:border-cyan-300 hover:text-cyan-200 disabled:opacity-25">Hoy</button></div></div>
       </div>
-      <SessionForm key={`${profile.id}:${dayId}:${date}:${saved?.revision ?? 0}`} profile={profile} day={day} date={date} data={data} saved={saved} busy={busy} setDirty={setDirty} mutate={mutate} />
+       {sunday ? <p role="alert" className="mt-4 border-2 border-orange-300/50 bg-orange-300/10 p-3 text-sm font-bold text-orange-200">El domingo el gimnasio no trabaja y no se pueden registrar seguimientos. Elegí otra fecha.</p> : <SessionForm key={`${profile.id}:${dayId}:${date}:${saved?.revision ?? 0}`} profile={profile} day={day} date={date} data={data} saved={saved} busy={busy} setDirty={setDirty} mutate={mutate} />}
     </div>
     <details open className="border-[3px] border-white/15 bg-[#0c0c0c] p-4"><summary className="cursor-pointer font-black">Seguimientos de {profile.name} ({logs.length})</summary><p className="mt-2 text-xs text-white/45">Hasta 60 registros recientes por persona. Elegí una sesión para consultar o corregirla.</p><div className="mt-3 space-y-2">{logs.length ? logs.map((log) => {
       const logRoutine = data.routines.find((entry) => entry.id === log.routineId) ?? routine;
@@ -319,12 +361,14 @@ function SessionForm({ profile, day, date, data, saved, busy, setDirty, mutate }
   const [note, setNote] = useState(saved?.note ?? "");
   const [weights, setWeights] = useState<Record<string, number | null>>(Object.fromEntries(saved?.executions.map((e) => [e.exerciseId, e.weightKg]) ?? []));
   const [changed, setChanged] = useState(false);
+  const hasWeight = Object.values(weights).some((value) => value !== null && Number.isFinite(value));
   const markDirty = () => { setChanged(true); setDirty(true); };
   return <form className="mt-4" onSubmit={(e) => { e.preventDefault(); void mutate({ action: "log", profileId: profile.id, dayId: day.id, date, completedIds: checked, weights, note, revision: saved?.revision ?? 0 }, "Seguimiento guardado para esta persona y fecha."); }}>
     <div className="mb-3 flex flex-wrap justify-between gap-2"><h4 className="font-black uppercase">{day.focus}</h4><p className="text-sm text-cyan-200">{checked.length}/{day.exercises.length} realizados{changed ? " · Sin guardar" : saved ? " · Guardado" : ""}</p></div>
-    <div className="mt-3 overflow-x-auto border-2 border-white/15"><table className="w-full min-w-[1040px] border-collapse text-left text-xs"><thead className="bg-white/[.06] text-[9px] font-black uppercase tracking-[.1em] text-white/50"><tr className="border-b-2 border-white/15"><th className="w-10 px-2 py-2">OK</th><th className="min-w-32 px-2 py-2">Grupo muscular</th><th className="min-w-44 px-2 py-2">Ejercicio</th><th className="min-w-56 px-2 py-2">Equipo / unidad</th><th className="w-20 px-2 py-2">Maq #</th><th className="w-16 px-2 py-2">Sets</th><th className="w-16 px-2 py-2">Reps</th><th className="w-28 px-2 py-2">Tiempo</th><th className="w-28 px-2 py-2">Carga kg</th></tr></thead><tbody>{day.exercises.map((exercise, index) => <ExerciseRow key={exercise.id} exercise={exercise} index={index} data={data} busy={busy} checked={checked.includes(exercise.id)} weight={weights[exercise.id] ?? null} onCheck={(value) => { markDirty(); setChecked((current) => value ? [...new Set([...current, exercise.id])] : current.filter((id) => id !== exercise.id)); }} onWeight={(value) => { markDirty(); setWeights((current) => ({ ...current, [exercise.id]: value })); }} />)}</tbody></table></div>
+    <div className="mt-3 hidden overflow-x-auto border-2 border-white/15 md:block"><table className="w-full min-w-[1040px] border-collapse text-left text-xs"><thead className="bg-white/[.06] text-[9px] font-black uppercase tracking-[.1em] text-white/50"><tr className="border-b-2 border-white/15"><th className="w-10 px-2 py-2">OK</th><th className="min-w-32 px-2 py-2">Grupo muscular</th><th className="min-w-44 px-2 py-2">Ejercicio</th><th className="min-w-56 px-2 py-2">Equipo / unidad</th><th className="w-20 px-2 py-2">Maq #</th><th className="w-16 px-2 py-2">Sets</th><th className="w-16 px-2 py-2">Reps</th><th className="w-28 px-2 py-2">Tiempo</th><th className="w-28 px-2 py-2">Carga kg</th></tr></thead><tbody>{day.exercises.map((exercise, index) => <ExerciseRow key={exercise.id} exercise={exercise} index={index} data={data} busy={busy} checked={checked.includes(exercise.id)} weight={weights[exercise.id] ?? null} onCheck={(value) => { markDirty(); setChecked((current) => value ? [...new Set([...current, exercise.id])] : current.filter((id) => id !== exercise.id)); }} onWeight={(value) => { markDirty(); setWeights((current) => ({ ...current, [exercise.id]: value })); }} />)}</tbody></table></div>
+    <div className="mt-3 space-y-2 md:hidden">{day.exercises.map((exercise, index) => <ExerciseCard key={exercise.id} exercise={exercise} index={index} data={data} busy={busy} checked={checked.includes(exercise.id)} weight={weights[exercise.id] ?? null} onCheck={(value) => { markDirty(); setChecked((current) => value ? [...new Set([...current, exercise.id])] : current.filter((id) => id !== exercise.id)); }} onWeight={(value) => { markDirty(); setWeights((current) => ({ ...current, [exercise.id]: value })); }} />)}</div>
     <label className="mt-4 block text-xs text-white/60">Observación del entrenador<textarea rows={3} maxLength={2000} className={`${field} mt-1`} disabled={busy} value={note} onChange={(e) => { markDirty(); setNote(e.target.value); }} placeholder="Técnica, avances, dificultades y próximo paso" /></label>
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-white/40">Registrar acá conserva el plan y el historial del socio en Member OS.</p><GameButton type="submit" disabled={busy || !date || !changed || (!checked.length && !note.trim())}><CheckCircle2 className="h-4 w-4" />{busy ? "Guardando..." : saved ? "Actualizar seguimiento" : "Guardar seguimiento"}</GameButton></div>
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-white/40">Registrar acá conserva el plan y el historial del socio en Member OS.</p><GameButton type="submit" disabled={busy || !date || !changed || (!saved && !checked.length && !note.trim() && !hasWeight)}><CheckCircle2 className="h-4 w-4" />{busy ? "Guardando..." : saved ? "Actualizar seguimiento" : "Guardar seguimiento"}</GameButton></div>
   </form>;
 }
 
@@ -343,6 +387,19 @@ function ExerciseRow({ exercise, index, data, busy, checked, weight, onCheck, on
     <td className="px-2 py-2 text-white/65">{exercise.sourceMachine || "-"}</td><td className="px-2 py-2 text-white/65">{exercise.sets ?? "-"}</td><td className="px-2 py-2 text-white/65">{exercise.reps ?? "-"}</td><td className="px-2 py-2 text-white/65">{exercise.time || "-"}</td>
     <td className="px-2 py-2"><input aria-label={`Carga real para ${exercise.name}`} type="number" min={0} max={1000} step="0.5" className="min-h-9 w-24 border border-white/20 bg-[#111] px-2 text-xs text-white outline-none focus:border-cyan-300" disabled={busy} value={weight ?? ""} placeholder="-" onChange={(e) => onWeight(e.target.value === "" ? null : Number(e.target.value))} /></td>
   </tr>;
+}
+
+function ExerciseCard({ exercise, index, data, busy, checked, weight, onCheck, onWeight }: {
+  exercise: GroupExercise; index: number; data: GroupDashboard; busy: boolean; checked: boolean; weight: number | null;
+  onCheck: (checked: boolean) => void; onWeight: (weight: number | null) => void;
+}) {
+  const mapping = data.mappings.find((m) => m.exerciseId === exercise.id);
+  const alignment = alignGroupExercise(exercise, data.inventory, mapping);
+  const pending = alignment.status === "review" || alignment.status === "unavailable";
+  return <article className={`border-2 p-3 ${pending ? "border-orange-300/50 bg-orange-300/[.05]" : "border-white/15 bg-black/20"}`}>
+    <div className="flex items-start gap-3"><input aria-label={`Realizado: ${exercise.name}, ejercicio ${index + 1}`} type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-cyan-300" checked={checked} disabled={busy || (alignment.status === "review" && !checked)} onChange={(event) => onCheck(event.target.checked)} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><p className="font-black">{index + 1}. {exercise.name}</p><span className="shrink-0 text-[9px] font-black uppercase text-cyan-200">{checked ? "Realizado" : "Pendiente"}</span></div><p className="mt-1 text-xs text-white/55">{exercise.muscle || "Sin grupo muscular"} · {alignment.asset ? `${alignment.asset.code} · ${alignment.asset.name}` : exercise.equipment || "Sin equipo"}</p><p className="mt-1 text-[10px] text-white/35">{exercise.sets ?? "—"} series · {exercise.reps ?? "—"} reps · {exercise.time || "Sin tiempo"}</p></div></div>
+    <label className="mt-3 block text-[10px] font-black uppercase tracking-[.1em] text-white/50">Carga real (kg)<input aria-label={`Carga real para ${exercise.name}`} type="number" min={0} max={1000} step="0.5" className="mt-1 min-h-11 w-full border border-white/20 bg-[#111] px-3 text-sm text-white outline-none focus:border-cyan-300" disabled={busy} value={weight ?? ""} placeholder="Sin registrar" onChange={(event) => onWeight(event.target.value === "" ? null : Number(event.target.value))} /></label>
+  </article>;
 }
 
 function MachineCategoryAssignments({ exercises, data, busy, mutate }: { exercises: GroupExercise[]; data: GroupDashboard; busy: boolean; mutate: Mutate }) {
@@ -407,6 +464,11 @@ function GroupPeopleDirectory({ data, profiles, members, groupId, busy, mutate }
   </section>;
 }
 
+function previousGroupForMember(data: GroupDashboard, memberId: string, currentGroupId: string) {
+  const profile = data.profiles.find((entry) => entry.groupId !== currentGroupId && (entry.memberId === memberId || data.links.some((link) => link.profileId === entry.id && link.memberId === memberId)));
+  return profile ? data.groups.find((group) => group.id === profile.groupId) : undefined;
+}
+
 function GroupSettings({ data, members, groupId, profiles, busy, mutate, onGroupChange }: {
   data: GroupDashboard; members: TrainerMember[]; groupId: string; profiles: GroupProfile[]; busy: boolean;
   mutate: Mutate; onGroupChange: (groupId: string) => void;
@@ -416,13 +478,13 @@ function GroupSettings({ data, members, groupId, profiles, busy, mutate, onGroup
   const activeGroup = data.groups.find((group) => group.id === groupId);
   const assigned = new Set(profiles.map((profile) => profile.memberId).filter(Boolean));
   const available = members.filter((member) => !assigned.has(member.memberId));
-  const routineId = data.routines[0]?.id ?? "";
+  const [routineId, setRoutineId] = useState(data.routines[0]?.id ?? "");
   return <div className="space-y-4">
     <section className="border-[3px] border-cyan-300/35 bg-[#0c0c0c] p-4 sm:p-5">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><GameLabel tone="cyan">Grupos</GameLabel><h2 className="mt-2 text-2xl font-black uppercase">Grupos y personas</h2><p className="mt-1 text-sm text-white/50">Acá solo se administran los grupos y sus integrantes.</p></div><form className="flex w-full gap-2 sm:w-auto" onSubmit={(event) => { event.preventDefault(); if (!groupName.trim()) return; void mutate({ action: "create_group", name: groupName, revision: 0 }, "Grupo creado.").then((ok) => { if (ok) setGroupName(""); }); }}><input className={`${field} sm:w-56`} value={groupName} disabled={busy} onChange={(event) => setGroupName(event.target.value)} placeholder="Nuevo grupo" aria-label="Nombre del nuevo grupo" /><GameButton type="submit" disabled={busy || !groupName.trim()}>Crear grupo</GameButton></form></div>
       <div className="mt-4 flex gap-2 overflow-x-auto border-t border-white/10 pt-4">{data.groups.map((group) => <button key={group.id} type="button" disabled={busy} onClick={() => onGroupChange(group.id)} className={`min-h-11 shrink-0 border-2 px-4 text-xs font-black uppercase ${group.id === groupId ? "border-cyan-300 bg-cyan-300 text-black" : "border-white/15 text-white/55 hover:border-cyan-300/60"}`}>{group.name}</button>)}{groupId !== "group-a" && <button type="button" disabled={busy} onClick={() => { if (window.confirm(`¿Eliminar el grupo ${activeGroup?.name ?? "seleccionado"}? Solo se puede eliminar si está vacío.`)) void mutate({ action: "delete_group", groupId, revision: 0 }, "Grupo eliminado.", () => onGroupChange("group-a")); }} className="min-h-11 shrink-0 border-2 border-red-300/35 px-4 text-xs font-black uppercase text-red-200 hover:border-red-300">Eliminar grupo</button>}</div>
     </section>
-    <section className="border-[3px] border-cyan-300/25 bg-cyan-300/[.04] p-4 sm:p-5"><GameLabel tone="cyan">Agregar persona a {activeGroup?.name ?? "grupo"}</GameLabel><p className="mt-1 text-sm text-white/50">Buscá una ficha y agregala al grupo seleccionado.</p><div className="mt-4"><TrainerMemberSearch members={available} query={memberQuery} onQueryChange={setMemberQuery} compact emptyText="No hay personas disponibles para agregar." renderAction={(member) => <GameButton type="button" disabled={busy || !routineId} onClick={() => void mutate({ action: "add_member", groupId, memberId: member.memberId, routineId, revision: 0 }, "Persona agregada al grupo.").then((ok) => { if (ok) setMemberQuery(""); })}>Agregar</GameButton>} /></div></section>
+    <section className="border-[3px] border-cyan-300/25 bg-cyan-300/[.04] p-4 sm:p-5"><GameLabel tone="cyan">Agregar persona a {activeGroup?.name ?? "grupo"}</GameLabel><p className="mt-1 text-sm text-white/50">Buscá una ficha y elegí la rutina que recibirá antes de agregarla.</p><label className="mt-3 block max-w-xl text-[10px] font-black uppercase tracking-[.12em] text-white/50">Rutina inicial<select className={`${field} mt-1 normal-case tracking-normal`} value={routineId} disabled={busy || !data.routines.length} onChange={(event) => setRoutineId(event.target.value)}><option value="">Elegí una rutina</option>{data.routines.map((routine) => <option key={routine.id} value={routine.id}>{routine.objective} · {routine.days.length} {routine.days.length === 1 ? "módulo" : "módulos"}</option>)}</select></label><p className="mt-2 text-xs text-cyan-200">Se asignará: {data.routines.find((routine) => routine.id === routineId)?.objective ?? "ninguna; elegí una rutina"}</p><div className="mt-4"><TrainerMemberSearch members={available} query={memberQuery} onQueryChange={setMemberQuery} compact emptyText="No hay personas disponibles para agregar." renderAction={(member) => { const previousGroup = previousGroupForMember(data, member.memberId, groupId); return <GameButton type="button" disabled={busy || !routineId} onClick={() => { if (previousGroup && !window.confirm(`¿Mover a ${member.memberName} de ${previousGroup.name} a ${activeGroup?.name ?? "este grupo"}?`)) return; void mutate({ action: "add_member", groupId, memberId: member.memberId, routineId, confirmMove: Boolean(previousGroup), revision: 0 }, "Persona agregada al grupo.").then((ok) => { if (ok) setMemberQuery(""); }); }}> {previousGroup ? `Mover de ${previousGroup.name}` : "Agregar"}</GameButton>; }} /></div></section>
     <section className="border-[3px] border-white/15 bg-[#0c0c0c] p-4 sm:p-5"><div className="flex items-center justify-between"><div><GameLabel tone="cyan">Integrantes</GameLabel><p className="mt-1 text-sm text-white/50">Personas actualmente dentro de {activeGroup?.name ?? "este grupo"}.</p></div><strong className="text-3xl font-black text-cyan-200">{profiles.length}</strong></div><div className="mt-4 grid gap-2 sm:grid-cols-2">{profiles.length ? profiles.map((profile) => <div key={profile.id} className="flex items-center justify-between gap-3 border-2 border-white/10 p-3"><span className="truncate text-sm font-black uppercase">{profile.name}</span><button type="button" disabled={busy} onClick={() => { if (window.confirm(`¿Quitar a ${profile.name} del grupo?`)) void mutate({ action: "remove_member", groupId, profileId: profile.id, revision: 0 }, "Persona sacada del grupo."); }} className="min-h-9 shrink-0 border border-red-300/35 px-2 text-[9px] font-black uppercase text-red-200 hover:border-red-300">Quitar</button></div>) : <p className="border border-dashed border-white/15 p-5 text-sm text-white/45">Este grupo todavía no tiene personas.</p>}</div></section>
   </div>;
 }
@@ -452,7 +514,7 @@ export function GroupManagerWithSearch({ data, members, groupId, profiles, busy,
     <GroupPeopleDirectory data={data} profiles={profiles} members={members} groupId={groupId} busy={busy} mutate={mutate} />
     <section className="border-2 border-dashed border-cyan-300/35 bg-cyan-300/[.04] p-4 sm:p-5">
       <div className="flex flex-wrap items-end gap-3"><div className="min-w-56 flex-1"><GameLabel tone="cyan">Agregar integrante</GameLabel><p className="mt-1 text-sm text-white/50">Elegí una persona y asignale una rutina inicial. Después podés cambiar la rutina sin tocar su ficha.</p></div><label className="w-full text-[10px] font-black uppercase tracking-[.12em] text-white/50 sm:w-80">Rutina inicial<select className={`${field} mt-1 normal-case tracking-normal`} value={routineId} disabled={busy} onChange={(event) => setRoutineId(event.target.value)}>{data.routines.map((routine) => <option key={routine.id} value={routine.id}>{routine.objective}</option>)}</select></label></div>
-      <div className="mt-4"><TrainerMemberSearch members={available} query={memberQuery} onQueryChange={setMemberQuery} compact emptyText="No hay socios disponibles para agregar." renderAction={(member) => <GameButton type="button" disabled={busy} onClick={() => void mutate({ action: "add_member", groupId, memberId: member.memberId, routineId, revision: 0 }, "Persona agregada al grupo.").then((ok) => { if (ok) setMemberQuery(""); })}>Agregar</GameButton>} /></div>
+      <div className="mt-4"><TrainerMemberSearch members={available} query={memberQuery} onQueryChange={setMemberQuery} compact emptyText="No hay socios disponibles para agregar." renderAction={(member) => { const previousGroup = previousGroupForMember(data, member.memberId, groupId); return <GameButton type="button" disabled={busy || !routineId} onClick={() => { if (previousGroup && !window.confirm(`¿Mover a ${member.memberName} de ${previousGroup.name} a ${activeGroupName}?`)) return; void mutate({ action: "add_member", groupId, memberId: member.memberId, routineId, confirmMove: Boolean(previousGroup), revision: 0 }, "Persona agregada al grupo.").then((ok) => { if (ok) setMemberQuery(""); }); }}>{previousGroup ? `Mover de ${previousGroup.name}` : "Agregar"}</GameButton>; }} /></div>
     </section>
 
     <div className="grid items-start gap-4 xl:grid-cols-2">
@@ -468,7 +530,7 @@ export function GroupManagerWithSearch({ data, members, groupId, profiles, busy,
         <div className="border-b border-white/10 pb-3"><p className="text-xs font-black uppercase tracking-[.12em] text-cyan-200">Buscar y agregar</p><p className="mt-1 text-sm text-white/45">Buscá por nombre, meta o entrenador y elegí “Agregar”.</p></div>
         <label className="mt-4 block text-xs font-black uppercase tracking-[.12em] text-white/60">Rutina que recibirá<select className={`${field} mt-1 normal-case tracking-normal`} value={routineId} disabled={busy} onChange={(event) => setRoutineId(event.target.value)}>{data.routines.map((routine) => <option key={routine.id} value={routine.id}>{routine.objective} · {routine.days.length} {routine.days.length === 1 ? "módulo" : "módulos"}</option>)}</select></label>
         <div className="mt-3"><TrainerRoutineCreator data={data} busy={busy} mutate={mutate} onCreated={setRoutineId} /></div>
-        <div className="mt-4 min-w-0"><TrainerMemberSearch members={available} query={memberQuery} onQueryChange={setMemberQuery} compact emptyText="No hay socios disponibles para agregar." renderAction={(member) => <GameButton type="button" disabled={busy} onClick={() => void mutate({ action: "add_member", groupId, memberId: member.memberId, routineId, revision: 0 }, "Persona agregada al grupo.").then((ok) => { if (ok) setMemberQuery(""); })}>Agregar</GameButton>} /></div>
+        <div className="mt-4 min-w-0"><TrainerMemberSearch members={available} query={memberQuery} onQueryChange={setMemberQuery} compact emptyText="No hay socios disponibles para agregar." renderAction={(member) => { const previousGroup = previousGroupForMember(data, member.memberId, groupId); return <GameButton type="button" disabled={busy || !routineId} onClick={() => { if (previousGroup && !window.confirm(`¿Mover a ${member.memberName} de ${previousGroup.name} a ${activeGroupName}?`)) return; void mutate({ action: "add_member", groupId, memberId: member.memberId, routineId, confirmMove: Boolean(previousGroup), revision: 0 }, "Persona agregada al grupo.").then((ok) => { if (ok) setMemberQuery(""); }); }}>{previousGroup ? `Mover de ${previousGroup.name}` : "Agregar"}</GameButton>; }} /></div>
       </section>
     </div>
 

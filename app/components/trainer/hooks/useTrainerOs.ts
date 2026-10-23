@@ -124,6 +124,11 @@ export function useTrainerOs() {
     }
   }, []);
 
+  const refreshMembers = useCallback(async () => {
+    if (!authenticated || healthBusy || groupBusy) return;
+    await load(true);
+  }, [authenticated, groupBusy, healthBusy, load]);
+
   useEffect(() => {
     void (async () => {
       try {
@@ -489,7 +494,7 @@ export function useTrainerOs() {
     setCoachName: (value: string) => { setCoachName(value); setDirty(true); }, notice,
     saving, assigningPrograms, dirty, validationError, login, logout, refresh, chooseMember, leaveMember, updateDraft,
     healthDirty, setHealthDirty, healthBusy, setHealthBusy, healthRefresh,
-    groupActive, setGroupActive, groupDirty, setGroupDirty, groupBusy, setGroupBusy, groupRefresh,
+    groupActive, setGroupActive, groupDirty, setGroupDirty, groupBusy, setGroupBusy, groupRefresh, refreshMembers,
     updateItem, addItem, deleteItem, duplicateItem, moveItem, updateExercise, addExercise, selectExerciseMachine,
     deleteExercise, applyTemplate, resetDraft, save, saveGroup, assignDefaults, assignProgram,
     changeAgendaDate, toggleClass, expelAttendee,

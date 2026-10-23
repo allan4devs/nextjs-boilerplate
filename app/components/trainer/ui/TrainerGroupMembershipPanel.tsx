@@ -10,6 +10,7 @@ export function TrainerGroupMembershipPanel({ member, refreshKey = 0 }: { member
   const [data, setData] = useState<GroupDashboard | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [routineId, setRoutineId] = useState("");
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -18,6 +19,7 @@ export function TrainerGroupMembershipPanel({ member, refreshKey = 0 }: { member
       const payload = await response.json() as GroupDashboard & { error?: string };
       if (!response.ok) throw new Error(payload.error || "No se pudieron cargar los grupos.");
       setData(payload);
+      setRoutineId((current) => current || payload.routines[0]?.id || "");
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los grupos.");
@@ -41,9 +43,11 @@ export function TrainerGroupMembershipPanel({ member, refreshKey = 0 }: { member
     setBusy(true);
     setError("");
     try {
+      const previousGroup = data.groups.find((group) => assignments.has(group.id));
+      if (!profileId && previousGroup && previousGroup.id !== groupId && !window.confirm(`¿Mover a ${member.memberName} de ${previousGroup.name} a ${data.groups.find((group) => group.id === groupId)?.name ?? "este grupo"}?`)) return;
       const body = profileId
         ? { action: "remove_member", groupId, profileId, revision: 0 }
-        : { action: "add_member", groupId, memberId: member.memberId, routineId: data.routines[0]?.id, revision: 0 };
+        : { action: "add_member", groupId, memberId: member.memberId, routineId, confirmMove: Boolean(previousGroup), revision: 0 };
       const response = await fetch("/api/xtreme/trainer/group-a", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error || "No se pudo actualizar el grupo.");
@@ -58,9 +62,9 @@ export function TrainerGroupMembershipPanel({ member, refreshKey = 0 }: { member
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-cyan-200"><Users className="h-4 w-4" />Grupos activos</p><p className="mt-1 text-xs text-white/45">Agregá o sacá a {member.memberName} desde esta misma ficha.</p></div>{busy && <Loader2 className="h-4 w-4 animate-spin text-cyan-200" />}</div>
     {error && <p role="alert" className="mt-3 border border-red-400/40 bg-red-500/10 p-2 text-xs font-bold text-red-200">{error}</p>}
     {!data && !error && <p className="mt-4 text-sm text-white/50">Cargando grupos activos…</p>}
-    {data && <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{data.groups.map((group) => {
+    {data && <><label className="mt-4 block max-w-xl text-[10px] font-black uppercase tracking-[.12em] text-white/50">Rutina inicial<select className="mt-1 min-h-11 w-full border-2 border-white/20 bg-[#111] px-3 text-sm normal-case tracking-normal text-white outline-none focus:border-cyan-300" value={routineId} disabled={busy} onChange={(event) => setRoutineId(event.target.value)}><option value="">Elegí una rutina</option>{data.routines.map((routine) => <option key={routine.id} value={routine.id}>{routine.objective} · {routine.days.length} {routine.days.length === 1 ? "módulo" : "módulos"}</option>)}</select></label><div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{data.groups.map((group) => {
       const profileId = assignments.get(group.id);
-      return <div key={group.id} className={`flex items-center justify-between gap-3 border-2 p-3 ${profileId ? "border-[#d8ff3e]/50 bg-[#d8ff3e]/[.05]" : "border-white/10"}`}><div className="min-w-0"><p className="truncate text-sm font-black">{group.name}</p><p className="mt-1 text-[10px] uppercase tracking-widest text-white/40">{profileId ? "Asignado" : "Disponible"}</p></div>{profileId ? <GameButton type="button" variant="ghost" disabled={busy} onClick={() => void changeGroup(group.id, profileId)}><Check className="h-4 w-4 text-[#d8ff3e]" />Quitar</GameButton> : <GameButton type="button" variant="ghost" disabled={busy} onClick={() => void changeGroup(group.id)}>Agregar</GameButton>}</div>;
-    })}</div>}
+      return <div key={group.id} className={`flex items-center justify-between gap-3 border-2 p-3 ${profileId ? "border-[#d8ff3e]/50 bg-[#d8ff3e]/[.05]" : "border-white/10"}`}><div className="min-w-0"><p className="truncate text-sm font-black">{group.name}</p><p className="mt-1 text-[10px] uppercase tracking-widest text-white/40">{profileId ? "Asignado" : "Disponible"}</p></div>{profileId ? <GameButton type="button" variant="ghost" disabled={busy} onClick={() => void changeGroup(group.id, profileId)}><Check className="h-4 w-4 text-[#d8ff3e]" />Quitar</GameButton> : <GameButton type="button" variant="ghost" disabled={busy || !routineId} onClick={() => void changeGroup(group.id)}>Agregar</GameButton>}</div>;
+    })}</div></>}
   </section>;
 }

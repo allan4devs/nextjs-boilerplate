@@ -132,6 +132,8 @@ export async function POST(req: NextRequest) {
       const member = await db.collection<MemberDoc>(MEMBERS_COLLECTION).findOne({ _id: new ObjectId(memberId) }, { projection: { memberName: 1 } });
       if (!member) return fail("Socio no encontrado.", 404);
       const records = db.collection<GroupRecord>(GROUP_A_COLLECTION);
+      const previousMembership = await records.findOne({ kind: "membership", memberId, active: { $ne: false }, groupId: { $ne: groupId } });
+      if (previousMembership && body.confirmMove !== true) return fail("El socio ya pertenece a otro grupo. Confirmá el traslado antes de agregarlo.", 409);
       await records.updateMany({ kind: "membership", memberId, active: { $ne: false } }, { $set: { active: false, updatedBy: trainer, updatedAt }, $inc: { revision: 1 } });
       for (const link of dashboard.links.filter((entry) => entry.memberId === memberId)) {
         const profile = dashboard.profiles.find((entry) => entry.id === link.profileId);
