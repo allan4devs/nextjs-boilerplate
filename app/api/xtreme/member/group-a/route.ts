@@ -11,7 +11,7 @@ import {
   saveGroupRecord,
   type GroupRecord,
 } from "@/lib/xtreme/trainer-group-a";
-import { validGroupDate, type GroupLog } from "@/lib/xtreme/trainer-group-a-model";
+import { alignGroupExercise, validGroupDate, type GroupLog } from "@/lib/xtreme/trainer-group-a-model";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       executions: uniqueCompletedIds.map((exerciseId) => {
         const exercise = day.exercises.find((entry) => entry.id === exerciseId)!;
         const mapping = mappingRecords.find((entry) => entry.exerciseId === exerciseId);
-        const asset = mapping ? inventory.find((entry) => entry.id === mapping.assetId) : undefined;
+        const asset = alignGroupExercise(exercise, inventory, mapping ? { exerciseId, assetId: mapping.assetId!, machineGuideId: mapping.machineGuideId, revision: mapping.revision, updatedBy: mapping.updatedBy } : undefined).asset;
         return {
           exerciseId,
           assetId: asset?.id ?? "",

@@ -16,10 +16,12 @@ export default function TrainerOs() {
   const os = useTrainerOs();
   const [groupView, setGroupView] = useState<"tracking" | "routines" | "settings">("tracking");
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | undefined>();
-  const requestGroupView = (nextView: "tracking" | "routines" | "settings", routineId?: string) => {
+  const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>();
+  const requestGroupView = (nextView: "tracking" | "routines" | "settings", routineId?: string, profileId?: string) => {
     if (nextView !== groupView && os.groupDirty && !window.confirm("¿Cambiar de sección y descartar los cambios sin guardar?")) return;
     if (nextView !== groupView) os.setGroupDirty(false);
     setSelectedRoutineId(routineId);
+    setSelectedProfileId(profileId);
     setGroupView(nextView);
     os.setGroupActive(true);
   };
@@ -44,7 +46,7 @@ export default function TrainerOs() {
       </nav>}
       {os.notice && <div role={os.notice.tone === "error" ? "alert" : "status"} className={`mb-4 flex items-center gap-3 border-[3px] p-3 text-sm font-bold ${os.notice.tone === "success" ? "border-[#d8ff3e]/45 bg-[#d8ff3e]/10 text-[#eaff93]" : "border-red-400/45 bg-red-500/10 text-red-200"}`}>{os.notice.tone === "success" ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertTriangle className="h-5 w-5 shrink-0" />}{os.notice.text}</div>}
       {!os.memberFocus && <div hidden={!os.groupActive}>
-         <TrainerGroupA active={os.groupActive} view={groupView} members={os.members} refreshKey={os.groupRefresh} onDirtyChange={os.setGroupDirty} onBusyChange={os.setGroupBusy} onRefreshMembers={os.refreshMembers} onOpenMember={os.chooseMember} initialRoutineId={selectedRoutineId} onRequestView={requestGroupView} />
+         <TrainerGroupA active={os.groupActive} view={groupView} members={os.members} refreshKey={os.groupRefresh} onDirtyChange={os.setGroupDirty} onBusyChange={os.setGroupBusy} onRefreshMembers={os.refreshMembers} onOpenMember={os.chooseMember} initialRoutineId={selectedRoutineId} initialProfileId={selectedProfileId} onRequestView={requestGroupView} />
       </div>}
       {os.memberFocus && os.selected && <section className="min-w-0 space-y-4">
           <button type="button" onClick={os.leaveMember} className="inline-flex min-h-11 items-center gap-2 border-[3px] border-white/15 px-3 text-[10px] font-black uppercase text-white/55 transition hover:border-cyan-300 hover:text-cyan-200"><ArrowLeft className="h-4 w-4" /> Volver al grupo</button>

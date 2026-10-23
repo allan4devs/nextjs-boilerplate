@@ -15,6 +15,10 @@ function parseExercisePatch(value: unknown): GroupExercisePatch | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
   const patch: GroupExercisePatch = {};
+  if (raw.assetId !== undefined) {
+    if (typeof raw.assetId !== "string" || raw.assetId.length > 160) return null;
+    patch.assetId = raw.assetId.trim();
+  }
   const textFields = ["muscle", "name", "equipment", "sourceMachine", "time"] as const;
   for (const key of textFields) {
     if (raw[key] !== undefined) {
@@ -181,11 +185,17 @@ export async function POST(req: NextRequest) {
       const patch = parseExercisePatch(body.patch);
       const day = dashboard.routines.find((routine) => routine.id === routineId)?.days.find((entry) => entry.id === dayId);
       if (!day || !patch?.name?.trim()) return fail("Rutina, día y nombre del ejercicio son requeridos.");
+      if (patch.assetId) {
+        const asset = dashboard.inventory.find((entry) => entry.id === patch.assetId);
+        if (!asset || !isGroupEquipmentAvailable(asset)) return fail("Elegí una máquina del inventario que esté disponible.");
+        patch.equipment = asset.name; patch.sourceMachine = asset.code;
+      }
       const id = `custom-${randomUUID().slice(0, 12)}`;
       const exercise: GroupExercise = {
         id, muscle: patch.muscle ?? "general", name: patch.name.trim(), equipment: patch.equipment ?? "",
         sourceMachine: patch.sourceMachine ?? "", sets: patch.sets ?? null, reps: patch.reps ?? null,
         time: patch.time ?? "", weightKg: patch.weightKg ?? null, sourcePage: 0,
+        ...(patch.assetId !== undefined ? { assetId: patch.assetId } : {}),
       };
       saved = await saveGroupRecord(db, `exercise:${id}`, 0, {
         kind: "exercise", exerciseId: id, routineId, dayId, isCustom: true, exercise, exercisePatch: patch,
@@ -215,6 +225,11 @@ export async function POST(req: NextRequest) {
       const exercise = allExercises(dashboard).find((entry) => entry.id === exerciseId);
       const patch = parseExercisePatch(body.patch);
       if (!exercise || !patch) return fail("Ejercicio o valores inválidos.");
+      if (patch.assetId) {
+        const asset = dashboard.inventory.find((entry) => entry.id === patch.assetId);
+        if (!asset || !isGroupEquipmentAvailable(asset)) return fail("Elegí una máquina del inventario que esté disponible.");
+        patch.equipment = asset.name; patch.sourceMachine = asset.code;
+      }
       const id = `exercise:${exercise.id}`;
       const current = revision > 0
         ? await db.collection<GroupRecord>(GROUP_A_COLLECTION).findOne({ _id: id, revision })

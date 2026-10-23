@@ -6,7 +6,7 @@ import { EQUIPMENT_ASSETS_COLLECTION } from "./shared";
 import { migrateMachineName } from "./machine-display-names";
 import {
   GROUP_A_PROFILES, type GroupRoutine, type GroupEquipment, type GroupMapping,
-  GROUP_A_ID, type GroupLink, type GroupLog, type GroupDashboard, type GroupExercise, type TrainerGroup, type GroupAMemberView,
+  GROUP_A_ID, type GroupLink, type GroupLog, type GroupDashboard, type GroupExercise, type GroupExercisePatch, type TrainerGroup, type GroupAMemberView,
 } from "./trainer-group-a-model";
 
 export const GROUP_A_COLLECTION = "xtreme_gym_trainer_group_a";
@@ -18,7 +18,7 @@ export type GroupRecord = {
   exercise?: GroupExercise;
   routine?: GroupRoutine;
   day?: GroupRoutine["days"][number];
-  exercisePatch?: Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time" | "weightKg">>;
+  exercisePatch?: GroupExercisePatch;
   log?: GroupLog; updatedBy: string; updatedAt: string;
 };
 export async function groupInventory(db: Db) {

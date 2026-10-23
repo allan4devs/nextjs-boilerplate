@@ -2,10 +2,11 @@
 export type GroupExercise = {
   id: string; muscle: string; name: string; equipment: string; sourceMachine: string;
   sets: number | null; reps: number | null; time: string; weightKg?: number | null; sourcePage: number;
+  assetId?: string;
 };
 export const GROUP_A_ID = "group-a";
 export type TrainerGroup = { id: string; name: string; revision: number };
-export type GroupExercisePatch = Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time" | "weightKg">>;
+export type GroupExercisePatch = Partial<Pick<GroupExercise, "muscle" | "name" | "equipment" | "sourceMachine" | "sets" | "reps" | "time" | "weightKg" | "assetId">>;
 export type GroupExerciseEdit = { exerciseId: string; revision: number };
 export type GroupDay = { id: string; label: string; focus: string; exercises: GroupExercise[] };
 export type GroupRoutine = {
@@ -120,11 +121,16 @@ export function isGroupEquipmentAvailable(asset: GroupEquipment) {
   return asset.status !== "fuera_de_servicio" && asset.status !== "pendiente";
 }
 export function alignGroupExercise(exercise: GroupExercise, inventory: GroupEquipment[], mapping?: GroupMapping) {
+  // A trainer's explicit unit selection takes precedence over older inferred mappings.
+  if (exercise.assetId !== undefined) {
+    const selected = inventory.find((asset) => asset.id === exercise.assetId);
+    mapping = exercise.assetId ? { exerciseId: exercise.id, assetId: exercise.assetId, machineGuideId: selected?.machineGuideId, revision: 0, updatedBy: "" } : undefined;
+  }
   const guides = exerciseGuides(exercise);
-  const needsMachine = guides.length > 0 || normalizeGroupName(exercise.equipment).includes("maquina");
+  const needsMachine = Boolean(mapping) || guides.length > 0 || normalizeGroupName(exercise.equipment).includes("maquina");
   const candidates = mapping?.machineGuideId
     ? inventory.filter((asset) => asset.machineGuideId === mapping.machineGuideId)
-    : inventory.filter((asset) => guides.length ? guides.includes(asset.machineGuideId ?? "") : needsMachine);
+    : inventory.filter((asset) => mapping ? asset.id === mapping.assetId : guides.length ? guides.includes(asset.machineGuideId ?? "") : needsMachine);
   const usable = candidates.filter(isGroupEquipmentAvailable);
   const sourceNumbers = exercise.sourceMachine.match(/\d+/g) ?? [];
   const numbered = usable.filter((asset) => {
