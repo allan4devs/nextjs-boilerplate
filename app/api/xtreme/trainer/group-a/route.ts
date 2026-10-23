@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         coach: trainer,
         days: Array.from({ length: moduleCount }, (_, index) => ({
           id: `day-${randomUUID().slice(0, 8)}`,
-          label: `Día ${index + 1}`,
+          label: index === 0 ? dayLabel : `Día ${index + 1}`,
           focus: index === 0 ? (focus || dayLabel) : `Día ${index + 1}`,
           exercises: index === 0 && templateDay ? templateDay.exercises.map((exercise) => ({ ...exercise, id: `custom-${randomUUID().slice(0, 12)}` })) : [],
         })),
