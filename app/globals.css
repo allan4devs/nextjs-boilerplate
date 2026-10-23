@@ -1508,6 +1508,110 @@ html:not(.xg-staff-light) .xg-pos[data-contrast="alto"] [class*="bg-black/4"] {
   );
 }
 
+/* Tema claro exclusivo de Member OS. El tema oscuro sigue siendo el default;
+ * esta capa convierte sus tokens oscuros sin afectar Admin, Reception ni Trainer. */
+html.xg-member-light,
+html.xg-member-light body {
+  background: #f1f4f1;
+  color: #172019;
+}
+
+html.xg-member-light .xg-member-os {
+  background-color: #f1f4f1 !important;
+  color: #172019 !important;
+}
+
+html.xg-member-light .xg-member-os [class*="bg-[#050505]"],
+html.xg-member-light .xg-member-os [class*="bg-[#070707]"],
+html.xg-member-light .xg-member-os [class*="bg-[#080808]"],
+html.xg-member-light .xg-member-os [class*="bg-[#090909]"],
+html.xg-member-light .xg-member-os [class*="bg-[#0a0a0a]"],
+html.xg-member-light .xg-member-os [class*="bg-[#0b0b0b]"],
+html.xg-member-light .xg-member-os [class*="bg-[#0c0c0c]"],
+html.xg-member-light .xg-member-os [class*="bg-[#0d0d0d]"],
+html.xg-member-light .xg-member-os [class*="bg-[#0e0e0e]"],
+html.xg-member-light .xg-member-os [class*="bg-[#0f0f0f]"],
+html.xg-member-light .xg-member-os [class*="bg-[#101010]"],
+html.xg-member-light .xg-member-os [class*="bg-[#111111]"],
+html.xg-member-light .xg-member-os [class*="bg-[#111]"],
+html.xg-member-light .xg-member-os [class*="bg-[#121212]"],
+html.xg-member-light .xg-member-os [class*="bg-[#171717]"],
+html.xg-member-light .xg-member-os [class*="bg-black"] {
+  background-color: #fbfdf9 !important;
+}
+
+html.xg-member-light .xg-member-os [class*="bg-white/"] {
+  background-color: rgba(23, 32, 25, 0.055) !important;
+}
+
+html.xg-member-light .xg-member-os [class*="text-white"] {
+  color: rgba(23, 32, 25, 0.82) !important;
+}
+
+html.xg-member-light .xg-member-os [class*="border-white"] {
+  border-color: #c5cec5 !important;
+}
+
+html.xg-member-light .xg-member-os [class*="shadow-["] {
+  box-shadow: 3px 3px 0 rgba(44, 63, 49, 0.13) !important;
+}
+
+html.xg-member-light .xg-member-os [class*="text-[#d8ff3e]"],
+html.xg-member-light .xg-member-os [class*="text-[#eaff93]"] {
+  color: #356b2d !important;
+}
+
+html.xg-member-light .xg-member-os [class*="border-[#d8ff3e]"] {
+  border-color: #4b813e !important;
+}
+
+html.xg-member-light .xg-member-os [class*="bg-[#d8ff3e]/"] {
+  background-color: rgba(75, 129, 62, 0.12) !important;
+}
+
+html.xg-member-light .xg-member-os [class~="bg-[#d8ff3e]"] {
+  background-color: #4b813e !important;
+  color: #fff !important;
+}
+
+html.xg-member-light .xg-member-os [class*="text-cyan-"] { color: #0c6570 !important; }
+html.xg-member-light .xg-member-os [class*="border-cyan-"] { border-color: #438b91 !important; }
+html.xg-member-light .xg-member-os [class~="bg-cyan-300"] { background-color: #19727a !important; color: #fff !important; }
+html.xg-member-light .xg-member-os [class*="text-orange-"] { color: #9a4613 !important; }
+html.xg-member-light .xg-member-os [class*="border-orange-"] { border-color: #c87842 !important; }
+html.xg-member-light .xg-member-os [class*="text-red-"] { color: #a43432 !important; }
+html.xg-member-light .xg-member-os [class*="border-red-"] { border-color: #bd6864 !important; }
+
+html.xg-member-light .xg-member-os input,
+html.xg-member-light .xg-member-os select,
+html.xg-member-light .xg-member-os textarea {
+  border-color: #b7c3b7 !important;
+  background-color: #fff !important;
+  color: #172019 !important;
+}
+
+html.xg-member-light .xg-member-os input::placeholder,
+html.xg-member-light .xg-member-os textarea::placeholder {
+  color: rgba(23, 32, 25, 0.45) !important;
+}
+
+html.xg-member-light .xg-member-os .xg-game-modal-panel,
+html.xg-member-light .xg-member-os .xg-game-panel,
+html.xg-member-light .xg-member-os .xg-game-stat {
+  background-color: #fbfdf9 !important;
+  color: #172019 !important;
+}
+
+html.xg-member-light .xg-member-os .xg-atmosphere {
+  opacity: 0.24;
+}
+
+html.xg-member-light .xg-member-os .xg-member-theme-toggle {
+  border-color: #aebeaa !important;
+  color: #245c32 !important;
+  background-color: #fff !important;
+}
+
 /* Glow que respira (CTA principal, elementos "vivos") */
 @keyframes xg-glow-breathe {
   0%,

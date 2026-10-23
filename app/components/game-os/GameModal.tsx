@@ -29,6 +29,8 @@ export function GameModal({
 }: GameModalProps) {
   const titleId   = useId();
   const panelRef  = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const wasOpenRef = useRef(false);
 
   /* `onClose` casi siempre llega como arrow inline: identidad nueva en cada
      render del padre. Guardarla en un ref para que el efecto de abajo dependa
@@ -36,6 +38,24 @@ export function GameModal({
      `panelRef.focus()` le robaba el foco a un input del modal en cada tecla. */
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  /* Recordar el control que abrió el modal y devolverle el foco al cerrarlo. */
+  useEffect(() => {
+    if (open) {
+      if (!wasOpenRef.current) {
+        restoreFocusRef.current = document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+        wasOpenRef.current = true;
+      }
+      return;
+    }
+    if (wasOpenRef.current) {
+      restoreFocusRef.current?.focus({ preventScroll: true });
+      restoreFocusRef.current = null;
+      wasOpenRef.current = false;
+    }
+  }, [open]);
 
   /* Animación de entrada/salida */
   const [visible, setVisible]     = useState(false); // controla la clase CSS
@@ -67,7 +87,33 @@ export function GameModal({
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => element.getClientRects().length > 0);
+      if (!focusable.length) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;

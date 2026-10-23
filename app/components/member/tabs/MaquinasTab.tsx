@@ -10,27 +10,17 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   Dumbbell,
-  HeartPulse,
-  LayoutGrid,
   Play,
   Search,
   ShieldCheck,
   Target,
-  type LucideIcon,
 } from "lucide-react";
 import { GameChip, GameLabel } from "../../GameOS";
 import { GUIDE_WORKOUTS, MACHINE_GUIDE } from "../constants";
 import PanelHub, { type HubPanel } from "../PanelHub";
 import type { MemberOs } from "../useMemberOs";
-
-const ZONE_ICONS: Record<string, LucideIcon> = {
-  Pierna: Dumbbell,
-  Pecho: Target,
-  Espalda: LayoutGrid,
-  Hombro: ShieldCheck,
-  "Full body": ShieldCheck,
-  Cardio: HeartPulse,
-};
+import { equipmentGlyphKind } from "@/lib/xtreme/trainer-equipment-search";
+import { EquipmentGlyph } from "@/app/components/trainer/ui/EquipmentGlyph";
 
 export default function MaquinasTab({ os }: { os: MemberOs }) {
   const { setOsModal } = os;
@@ -89,6 +79,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
         <button
           type="button"
           onClick={() => setZoneFilter(null)}
+          aria-pressed={zoneFilter === null}
           className={`shrink-0 border-[3px] px-3 py-2 text-xs font-black uppercase transition ${
             zoneFilter === null
               ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
@@ -102,6 +93,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
             key={zone}
             type="button"
             onClick={() => setZoneFilter((z) => (z === zone ? null : zone))}
+            aria-pressed={zoneFilter === zone}
             className={`shrink-0 border-[3px] px-3 py-2 text-xs font-black uppercase transition ${
               zoneFilter === zone
                 ? "border-[#d8ff3e] bg-[#d8ff3e] text-black"
@@ -114,7 +106,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
       </div>
 
       <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-white/45">
+        <p role="status" aria-live="polite" className="text-xs font-black uppercase tracking-[0.12em] text-white/45">
           {filtered.length} resultado{filtered.length === 1 ? "" : "s"}
         </p>
         {(zoneFilter || query) && (
@@ -126,12 +118,13 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
 
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">
         {filtered.map((machine) => {
-          const ZoneIcon = ZONE_ICONS[machine.zone] ?? Dumbbell;
+          const equipmentKind = equipmentGlyphKind({ name: machine.name, machineGuideId: machine.id });
           return (
             <button
               key={machine.id}
               type="button"
               onClick={() => setOsModal({ kind: "machine", machineId: machine.id })}
+              aria-label={`Abrir guía de ${machine.name}`}
               className="group relative flex min-h-[196px] flex-col overflow-hidden border-[2px] border-white/20 bg-[#0c0c0c] text-left shadow-[3px_3px_0_rgba(0,0,0,.55)] transition focus-visible:border-[#d8ff3e] focus-visible:outline-none active:translate-x-px active:translate-y-px active:shadow-none hover:border-[#d8ff3e] sm:min-h-[218px]"
             >
               <div
@@ -145,7 +138,7 @@ export default function MaquinasTab({ os }: { os: MemberOs }) {
                   <span
                     className={`grid h-9 w-9 place-items-center bg-gradient-to-br ${machine.accent} text-black shadow-[2px_2px_0_rgba(0,0,0,.35)] sm:h-11 sm:w-11`}
                   >
-                    <ZoneIcon className="h-5 w-5" />
+                    <EquipmentGlyph kind={equipmentKind} className="h-7 w-7 sm:h-8 sm:w-8" />
                   </span>
                   {machine.videoUrl && (
                     <span className="inline-flex items-center gap-1 border-2 border-black/50 bg-black/70 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#d8ff3e]">
