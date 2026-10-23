@@ -1,0 +1,1 @@
+La imagen 00 es una captura real del ingreso local. Las imagenes 01 a 07 son recreaciones de interfaz basadas en el codigo local, con datos ficticios. La imagen 03 refleja el selector actualizado de equipo: busqueda por numero o nombre, filtros por familia, disponibilidad y opcion de equipo libre. No contienen datos reales de socios. Edicion: 23 de octubre de 2026.
